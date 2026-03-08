@@ -35,9 +35,12 @@ export function createChatMessageHandler(deps: HookDeps) {
         to: requestedModel,
       })
       state = createFallbackState(requestedModel)
+      state.manualLock = true
       sessionStates.set(sessionID, state)
       return
     }
+
+    if (state.manualLock) return
 
     if (state.currentModel === state.originalModel) return
 

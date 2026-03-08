@@ -132,6 +132,11 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
       return
     }
 
+    if (state?.manualLock) {
+      log(`[${HOOK_NAME}] Manual model lock active; skipping fallback`, { sessionID })
+      return
+    }
+
     if (!state) {
       const currentModel = props?.model as string | undefined
       if (currentModel) {

@@ -1,4 +1,9 @@
 > [!NOTE]
+> **衍生项目说明**
+> 
+> 本项目是 `code-yeongyu/oh-my-openagent`（原 `oh-my-opencode`）的克隆/衍生版本。
+> 我们已对项目进行重命名，并新增了以“用户可控模型路由”和“科研工作流”为核心的功能与配置选项。
+> 许可与来源请见 `LICENSE` 和 `THIRD_PARTY_NOTICES.md`。
 >
 > [![Sisyphus Labs - Sisyphus is the agent that codes like your team.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
 > > **我们正在构建 Sisyphus 的完全产品化版本，以定义前沿智能体 (Frontier Agents) 的未来。<br />[在此处](https://sisyphuslabs.ai)加入候补名单。**
@@ -75,6 +80,15 @@
 脏活累活我们替你干了。我们测试了一切，只留下了真正有用的。
 
 安装 OmO。敲下 `ultrawork`。疯狂地写代码吧。
+
+## 变更摘要 (Labforge)
+
+- 以衍生项目形式重命名，并补充第三方来源与许可说明。
+- 恢复轻量 plan/build 默认行为，并提供显式开关。
+- 新增 Model Governor AUTO，用于模型发现、类别默认与回退链。
+- 强制尊重用户手动模型选择，避免越权改写。
+- 增加智能体名称多语言与 SOUL 规则注入控制。
+- 新增 DOCX、PDF、PPTX、XLSX、网页检索、数据分析等内置技能。
 
 
 
@@ -174,6 +188,28 @@ Read this and tell me why it's not just another boilerplate: https://raw.githubu
 | `ultrabrain`         | 复杂硬核逻辑、架构决策 |
 
 智能体只需要说明要做什么类型的工作，框架就会挑选出最合适的模型去干。你完全不需要操心。
+
+### 模型治理 (AUTO)
+
+AUTO 会检测可用模型，分配类别默认模型，并生成回退链。
+它不会覆盖你手写的配置，也不会改写你在 UI 中手动选择的模型。
+
+配置示例：
+
+```jsonc
+{
+  "model_governor": {
+    "enabled": true,
+    "mode": "auto",
+    "report": { "enabled": true, "format": "md" }
+  }
+}
+```
+
+报告与规则文件将写入 OpenCode 配置目录：
+
+- `oh-my-opencode.models.report.md`
+- `oh-my-opencode.models.rules.jsonc`
 
 ### 完全兼容 Claude Code
 

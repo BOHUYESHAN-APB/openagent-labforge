@@ -12,6 +12,11 @@ import { loadPluginConfig } from "./plugin-config"
 import { createModelCacheState } from "./plugin-state"
 import { createFirstMessageVariantGate } from "./shared/first-message-variant"
 import { injectServerAuthIntoClient, log } from "./shared"
+import {
+  resolveAgentDisplayLanguage,
+  setAgentDisplayLanguage,
+} from "./shared/agent-display-names"
+import { applyModelGovernor } from "./features/model-governor"
 import { startTmuxCheck } from "./tools"
 
 const OhMyOpenCodePlugin: Plugin = async (ctx) => {
@@ -25,6 +30,12 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   startTmuxCheck()
 
   const pluginConfig = loadPluginConfig(ctx.directory, ctx)
+
+  // Set agent display names language early so config/agents/commands share consistent labels.
+  setAgentDisplayLanguage(resolveAgentDisplayLanguage(pluginConfig.i18n?.language))
+
+  // AUTO mode foundation: discover available models and write a recommendation report.
+  applyModelGovernor(pluginConfig)
   const disabledHooks = new Set(pluginConfig.disabled_hooks ?? [])
 
   const isHookEnabled = (hookName: HookName): boolean => !disabledHooks.has(hookName)

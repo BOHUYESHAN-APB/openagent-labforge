@@ -8,6 +8,7 @@ export interface FallbackState {
   failedModels: Map<string, number>
   attemptCount: number
   pendingFallbackModel?: string
+  manualLock?: boolean
 }
 
 export interface FallbackResult {

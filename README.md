@@ -1,4 +1,9 @@
 > [!NOTE]
+> **Derivative Notice**
+> 
+> This project is a fork/derivative of `code-yeongyu/oh-my-openagent` (formerly `oh-my-opencode`).
+> We have renamed the project and added new features and configuration options focused on user-controlled model routing and research workflows.
+> Licensing and provenance are documented in `LICENSE` and `THIRD_PARTY_NOTICES.md`.
 >
 > [![Sisyphus Labs - Sisyphus is the agent that codes like your team.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
 > > **We're building a fully productized version of Sisyphus to define the future of frontier agents. <br />Join the waitlist [here](https://sisyphuslabs.ai).**
@@ -78,6 +83,15 @@ You're juggling Claude Code, Codex, random OSS models. Configuring workflows. De
 We did the work. Tested everything. Kept what actually shipped.
 
 Install OmO. Type `ultrawork`. Done.
+
+## Change Summary (Labforge)
+
+- Renamed fork with a derivative notice and third-party provenance.
+- Restored lightweight default plan and build behavior with explicit toggles.
+- Added Model Governor AUTO for discovery, category defaults, and fallback chains.
+- Enforced manual model selection priority to prevent unwanted overrides.
+- Added i18n agent display names and SOUL rule injection controls.
+- Added built-in skills for DOCX, PDF, PPTX, XLSX, web research, and data analysis.
 
 
 ## Installation
@@ -176,6 +190,28 @@ When Sisyphus delegates to a subagent, it doesn't pick a model. It picks a **cat
 | `ultrabrain`         | Hard logic, architecture decisions |
 
 Agent says what kind of work. Harness picks the right model. You touch nothing.
+
+### Model Governor (AUTO)
+
+AUTO detects available models, assigns category defaults, and builds fallback chains.
+It never overwrites your explicit config or UI-selected model.
+
+Config example:
+
+```jsonc
+{
+  "model_governor": {
+    "enabled": true,
+    "mode": "auto",
+    "report": { "enabled": true, "format": "md" }
+  }
+}
+```
+
+Reports and rules are written to your OpenCode config dir:
+
+- `oh-my-opencode.models.report.md`
+- `oh-my-opencode.models.rules.jsonc`
 
 ### Claude Code Compatibility
 

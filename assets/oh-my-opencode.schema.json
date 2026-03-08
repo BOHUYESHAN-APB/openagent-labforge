@@ -8,6 +8,59 @@
     "$schema": {
       "type": "string"
     },
+    "i18n": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "zh-CN"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "model_governor": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "report_only",
+            "auto"
+          ]
+        },
+        "report": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "path": {
+              "type": "string"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "md",
+                "json"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "rules_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "new_task_system_enabled": {
       "type": "boolean"
     },
@@ -3301,6 +3354,12 @@
         },
         "replace_plan": {
           "type": "boolean"
+        },
+        "hijack_build": {
+          "type": "boolean"
+        },
+        "set_default_agent": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -3713,6 +3772,42 @@
       "required": [
         "timeout_ms"
       ],
+      "additionalProperties": false
+    },
+    "soul": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "dynamic"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "high",
+            "normal",
+            "low"
+          ]
+        },
+        "inject_once": {
+          "type": "boolean"
+        },
+        "max_chars": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
       "additionalProperties": false
     },
     "git_master": {

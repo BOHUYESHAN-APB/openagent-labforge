@@ -1,0 +1,40 @@
+{
+  // Enhanced profile: full orchestration. More capable, higher token usage.
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/oh-my-opencode.schema.json",
+
+  "i18n": {
+    "language": "auto"
+  },
+
+  // Optional: enforce SOUL research principles in all sessions.
+  // "soul": { "path": "C:/Users/BoHuYeShan/Downloads/soul.md", "mode": "dynamic", "priority": "high", "inject_once": true, "max_chars": 6000 },
+
+  "sisyphus_agent": {
+    "disabled": false,
+    "hijack_build": true,
+    "set_default_agent": true,
+    "replace_plan": true,
+    "default_builder_enabled": false,
+    "planner_enabled": true
+  },
+
+  // Still recommended OFF by default until you explicitly want auto-switching.
+  "model_fallback": false,
+  "runtime_fallback": false,
+
+  "categories": {
+    "quick": { "model": "gmn/gpt-5.2" },
+    "deep": { "model": "gmn/gpt-5.3-codex" },
+    "ultrabrain": { "model": "gmn/gpt-5.4" }
+  },
+
+  "agents": {
+    "sisyphus": { "category": "ultrabrain" },
+    "hephaestus": { "category": "deep" },
+    "prometheus": { "category": "quick" },
+    "atlas": { "category": "deep" },
+    "librarian": { "category": "quick" },
+    "explore": { "category": "quick" },
+    "oracle": { "category": "ultrabrain" }
+  }
+}

@@ -2,6 +2,8 @@ import type { OhMyOpenCodeConfig } from "../config"
 import type { PluginContext } from "./types"
 
 import { hasConnectedProvidersCache } from "../shared"
+import { contextCollector } from "../features/context-injector"
+import { loadSoulRules, selectSoulContent } from "../shared/soul-rules"
 import { setSessionModel } from "../shared/session-model-state"
 import { setSessionAgent } from "../features/claude-code-session-state"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
@@ -45,6 +47,7 @@ export function createChatMessageHandler(args: {
   output: ChatMessageHandlerOutput
 ) => Promise<void> {
   const { ctx, pluginConfig, firstMessageVariantGate, hooks } = args
+  const soulInjectedSessions = new Set<string>()
   const pluginContext = ctx as {
     client: {
       tui: {
@@ -70,6 +73,41 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const soulRules = loadSoulRules({ directory: ctx.directory, pluginConfig })
+    const injectOnce = pluginConfig.soul?.inject_once ?? true
+    const alreadyInjected = soulInjectedSessions.has(input.sessionID)
+
+    if (soulRules.content && (!injectOnce || !alreadyInjected)) {
+      const promptText = output.parts
+        .filter((part) => part.type === "text" && part.text)
+        .map((part) => part.text ?? "")
+        .join("\n")
+
+      const mode = pluginConfig.soul?.mode ?? "dynamic"
+      let content = selectSoulContent({
+        content: soulRules.content,
+        prompt: promptText,
+        mode,
+      })
+
+      const maxChars = pluginConfig.soul?.max_chars
+      if (typeof maxChars === "number" && maxChars > 0 && content.length > maxChars) {
+        content = `${content.slice(0, maxChars)}\n\n[SOUL truncated to max_chars]`
+      }
+
+      contextCollector.register(input.sessionID, {
+        id: "soul-rules",
+        source: "custom",
+        content,
+        priority: pluginConfig.soul?.priority ?? "high",
+        metadata: { source: soulRules.source },
+      })
+
+      if (injectOnce) {
+        soulInjectedSessions.add(input.sessionID)
+      }
+    }
+
     if (input.agent) {
       setSessionAgent(input.sessionID, input.agent)
     }
