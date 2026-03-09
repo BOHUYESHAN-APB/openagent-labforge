@@ -22,6 +22,7 @@ const sessionProcessedCommandExecutions = new Set<string>()
 
 export interface AutoSlashCommandHookOptions {
   skills?: LoadedSkill[]
+  getSkills?: () => Promise<LoadedSkill[]>
   pluginsEnabled?: boolean
   enabledPluginsOverride?: Record<string, boolean>
 }
@@ -29,6 +30,7 @@ export interface AutoSlashCommandHookOptions {
 export function createAutoSlashCommandHook(options?: AutoSlashCommandHookOptions) {
   const executorOptions: ExecutorOptions = {
     skills: options?.skills,
+    getSkills: options?.getSkills,
     pluginsEnabled: options?.pluginsEnabled,
     enabledPluginsOverride: options?.enabledPluginsOverride,
   }

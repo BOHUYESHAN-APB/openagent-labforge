@@ -1,0 +1,28 @@
+{
+  // Classic profile: keep OpenCode's built-in plan/build behavior.
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/openagent-labforge.schema.json",
+
+  "i18n": {
+    // auto | en | zh-CN
+    "language": "auto"
+  },
+
+  // Optional: enforce SOUL research principles in all sessions.
+  // "soul": { "path": "C:/Users/BoHuYeShan/Downloads/soul.md", "mode": "dynamic", "priority": "high", "inject_once": true, "max_chars": 6000 },
+
+  // Completely disable orchestration.
+  "sisyphus_agent": {
+    "disabled": true
+  },
+
+  // No automatic model switching.
+  "model_fallback": false,
+  "runtime_fallback": false,
+
+  // Keep built-in remote MCPs enabled by default.
+  // "disabled_mcps": ["websearch", "context7", "grep_app"],
+
+  "experimental": {
+    "task_system": false
+  }
+}

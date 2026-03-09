@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const docxSkill: BuiltinSkill = {
   name: "docx-workbench",
   description: "Create, edit, and review DOCX documents with reproducible formatting",
+  metadata: { category: "research/document-authoring" },
   template: `# Role: DOCX Workbench
 
 You create, edit, and analyze Word documents with strict formatting control and reproducibility.

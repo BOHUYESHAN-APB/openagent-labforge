@@ -5,6 +5,7 @@ import type { ToolPermission } from "../../features/hook-message-injector"
 import { normalizeSDKResponse } from "../../shared"
 import { log } from "../../shared/logger"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
+import { SystemDirectiveTypes } from "../../shared/system-directive"
 
 import {
   ABORT_WINDOW_MS,
@@ -20,6 +21,26 @@ import { getIncompleteCount } from "./todo"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
 import { startCountdown } from "./countdown"
+
+function hasRecentTodoContinuationDirective(messages: Array<{ info?: MessageInfo; parts?: Array<{ text?: string; type?: string }> }>): boolean {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const info = messages[i].info
+    if (!info) continue
+    if (info.role === "user") return false
+
+    const parts = messages[i].parts
+    if (!parts) continue
+
+    const hasDirective = parts.some((part) =>
+      part.type === "text" && typeof part.text === "string" && part.text.includes(SystemDirectiveTypes.TODO_CONTINUATION),
+    )
+    if (hasDirective) {
+      return true
+    }
+  }
+
+  return false
+}
 
 export async function handleSessionIdle(args: {
   ctx: PluginInput
@@ -75,6 +96,10 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
       return
     }
+    if (hasRecentTodoContinuationDirective(messages)) {
+      log(`[${HOOK_NAME}] Skipped: recent todo continuation directive already injected`, { sessionID })
+      return
+    }
     if (hasUnansweredQuestion(messages)) {
       log(`[${HOOK_NAME}] Skipped: pending question awaiting user response`, { sessionID })
       return
@@ -105,6 +130,16 @@ export async function handleSessionIdle(args: {
 
   if (state.inFlight) {
     log(`[${HOOK_NAME}] Skipped: injection in flight`, { sessionID })
+    return
+  }
+
+  state.idleStrikeCount = (state.idleStrikeCount ?? 0) + 1
+  if (state.idleStrikeCount < 2) {
+    log(`[${HOOK_NAME}] Skipped: waiting for second idle before continuation`, {
+      sessionID,
+      idleStrikeCount: state.idleStrikeCount,
+      incompleteCount,
+    })
     return
   }
 

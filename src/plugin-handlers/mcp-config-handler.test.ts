@@ -164,4 +164,73 @@ describe("applyMcpConfig", () => {
     const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
     expect(mergedMcp).not.toHaveProperty("plugin:custom")
   })
+
+  test("applies mcp_policy enable/disable overrides", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      deepwiki_mcp: { type: "remote", url: "https://mcp.deepwiki.com/mcp", enabled: false },
+      context7: { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig({
+      mcp_policy: {
+        enable: ["deepwiki_mcp"],
+        disable: ["context7"],
+      } as any,
+    })
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(mergedMcp.deepwiki_mcp.enabled).toBe(true)
+    expect(mergedMcp.context7.enabled).toBe(false)
+  })
+
+  test("enables websearch when bing_cn_mcp is enabled and fallback policy is active", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: true },
+      websearch: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: false },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig({
+      mcp_policy: {
+        bing_cn_english_fallback: true,
+      } as any,
+    })
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(mergedMcp.websearch.enabled).toBe(true)
+  })
+
+  test("disables selected MCPs in restricted network profile", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      paper_search_mcp: { type: "local", command: ["uvx", "paper-search-mcp"], enabled: true },
+      semantic_scholar_fastmcp: { type: "local", command: ["uvx", "semantic-scholar-fastmcp-mcp-server"], enabled: true },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig({
+      mcp_policy: {
+        network_profile: "restricted",
+      } as any,
+    })
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(mergedMcp.paper_search_mcp.enabled).toBe(false)
+    expect(mergedMcp.semantic_scholar_fastmcp.enabled).toBe(false)
+  })
 })

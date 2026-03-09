@@ -263,6 +263,10 @@ describe("todo-continuation-enforcer", () => {
       event: { type: "session.idle", properties: { sessionID } },
     })
 
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
     // then - countdown toast shown
     await wait(50)
     expect(toastCalls.length).toBeGreaterThanOrEqual(1)
@@ -584,8 +588,14 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
     await fakeTimers.advanceBy(2500, true)
     await fakeTimers.advanceClockBy(CONTINUATION_COOLDOWN_MS)
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
@@ -897,12 +907,18 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
     await fakeTimers.advanceBy(3500, true)
 
     // then - first injection happened
     expect(promptCalls.length).toBe(1)
 
     await fakeTimers.advanceBy(CONTINUATION_COOLDOWN_MS, true)
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
@@ -998,6 +1014,9 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
 
     await wait(2500)
 
@@ -1019,6 +1038,9 @@ describe("todo-continuation-enforcer", () => {
     const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
 
     // when - session goes idle
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })

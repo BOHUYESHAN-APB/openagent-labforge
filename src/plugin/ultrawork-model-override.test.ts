@@ -363,6 +363,28 @@ describe("applyUltraworkModelOverrideOnMessage", () => {
     expect(dbOverrideSpy).not.toHaveBeenCalled()
   })
 
+  test("should skip override when manual model change is detected", () => {
+    //#given
+    const config = createConfig("sisyphus", { model: "anthropic/claude-opus-4-6", variant: "max" })
+    const output = createOutput("ultrawork do something", { messageId: "msg_123" })
+    const tui = createMockTui()
+
+    //#when
+    applyUltraworkModelOverrideOnMessage(
+      config,
+      "sisyphus",
+      output,
+      tui,
+      undefined,
+      true,
+    )
+
+    //#then
+    expect(dbOverrideSpy).not.toHaveBeenCalled()
+    expect(output.message["variant"]).toBeUndefined()
+    expect(output.message["thinking"]).toBeUndefined()
+  })
+
   test("should log the model transition with deferred DB tag", () => {
     //#given
     const config = createConfig("sisyphus", { model: "anthropic/claude-opus-4-6" })

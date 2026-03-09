@@ -1,0 +1,12 @@
+{
+  "name": "@labforge/openagent-labforge-paper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aggregate paper-focused installer: core + paper profile companions",
+  "license": "MIT",
+  "dependencies": {
+    "@labforge/openagent-labforge-core": "^1.0.0",
+    "@labforge/opencode-agent-bio-paper": "^0.1.0",
+    "@labforge/opencode-mcp-paper-search": "^0.1.0"
+  }
+}

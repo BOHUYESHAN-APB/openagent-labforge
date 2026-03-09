@@ -1,0 +1,15 @@
+{
+  // Full workflow profile: literature + bioinformatics
+  "features": {
+    "literature_workflow": true,
+    "paper_formatting_presets": true,
+    "bio_workflow": true
+  },
+  "defaults": {
+    "document_style": "paper-academic",
+    "citation_mode": "inline-author-year"
+  },
+  "skills": {
+    "bundle": "full"
+  }
+}

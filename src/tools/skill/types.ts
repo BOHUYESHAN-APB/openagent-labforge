@@ -13,6 +13,7 @@ export interface SkillInfo {
   description: string
   location?: string
   scope: SkillScope
+  category?: string
   license?: string
   compatibility?: string
   metadata?: Record<string, string>
@@ -24,6 +25,8 @@ export interface SkillLoadOptions {
   opencodeOnly?: boolean
   /** Pre-merged skills to use instead of discovering */
   skills?: LoadedSkill[]
+  /** Lazy merged skills getter */
+  getSkills?: () => Promise<LoadedSkill[]>
   /** Pre-discovered commands to use instead of discovering */
   commands?: CommandInfo[]
   /** MCP manager for querying skill-embedded MCP servers */

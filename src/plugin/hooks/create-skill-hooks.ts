@@ -16,7 +16,7 @@ export function createSkillHooks(args: {
   pluginConfig: OhMyOpenCodeConfig
   isHookEnabled: (hookName: HookName) => boolean
   safeHookEnabled: boolean
-  mergedSkills: LoadedSkill[]
+  getMergedSkills: () => Promise<LoadedSkill[]>
   availableSkills: AvailableSkill[]
 }): SkillHooks {
   const {
@@ -24,7 +24,7 @@ export function createSkillHooks(args: {
     pluginConfig,
     isHookEnabled,
     safeHookEnabled,
-    mergedSkills,
+    getMergedSkills,
     availableSkills,
   } = args
 
@@ -38,8 +38,8 @@ export function createSkillHooks(args: {
 
   const autoSlashCommand = isHookEnabled("auto-slash-command")
     ? safeHook("auto-slash-command", () =>
-        createAutoSlashCommandHook({
-          skills: mergedSkills,
+      createAutoSlashCommandHook({
+          getSkills: getMergedSkills,
           pluginsEnabled: pluginConfig.claude_code?.plugins ?? true,
           enabledPluginsOverride: pluginConfig.claude_code?.plugins_override,
         }))

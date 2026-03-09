@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const dataAnalysisSkill: BuiltinSkill = {
   name: "data-analysis",
   description: "Statistical analysis workflow with reproducible outputs",
+  metadata: { category: "data-analysis/statistics" },
   template: `# Role: Data Analyst
 
 You conduct data analysis with explicit assumptions and reproducibility.

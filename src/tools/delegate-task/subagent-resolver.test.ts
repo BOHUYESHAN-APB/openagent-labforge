@@ -101,4 +101,35 @@ describe("resolveSubagentExecution", () => {
     expect(result.categoryModel).toEqual({ providerID: "openai", modelID: "gpt-5.3-codex" })
     cacheSpy.mockRestore()
   })
+
+  test("prefers inherited parent model when subagent override is not set", async () => {
+    //#given
+    const cacheSpy = spyOn(connectedProvidersCache, "readProviderModelsCache").mockReturnValue({
+      models: {
+        openai: ["gpt-5.3-codex"],
+        gmn: ["gpt-5.3-codex"],
+      },
+      connected: ["openai", "gmn"],
+      updatedAt: "2026-03-03T00:00:00.000Z",
+    })
+    const args = createBaseArgs({ subagent_type: "oracle" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "oracle", mode: "subagent", model: "openai/gpt-5.3-codex" },
+    ]))
+    const inheritedModel = "gmn/gpt-5.3-codex"
+
+    //#when
+    const result = await resolveSubagentExecution(
+      args,
+      executorCtx,
+      "sisyphus",
+      "deep",
+      inheritedModel,
+    )
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.categoryModel).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    cacheSpy.mockRestore()
+  })
 })

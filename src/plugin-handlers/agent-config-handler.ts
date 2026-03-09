@@ -31,6 +31,22 @@ function getConfiguredDefaultAgent(config: Record<string, unknown>): string | un
   return trimmedDefaultAgent.length > 0 ? trimmedDefaultAgent : undefined;
 }
 
+export function enforceStrictUserModelPriorityOnAgents(agents: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(agents).map(([name, value]) => {
+      if (typeof value !== "object" || value === null) {
+        return [name, value]
+      }
+
+      const sanitized = { ...(value as Record<string, unknown>) }
+      delete sanitized.model
+      delete sanitized.fallback_models
+
+      return [name, sanitized]
+    }),
+  )
+}
+
 export async function applyAgentConfig(params: {
   config: Record<string, unknown>;
   pluginConfig: OhMyOpenCodeConfig;
@@ -88,7 +104,7 @@ export async function applyAgentConfig(params: {
     allDiscoveredSkills,
     params.ctx.client,
     browserProvider,
-    currentModel,
+    undefined,
     disabledSkills,
     useTaskSystem,
     disableOmoEnv,
@@ -193,6 +209,10 @@ export async function applyAgentConfig(params: {
       ? migrateAgentConfig(configAgent.build as Record<string, unknown>)
       : {};
 
+    const preservedBuild = Object.keys(migratedBuild).length > 0
+      ? migratedBuild
+      : { description: "Build agent (OpenCode default)" };
+
     const planDemoteConfig = shouldDemotePlan
       ? buildPlanDemoteConfig(
           agentConfig["prometheus"] as Record<string, unknown> | undefined,
@@ -209,7 +229,9 @@ export async function applyAgentConfig(params: {
       ...filterDisabledAgents(projectAgents),
       ...filterDisabledAgents(pluginAgents),
       ...filteredConfigAgents,
-      ...(hijackBuild ? { build: { ...migratedBuild, mode: "subagent", hidden: true } } : {}),
+      ...(hijackBuild
+        ? { build: { ...migratedBuild, mode: "subagent", hidden: true } }
+        : { build: preservedBuild }),
       ...(planDemoteConfig ? { plan: planDemoteConfig } : {}),
     };
   } else {
@@ -223,6 +245,14 @@ export async function applyAgentConfig(params: {
   }
 
   if (params.config.agent) {
+    const strictUserModelPriority =
+      params.pluginConfig.experimental?.strict_user_model_priority ?? true
+    if (strictUserModelPriority) {
+      params.config.agent = enforceStrictUserModelPriorityOnAgents(
+        params.config.agent as Record<string, unknown>,
+      )
+    }
+
     params.config.agent = remapAgentKeysToDisplayNames(
       params.config.agent as Record<string, unknown>,
     );

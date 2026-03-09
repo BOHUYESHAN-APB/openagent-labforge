@@ -3,7 +3,7 @@
 > 
 > 本项目是 `code-yeongyu/oh-my-openagent`（原 `oh-my-opencode`）的克隆/衍生版本。
 > 我们已对项目进行重命名，并新增了以“用户可控模型路由”和“科研工作流”为核心的功能与配置选项。
-> 许可与来源请见 `LICENSE` 和 `THIRD_PARTY_NOTICES.md`。
+> 许可与来源请见 `LICENSE.md`、`NOTICE`、`THIRD_PARTY_NOTICES.md` 与 `docs/licensing.md`。
 >
 > [![Sisyphus Labs - Sisyphus is the agent that codes like your team.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
 > > **我们正在构建 Sisyphus 的完全产品化版本，以定义前沿智能体 (Frontier Agents) 的未来。<br />[在此处](https://sisyphuslabs.ai)加入候补名单。**
@@ -89,17 +89,136 @@
 - 强制尊重用户手动模型选择，避免越权改写。
 - 增加智能体名称多语言与 SOUL 规则注入控制。
 - 新增 DOCX、PDF、PPTX、XLSX、网页检索、数据分析等内置技能。
+- 新增科研导向 MCP 默认策略、显式 MCP policy，以及默认关闭但可见的研究型 MCP。
+- 新增统一的 `full` / `paper` skills bundle，并用来源前缀解决外部 skill 同名冲突。
+- 通过 metadata-first 预览与按需 merged-skill 获取，降低 skills 初始化负担。
+- 收紧 todo continuation 行为，更尊重真正等待用户输入的场景。
+
+## 科研导向设计
+
+- 该衍生版本在保留原始编程能力的基础上，直接在核心中加入科研导向增强。
+- 核心已内置：模型治理、SOUL 规则注入控制、文档/研究技能默认能力。
+- Skills 现已支持统一功能目录、metadata-first 预览，以及按需正文懒加载。
+- Skills 默认整理为 `paper` / `full` 两套 bundle，降低运行时 token 噪音。
+- 建议配合以下子插件以获得更强科研工作流：
+  - `opencode-agent-bio-paper`
+  - `opencode-mcp-paper-search`
+- `full` 与 `paper-only` 组合策略见 `plugins/BUNDLES.md`。
+
+## 统一 Skills Catalog
+
+- 生成统一功能化 catalog：
+
+```bash
+bun run build:skills-catalog
+```
+
+- 运行时通过 bundle 快捷方式加载：
+
+```jsonc
+{
+  "skills": {
+    "bundle": "full"
+  }
+}
+```
+
+或：
+
+```jsonc
+{
+  "skills": {
+    "bundle": "paper"
+  }
+}
+```
+
+- 生成产物：
+  - `generated/skills-bundles/catalog.json`
+  - `generated/skills-bundles/full/INDEX.md`
+  - `generated/skills-bundles/paper/INDEX.md`
+
+模型现在会先看 skill 的 `name`、`description`、`category`，只有真正需要时才读取完整 skill 指令正文。
+
+说明：为避免不同来源 skill 同名冲突，外部 bundle skill 会使用来源前缀命名（例如 `openai-curated/openai-docs`、`anthropic/mcp-builder`）；builtin skill 保持原始稳定命名。
+
+## 模型选择保证
+
+- 用户手动选择的模型在 build/plan 及所有新增 agent 场景下均为最高优先级。
+- AUTO 以显式入口（`auto` provider）提供，不会覆盖用户显式固定模型。
+- 默认开启严格锁定，可配置：
+
+```jsonc
+{
+  "experimental": {
+    "strict_user_model_priority": true
+  }
+}
+```
 
 
 
 ## 安装
+
+### 发布命名（Labforge）
+
+- 核心包：`@labforge/openagent-labforge-core`
+- 完整包目标：`@labforge/openagent-labforge`
+- 论文/精简目标：`@labforge/openagent-labforge-paper`
+
+## 当前分发策略
+
+- 当前推荐使用方式：**本地编译 + 本地安装**
+- 正式 npm 发布暂时后置
+- 上游发布工作流差异记录见：`docs/release/upstream-publish-notes.md`
+
+## 当前推荐使用方式
+
+1. 本地构建：
+
+```bash
+bun run build:skills-catalog
+bun run build
+```
+
+2. 在 OpenCode 配置目录中安装本地打包产物或本地开发版本。
+3. 插件配置文件使用：
+
+```jsonc
+{
+  "skills": {
+    "bundle": "full"
+  }
+}
+```
+
+4. 默认推荐先用 `full` bundle；如只做论文/科研轻量工作流，可改 `paper`。
+
+## 当前运行时行为
+
+- 用户手动选中的模型在多会话、多 agent 场景下仍为最高优先级。
+- `skills.bundle = "full"` 当前会加载完整 curated bundle（builtin + 精选 external skills）。
+- 外部 bundle skill 为避免与 builtin 同名冲突，会使用来源前缀命名，例如：
+  - `openai-curated/openai-docs`
+  - `anthropic/mcp-builder`
+- Todo continuation 现在更保守：
+  - 需要连续两次 idle 才会继续注入
+  - 优先尊重 `question` 工具
+  - 也会识别常见“等待用户确认/输入”的文本模式
+  - 避免刚结束输出就立刻重复注入
+
+## 当前已知限制
+
+- 多窗口 / 多仓库切换仍然部分受 OpenCode 宿主初始化模型影响。
+- 插件已经减少了若干重复扫描，但在超大工作区或长期使用导致宿主数据目录很大时，冷启动仍可能有明显成本。
+- 当前不以正式 npm 发布为主，推荐方式仍是：本地构建 + 本地安装。
 
 ### 给人类看的
 
 复制并粘贴以下提示词到你的 LLM Agent (Claude Code, AmpCode, Cursor 等):
 
 ```
-Install and configure oh-my-opencode by following the instructions here:
+Install and configure @labforge/openagent-labforge-core by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
@@ -208,8 +327,8 @@ AUTO 会检测可用模型，分配类别默认模型，并生成回退链。
 
 报告与规则文件将写入 OpenCode 配置目录：
 
-- `oh-my-opencode.models.report.md`
-- `oh-my-opencode.models.rules.jsonc`
+- `openagent-labforge.models.report.md`
+- `openagent-labforge.models.rules.jsonc`
 
 ### 完全兼容 Claude Code
 

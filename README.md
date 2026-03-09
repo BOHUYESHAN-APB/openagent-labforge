@@ -3,7 +3,7 @@
 > 
 > This project is a fork/derivative of `code-yeongyu/oh-my-openagent` (formerly `oh-my-opencode`).
 > We have renamed the project and added new features and configuration options focused on user-controlled model routing and research workflows.
-> Licensing and provenance are documented in `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+> Licensing and provenance are documented in `LICENSE.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and `docs/licensing.md`.
 >
 > [![Sisyphus Labs - Sisyphus is the agent that codes like your team.](./.github/assets/sisyphuslabs.png?v=2)](https://sisyphuslabs.ai)
 > > **We're building a fully productized version of Sisyphus to define the future of frontier agents. <br />Join the waitlist [here](https://sisyphuslabs.ai).**
@@ -92,16 +92,132 @@ Install OmO. Type `ultrawork`. Done.
 - Enforced manual model selection priority to prevent unwanted overrides.
 - Added i18n agent display names and SOUL rule injection controls.
 - Added built-in skills for DOCX, PDF, PPTX, XLSX, web research, and data analysis.
+- Added research-oriented MCP defaults, explicit MCP policy, and visible default-off research MCPs.
+- Added unified `full` / `paper` skills bundles with source-aware naming and bundle loading.
+- Reduced skill initialization overhead with metadata-first preview and lazy merged-skill access.
+- Hardened todo continuation behavior to better respect user-facing question/confirmation flows.
+
+## Research-Focused Design
+
+- This derivative keeps the original programming strengths and adds research-oriented defaults directly in core.
+- Core now includes model governance, SOUL injection controls, and document/research skill presets.
+- Skills now support a unified functional catalog with metadata-first preview and lazy body loading.
+- Curated skills are split into `paper` and `full` bundles for lower token overhead at runtime.
+- Companion plugins are still recommended for domain depth:
+  - `opencode-agent-bio-paper`
+  - `opencode-mcp-paper-search`
+- See `plugins/BUNDLES.md` for `full` and `paper-only` bundle profiles.
+
+## Unified Skills Catalog
+
+- Generate the curated functional catalog:
+
+```bash
+bun run build:skills-catalog
+```
+
+- Use the runtime bundle shortcut:
+
+```jsonc
+{
+  "skills": {
+    "bundle": "full"
+  }
+}
+```
+
+or:
+
+```jsonc
+{
+  "skills": {
+    "bundle": "paper"
+  }
+}
+```
+
+- Generated outputs:
+  - `generated/skills-bundles/catalog.json`
+  - `generated/skills-bundles/full/INDEX.md`
+  - `generated/skills-bundles/paper/INDEX.md`
+
+The model now previews skill `name`, `description`, and `category` first, then reads full skill instructions only when needed.
+
+To avoid collisions between curated sources, external bundle skills use source-prefixed IDs (for example `openai-curated/openai-docs`, `anthropic/mcp-builder`), while builtin skills keep their original stable names.
+
+## Model Selection Guarantee
+
+- User-selected model is treated as highest priority across build/plan and all added agents.
+- AUTO is explicit (`auto` provider entry) and does not override explicit model pinning.
+- Strict lock is enabled by default and configurable:
+
+```jsonc
+{
+  "experimental": {
+    "strict_user_model_priority": true
+  }
+}
+```
 
 
 ## Installation
+
+### Release Naming (Labforge)
+
+- Core package: `@labforge/openagent-labforge-core`
+- Full bundle target: `@labforge/openagent-labforge`
+- Paper-focused bundle target: `@labforge/openagent-labforge-paper`
+
+## Current Distribution Policy
+
+- Current recommended usage: **local build + local install**
+- Formal npm release is intentionally deferred for now
+- Upstream publish workflow differences are tracked in `docs/release/upstream-publish-notes.md`
+
+## Recommended Current Usage
+
+1. Build locally:
+
+```bash
+bun run build:skills-catalog
+bun run build
+```
+
+2. Install or load the local build into your OpenCode config directory.
+3. Use the bundle shortcut in plugin config:
+
+```jsonc
+{
+  "skills": {
+    "bundle": "full"
+  }
+}
+```
+
+4. Use `paper` if you want a smaller research-focused runtime surface.
+
+## Current Runtime Behavior
+
+- User-selected model remains highest priority across sessions and agents.
+- `skills.bundle = "full"` currently loads the complete curated bundle (builtin + curated external skills).
+- External bundle skills use source-prefixed IDs (for example `openai-curated/openai-docs`) to avoid collision with builtin skills.
+- Todo continuation is now more conservative:
+  - waits for a second idle cycle before injecting continuation
+  - respects `question` tool usage and common textual “waiting for user” patterns
+  - avoids immediate repeated continuation reinjection
+
+## Current Known Limits
+
+- Multi-window / multi-repository switching still depends partly on OpenCode host-side initialization behavior.
+- The plugin now avoids several repeated scans, but `createSkillContext` and host-side session loading can still add noticeable cold-start cost in very large workspaces or long-running OpenCode installations.
+- Formal npm publishing is intentionally deferred; local build + local install is the supported path for now.
 
 ### For Humans
 
 Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
 
 ```
-Install and configure oh-my-opencode by following the instructions here:
+Install and configure @labforge/openagent-labforge-core by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
@@ -210,8 +326,8 @@ Config example:
 
 Reports and rules are written to your OpenCode config dir:
 
-- `oh-my-opencode.models.report.md`
-- `oh-my-opencode.models.rules.jsonc`
+- `openagent-labforge.models.report.md`
+- `openagent-labforge.models.rules.jsonc`
 
 ### Claude Code Compatibility
 

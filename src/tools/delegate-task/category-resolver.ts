@@ -84,21 +84,25 @@ Available categories: ${allCategoryNames}`,
   let categoryModel: { providerID: string; modelID: string; variant?: string } | undefined
 
   const overrideModel = sisyphusJuniorModel
+  const inheritedParentModel = inheritedModel
   const explicitCategoryModel = userCategories?.[args.category!]?.model
 
   if (!requirement) {
-    // Precedence: explicit category model > sisyphus-junior default > category resolved model
+    // Precedence:
+    // explicit category model > inherited parent model > sisyphus-junior default > category resolved model
     // This keeps `sisyphus-junior.model` useful as a global default while allowing
     // per-category overrides via `categories[category].model`.
-    actualModel = explicitCategoryModel ?? overrideModel ?? resolved.model
+    actualModel = explicitCategoryModel ?? inheritedParentModel ?? overrideModel ?? resolved.model
     if (actualModel) {
       modelInfo = explicitCategoryModel || overrideModel
         ? { model: actualModel, type: "user-defined", source: "override" }
+        : inheritedParentModel && actualModel === inheritedParentModel
+          ? { model: actualModel, type: "inherited", source: "override" }
         : { model: actualModel, type: "system-default", source: "system-default" }
     }
   } else {
     const resolution = resolveModelForDelegateTask({
-      userModel: explicitCategoryModel ?? overrideModel,
+      userModel: explicitCategoryModel ?? inheritedParentModel ?? overrideModel,
       categoryDefaultModel: resolved.model,
       fallbackChain: requirement.fallbackChain,
       availableModels,
@@ -125,12 +129,14 @@ Available categories: ${allCategoryNames}`,
       const type: "user-defined" | "inherited" | "category-default" | "system-default" =
         (explicitCategoryModel || overrideModel)
           ? "user-defined"
+          : (inheritedParentModel && actualModel === inheritedParentModel)
+              ? "inherited"
           : (systemDefaultModel && actualModel === systemDefaultModel)
               ? "system-default"
               : "category-default"
 
       const source: "override" | "category-default" | "system-default" =
-        type === "user-defined"
+        type === "user-defined" || type === "inherited"
           ? "override"
           : type === "system-default"
               ? "system-default"

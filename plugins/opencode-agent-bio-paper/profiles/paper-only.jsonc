@@ -1,0 +1,15 @@
+{
+  // Paper-only profile: no bioinformatics tooling
+  "features": {
+    "literature_workflow": true,
+    "paper_formatting_presets": true,
+    "bio_workflow": false
+  },
+  "defaults": {
+    "document_style": "paper-academic",
+    "citation_mode": "inline-author-year"
+  },
+  "skills": {
+    "bundle": "paper"
+  }
+}

@@ -61,6 +61,35 @@
       },
       "additionalProperties": false
     },
+    "mcp_policy": {
+      "type": "object",
+      "properties": {
+        "network_profile": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "open",
+            "restricted"
+          ]
+        },
+        "enable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bing_cn_english_fallback": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
     "new_task_system_enabled": {
       "type": "boolean"
     },
@@ -89,7 +118,13 @@
           "agent-browser",
           "dev-browser",
           "frontend-ui-ux",
-          "git-master"
+          "git-master",
+          "docx-workbench",
+          "pdf-toolkit",
+          "pptx-studio",
+          "xlsx-analyst",
+          "web-research",
+          "data-analysis"
         ]
       }
     },
@@ -3360,6 +3395,9 @@
         },
         "set_default_agent": {
           "type": "boolean"
+        },
+        "force_agent_model_routing": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -3522,6 +3560,9 @@
         },
         "model_fallback_title": {
           "type": "boolean"
+        },
+        "strict_user_model_priority": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -3540,6 +3581,13 @@
         {
           "type": "object",
           "properties": {
+            "bundle": {
+              "type": "string",
+              "enum": [
+                "full",
+                "paper"
+              ]
+            },
             "sources": {
               "type": "array",
               "items": {

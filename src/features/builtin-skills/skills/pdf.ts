@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const pdfSkill: BuiltinSkill = {
   name: "pdf-toolkit",
   description: "Create, extract, and transform PDFs with reproducible layout",
+  metadata: { category: "research/document-authoring" },
   template: `# Role: PDF Toolkit
 
 You work with PDF files using reliable libraries and strict layout rules.

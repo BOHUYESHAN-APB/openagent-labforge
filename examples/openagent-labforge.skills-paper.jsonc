@@ -1,0 +1,6 @@
+{
+  "$schema": "../assets/openagent-labforge.schema.json",
+  "skills": {
+    "bundle": "paper"
+  }
+}

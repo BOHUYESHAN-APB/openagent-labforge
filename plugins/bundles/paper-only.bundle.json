@@ -1,0 +1,17 @@
+{
+  "name": "openagent-labforge-paper-only",
+  "description": "Paper research, summarization, and writing bundle",
+  "core": {
+    "package": "@labforge/openagent-labforge-core",
+    "versionRange": ">=1.0.0 <2.0.0"
+  },
+  "plugins": [
+    {
+      "package": "opencode-agent-bio-paper",
+      "profile": "paper-only"
+    },
+    {
+      "package": "opencode-mcp-paper-search"
+    }
+  ]
+}

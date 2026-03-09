@@ -22,4 +22,24 @@ describe("resolveModelPipeline", () => {
     expect(result).toEqual({ model: "openai/gpt-5.3-codex", provenance: "override" })
     expect(hasExplicitUserConfigField).toBe(false)
   })
+
+  test("treats auto sentinel as non-explicit override", () => {
+    // given
+    const result = resolveModelPipeline({
+      intent: {
+        userModel: "auto",
+        categoryDefaultModel: "openai/gpt-5.4",
+      },
+      constraints: {
+        availableModels: new Set<string>(["openai/gpt-5.4"]),
+      },
+    })
+
+    // then
+    expect(result).toEqual({
+      model: "openai/gpt-5.4",
+      provenance: "category-default",
+      attempted: ["openai/gpt-5.4"],
+    })
+  })
 })

@@ -8,6 +8,15 @@ import { parseAllowedTools } from "./allowed-tools-parser"
 import { loadMcpJsonFromDir, parseSkillMcpConfigFromFrontmatter } from "./skill-mcp-config"
 import type { SkillScope, SkillMetadata, LoadedSkill, LazyContentLoader } from "./types"
 
+function buildWrappedTemplate(body: string, resolvedPath: string): string {
+  const resolvedBody = resolveSkillPathReferences(body.trim(), resolvedPath)
+  return `<skill-instruction>\nBase directory for this skill: ${resolvedPath}/\nFile references (@path) in this skill are relative to this directory.\n\n${resolvedBody}\n</skill-instruction>\n\n<user-request>\n$ARGUMENTS\n</user-request>`
+}
+
+function derivePreviewCategory(options: { namePrefix?: string; metadata?: Record<string, string> }): string | undefined {
+  return options.metadata?.category ?? options.namePrefix
+}
+
 export async function loadSkillFromPath(options: {
   skillPath: string
   resolvedPath: string
@@ -31,19 +40,24 @@ export async function loadSkillFromPath(options: {
     const isOpencodeSource = options.scope === "opencode" || options.scope === "opencode-project"
     const formattedDescription = `(${options.scope} - Skill) ${originalDescription}`
 
-    const resolvedBody = resolveSkillPathReferences(body.trim(), options.resolvedPath)
-    const templateContent = `<skill-instruction>\nBase directory for this skill: ${options.resolvedPath}/\nFile references (@path) in this skill are relative to this directory.\n\n${resolvedBody}\n</skill-instruction>\n\n<user-request>\n$ARGUMENTS\n</user-request>`
-
-    const eagerLoader: LazyContentLoader = {
-      loaded: true,
-      content: templateContent,
-      load: async () => templateContent,
+    let cachedTemplate: string | undefined
+    const lazyLoader: LazyContentLoader = {
+      loaded: false,
+      load: async () => {
+        if (cachedTemplate) return cachedTemplate
+        const latestContent = await fs.readFile(options.skillPath, "utf-8")
+        const parsed = parseFrontmatter<SkillMetadata>(latestContent)
+        cachedTemplate = buildWrappedTemplate(parsed.body, options.resolvedPath)
+        lazyLoader.loaded = true
+        lazyLoader.content = cachedTemplate
+        return cachedTemplate
+      },
     }
 
     const definition: CommandDefinition = {
       name: skillName,
       description: formattedDescription,
-      template: templateContent,
+      template: "",
       model: sanitizeModelField(data.model, isOpencodeSource ? "opencode" : "claude-code"),
       agent: data.agent,
       subtask: data.subtask,
@@ -61,7 +75,11 @@ export async function loadSkillFromPath(options: {
       metadata: data.metadata,
       allowedTools: parseAllowedTools(data["allowed-tools"]),
       mcpConfig,
-      lazyContent: eagerLoader,
+      lazyContent: lazyLoader,
+      previewCategory: derivePreviewCategory({
+        namePrefix,
+        metadata: data.metadata as Record<string, string> | undefined,
+      }),
     }
   } catch {
     return null

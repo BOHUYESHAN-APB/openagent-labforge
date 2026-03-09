@@ -12,6 +12,7 @@ import { parseRuleFrontmatter } from "./parser";
 import { saveInjectedRules } from "./storage";
 import type { SessionInjectedRulesCache } from "./cache";
 import type { RuleMetadata } from "./types";
+import { log } from "../../shared";
 
 type ToolExecuteOutput = {
   title: string;
@@ -96,6 +97,7 @@ export function createRuleInjectionProcessor(deps: {
     sessionID: string,
     output: ToolExecuteOutput
   ): Promise<void> {
+    const startedAt = performance.now();
     const resolved = resolveFilePath(workspaceDirectory, filePath);
     if (!resolved) return;
 
@@ -145,7 +147,17 @@ export function createRuleInjectionProcessor(deps: {
       } catch {}
     }
 
-    if (toInject.length === 0) return;
+    if (toInject.length === 0) {
+      log("[perf] rules-injector", {
+        sessionID,
+        filePath: resolved,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        projectRoot,
+        candidateCount: ruleFileCandidates.length,
+        injectedCount: 0,
+      });
+      return;
+    }
 
     toInject.sort((a, b) => a.distance - b.distance);
 
@@ -163,6 +175,15 @@ export function createRuleInjectionProcessor(deps: {
     if (dirty) {
       saveInjectedRules(sessionID, cache);
     }
+
+    log("[perf] rules-injector", {
+      sessionID,
+      filePath: resolved,
+      elapsedMs: Math.round(performance.now() - startedAt),
+      projectRoot,
+      candidateCount: ruleFileCandidates.length,
+      injectedCount: toInject.length,
+    });
   }
 
   return { processFilePathForInjection };

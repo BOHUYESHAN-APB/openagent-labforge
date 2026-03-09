@@ -35,4 +35,5 @@ export interface LoadedSkill {
   allowedTools?: string[]
   mcpConfig?: SkillMcpConfig
   lazyContent?: LazyContentLoader
+  previewCategory?: string
 }

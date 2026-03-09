@@ -13,6 +13,7 @@ import { ExperimentalConfigSchema } from "./experimental"
 import { GitMasterConfigSchema } from "./git-master"
 import { I18nConfigSchema } from "./i18n"
 import { ModelGovernorConfigSchema } from "./model-governor"
+import { McpPolicyConfigSchema } from "./mcp-policy"
 import { NotificationConfigSchema } from "./notification"
 import { RalphLoopConfigSchema } from "./ralph-loop"
 import { RuntimeFallbackConfigSchema } from "./runtime-fallback"
@@ -28,6 +29,7 @@ export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
   i18n: I18nConfigSchema.optional(),
   model_governor: ModelGovernorConfigSchema.optional(),
+  mcp_policy: McpPolicyConfigSchema.optional(),
   /** Enable new task system (default: false) */
   new_task_system_enabled: z.boolean().optional(),
   /** Default agent name for `oh-my-opencode run` (env: OPENCODE_DEFAULT_AGENT) */

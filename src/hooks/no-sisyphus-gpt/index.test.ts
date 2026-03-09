@@ -36,14 +36,14 @@ describe("no-sisyphus-gpt hook", () => {
       model: { providerID: "openai", modelID: "gpt-5.3-codex" },
     }, output2)
 
-    // then - toast is shown for every message
+    // then - toast is shown for every message, but agent is not auto-switched by default
     expect(showToast).toHaveBeenCalledTimes(2)
-    expect(output1.message.agent).toBe(HEPHAESTUS_DISPLAY)
-    expect(output2.message.agent).toBe(HEPHAESTUS_DISPLAY)
+    expect(output1.message.agent).toBeUndefined()
+    expect(output2.message.agent).toBeUndefined()
     expect(showToast.mock.calls[0]?.[0]).toMatchObject({
       body: {
         title: "NEVER Use Sisyphus with GPT",
-        message: expect.stringContaining("For GPT models (other than 5.4), always use Hephaestus."),
+        message: expect.stringContaining("consider Hephaestus"),
         variant: "error",
       },
     })
@@ -129,7 +129,29 @@ describe("no-sisyphus-gpt hook", () => {
       model: { providerID: "openai", modelID: "gpt-4o" },
     }, output)
 
-    // then - toast shown via session-agent fallback
+    // then - toast shown via session-agent fallback, but no forced reroute by default
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(output.message.agent).toBeUndefined()
+  })
+
+  test("forces reroute only when forceAgentModelRouting is enabled", async () => {
+    // given
+    const showToast = spyOn({ fn: async () => ({}) }, "fn")
+    const hook = createNoSisyphusGptHook({
+      client: { tui: { showToast } },
+    } as any)
+
+    const output = createOutput()
+
+    // when
+    await hook["chat.message"]?.({
+      sessionID: "ses_force",
+      agent: SISYPHUS_DISPLAY,
+      model: { providerID: "openai", modelID: "gpt-5.3-codex" },
+      forceAgentModelRouting: true,
+    }, output)
+
+    // then
     expect(showToast).toHaveBeenCalledTimes(1)
     expect(output.message.agent).toBe(HEPHAESTUS_DISPLAY)
   })

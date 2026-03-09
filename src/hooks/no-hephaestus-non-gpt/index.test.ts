@@ -38,14 +38,14 @@ describe("no-hephaestus-non-gpt hook", () => {
       model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
     }, output2)
 
-    // then - toast is shown and agent is switched to sisyphus
+    // then - toast is shown, but agent is not auto-switched by default
     expect(showToast).toHaveBeenCalledTimes(2)
-    expect(output1.message.agent).toBe(SISYPHUS_DISPLAY)
-    expect(output2.message.agent).toBe(SISYPHUS_DISPLAY)
+    expect(output1.message.agent).toBeUndefined()
+    expect(output2.message.agent).toBeUndefined()
     expect(showToast.mock.calls[0]?.[0]).toMatchObject({
       body: {
         title: "NEVER Use Hephaestus with Non-GPT",
-        message: expect.stringContaining("Hephaestus is trash without GPT."),
+        message: expect.stringContaining("consider Sisyphus"),
         variant: "error",
       },
     })
@@ -139,7 +139,29 @@ describe("no-hephaestus-non-gpt hook", () => {
       model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
     }, output)
 
-    // then - toast shown via session-agent fallback, switched to sisyphus
+    // then - toast shown via session-agent fallback, but no forced reroute by default
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(output.message.agent).toBeUndefined()
+  })
+
+  test("forces reroute only when forceAgentModelRouting is enabled", async () => {
+    // given
+    const showToast = spyOn({ fn: async (_input: unknown) => ({}) }, "fn")
+    const hook = createNoHephaestusNonGptHook({
+      client: { tui: { showToast } },
+    } as any)
+
+    const output = createOutput()
+
+    // when
+    await hook["chat.message"]?.({
+      sessionID: "ses_force",
+      agent: HEPHAESTUS_DISPLAY,
+      model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
+      forceAgentModelRouting: true,
+    }, output)
+
+    // then
     expect(showToast).toHaveBeenCalledTimes(1)
     expect(output.message.agent).toBe(SISYPHUS_DISPLAY)
   })

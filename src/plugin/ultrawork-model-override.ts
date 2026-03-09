@@ -110,7 +110,13 @@ export function applyUltraworkModelOverrideOnMessage(
   },
   tui: unknown,
   sessionID?: string,
+  manualModelChangeDetected = false,
 ): void {
+  if (manualModelChangeDetected) {
+    log("[ultrawork-model-override] Skip override; manual model change detected")
+    return
+  }
+
   const override = resolveUltraworkOverride(pluginConfig, inputAgentName, output, sessionID)
   if (!override) return
 

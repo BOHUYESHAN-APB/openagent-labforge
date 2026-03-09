@@ -7,8 +7,8 @@ import { getAgentConfigKey, getAgentDisplayName } from "../../shared/agent-displ
 const TOAST_TITLE = "NEVER Use Hephaestus with Non-GPT"
 const TOAST_MESSAGE = [
   "Hephaestus is designed exclusively for GPT models.",
-  "Hephaestus is trash without GPT.",
-  "For Claude/Kimi/GLM models, always use Sisyphus.",
+  "Hephaestus with non-GPT models may be less stable depending on provider limits.",
+  "Recommendation: for Claude/Kimi/GLM models, consider Sisyphus.",
 ].join("\n")
 const SISYPHUS_DISPLAY = getAgentDisplayName("sisyphus")
 
@@ -41,6 +41,7 @@ export function createNoHephaestusNonGptHook(
       sessionID: string
       agent?: string
       model?: { providerID: string; modelID: string }
+      forceAgentModelRouting?: boolean
     }, output?: {
       message?: { agent?: string; [key: string]: unknown }
     }): Promise<void> => {
@@ -51,7 +52,7 @@ export function createNoHephaestusNonGptHook(
 
       if (agentKey === "hephaestus" && modelID && !isGptModel(modelID)) {
         showToast(ctx, input.sessionID, allowNonGptModel ? "warning" : "error")
-        if (allowNonGptModel) {
+        if (allowNonGptModel || !input.forceAgentModelRouting) {
           return
         }
         input.agent = SISYPHUS_DISPLAY

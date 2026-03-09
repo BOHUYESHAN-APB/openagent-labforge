@@ -8,6 +8,18 @@ import { createOracleAgent, ORACLE_PROMPT_METADATA } from "./oracle"
 import { createLibrarianAgent, LIBRARIAN_PROMPT_METADATA } from "./librarian"
 import { createExploreAgent, EXPLORE_PROMPT_METADATA } from "./explore"
 import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
+import {
+  createBioMethodologistAgent,
+  BIO_METHODOLOGIST_PROMPT_METADATA,
+} from "./bio-methodologist"
+import {
+  createBioPipelineOperatorAgent,
+  BIO_PIPELINE_OPERATOR_PROMPT_METADATA,
+} from "./bio-pipeline-operator"
+import {
+  createPaperEvidenceSynthesizerAgent,
+  PAPER_EVIDENCE_SYNTHESIZER_PROMPT_METADATA,
+} from "./paper-evidence-synthesizer"
 import { createMetisAgent, metisPromptMetadata } from "./metis"
 import { createAtlasAgent, atlasPromptMetadata } from "./atlas"
 import { createMomusAgent, momusPromptMetadata } from "./momus"
@@ -36,6 +48,9 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   librarian: createLibrarianAgent,
   explore: createExploreAgent,
   "multimodal-looker": createMultimodalLookerAgent,
+  "bio-methodologist": createBioMethodologistAgent,
+  "bio-pipeline-operator": createBioPipelineOperatorAgent,
+  "paper-evidence-synthesizer": createPaperEvidenceSynthesizerAgent,
   metis: createMetisAgent,
   momus: createMomusAgent,
   // Note: Atlas is handled specially in createBuiltinAgents()
@@ -52,6 +67,9 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   librarian: LIBRARIAN_PROMPT_METADATA,
   explore: EXPLORE_PROMPT_METADATA,
   "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
+  "bio-methodologist": BIO_METHODOLOGIST_PROMPT_METADATA,
+  "bio-pipeline-operator": BIO_PIPELINE_OPERATOR_PROMPT_METADATA,
+  "paper-evidence-synthesizer": PAPER_EVIDENCE_SYNTHESIZER_PROMPT_METADATA,
   metis: metisPromptMetadata,
   momus: momusPromptMetadata,
   atlas: atlasPromptMetadata,
@@ -157,6 +175,7 @@ export async function createBuiltinAgents(
   const hephaestusConfig = maybeCreateHephaestusConfig({
     disabledAgents,
     agentOverrides,
+    uiSelectedModel,
     availableModels,
     systemDefaultModel,
     isFirstRunNoCache,

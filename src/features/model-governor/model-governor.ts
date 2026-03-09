@@ -259,14 +259,14 @@ function defaultReportPath(pluginConfig: OhMyOpenCodeConfig): string {
 
   const configDir = getOpenCodeConfigDir({ binary: "opencode" })
   const format = pluginConfig.model_governor?.report?.format ?? "md"
-  return join(configDir, format === "json" ? "oh-my-opencode.models.report.json" : "oh-my-opencode.models.report.md")
+  return join(configDir, format === "json" ? "openagent-labforge.models.report.json" : "openagent-labforge.models.report.md")
 }
 
 function defaultRulesPath(pluginConfig: OhMyOpenCodeConfig): string {
   const configDir = getOpenCodeConfigDir({ binary: "opencode" })
   const userPath = (pluginConfig.model_governor as any)?.rules_path as string | undefined
   if (userPath && userPath.trim().length > 0) return userPath
-  return join(configDir, "oh-my-opencode.models.rules.jsonc")
+  return join(configDir, "openagent-labforge.models.rules.jsonc")
 }
 
 function ensureRulesFile(path: string): void {

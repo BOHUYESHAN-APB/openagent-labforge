@@ -5,17 +5,30 @@
 Paste this into your llm agent session:
 
 ```
-Install and configure oh-my-opencode by following the instructions here:
+Install and configure openagent-labforge by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 
 **Alternative, Not recommended, do this by yourself**
 
+Local build / local install is the recommended current path.
+
+### Current recommended local workflow
+
+```bash
+bun run build:skills-catalog
+bun run build
+npm pack
+npm install --prefix ~/.config/opencode /absolute/path/to/labforge-openagent-labforge-core-<version>.tgz
+```
+
+Then register the plugin in `opencode.json` and use `openagent-labforge.jsonc` for plugin-specific config.
+
 Run the interactive installer:
 
 ```bash
-bunx oh-my-opencode install # recommended
-npx oh-my-opencode install # alternative
+bunx openagent-labforge install # recommended once formal publish exists
+npx openagent-labforge install # alternative once formal publish exists
 ```
 
 > **Note**: The CLI ships with standalone binaries for all major platforms. No runtime (Bun/Node.js) is required for CLI execution after installation.
@@ -304,6 +317,15 @@ Not all models behave the same way. Understanding which models are "similar" hel
 #### What Each Agent Does and Which Model It Got
 
 Based on your subscriptions, here's how the agents were configured:
+
+## Notes for current Labforge local usage
+
+- Prefer `skills.bundle = "full"` first unless you explicitly want the smaller `paper` surface.
+- Curated external bundle skills use source-prefixed IDs to avoid collisions.
+- Todo continuation is intentionally conservative:
+  - it should not immediately re-inject after the assistant has just replied
+  - it respects `question` tool usage and common textual “waiting for user input” patterns
+  - it now waits for a second idle cycle before auto-continuing
 
 **Claude-Optimized Agents** (prompts tuned for Claude-family models):
 

@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const pptxSkill: BuiltinSkill = {
   name: "pptx-studio",
   description: "Generate and edit PPTX decks with structured layouts",
+  metadata: { category: "research/presentation-authoring" },
   template: `# Role: PPTX Studio
 
 You produce presentation decks from structured outlines with clear hierarchy.

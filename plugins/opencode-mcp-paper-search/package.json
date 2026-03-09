@@ -1,0 +1,10 @@
+{
+  "name": "opencode-mcp-paper-search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Companion MCP adapter plugin for paper search workflows",
+  "license": "MIT",
+  "peerDependencies": {
+    "@labforge/openagent-labforge-core": ">=1.0.0 <2.0.0"
+  }
+}

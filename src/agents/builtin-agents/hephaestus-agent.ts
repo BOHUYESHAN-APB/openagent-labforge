@@ -11,6 +11,7 @@ import { applyModelResolution, getFirstFallbackModel } from "./model-resolution"
 export function maybeCreateHephaestusConfig(input: {
   disabledAgents: string[]
   agentOverrides: AgentOverrides
+  uiSelectedModel?: string
   availableModels: Set<string>
   systemDefaultModel?: string
   isFirstRunNoCache: boolean
@@ -25,6 +26,7 @@ export function maybeCreateHephaestusConfig(input: {
   const {
     disabledAgents,
     agentOverrides,
+    uiSelectedModel,
     availableModels,
     systemDefaultModel,
     isFirstRunNoCache,
@@ -52,6 +54,7 @@ export function maybeCreateHephaestusConfig(input: {
   if (!hasRequiredProvider) return undefined
 
   let hephaestusResolution = applyModelResolution({
+    uiSelectedModel: hephaestusOverride?.model ? undefined : uiSelectedModel,
     userModel: hephaestusOverride?.model,
     requirement: hephaestusRequirement,
     availableModels,

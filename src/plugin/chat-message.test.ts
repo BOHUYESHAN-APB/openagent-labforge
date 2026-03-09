@@ -11,7 +11,7 @@ function createMockHandlerArgs(overrides?: {
 }) {
   const appliedSessions: string[] = []
   return {
-    ctx: { client: { tui: { showToast: async () => {} } } } as any,
+    ctx: { directory: ".", client: { tui: { showToast: async () => {} } } } as any,
     pluginConfig: (overrides?.pluginConfig ?? {}) as any,
     firstMessageVariantGate: {
       shouldOverride: () => overrides?.shouldOverride ?? false,
@@ -141,5 +141,181 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     //#then
     expect(output.parts).toHaveLength(1)
     expect(output.parts[0].text).toContain("[BACKGROUND TASK COMPLETED]")
+  })
+
+  test("locks output model to user-selected model when strict_user_model_priority is enabled", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(output.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
+  test("does not lock output model when selected model is auto sentinel", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+  })
+
+  test("keeps user-selected model on continue turns without reselecting", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const firstInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const firstOutput = createMockOutput()
+
+    //#when
+    await handler(firstInput, firstOutput)
+
+    const continueInput = createMockInput("hephaestus", undefined)
+    const continueOutput = createMockOutput()
+    await handler(continueInput, continueOutput)
+
+    //#then
+    expect(firstOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
+  test("clears sticky lock when user explicitly switches to auto", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const pinnedInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const pinnedOutput = createMockOutput()
+    await handler(pinnedInput, pinnedOutput)
+
+    const autoInput = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
+    const autoOutput = createMockOutput()
+    await handler(autoInput, autoOutput)
+
+    //#when
+    const continueInput = createMockInput("hephaestus", undefined)
+    const continueOutput = createMockOutput()
+    await handler(continueInput, continueOutput)
+
+    //#then
+    expect(autoOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+  })
+
+  test("restores locked model when input reflects prior forced auto-switch", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const firstInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const firstOutput = createMockOutput()
+    await handler(firstInput, firstOutput)
+
+    //#when
+    const continueInput = createMockInput("hephaestus", { providerID: "openai", modelID: "gpt-5.4" })
+    const continueOutput = createMockOutput()
+    await handler(continueInput, continueOutput)
+
+    //#then
+    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
+  test("allows explicit user switch to a new model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const firstInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const firstOutput = createMockOutput()
+    await handler(firstInput, firstOutput)
+
+    //#when
+    const explicitSwitchInput = createMockInput("hephaestus", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const explicitSwitchOutput = createMockOutput()
+    await handler(explicitSwitchInput, explicitSwitchOutput)
+
+    //#then
+    expect(explicitSwitchOutput.message.model).toEqual({
+      providerID: "anthropic",
+      modelID: "claude-opus-4-6",
+    })
   })
 })

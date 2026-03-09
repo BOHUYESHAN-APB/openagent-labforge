@@ -75,7 +75,7 @@ describe("createBuiltinSkills", () => {
 		}
 	})
 
-	test("returns exactly 4 skills regardless of provider", () => {
+	test("returns full built-in skill set regardless of provider", () => {
 		// given
 
 		// when
@@ -83,8 +83,12 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// then
-		expect(defaultSkills).toHaveLength(4)
-		expect(agentBrowserSkills).toHaveLength(4)
+		expect(defaultSkills).toHaveLength(10)
+		expect(agentBrowserSkills).toHaveLength(10)
+		expect(defaultSkills.map((s) => s.name)).toContain("docx-workbench")
+		expect(defaultSkills.map((s) => s.name)).toContain("pdf-toolkit")
+		expect(defaultSkills.map((s) => s.name)).toContain("web-research")
+		expect(defaultSkills.map((s) => s.name)).toContain("data-analysis")
 	})
 
 	test("should exclude playwright when it is in disabledSkills", () => {
@@ -99,7 +103,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(3)
+		expect(skills.length).toBe(9)
 	})
 
 	test("should exclude multiple skills when they are in disabledSkills", () => {
@@ -114,7 +118,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).not.toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(2)
+		expect(skills.length).toBe(8)
 	})
 
 	test("should return an empty array when all skills are disabled", () => {
@@ -127,7 +131,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(0)
+		expect(skills.length).toBe(6)
 	})
 
 	test("should return all skills when disabledSkills set is empty", () => {
@@ -138,7 +142,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(4)
+		expect(skills.length).toBe(10)
 	})
 
 	test("returns playwright-cli skill when browserProvider is 'playwright-cli'", () => {

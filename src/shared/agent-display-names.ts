@@ -42,6 +42,9 @@ const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
   librarian: "librarian",
   explore: "explore",
   "multimodal-looker": "multimodal-looker",
+  "bio-methodologist": "bio-methodologist",
+  "bio-pipeline-operator": "bio-pipeline-operator",
+  "paper-evidence-synthesizer": "paper-evidence-synthesizer",
 }
 
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
@@ -52,10 +55,13 @@ const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   "sisyphus-junior": "调度助手",
   metis: "顾问 (计划咨询)",
   momus: "质检官 (计划批判)",
-  oracle: "先知",
-  librarian: "馆员",
+  oracle: "研判官",
+  librarian: "资料官",
   explore: "探索者",
   "multimodal-looker": "多模态观察者",
+  "bio-methodologist": "生信方法官",
+  "bio-pipeline-operator": "生信执行官",
+  "paper-evidence-synthesizer": "论文证据整合官",
 }
 
 export const AGENT_DISPLAY_NAMES: Record<string, string> = AGENT_DISPLAY_NAMES_EN

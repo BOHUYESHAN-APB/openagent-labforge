@@ -11,11 +11,11 @@ import { createToolRegistry } from "./plugin/tool-registry"
 
 export type CreateToolsResult = {
   filteredTools: ToolsRecord
-  mergedSkills: LoadedSkill[]
   availableSkills: AvailableSkill[]
   availableCategories: AvailableCategory[]
   browserProvider: BrowserAutomationProvider
   disabledSkills: Set<string>
+  getMergedSkills: () => Promise<LoadedSkill[]>
   taskSystemEnabled: boolean
 }
 
@@ -43,11 +43,11 @@ export async function createTools(args: {
 
   return {
     filteredTools,
-    mergedSkills: skillContext.mergedSkills,
     availableSkills: skillContext.availableSkills,
     availableCategories,
     browserProvider: skillContext.browserProvider,
     disabledSkills: skillContext.disabledSkills,
+    getMergedSkills: skillContext.getMergedSkills,
     taskSystemEnabled,
   }
 }

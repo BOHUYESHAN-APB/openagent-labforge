@@ -1,0 +1,23 @@
+{
+  "$schema": "../assets/openagent-labforge.schema.json",
+
+  // Research-oriented MCP policy (safe defaults)
+  "mcp_policy": {
+    "network_profile": "auto",
+    "bing_cn_english_fallback": true,
+    "enable": [
+      "arxiv_mcp",
+      "fetch_browser",
+      "browser_puppeteer",
+      "deepwiki_mcp",
+      "bing_cn_mcp"
+    ],
+    "disable": [
+      "paper_search_mcp",
+      "semantic_scholar_fastmcp"
+    ]
+  },
+
+  // Manual hard-disable still wins when needed
+  "disabled_mcps": []
+}

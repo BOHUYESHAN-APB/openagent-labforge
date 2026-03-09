@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const xlsxSkill: BuiltinSkill = {
   name: "xlsx-analyst",
   description: "Analyze and format XLSX files with reproducible calculations",
+  metadata: { category: "data-analysis/tabular-analysis" },
   template: `# Role: XLSX Analyst
 
 You perform data analysis and produce clean, reproducible Excel workbooks.

@@ -1,11 +1,13 @@
 import { getAgentDisplayName } from "../shared/agent-display-names";
 
-const CORE_AGENT_ORDER = [
-  getAgentDisplayName("sisyphus"),
-  getAgentDisplayName("hephaestus"),
-  getAgentDisplayName("prometheus"),
-  getAgentDisplayName("atlas"),
-] as const;
+function getCoreAgentOrder(): string[] {
+  return [
+    getAgentDisplayName("sisyphus"),
+    getAgentDisplayName("hephaestus"),
+    getAgentDisplayName("prometheus"),
+    getAgentDisplayName("atlas"),
+  ];
+}
 
 export function reorderAgentsByPriority(
   agents: Record<string, unknown>,
@@ -13,7 +15,7 @@ export function reorderAgentsByPriority(
   const ordered: Record<string, unknown> = {};
   const seen = new Set<string>();
 
-  for (const key of CORE_AGENT_ORDER) {
+  for (const key of getCoreAgentOrder()) {
     if (Object.prototype.hasOwnProperty.call(agents, key)) {
       ordered[key] = agents[key];
       seen.add(key);

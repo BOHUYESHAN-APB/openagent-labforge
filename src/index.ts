@@ -32,7 +32,12 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   const pluginConfig = loadPluginConfig(ctx.directory, ctx)
 
   // Set agent display names language early so config/agents/commands share consistent labels.
-  setAgentDisplayLanguage(resolveAgentDisplayLanguage(pluginConfig.i18n?.language))
+  const resolvedLanguage = resolveAgentDisplayLanguage(pluginConfig.i18n?.language)
+  setAgentDisplayLanguage(resolvedLanguage)
+  log("[i18n] agent display language", {
+    requested: pluginConfig.i18n?.language,
+    resolved: resolvedLanguage,
+  })
 
   // AUTO mode foundation: discover available models and write a recommendation report.
   applyModelGovernor(pluginConfig)
@@ -74,7 +79,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     backgroundManager: managers.backgroundManager,
     isHookEnabled,
     safeHookEnabled,
-    mergedSkills: toolsResult.mergedSkills,
+    getMergedSkills: toolsResult.getMergedSkills,
     availableSkills: toolsResult.availableSkills,
   })
 

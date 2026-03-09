@@ -47,6 +47,7 @@ export function createSessionStateStore(): SessionStateStore {
 
     const state: SessionState = {
       consecutiveFailures: 0,
+      idleStrikeCount: 0,
     }
     sessions.set(sessionID, { state, lastAccessedAt: Date.now() })
     return state
@@ -78,6 +79,7 @@ export function createSessionStateStore(): SessionStateStore {
 
     state.inFlight = false
     state.countdownStartedAt = undefined
+    state.idleStrikeCount = 0
   }
 
   function cleanup(sessionID: string): void {

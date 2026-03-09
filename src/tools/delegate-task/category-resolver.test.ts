@@ -75,4 +75,85 @@ describe("resolveCategoryExecution", () => {
 		expect(result.error).toContain("Unknown category")
 		expect(result.error).toContain("definitely-not-a-real-category-xyz123")
 	})
+
+	test("inherits parent model for category execution when no explicit category override exists", async () => {
+		//#given
+		providerModelsSpy?.mockReturnValue({
+			models: {
+				gmn: ["gpt-5.3-codex"],
+			},
+			connected: ["gmn"],
+			updatedAt: "2026-03-03T00:00:00.000Z",
+		})
+		const args = {
+			category: "deep",
+			prompt: "test prompt",
+			description: "Test task",
+			run_in_background: false,
+			load_skills: [],
+			blockedBy: undefined,
+			enableSkillTools: false,
+		}
+		const executorCtx = createMockExecutorContext()
+		const inheritedModel = "gmn/gpt-5.3-codex"
+		const systemDefaultModel = "openai/gpt-5.4"
+
+		//#when
+		const result = await resolveCategoryExecution(args, executorCtx, inheritedModel, systemDefaultModel)
+
+		//#then
+		expect(result.error).toBeUndefined()
+		expect(result.categoryModel).toEqual({
+			providerID: "gmn",
+			modelID: "gpt-5.3-codex",
+			variant: "medium",
+		})
+		expect(result.modelInfo).toEqual({
+			model: "gmn/gpt-5.3-codex",
+			type: "inherited",
+			source: "override",
+		})
+	})
+
+	test("prefers inherited parent model over sisyphus-junior model", async () => {
+		//#given
+		providerModelsSpy?.mockReturnValue({
+			models: {
+				gmn: ["gpt-5.3-codex"],
+				openai: ["gpt-5.4"],
+			},
+			connected: ["gmn", "openai"],
+			updatedAt: "2026-03-03T00:00:00.000Z",
+		})
+		const args = {
+			category: "deep",
+			prompt: "test prompt",
+			description: "Test task",
+			run_in_background: false,
+			load_skills: [],
+			blockedBy: undefined,
+			enableSkillTools: false,
+		}
+		const executorCtx = createMockExecutorContext({
+			sisyphusJuniorModel: "openai/gpt-5.4",
+		})
+		const inheritedModel = "gmn/gpt-5.3-codex"
+		const systemDefaultModel = "openai/gpt-5.4"
+
+		//#when
+		const result = await resolveCategoryExecution(args, executorCtx, inheritedModel, systemDefaultModel)
+
+		//#then
+		expect(result.error).toBeUndefined()
+		expect(result.categoryModel).toEqual({
+			providerID: "gmn",
+			modelID: "gpt-5.3-codex",
+			variant: "medium",
+		})
+		expect(result.modelInfo).toEqual({
+			model: "gmn/gpt-5.3-codex",
+			type: "inherited",
+			source: "override",
+		})
+	})
 })

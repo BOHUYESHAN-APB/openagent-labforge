@@ -5,6 +5,46 @@ import type { PluginComponents } from "./plugin-components-loader";
 
 type McpEntry = Record<string, unknown>;
 
+function setMcpEnabled(
+  merged: Record<string, McpEntry>,
+  name: string,
+  enabled: boolean,
+): void {
+  if (!merged[name]) return
+  merged[name] = { ...merged[name], enabled }
+}
+
+function applyMcpPolicy(
+  merged: Record<string, McpEntry>,
+  pluginConfig: OhMyOpenCodeConfig,
+): void {
+  const policy = pluginConfig.mcp_policy
+  if (!policy) return
+
+  for (const name of policy.enable ?? []) {
+    setMcpEnabled(merged, name, true)
+  }
+
+  for (const name of policy.disable ?? []) {
+    setMcpEnabled(merged, name, false)
+  }
+
+  const profile = policy.network_profile ?? "auto"
+  if (profile === "restricted") {
+    setMcpEnabled(merged, "paper_search_mcp", false)
+    setMcpEnabled(merged, "semantic_scholar_fastmcp", false)
+  }
+
+  const bingFallback = policy.bing_cn_english_fallback ?? true
+  const bingEnabled =
+    Boolean(merged.bing_cn_mcp) &&
+    merged.bing_cn_mcp.enabled !== false
+
+  if (bingFallback && bingEnabled) {
+    setMcpEnabled(merged, "websearch", true)
+  }
+}
+
 function captureUserDisabledMcps(
   userMcp: Record<string, unknown> | undefined
 ): Set<string> {
@@ -44,6 +84,8 @@ export async function applyMcpConfig(params: {
     ...mcpResult.servers,
     ...params.pluginComponents.mcpServers,
   } as Record<string, McpEntry>;
+
+  applyMcpPolicy(merged, params.pluginConfig)
 
   for (const name of userDisabledMcps) {
     if (merged[name]) {

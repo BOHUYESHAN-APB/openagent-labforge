@@ -1,5 +1,6 @@
 import type { OhMyOpenCodeConfig } from "../config";
 import { getAgentDisplayName } from "../shared/agent-display-names";
+import { log } from "../shared/logger";
 import {
   loadUserCommands,
   loadProjectCommands,
@@ -53,6 +54,18 @@ export async function applyCommandConfig(params: {
     loadOpencodeGlobalSkills(),
     loadOpencodeProjectSkills(params.ctx.directory),
   ]);
+
+  log("[config-handler] skills discovered", {
+    configSourceSkillCount: configSourceSkills.length,
+    userSkillCount: Object.keys(userSkills).length,
+    projectSkillCount: Object.keys(projectSkills).length,
+    opencodeGlobalSkillCount: Object.keys(opencodeGlobalSkills).length,
+    opencodeProjectSkillCount: Object.keys(opencodeProjectSkills).length,
+    pluginSkillCount: Object.keys(params.pluginComponents.skills).length,
+    configuredBundle: Array.isArray(params.pluginConfig.skills)
+      ? undefined
+      : params.pluginConfig.skills?.bundle,
+  })
 
   params.config.command = {
     ...builtinCommands,

@@ -84,6 +84,7 @@ export function createContextInjectorMessagesTransformHook(
 ): MessagesTransformHook {
   return {
     "experimental.chat.messages.transform": async (_input, output) => {
+      const startedAt = performance.now()
       const { messages } = output
       log("[DEBUG] experimental.chat.messages.transform called", {
         messageCount: messages.length,
@@ -161,6 +162,14 @@ export function createContextInjectorMessagesTransformHook(
       log("[context-injector] Inserted synthetic part with hook content", {
         sessionID,
         contentLength: pending.merged.length,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      })
+
+      log("[perf] context-injector.messages-transform", {
+        sessionID,
+        messageCount: messages.length,
+        contextLength: pending.merged.length,
+        elapsedMs: Math.round(performance.now() - startedAt),
       })
     },
   }

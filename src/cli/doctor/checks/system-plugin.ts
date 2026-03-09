@@ -31,11 +31,18 @@ function parsePluginVersion(entry: string): string | null {
 }
 
 function findPluginEntry(entries: string[]): { entry: string; isLocalDev: boolean } | null {
+  const legacyName = "oh-my-opencode"
   for (const entry of entries) {
     if (entry === PACKAGE_NAME || entry.startsWith(`${PACKAGE_NAME}@`)) {
       return { entry, isLocalDev: false }
     }
+    if (entry === legacyName || entry.startsWith(`${legacyName}@`)) {
+      return { entry, isLocalDev: false }
+    }
     if (entry.startsWith("file://") && entry.includes(PACKAGE_NAME)) {
+      return { entry, isLocalDev: true }
+    }
+    if (entry.startsWith("file://") && entry.includes(legacyName)) {
       return { entry, isLocalDev: true }
     }
   }

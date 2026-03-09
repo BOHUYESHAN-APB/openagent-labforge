@@ -26,7 +26,7 @@ export function resolveCategoryConfig(
   categoryName: string,
   options: ResolveCategoryConfigOptions
 ): ResolveCategoryConfigResult | null {
-  const { userCategories, inheritedModel: _inheritedModel, systemDefaultModel, availableModels } = options
+  const { userCategories, inheritedModel, systemDefaultModel, availableModels } = options
 
   const defaultConfig = DEFAULT_CATEGORIES[categoryName]
   const userConfig = userCategories?.[categoryName]
@@ -49,11 +49,12 @@ export function resolveCategoryConfig(
     return null
   }
 
-  // Model priority for categories: user override > category default > system default
-  // Categories have explicit models - no inheritance from parent session
+  // Model priority for categories:
+  // user override > inherited parent model > category default > system default.
+  // This ensures explicit user model choice in the parent session is respected.
   const model = resolveModel({
     userModel: userConfig?.model,
-    inheritedModel: defaultConfig?.model, // Category's built-in model takes precedence over system default
+    inheritedModel: inheritedModel ?? defaultConfig?.model,
     systemDefault: systemDefaultModel,
   })
   const config: CategoryConfig = {

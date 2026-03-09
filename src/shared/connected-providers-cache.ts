@@ -5,6 +5,10 @@ import { getOmoOpenCodeCacheDir } from "./data-path"
 
 const CONNECTED_PROVIDERS_CACHE_FILE = "connected-providers.json"
 const PROVIDER_MODELS_CACHE_FILE = "provider-models.json"
+const MEMORY_CACHE_TTL_MS = 2000
+
+let connectedProvidersMemoryCache: { value: string[]; expiresAt: number } | null = null
+let providerModelsMemoryCache: { value: ProviderModelsCache; expiresAt: number } | null = null
 
 interface ConnectedProvidersCache {
 	connected: string[]
@@ -41,7 +45,18 @@ function ensureCacheDir(): void {
  * Returns the list of connected provider IDs, or null if cache doesn't exist.
  */
 export function readConnectedProvidersCache(): string[] | null {
-	const cacheFile = getCacheFilePath(CONNECTED_PROVIDERS_CACHE_FILE)
+  const startedAt = performance.now()
+  const now = Date.now()
+
+  if (connectedProvidersMemoryCache && connectedProvidersMemoryCache.expiresAt > now) {
+    log("[connected-providers-cache] Read cache (memory)", {
+      count: connectedProvidersMemoryCache.value.length,
+      elapsedMs: Math.round(performance.now() - startedAt),
+    })
+    return connectedProvidersMemoryCache.value
+  }
+
+  const cacheFile = getCacheFilePath(CONNECTED_PROVIDERS_CACHE_FILE)
 
 	if (!existsSync(cacheFile)) {
 		log("[connected-providers-cache] Cache file not found", { cacheFile })
@@ -51,7 +66,11 @@ export function readConnectedProvidersCache(): string[] | null {
 	try {
 		const content = readFileSync(cacheFile, "utf-8")
 		const data = JSON.parse(content) as ConnectedProvidersCache
-		log("[connected-providers-cache] Read cache", { count: data.connected.length, updatedAt: data.updatedAt })
+		connectedProvidersMemoryCache = {
+			value: data.connected,
+			expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+		}
+    log("[connected-providers-cache] Read cache", { count: data.connected.length, updatedAt: data.updatedAt, elapsedMs: Math.round(performance.now() - startedAt) })
 		return data.connected
 	} catch (err) {
 		log("[connected-providers-cache] Error reading cache", { error: String(err) })
@@ -79,6 +98,11 @@ function writeConnectedProvidersCache(connected: string[]): void {
 		updatedAt: new Date().toISOString(),
 	}
 
+	connectedProvidersMemoryCache = {
+		value: connected,
+		expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+	}
+
 	try {
 		writeFileSync(cacheFile, JSON.stringify(data, null, 2))
 		log("[connected-providers-cache] Cache written", { count: connected.length })
@@ -92,6 +116,18 @@ function writeConnectedProvidersCache(connected: string[]): void {
  * Returns the cache data, or null if cache doesn't exist.
  */
 export function readProviderModelsCache(): ProviderModelsCache | null {
+  const startedAt = performance.now()
+  const now = Date.now()
+
+  if (providerModelsMemoryCache && providerModelsMemoryCache.expiresAt > now) {
+    log("[connected-providers-cache] Read provider-models cache (memory)", {
+      providerCount: Object.keys(providerModelsMemoryCache.value.models).length,
+      updatedAt: providerModelsMemoryCache.value.updatedAt,
+      elapsedMs: Math.round(performance.now() - startedAt),
+    })
+    return providerModelsMemoryCache.value
+  }
+
 	const cacheFile = getCacheFilePath(PROVIDER_MODELS_CACHE_FILE)
 
 	if (!existsSync(cacheFile)) {
@@ -102,9 +138,14 @@ export function readProviderModelsCache(): ProviderModelsCache | null {
 	try {
 		const content = readFileSync(cacheFile, "utf-8")
 		const data = JSON.parse(content) as ProviderModelsCache
+		providerModelsMemoryCache = {
+			value: data,
+			expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+		}
 		log("[connected-providers-cache] Read provider-models cache", { 
 			providerCount: Object.keys(data.models).length, 
-			updatedAt: data.updatedAt 
+			updatedAt: data.updatedAt,
+			elapsedMs: Math.round(performance.now() - startedAt),
 		})
 		return data
 	} catch (err) {
@@ -131,6 +172,11 @@ export function writeProviderModelsCache(data: { models: Record<string, string[]
 	const cacheData: ProviderModelsCache = {
 		...data,
 		updatedAt: new Date().toISOString(),
+	}
+
+	providerModelsMemoryCache = {
+		value: cacheData,
+		expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
 	}
 
 	try {

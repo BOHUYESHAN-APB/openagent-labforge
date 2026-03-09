@@ -413,6 +413,36 @@ Disable built-in skills: `{ "disabled_skills": ["playwright"] }`
 | `recursive`      | `false` | Recurse into subdirectories     |
 | `glob`           | -       | Glob pattern for file selection |
 
+> Note: Current runtime source discovery only loads local filesystem sources. HTTP/HTTPS entries are ignored by `discoverConfigSourceSkills`.
+
+Recommended multi-source practice:
+
+1. Sync external sources into local allowlist directory (`external/skills-whitelist`).
+2. Point `skills.sources` to that allowlist path only.
+
+```jsonc
+{
+  "skills": {
+    "sources": [{ "path": "./external/skills-whitelist", "recursive": true }]
+  }
+}
+```
+
+Bundle shortcut:
+
+```jsonc
+{
+  "skills": {
+    "bundle": "full"
+  }
+}
+```
+
+Supported values:
+
+- `full`
+- `paper`
+
 ### Hooks
 
 Disable built-in hooks via `disabled_hooks`:

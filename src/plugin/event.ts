@@ -18,7 +18,7 @@ import {
 import { resetMessageCursor } from "../shared";
 import { log } from "../shared/logger";
 import { shouldRetryError } from "../shared/model-error-classifier";
-import { clearSessionModel, setSessionModel } from "../shared/session-model-state";
+import { clearSessionModel, clearSessionModelLock, setSessionModel } from "../shared/session-model-state";
 import { deleteSessionTools } from "../shared/session-tools-store";
 import { lspManager } from "../tools";
 
@@ -250,6 +250,7 @@ export function createEventHandler(args: {
         resetMessageCursor(sessionInfo.id);
         firstMessageVariantGate.clear(sessionInfo.id);
         clearSessionModel(sessionInfo.id);
+        clearSessionModelLock(sessionInfo.id);
         syncSubagentSessions.delete(sessionInfo.id);
         deleteSessionTools(sessionInfo.id);
         await managers.skillMcpManager.disconnectSession(sessionInfo.id);

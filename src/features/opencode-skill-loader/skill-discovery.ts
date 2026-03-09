@@ -45,6 +45,7 @@ export async function getAllSkills(options?: SkillResolutionOptions): Promise<Lo
 		metadata: skill.metadata as Record<string, string> | undefined,
 		allowedTools: skill.allowedTools,
 		mcpConfig: skill.mcpConfig,
+		previewCategory: (skill.metadata as Record<string, string> | undefined)?.category,
 	}))
 
 	// Provider-gated skill names that should be filtered based on browserProvider

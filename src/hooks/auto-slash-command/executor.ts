@@ -100,6 +100,7 @@ function skillToCommandInfo(skill: LoadedSkill): CommandInfo {
 
 export interface ExecutorOptions {
   skills?: LoadedSkill[]
+  getSkills?: () => Promise<LoadedSkill[]>
   pluginsEnabled?: boolean
   enabledPluginsOverride?: Record<string, boolean>
 }
@@ -146,7 +147,7 @@ async function discoverAllCommands(options?: ExecutorOptions): Promise<CommandIn
     scope: "builtin",
   }))
 
-  const skills = options?.skills ?? await discoverAllSkills()
+  const skills = options?.skills ?? (options?.getSkills ? await options.getSkills() : await discoverAllSkills())
   const skillCommands = skills.map(skillToCommandInfo)
   const pluginCommands = discoverPluginCommands(options)
 

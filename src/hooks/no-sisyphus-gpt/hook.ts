@@ -7,8 +7,8 @@ import { getAgentConfigKey, getAgentDisplayName } from "../../shared/agent-displ
 const TOAST_TITLE = "NEVER Use Sisyphus with GPT"
 const TOAST_MESSAGE = [
   "Sisyphus works best with Claude Opus, and works fine with Kimi/GLM models.",
-  "Do NOT use Sisyphus with GPT (except GPT-5.4 which has specialized support).",
-  "For GPT models (other than 5.4), always use Hephaestus.",
+  "Sisyphus with GPT may be less stable depending on provider limits.",
+  "Recommendation: for GPT models (other than 5.4), consider Hephaestus.",
 ].join("\n")
 const HEPHAESTUS_DISPLAY = getAgentDisplayName("hephaestus")
 
@@ -34,6 +34,7 @@ export function createNoSisyphusGptHook(ctx: PluginInput) {
       sessionID: string
       agent?: string
       model?: { providerID: string; modelID: string }
+      forceAgentModelRouting?: boolean
     }, output?: {
       message?: { agent?: string; [key: string]: unknown }
     }): Promise<void> => {
@@ -43,11 +44,13 @@ export function createNoSisyphusGptHook(ctx: PluginInput) {
 
       if (agentKey === "sisyphus" && modelID && isGptModel(modelID) && !isGpt5_4Model(modelID)) {
         showToast(ctx, input.sessionID)
-        input.agent = HEPHAESTUS_DISPLAY
-        if (output?.message) {
-          output.message.agent = HEPHAESTUS_DISPLAY
+        if (input.forceAgentModelRouting) {
+          input.agent = HEPHAESTUS_DISPLAY
+          if (output?.message) {
+            output.message.agent = HEPHAESTUS_DISPLAY
+          }
+          updateSessionAgent(input.sessionID, HEPHAESTUS_DISPLAY)
         }
-        updateSessionAgent(input.sessionID, HEPHAESTUS_DISPLAY)
       }
     },
   }

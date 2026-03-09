@@ -18,7 +18,7 @@ export function createHooks(args: {
   backgroundManager: BackgroundManager
   isHookEnabled: (hookName: HookName) => boolean
   safeHookEnabled: boolean
-  mergedSkills: LoadedSkill[]
+  getMergedSkills: () => Promise<LoadedSkill[]>
   availableSkills: AvailableSkill[]
 }) {
   const {
@@ -28,7 +28,7 @@ export function createHooks(args: {
     backgroundManager,
     isHookEnabled,
     safeHookEnabled,
-    mergedSkills,
+    getMergedSkills,
     availableSkills,
   } = args
 
@@ -54,7 +54,7 @@ export function createHooks(args: {
     pluginConfig,
     isHookEnabled,
     safeHookEnabled,
-    mergedSkills,
+    getMergedSkills,
     availableSkills,
   })
 

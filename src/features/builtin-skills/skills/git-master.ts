@@ -8,6 +8,7 @@ import {
 export const gitMasterSkill: BuiltinSkill = {
   name: GIT_MASTER_SKILL_NAME,
   description: GIT_MASTER_SKILL_DESCRIPTION,
+  metadata: { category: "engineering/version-control" },
   template: `# Git Master Agent
 
 You are a Git expert combining three specializations:

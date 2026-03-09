@@ -4,10 +4,21 @@ import type { PluginContext } from "./types"
 import { hasConnectedProvidersCache } from "../shared"
 import { contextCollector } from "../features/context-injector"
 import { loadSoulRules, selectSoulContent } from "../shared/soul-rules"
-import { setSessionModel } from "../shared/session-model-state"
+import { isAutoModelSelection } from "../shared/model-normalization"
+import {
+  clearSessionForcedModel,
+  clearSessionModelLock,
+  getSessionForcedModel,
+  getSessionModel,
+  getSessionModelLock,
+  setSessionForcedModel,
+  setSessionModel,
+  setSessionModelLock,
+} from "../shared/session-model-state"
 import { setSessionAgent } from "../features/claude-code-session-state"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
+import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -22,6 +33,7 @@ export type ChatMessageInput = {
   sessionID: string
   agent?: string
   model?: { providerID: string; modelID: string }
+  forceAgentModelRouting?: boolean
 }
 type StartWorkHookOutput = { parts: Array<{ type: string; text?: string }> }
 
@@ -73,6 +85,38 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const previousSessionModel = getSessionModel(input.sessionID)
+    const currentInputModel = input.model
+    const manualModelChangeDetected =
+      currentInputModel !== undefined &&
+      previousSessionModel !== undefined &&
+      (currentInputModel.providerID !== previousSessionModel.providerID ||
+        currentInputModel.modelID !== previousSessionModel.modelID)
+
+    if (manualModelChangeDetected) {
+      clearPendingModelFallback(input.sessionID)
+      clearSessionFallbackChain(input.sessionID)
+    }
+
+    const strictUserModelPriority = pluginConfig.experimental?.strict_user_model_priority ?? true
+    const lockedModel = getSessionModelLock(input.sessionID)
+    const forcedModel = getSessionForcedModel(input.sessionID)
+    const rawInputModel = input.model
+    const rawInputModelId = modelToString(rawInputModel)
+
+    if (strictUserModelPriority && lockedModel) {
+      if (!rawInputModel) {
+        input.model = lockedModel
+      } else if (isAutoModelSelection(rawInputModelId)) {
+        clearSessionModelLock(input.sessionID)
+        clearSessionForcedModel(input.sessionID)
+      } else if (!sameModel(rawInputModel, lockedModel)) {
+        if (forcedModel && sameModel(rawInputModel, forcedModel)) {
+          input.model = lockedModel
+        }
+      }
+    }
+
     const soulRules = loadSoulRules({ directory: ctx.directory, pluginConfig })
     const injectOnce = pluginConfig.soul?.inject_once ?? true
     const alreadyInjected = soulInjectedSessions.has(input.sessionID)
@@ -119,21 +163,6 @@ export function createChatMessageHandler(args: {
     if (!isRuntimeFallbackEnabled) {
       await hooks.modelFallback?.["chat.message"]?.(input, output)
     }
-    const modelOverride = output.message["model"]
-    if (
-      modelOverride &&
-      typeof modelOverride === "object" &&
-      "providerID" in modelOverride &&
-      "modelID" in modelOverride
-    ) {
-      const providerID = (modelOverride as { providerID?: string }).providerID
-      const modelID = (modelOverride as { modelID?: string }).modelID
-      if (typeof providerID === "string" && typeof modelID === "string") {
-        setSessionModel(input.sessionID, { providerID, modelID })
-      }
-    } else if (input.model) {
-      setSessionModel(input.sessionID, input.model)
-    }
     await hooks.stopContinuationGuard?.["chat.message"]?.(input)
     await hooks.backgroundNotificationHook?.["chat.message"]?.(input, output)
     await hooks.runtimeFallback?.["chat.message"]?.(input, output)
@@ -141,6 +170,9 @@ export function createChatMessageHandler(args: {
     await hooks.thinkMode?.["chat.message"]?.(input, output)
     await hooks.claudeCodeHooks?.["chat.message"]?.(input, output)
     await hooks.autoSlashCommand?.["chat.message"]?.(input, output)
+    const forceAgentModelRouting =
+      pluginConfig.sisyphus_agent?.force_agent_model_routing ?? false
+    input.forceAgentModelRouting = forceAgentModelRouting
     await hooks.noSisyphusGpt?.["chat.message"]?.(input, output)
     await hooks.noHephaestusNonGpt?.["chat.message"]?.(input, output)
     if (hooks.startWork && isStartWorkHookOutput(output)) {
@@ -196,6 +228,81 @@ export function createChatMessageHandler(args: {
       }
     }
 
-    applyUltraworkModelOverrideOnMessage(pluginConfig, input.agent, output, pluginContext.client.tui, input.sessionID)
+    applyUltraworkModelOverrideOnMessage(
+      pluginConfig,
+      input.agent,
+      output,
+      pluginContext.client.tui,
+      input.sessionID,
+      manualModelChangeDetected,
+    )
+
+    const requestedModel = input.model
+    const requestedModelId = modelToString(requestedModel)
+    const shouldLockToRequestedModel =
+      strictUserModelPriority &&
+      requestedModel !== undefined &&
+      !isAutoModelSelection(requestedModelId)
+
+    const modelBeforeUserLock =
+      output.message["model"] &&
+      typeof output.message["model"] === "object" &&
+      "providerID" in (output.message["model"] as Record<string, unknown>) &&
+      "modelID" in (output.message["model"] as Record<string, unknown>)
+        ? {
+            providerID: (output.message["model"] as { providerID?: string }).providerID ?? "",
+            modelID: (output.message["model"] as { modelID?: string }).modelID ?? "",
+          }
+        : undefined
+
+    if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
+      clearSessionModelLock(input.sessionID)
+      clearSessionForcedModel(input.sessionID)
+    } else if (shouldLockToRequestedModel) {
+      setSessionModelLock(input.sessionID, requestedModel)
+      if (
+        modelBeforeUserLock &&
+        modelBeforeUserLock.providerID.length > 0 &&
+        modelBeforeUserLock.modelID.length > 0 &&
+        !sameModel(modelBeforeUserLock, requestedModel)
+      ) {
+        setSessionForcedModel(input.sessionID, modelBeforeUserLock)
+      } else {
+        clearSessionForcedModel(input.sessionID)
+      }
+    }
+
+    if (shouldLockToRequestedModel) {
+      output.message["model"] = requestedModel
+    }
+
+    const finalOutputModel = output.message["model"]
+    if (
+      finalOutputModel &&
+      typeof finalOutputModel === "object" &&
+      "providerID" in finalOutputModel &&
+      "modelID" in finalOutputModel
+    ) {
+      const providerID = (finalOutputModel as { providerID?: string }).providerID
+      const modelID = (finalOutputModel as { modelID?: string }).modelID
+      if (typeof providerID === "string" && typeof modelID === "string") {
+        setSessionModel(input.sessionID, { providerID, modelID })
+      }
+    } else if (requestedModel) {
+      setSessionModel(input.sessionID, requestedModel)
+    }
   }
+}
+
+function modelToString(model?: { providerID: string; modelID: string }): string | undefined {
+  if (!model) return undefined
+  return `${model.providerID}/${model.modelID}`
+}
+
+function sameModel(
+  left?: { providerID: string; modelID: string },
+  right?: { providerID: string; modelID: string },
+): boolean {
+  if (!left || !right) return false
+  return left.providerID === right.providerID && left.modelID === right.modelID
 }

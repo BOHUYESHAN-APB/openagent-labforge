@@ -5,10 +5,38 @@ type ProviderConfig = {
   models?: Record<string, { limit?: { context?: number } }>;
 };
 
+function ensureAutoProvider(config: Record<string, unknown>): void {
+  const rawProviders = config.provider;
+  const providers: Record<string, ProviderConfig> =
+    typeof rawProviders === "object" && rawProviders !== null
+      ? (rawProviders as Record<string, ProviderConfig>)
+      : {};
+
+  const autoProvider = providers.auto ?? {};
+  const autoModels = autoProvider.models ?? {};
+
+  providers.auto = {
+    ...autoProvider,
+    models: {
+      auto: {},
+      "auto/quick": {},
+      "auto/deep": {},
+      "auto/ultrabrain": {},
+      "auto/writing": {},
+      "auto/visual-engineering": {},
+      ...autoModels,
+    },
+  };
+
+  config.provider = providers;
+}
+
 export function applyProviderConfig(params: {
   config: Record<string, unknown>;
   modelCacheState: ModelCacheState;
 }): void {
+  ensureAutoProvider(params.config);
+
   const providers = params.config.provider as
     | Record<string, ProviderConfig>
     | undefined;

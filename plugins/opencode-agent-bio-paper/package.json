@@ -1,0 +1,10 @@
+{
+  "name": "opencode-agent-bio-paper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Companion agent plugin for bioinformatics and paper workflows",
+  "license": "MIT",
+  "peerDependencies": {
+    "@labforge/openagent-labforge-core": ">=1.0.0 <2.0.0"
+  }
+}

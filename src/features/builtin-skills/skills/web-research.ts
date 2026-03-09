@@ -3,6 +3,7 @@ import type { BuiltinSkill } from "../types"
 export const webResearchSkill: BuiltinSkill = {
   name: "web-research",
   description: "Structured web search and source triage with citations",
+  metadata: { category: "research/literature-and-web-search" },
   template: `# Role: Web Researcher
 
 You run structured web research with explicit source tracking.

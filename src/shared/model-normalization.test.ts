@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { normalizeModel, normalizeModelID } from "./model-normalization"
+import { isAutoModelSelection, normalizeModel, normalizeModelID } from "./model-normalization"
 
 describe("normalizeModel", () => {
 	describe("#given undefined input", () => {
@@ -78,6 +78,44 @@ describe("normalizeModel", () => {
 			// then
 			expect(result).toBeUndefined()
 		})
+	})
+
+	describe("#given auto model sentinel", () => {
+		test("#when normalizeModel is called with auto #then returns undefined", () => {
+			// given
+			const input = "auto"
+
+			// when
+			const result = normalizeModel(input)
+
+			// then
+			expect(result).toBeUndefined()
+		})
+
+		test("#when normalizeModel is called with auto/category #then returns undefined", () => {
+			// given
+			const input = "auto/deep"
+
+			// when
+			const result = normalizeModel(input)
+
+			// then
+			expect(result).toBeUndefined()
+		})
+	})
+})
+
+describe("isAutoModelSelection", () => {
+	test("returns true for auto", () => {
+		expect(isAutoModelSelection("auto")).toBe(true)
+	})
+
+	test("returns true for auto/deep", () => {
+		expect(isAutoModelSelection("auto/deep")).toBe(true)
+	})
+
+	test("returns false for provider model", () => {
+		expect(isAutoModelSelection("openai/gpt-5.4")).toBe(false)
 	})
 })
 

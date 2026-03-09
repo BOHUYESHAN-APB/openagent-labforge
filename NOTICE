@@ -1,0 +1,12 @@
+openagent-labforge NOTICE
+
+This repository is a derivative work based on:
+- oh-my-openagent / oh-my-opencode
+  Repository: https://github.com/code-yeongyu/oh-my-openagent
+
+License boundary:
+1) Upstream-derived code remains subject to upstream license terms (SUL-1.0 context).
+2) Third-party components and integrations retain their original licenses.
+3) Additional attribution details are documented in THIRD_PARTY_NOTICES.md.
+
+This NOTICE is an engineering attribution document for provenance clarity.

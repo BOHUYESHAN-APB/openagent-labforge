@@ -91,7 +91,7 @@ export function createToolRegistry(args: {
 
   const skillMcpTool = createSkillMcpTool({
     manager: managers.skillMcpManager,
-    getLoadedSkills: () => skillContext.mergedSkills,
+    getLoadedSkills: () => skillContext.getMergedSkills(),
     getSessionID: getSessionIDForMcp,
   })
 
@@ -101,7 +101,7 @@ export function createToolRegistry(args: {
   })
   const skillTool = createSkillTool({
     commands,
-    skills: skillContext.mergedSkills,
+    getSkills: skillContext.getMergedSkills,
     mcpManager: managers.skillMcpManager,
     getSessionID: getSessionIDForMcp,
     gitMasterConfig: pluginConfig.git_master,

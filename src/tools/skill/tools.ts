@@ -27,6 +27,7 @@ function loadedSkillToInfo(skill: LoadedSkill): SkillInfo {
     description: skill.definition.description || "",
     location: skill.path,
     scope: skill.scope,
+    category: skill.previewCategory,
     license: skill.license,
     compatibility: skill.compatibility,
     metadata: skill.metadata,
@@ -58,6 +59,9 @@ function formatCombinedDescription(skills: SkillInfo[], commands: CommandInfo[])
         `    <name>${skill.name}</name>`,
         `    <description>${skill.description}</description>`,
       ]
+      if (skill.category) {
+        parts.push(`    <category>${skill.category}</category>`)
+      }
       if (skill.compatibility) {
         parts.push(`    <compatibility>${skill.compatibility}</compatibility>`)
       }
@@ -189,6 +193,7 @@ export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition 
 
   const getSkills = async (): Promise<LoadedSkill[]> => {
     if (options.skills) return options.skills
+    if (options.getSkills) return await options.getSkills()
     if (cachedSkills) return cachedSkills
     cachedSkills = await getAllSkills({disabledSkills: options?.disabledSkills})
     return cachedSkills

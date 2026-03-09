@@ -9,8 +9,10 @@ import { loadAvailableModelsFromCache } from "./model-resolution-cache"
 import { getModelResolutionInfoWithOverrides } from "./model-resolution"
 import type { OmoConfig } from "./model-resolution-types"
 
-const USER_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), PACKAGE_NAME)
-const PROJECT_CONFIG_BASE = join(process.cwd(), ".opencode", PACKAGE_NAME)
+const USER_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), "openagent-labforge")
+const USER_LEGACY_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), "oh-my-opencode")
+const PROJECT_CONFIG_BASE = join(process.cwd(), ".opencode", "openagent-labforge")
+const PROJECT_LEGACY_CONFIG_BASE = join(process.cwd(), ".opencode", "oh-my-opencode")
 
 interface ConfigValidationResult {
   exists: boolean
@@ -24,8 +26,14 @@ function findConfigPath(): string | null {
   const projectConfig = detectConfigFile(PROJECT_CONFIG_BASE)
   if (projectConfig.format !== "none") return projectConfig.path
 
+  const projectLegacyConfig = detectConfigFile(PROJECT_LEGACY_CONFIG_BASE)
+  if (projectLegacyConfig.format !== "none") return projectLegacyConfig.path
+
   const userConfig = detectConfigFile(USER_CONFIG_BASE)
   if (userConfig.format !== "none") return userConfig.path
+
+  const userLegacyConfig = detectConfigFile(USER_LEGACY_CONFIG_BASE)
+  if (userLegacyConfig.format !== "none") return userLegacyConfig.path
 
   return null
 }

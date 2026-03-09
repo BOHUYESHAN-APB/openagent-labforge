@@ -1,0 +1,58 @@
+{
+  // Hybrid profile: enable Labforge agents, but do NOT replace OpenCode's default plan/build.
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/openagent-labforge.schema.json",
+
+  "i18n": {
+    "language": "auto"
+  },
+
+  // AUTO mode foundation: detect available models from OpenCode cache,
+  // write a report into OpenCode config directory, and fill missing category models.
+  "model_governor": {
+    "enabled": true,
+    "mode": "auto",
+    "report": { "enabled": true, "format": "md" }
+  },
+
+  // SOUL rules: set path if you want strict research assistant behavior injected.
+  // "soul": { "path": "C:/Users/BoHuYeShan/Downloads/soul.md", "mode": "dynamic", "priority": "high", "inject_once": true, "max_chars": 6000 },
+
+  "sisyphus_agent": {
+    "disabled": false,
+
+    // Keep OpenCode default build agent as-is (lightweight).
+    "hijack_build": false,
+
+    // Do not force default_agent to Sisyphus.
+    "set_default_agent": false,
+
+    // Keep plan agent as-is.
+    "replace_plan": false,
+
+    // Keep OpenCode-Builder hidden unless you explicitly enable it.
+    "default_builder_enabled": false,
+
+    // Keep planner available as a separate agent (does not replace plan).
+    "planner_enabled": true
+  },
+
+  // Hard rule: user model selection stays in control.
+  "model_fallback": false,
+  "runtime_fallback": false,
+
+  // Example: drive models via categories (user-controlled, not hardcoded in code).
+  "categories": {
+    "quick": { "model": "gmn/gpt-5.2" },
+    "deep": { "model": "gmn/gpt-5.3-codex" },
+    "writing": { "model": "gmn/gpt-5.2" }
+  },
+
+  // Example: assign agents to categories.
+  "agents": {
+    "sisyphus": { "category": "deep" },
+    "hephaestus": { "category": "deep" },
+    "librarian": { "category": "quick" },
+    "explore": { "category": "quick" },
+    "oracle": { "category": "deep" }
+  }
+}

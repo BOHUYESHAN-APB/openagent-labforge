@@ -5,6 +5,17 @@ node_modules/
 
 # Build output
 dist/
+generated/
+*.tgz
+nul
+
+# External research/work dirs
+external/anthropics-skills/
+external/microsoft-skills/
+external/openai-skills/
+external/openclaw-skills/
+external/skills-main/
+external/skills-quarantine/
 
 # Platform binaries (built, not committed)
 packages/*/bin/oh-my-opencode
