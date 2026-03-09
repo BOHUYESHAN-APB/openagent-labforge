@@ -31,47 +31,40 @@ type LocalMcpConfig = {
 
 type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
+const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
+  arxiv_mcp,
+  browser_puppeteer,
+  fetch_browser,
+  deepwiki_mcp,
+  bing_cn_mcp,
+  paper_search_mcp,
+  semantic_scholar_fastmcp,
+}
+
+function getOptInExtendedMcpNames(config?: OhMyOpenCodeConfig): string[] {
+  const enabledFromPolicy = config?.mcp_policy?.enable ?? []
+  return enabledFromPolicy.filter((name) => name in EXTENDED_BUILTIN_MCPS)
+}
+
 export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpenCodeConfig) {
   const mcps: Record<string, BuiltinMcpConfig> = {}
+  const disabledSet = new Set(disabledMcps)
 
-  if (!disabledMcps.includes("websearch")) {
+  if (!disabledSet.has("websearch")) {
     mcps.websearch = createWebsearchConfig(config?.websearch)
   }
 
-  if (!disabledMcps.includes("context7")) {
+  if (!disabledSet.has("context7")) {
     mcps.context7 = context7
   }
 
-  if (!disabledMcps.includes("grep_app")) {
+  if (!disabledSet.has("grep_app")) {
     mcps.grep_app = grep_app
   }
 
-  if (!disabledMcps.includes("arxiv_mcp")) {
-    mcps.arxiv_mcp = arxiv_mcp
-  }
-
-  if (!disabledMcps.includes("browser_puppeteer")) {
-    mcps.browser_puppeteer = browser_puppeteer
-  }
-
-  if (!disabledMcps.includes("fetch_browser")) {
-    mcps.fetch_browser = fetch_browser
-  }
-
-  if (!disabledMcps.includes("deepwiki_mcp")) {
-    mcps.deepwiki_mcp = deepwiki_mcp
-  }
-
-  if (!disabledMcps.includes("bing_cn_mcp")) {
-    mcps.bing_cn_mcp = bing_cn_mcp
-  }
-
-  if (!disabledMcps.includes("paper_search_mcp")) {
-    mcps.paper_search_mcp = paper_search_mcp
-  }
-
-  if (!disabledMcps.includes("semantic_scholar_fastmcp")) {
-    mcps.semantic_scholar_fastmcp = semantic_scholar_fastmcp
+  for (const name of getOptInExtendedMcpNames(config)) {
+    if (disabledSet.has(name)) continue
+    mcps[name] = EXTENDED_BUILTIN_MCPS[name]
   }
 
   return mcps

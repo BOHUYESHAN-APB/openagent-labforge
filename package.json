@@ -1,5 +1,5 @@
 {
-  "name": "@labforge/openagent-labforge-core",
+  "name": "@bohuyeshan/openagent-labforge-core",
   "version": "3.11.0",
   "description": "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
   "main": "dist/index.js",

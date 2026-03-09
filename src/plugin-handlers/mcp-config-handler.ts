@@ -45,6 +45,42 @@ function applyMcpPolicy(
   }
 }
 
+function isPromptNotSupportedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+
+  const maybeMessage =
+    "message" in error && typeof (error as { message?: unknown }).message === "string"
+      ? (error as { message: string }).message
+      : ""
+
+  return maybeMessage.includes("Method not found") || maybeMessage.includes("-32601")
+}
+
+function withPromptProbeCompatibility(merged: Record<string, McpEntry>): Record<string, McpEntry> {
+  const compatWrapped = { ...merged }
+
+  for (const [name, entry] of Object.entries(compatWrapped)) {
+    if (!entry || typeof entry !== "object") continue
+    if (name !== "context7" && name !== "grep_app" && name !== "websearch") continue
+
+    const original = entry as Record<string, unknown>
+    const wrapped: Record<string, unknown> = { ...original }
+
+    if (typeof wrapped.onCallError !== "function") {
+      wrapped.onCallError = (error: unknown, operation?: string) => {
+        if (operation === "prompts" && isPromptNotSupportedError(error)) {
+          return { handled: true, level: "debug" }
+        }
+        return undefined
+      }
+    }
+
+    compatWrapped[name] = wrapped
+  }
+
+  return compatWrapped
+}
+
 function captureUserDisabledMcps(
   userMcp: Record<string, unknown> | undefined
 ): Set<string> {
@@ -98,5 +134,5 @@ export async function applyMcpConfig(params: {
     delete merged[name];
   }
 
-  params.config.mcp = merged;
+  params.config.mcp = withPromptProbeCompatibility(merged);
 }
