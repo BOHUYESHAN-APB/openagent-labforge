@@ -9,6 +9,7 @@ import { SessionCategoryRegistry } from "../../shared/session-category-registry"
 import { resolveFallbackBootstrapModel } from "./fallback-bootstrap-model"
 import { dispatchFallbackRetry } from "./fallback-retry-dispatcher"
 import { createSessionStatusHandler } from "./session-status-handler"
+import { isSessionAutoModelRoutingEnabled } from "../../shared/session-model-state"
 
 export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
   const { config, pluginConfig, sessionStates, sessionLastAccess, sessionRetryInFlight, sessionAwaitingFallbackResult, sessionFallbackTimeouts, sessionStatusRetryKeys } = deps
@@ -95,6 +96,10 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
 
     if (!sessionID) {
       log(`[${HOOK_NAME}] session.error without sessionID, skipping`)
+      return
+    }
+    if (!isSessionAutoModelRoutingEnabled(sessionID)) {
+      log(`[${HOOK_NAME}] session.error fallback skipped - auto model routing disabled`, { sessionID })
       return
     }
 

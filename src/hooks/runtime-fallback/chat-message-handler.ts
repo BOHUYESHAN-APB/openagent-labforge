@@ -2,6 +2,7 @@ import type { HookDeps } from "./types"
 import { HOOK_NAME } from "./constants"
 import { log } from "../../shared/logger"
 import { createFallbackState } from "./fallback-state"
+import { isSessionAutoModelRoutingEnabled } from "../../shared/session-model-state"
 
 export function createChatMessageHandler(deps: HookDeps) {
   const { config, sessionStates, sessionLastAccess } = deps
@@ -16,6 +17,7 @@ export function createChatMessageHandler(deps: HookDeps) {
     let state = sessionStates.get(sessionID)
 
     if (!state) return
+    if (!isSessionAutoModelRoutingEnabled(sessionID)) return
 
     sessionLastAccess.set(sessionID, Date.now())
 

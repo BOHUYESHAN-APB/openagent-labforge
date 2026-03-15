@@ -8,6 +8,7 @@ import { getFallbackModelsForSession } from "./fallback-models"
 import { resolveFallbackBootstrapModel } from "./fallback-bootstrap-model"
 import { dispatchFallbackRetry } from "./fallback-retry-dispatcher"
 import { hasVisibleAssistantResponse } from "./visible-assistant-response"
+import { isSessionAutoModelRoutingEnabled } from "../../shared/session-model-state"
 
 export { hasVisibleAssistantResponse } from "./visible-assistant-response"
 
@@ -65,6 +66,9 @@ export function createMessageUpdateHandler(deps: HookDeps, helpers: AutoRetryHel
     }
 
     if (sessionID && role === "assistant" && error) {
+      if (!isSessionAutoModelRoutingEnabled(sessionID)) {
+        return
+      }
       sessionAwaitingFallbackResult.delete(sessionID)
       if (sessionRetryInFlight.has(sessionID) && !retrySignal) {
         log(`[${HOOK_NAME}] message.updated fallback skipped (retry in flight)`, { sessionID })

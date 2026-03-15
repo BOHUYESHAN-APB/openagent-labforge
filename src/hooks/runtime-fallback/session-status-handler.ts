@@ -8,6 +8,7 @@ import { getFallbackModelsForSession } from "./fallback-models"
 import { normalizeRetryStatusMessage, extractRetryAttempt } from "../../shared/retry-status-utils"
 import { resolveFallbackBootstrapModel } from "./fallback-bootstrap-model"
 import { dispatchFallbackRetry } from "./fallback-retry-dispatcher"
+import { isSessionAutoModelRoutingEnabled } from "../../shared/session-model-state"
 
 export function createSessionStatusHandler(
   deps: HookDeps,
@@ -28,6 +29,7 @@ export function createSessionStatusHandler(
     const model = props?.model as string | undefined
 
     if (!sessionID || status?.type !== "retry") return
+    if (!isSessionAutoModelRoutingEnabled(sessionID)) return
 
     const retryMessage = typeof status.message === "string" ? status.message : ""
     const retrySignal = extractAutoRetrySignal({ status: retryMessage, message: retryMessage })

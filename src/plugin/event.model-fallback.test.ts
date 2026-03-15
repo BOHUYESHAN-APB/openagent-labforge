@@ -10,12 +10,13 @@ import { createEventHandler } from "./event"
 import { createChatMessageHandler } from "./chat-message"
 import { _resetForTesting, setMainSession } from "../features/claude-code-session-state"
 import { createModelFallbackHook, clearPendingModelFallback } from "../hooks/model-fallback/hook"
+import { setSessionAutoModelRouting } from "../shared/session-model-state"
 describe("createEventHandler - model fallback", () => {
   const createHandler = (args?: { hooks?: any; pluginConfig?: any }) => {
     const abortCalls: string[] = []
     const promptCalls: string[] = []
 
-    const handler = createEventHandler({
+    const baseHandler = createEventHandler({
       ctx: {
         directory: "/tmp",
         client: {
@@ -47,6 +48,16 @@ describe("createEventHandler - model fallback", () => {
       } as any,
       hooks: args?.hooks ?? ({} as any),
     })
+
+    const handler = async (input: any) => {
+      const props = input?.event?.properties as Record<string, unknown> | undefined
+      const info = props?.info as Record<string, unknown> | undefined
+      const sessionID = (props?.sessionID as string | undefined) ?? (info?.sessionID as string | undefined)
+      if (sessionID) {
+        setSessionAutoModelRouting(sessionID, true)
+      }
+      await baseHandler(input)
+    }
 
     return { handler, abortCalls, promptCalls }
   }
@@ -199,11 +210,11 @@ describe("createEventHandler - model fallback", () => {
     })
 
     const output = { message: {}, parts: [] as Array<{ type: string; text?: string }> }
+    setSessionAutoModelRouting(sessionID, true)
     await chatMessageHandler(
       {
         sessionID,
         agent: "sisyphus",
-        model: { providerID: "anthropic", modelID: "claude-opus-4-6-thinking" },
       },
       output,
     )
@@ -410,11 +421,11 @@ describe("createEventHandler - model fallback", () => {
     })
 
     const output = { message: {}, parts: [] as Array<{ type: string; text?: string }> }
+    setSessionAutoModelRouting(sessionID, true)
     await chatMessageHandler(
       {
         sessionID,
         agent: "sisyphus",
-        model: { providerID: "quotio", modelID: "claude-opus-4-6" },
       },
       output,
     )
@@ -503,6 +514,7 @@ describe("createEventHandler - model fallback", () => {
     })
 
     const triggerRetryCycle = async () => {
+      setSessionAutoModelRouting(sessionID, true)
       await eventHandler({
         event: {
           type: "session.error",
@@ -524,11 +536,11 @@ describe("createEventHandler - model fallback", () => {
       })
 
       const output = { message: {}, parts: [] as Array<{ type: string; text?: string }> }
+      setSessionAutoModelRouting(sessionID, true)
       await chatMessageHandler(
         {
           sessionID,
           agent: "sisyphus",
-          model: { providerID: "anthropic", modelID: "claude-opus-4-6-thinking" },
         },
         output,
       )

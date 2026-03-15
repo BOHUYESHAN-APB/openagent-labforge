@@ -8,9 +8,11 @@ import { isAutoModelSelection } from "../shared/model-normalization"
 import {
   clearSessionForcedModel,
   clearSessionModelLock,
+  isSessionAutoModelRoutingEnabled,
   getSessionForcedModel,
   getSessionModel,
   getSessionModelLock,
+  setSessionAutoModelRouting,
   setSessionForcedModel,
   setSessionModel,
   setSessionModelLock,
@@ -103,6 +105,10 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
+    if (rawInputModel !== undefined) {
+      setSessionAutoModelRouting(input.sessionID, isAutoModelSelection(rawInputModelId))
+    }
+    const autoModelRoutingEnabled = isSessionAutoModelRoutingEnabled(input.sessionID)
 
     if (strictUserModelPriority && lockedModel) {
       if (!rawInputModel) {
@@ -117,7 +123,10 @@ export function createChatMessageHandler(args: {
       }
     }
 
-    const soulRules = loadSoulRules({ directory: ctx.directory, pluginConfig })
+    const soulRules = loadSoulRules({
+      directory: typeof ctx.directory === "string" ? ctx.directory : "",
+      pluginConfig,
+    })
     const injectOnce = pluginConfig.soul?.inject_once ?? true
     const alreadyInjected = soulInjectedSessions.has(input.sessionID)
 
@@ -160,12 +169,14 @@ export function createChatMessageHandler(args: {
       firstMessageVariantGate.markApplied(input.sessionID)
     }
 
-    if (!isRuntimeFallbackEnabled) {
+    if (!isRuntimeFallbackEnabled && autoModelRoutingEnabled) {
       await hooks.modelFallback?.["chat.message"]?.(input, output)
     }
     await hooks.stopContinuationGuard?.["chat.message"]?.(input)
     await hooks.backgroundNotificationHook?.["chat.message"]?.(input, output)
-    await hooks.runtimeFallback?.["chat.message"]?.(input, output)
+    if (autoModelRoutingEnabled) {
+      await hooks.runtimeFallback?.["chat.message"]?.(input, output)
+    }
     await hooks.keywordDetector?.["chat.message"]?.(input, output)
     await hooks.thinkMode?.["chat.message"]?.(input, output)
     await hooks.claudeCodeHooks?.["chat.message"]?.(input, output)
@@ -236,6 +247,7 @@ export function createChatMessageHandler(args: {
       input.sessionID,
       manualModelChangeDetected,
       pluginContext.client,
+      autoModelRoutingEnabled,
     )
 
     const requestedModel = input.model

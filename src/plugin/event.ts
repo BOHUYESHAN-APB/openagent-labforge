@@ -24,7 +24,13 @@ import { log } from "../shared/logger";
 import { shouldRetryError } from "../shared/model-error-classifier";
 import { buildFallbackChainFromModels } from "../shared/fallback-chain-from-models";
 import { extractRetryAttempt, normalizeRetryStatusMessage } from "../shared/retry-status-utils";
-import { clearSessionModel, clearSessionModelLock, getSessionModel, setSessionModel } from "../shared/session-model-state";
+import {
+  clearSessionModel,
+  clearSessionModelLock,
+  getSessionModel,
+  isSessionAutoModelRoutingEnabled,
+  setSessionModel,
+} from "../shared/session-model-state";
 import { deleteSessionTools } from "../shared/session-tools-store";
 import { lspManager } from "../tools";
 
@@ -363,7 +369,13 @@ export function createEventHandler(args: {
 
       // Model fallback: in practice, API/model failures often surface as assistant message errors.
       // session.error events are not guaranteed for all providers, so we also observe message.updated.
-      if (sessionID && role === "assistant" && !isRuntimeFallbackEnabled && isModelFallbackEnabled) {
+      if (
+        sessionID &&
+        role === "assistant" &&
+        !isRuntimeFallbackEnabled &&
+        isModelFallbackEnabled &&
+        isSessionAutoModelRoutingEnabled(sessionID)
+      ) {
         try {
           const assistantMessageID = info?.id as string | undefined;
           const assistantError = info?.error;
@@ -422,7 +434,13 @@ export function createEventHandler(args: {
       const sessionID = props?.sessionID as string | undefined;
       const status = props?.status as { type?: string; attempt?: number; message?: string; next?: number } | undefined;
 
-      if (sessionID && status?.type === "retry" && isModelFallbackEnabled && !isRuntimeFallbackEnabled) {
+      if (
+        sessionID &&
+        status?.type === "retry" &&
+        isModelFallbackEnabled &&
+        !isRuntimeFallbackEnabled &&
+        isSessionAutoModelRoutingEnabled(sessionID)
+      ) {
         try {
           const retryMessage = typeof status.message === "string" ? status.message : "";
           const parsedForKey = extractProviderModelFromErrorMessage(retryMessage);
@@ -508,7 +526,13 @@ export function createEventHandler(args: {
           }
         }
         // Second, try model fallback for model errors (rate limit, quota, provider issues, etc.)
-        else if (sessionID && shouldRetryError(errorInfo) && !isRuntimeFallbackEnabled && isModelFallbackEnabled) {
+        else if (
+          sessionID &&
+          shouldRetryError(errorInfo) &&
+          !isRuntimeFallbackEnabled &&
+          isModelFallbackEnabled &&
+          isSessionAutoModelRoutingEnabled(sessionID)
+        ) {
           let agentName = getSessionAgent(sessionID);
 
           if (!agentName && sessionID === getMainSessionID()) {

@@ -151,9 +151,23 @@ export function applyUltraworkModelOverrideOnMessage(
   },
   tui: unknown,
   sessionID?: string,
-  manualModelChangeDetected = false,
+  manualModelChangeDetectedOrClient: unknown = false,
   client?: unknown,
+  allowAutomaticModelOverride = true,
 ): void | Promise<void> {
+  let manualModelChangeDetected = false
+  let resolvedClient = client
+  if (typeof manualModelChangeDetectedOrClient === "boolean") {
+    manualModelChangeDetected = manualModelChangeDetectedOrClient
+  } else if (manualModelChangeDetectedOrClient !== undefined && manualModelChangeDetectedOrClient !== null) {
+    resolvedClient = manualModelChangeDetectedOrClient
+  }
+
+  if (!allowAutomaticModelOverride) {
+    log("[ultrawork-model-override] Skip override; auto model routing disabled for session")
+    return
+  }
+
   if (manualModelChangeDetected) {
     log("[ultrawork-model-override] Skip override; manual model change detected")
     return
@@ -167,7 +181,7 @@ export function applyUltraworkModelOverrideOnMessage(
     ? { providerID: override.providerID, modelID: override.modelID }
     : currentModel
 
-  if (!client || typeof (client as { provider?: { list?: unknown } }).provider?.list !== "function") {
+  if (!resolvedClient || typeof (resolvedClient as { provider?: { list?: unknown } }).provider?.list !== "function") {
     if (override.variant) {
       log("[ultrawork-model-override] SDK validation unavailable, skipping variant override", {
         variant: override.variant,
@@ -177,7 +191,7 @@ export function applyUltraworkModelOverrideOnMessage(
     return
   }
 
-  return resolveValidUltraworkVariant(client, variantTargetModel, override.variant)
+  return resolveValidUltraworkVariant(resolvedClient, variantTargetModel, override.variant)
     .then((validatedVariant) => {
       if (override.variant && !validatedVariant) {
         log("[ultrawork-model-override] Skip invalid ultrawork variant override", {

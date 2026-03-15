@@ -258,7 +258,65 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
   })
 
-  test("restores locked model when input reflects prior forced auto-switch", async () => {
+  test("skips runtime fallback hook when session is not in auto model routing mode", async () => {
+    //#given
+    let runtimeFallbackCalled = false
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: false,
+        },
+        runtime_fallback: { enabled: true },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        runtimeFallbackCalled = true
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(runtimeFallbackCalled).toBe(false)
+    expect(output.message.model).toBeUndefined()
+  })
+
+  test("allows runtime fallback hook when session uses auto model routing", async () => {
+    //#given
+    let runtimeFallbackCalled = false
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: false,
+        },
+        runtime_fallback: { enabled: true },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        runtimeFallbackCalled = true
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(runtimeFallbackCalled).toBe(true)
+    expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+  })
+
+  test("treats different model input as explicit switch when auto routing is disabled", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -284,7 +342,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(continueInput, continueOutput)
 
     //#then
-    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
   })
 
   test("allows explicit user switch to a new model", async () => {
