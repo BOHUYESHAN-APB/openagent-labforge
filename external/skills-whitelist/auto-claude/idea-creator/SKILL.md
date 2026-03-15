@@ -11,7 +11,7 @@ Generate publishable research ideas for: $ARGUMENTS
 
 ## Overview
 
-Given a broad research direction from the user, systematically generate, validate, and rank concrete research ideas. This skill composes with `/research-lit`, `/novelty-check`, and `/research-review` to form a complete idea discovery pipeline.
+Given a broad research direction from the user, systematically generate, validate, and rank concrete research ideas. This skill composes with `/research-lit` and `/novelty-check` to form a complete idea discovery pipeline.
 
 ## Constants
 
@@ -112,17 +112,11 @@ For each surviving idea, run a deeper evaluation:
 
 1. **Novelty check**: Use the `/novelty-check` workflow (multi-source search + GPT-5.4 cross-verification) for each idea
 
-2. **Critical review**: Use GPT-5.4 via `mcp__codex__codex-reply` (same thread):
-   ```
-   Here are our top ideas after filtering:
-   [paste surviving ideas with novelty check results]
-
-   For each, play devil's advocate:
+2. **Critical review**: Perform a rigorous internal devil's-advocate pass:
    - What's the strongest objection a reviewer would raise?
    - What's the most likely failure mode?
    - How would you rank these for a top venue submission?
    - Which 2-3 would you actually work on?
-   ```
 
 3. **Combine rankings**: Merge your assessment with GPT-5.4's ranking. Select top 2-3 ideas for pilot experiments.
 
@@ -206,7 +200,7 @@ Write a structured report to `IDEA_REPORT.md` in the project root:
 
 ## Next Steps
 - [ ] Scale up Idea 1 to full experiment (multi-seed, full dataset)
-- [ ] If confirmed, invoke /auto-review-loop for full iteration
+- [ ] If confirmed, invoke /ulw-loop for full iteration
 ```
 
 ## Key Rules
@@ -226,8 +220,7 @@ After this skill produces the ranked report:
 ```
 /idea-creator "direction"     → ranked ideas
 /novelty-check "top idea"     → deep novelty verification (already done in Phase 4, but user can re-run)
-/research-review "top idea"   → external critical feedback
 implement                     → write code
 /run-experiment               → deploy to GPU
-/auto-review-loop             → iterate until submission-ready
+/ulw-loop             → iterate until submission-ready
 ```

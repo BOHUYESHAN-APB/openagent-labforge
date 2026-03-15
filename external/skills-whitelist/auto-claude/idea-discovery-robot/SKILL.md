@@ -1,6 +1,6 @@
 ---
 name: idea-discovery-robot
-description: "Workflow 1 adaptation for robotics and embodied AI. Orchestrates robotics-aware literature survey, idea generation, novelty check, and critical review to go from a broad robotics direction to benchmark-grounded, simulation-first ideas. Use when user says \"robotics idea discovery\", \"机器人找idea\", \"embodied AI idea\", \"机器人方向探索\", \"sim2real 选题\", or wants ideas for manipulation, locomotion, navigation, drones, humanoids, or general robot learning."
+description: "Workflow 1 adaptation for robotics and embodied AI. Orchestrates robotics-aware literature survey, idea generation, novelty check, and internal critique to go from a broad robotics direction to benchmark-grounded, simulation-first ideas. Use when user says \"robotics idea discovery\", \"机器人找idea\", \"embodied AI idea\", \"机器人方向探索\", \"sim2real 选题\", or wants ideas for manipulation, locomotion, navigation, drones, humanoids, or general robot learning."
 argument-hint: [robotics-direction]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
 ---
@@ -11,11 +11,11 @@ Orchestrate a robotics-specific idea discovery workflow for: **$ARGUMENTS**
 
 ## Overview
 
-This skill chains four sub-skills into a single automated pipeline:
+This skill chains three sub-skills into a single automated pipeline:
 
 ```
-/research-lit → /idea-creator (robotics framing) → /novelty-check → /research-review
-  (survey)              (filter + pilot plan)         (verify novel)    (critical feedback)
+/research-lit → /idea-creator (robotics framing) → /novelty-check
+  (survey)              (filter + pilot plan)         (verify novel)
 ```
 
 But every phase must be grounded in robotics-specific constraints:
@@ -39,7 +39,6 @@ The goal is not to produce flashy demos. The goal is to produce ideas that are:
 - **PILOT_MODE = `sim-first`** — Prefer simulation or offline-log pilots before any hardware execution
 - **REAL_ROBOT_PILOTS = `explicit approval only`** — Never assume physical robot access or approval
 - **AUTO_PROCEED = true** — If user does not respond at checkpoints, proceed with the best sim-first option
-- **REVIEWER_MODEL = `gpt-5.4`** — External reviewer model via Codex MCP
 - **TARGET_VENUES = CoRL, RSS, ICRA, IROS, RA-L** — Default novelty and reviewer framing
 
 > Override inline, e.g. `/idea-discovery-robot "bimanual manipulation" — only sim ideas, no real robot` or `/idea-discovery-robot "drone navigation" — focus on CoRL/RSS, 2 pilot ideas max`
@@ -195,7 +194,7 @@ For each idea, reject or heavily downrank if:
 2. [Idea 2] — Embodiment: [...] — Benchmark: [...] — Pilot: sim/offline — Risk: LOW/MEDIUM/HIGH
 3. [Idea 3] — requires hardware / weak benchmark / high risk
 
-Should I carry the top sim-first ideas into novelty checking and external review?
+Should I carry the top sim-first ideas into novelty checking and internal review?
 (If no response, I'll continue with the strongest benchmark-grounded ideas.)
 ```
 
@@ -266,22 +265,16 @@ Be especially skeptical of ideas that are just:
 
 If the method is not novel but the **finding** or **evaluation protocol** is, say that explicitly.
 
-## Phase 5: External Robotics Review
+## Phase 5: Internal Robotics Review
 
-Invoke:
-
-```
-/research-review "[top idea with robotics framing, embodiment, benchmark, baselines, pilot plan, evaluation metrics, and sim2real/hardware risks — review as CoRL/RSS/ICRA reviewer]"
-```
-
-Frame the reviewer as a senior **CoRL / RSS / ICRA** reviewer. Ask them to focus on:
+Perform an internal senior-reviewer pass. Focus on:
 - whether the contribution is really new for robotics, not just ML
 - the minimum benchmark package needed for credibility
 - whether the sim2real story is justified
 - missing baselines or failure analyses
 - whether the idea survives realistic infrastructure constraints
 
-Update the report with the reviewer's minimum viable evidence package.
+Update the report with the minimum viable evidence package.
 
 ## Phase 6: Final Report
 
@@ -292,7 +285,7 @@ Write or update `IDEA_REPORT.md` with a robotics-specific structure so it stays 
 
 **Direction**: $ARGUMENTS
 **Date**: [today]
-**Pipeline**: research-lit → idea-creator (robotics framing) → novelty-check → research-review
+**Pipeline**: research-lit → idea-creator (robotics framing) → novelty-check → internal review
 
 ## Robotics Problem Frame
 - Embodiment:
@@ -313,7 +306,7 @@ Write or update `IDEA_REPORT.md` with a robotics-specific structure so it stays 
 - Pilot type: sim / offline / real
 - Positive signal:
 - Novelty:
-- Reviewer score:
+- Internal review notes:
 - Hardware risk:
 - Next step:
 
@@ -350,7 +343,7 @@ After this workflow identifies a strong robotics idea:
 /idea-discovery-robot "direction"   ← you are here
 implement sim-first pilot
 /run-experiment                     ← if infrastructure exists
-/auto-review-loop "top robotics idea"
+/ulw-loop "top robotics idea"
 ```
 
 If no simulator or benchmark is available yet, stop at the report and ask the user to choose whether to build infrastructure or pivot to a more executable idea.

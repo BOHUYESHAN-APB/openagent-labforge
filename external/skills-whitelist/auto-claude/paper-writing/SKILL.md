@@ -1,6 +1,6 @@
 ---
 name: paper-writing
-description: "Workflow 3: Full paper writing pipeline. Orchestrates paper-plan → paper-figure → paper-write → paper-compile → auto-paper-improvement-loop to go from a narrative report to a polished, submission-ready PDF. Use when user says \"写论文全流程\", \"write paper pipeline\", \"从报告到PDF\", \"paper writing\", or wants the complete paper generation workflow."
+description: "Workflow 3: Full paper writing pipeline. Orchestrates paper-plan → paper-figure → paper-write → paper-compile → ULTRAWORK QA to go from a narrative report to a polished, submission-ready PDF. Use when user says \"写论文全流程\", \"write paper pipeline\", \"从报告到PDF\", \"paper writing\", or wants the complete paper generation workflow."
 argument-hint: [narrative-report-path-or-topic]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
 ---
@@ -14,8 +14,8 @@ Orchestrate a complete paper writing workflow for: **$ARGUMENTS**
 This skill chains five sub-skills into a single automated pipeline:
 
 ```
-/paper-plan → /paper-figure → /paper-write → /paper-compile → /auto-paper-improvement-loop
-  (outline)     (plots)        (LaTeX)        (build PDF)       (review & polish ×2)
+/paper-plan → /paper-figure → /paper-write → /paper-compile → /ulw-loop
+  (outline)     (plots)        (LaTeX)        (build PDF)       (final QA + Oracle verify)
 ```
 
 Each phase builds on the previous one's output. The final deliverable is a polished, reviewed `paper/` directory with LaTeX source and compiled PDF.
@@ -23,12 +23,10 @@ Each phase builds on the previous one's output. The final deliverable is a polis
 ## Constants
 
 - **VENUE = `ICLR`** — Target venue. Options: `ICLR`, `NeurIPS`, `ICML`. Affects style file, page limit, citation format.
-- **MAX_IMPROVEMENT_ROUNDS = 2** — Number of review→fix→recompile rounds in the improvement loop.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for plan review, figure review, writing review, and improvement loop.
+- **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for plan review, figure review, and writing review.
 - **AUTO_PROCEED = true** — Auto-continue between phases. Set `false` to pause and wait for user approval after each phase.
-- **HUMAN_CHECKPOINT = false** — When `true`, the improvement loop (Phase 5) pauses after each round's review to let you see the score and provide custom modification instructions. When `false` (default), the loop runs fully autonomously. Passed through to `/auto-paper-improvement-loop`.
 
-> Override inline: `/paper-writing "NARRATIVE_REPORT.md" — venue: NeurIPS, human checkpoint: true`
+> Override inline: `/paper-writing "NARRATIVE_REPORT.md" — venue: NeurIPS`
 
 ## Inputs
 
@@ -164,31 +162,25 @@ Invoke `/paper-compile` to build the PDF:
 - Undefined references: 0
 - Undefined citations: 0
 
-Shall I proceed with the improvement loop?
+Shall I proceed with the ULTRAWORK final QA?
 ```
 
-### Phase 5: Auto Improvement Loop
+### Phase 5: ULTRAWORK Final QA
 
-Invoke `/auto-paper-improvement-loop` to polish the paper:
+Invoke `/ulw-loop` to do a final evidence-based QA pass:
 
 ```
-/auto-paper-improvement-loop "paper/"
+/ulw-loop "Final QA for paper/: verify claims vs figures, references, and compile output" --max-iterations=2
 ```
 
-**What this does (2 rounds):**
+**What this does (recommend 1-2 rounds):**
 
-**Round 1:** GPT-5.4 xhigh reviews the full paper → identifies CRITICAL/MAJOR/MINOR issues → Claude Code implements fixes → recompile → save `main_round1.pdf`
+- Verify claims vs figures and tables
+- Check references, citations, and build artifacts
+- Fix inconsistencies, missing evidence, and presentation gaps
+- Oracle verifies completion; if not verified, iterate
 
-**Round 2:** GPT-5.4 xhigh re-reviews with conversation context → identifies remaining issues → Claude Code implements fixes → recompile → save `main_round2.pdf`
-
-**Typical improvements:**
-- Fix assumption-model mismatches
-- Soften overclaims to match evidence
-- Add missing interpretations and notation
-- Strengthen limitations section
-- Add theory-aligned experiments if needed
-
-**Output:** Three PDFs for comparison + `PAPER_IMPROVEMENT_LOG.md`.
+**Output:** `paper/main.pdf` plus a `ULTRAWORK_LOG.md` describing evidence and fixes.
 
 **Format check** (included in improvement loop Step 8): After final recompilation, auto-detect and fix overfull hboxes (content exceeding margins), verify page count vs venue limit, and ensure compact formatting. Any overfull > 10pt is fixed before generating the final PDF.
 
@@ -209,21 +201,11 @@ Invoke `/auto-paper-improvement-loop` to polish the paper:
 | 2. Figures | ✅ | figures/ ([N] auto + [M] manual) |
 | 3. LaTeX Writing | ✅ | paper/sections/*.tex ([N] sections, [M] citations) |
 | 4. Compilation | ✅ | paper/main.pdf ([X] pages) |
-| 5. Improvement | ✅ | [score0]/10 → [score2]/10 |
-
-## Improvement Scores
-| Round | Score | Key Changes |
-|-------|-------|-------------|
-| Round 0 | X/10 | Baseline |
-| Round 1 | Y/10 | [summary] |
-| Round 2 | Z/10 | [summary] |
+| 5. ULTRAWORK QA | ✅ | ULTRAWORK_LOG.md |
 
 ## Deliverables
 - paper/main.pdf — Final polished paper
-- paper/main_round0_original.pdf — Before improvement
-- paper/main_round1.pdf — After round 1
-- paper/main_round2.pdf — After round 2
-- paper/PAPER_IMPROVEMENT_LOG.md — Full review log
+- paper/ULTRAWORK_LOG.md — QA log with evidence and fixes
 
 ## Remaining Issues (if any)
 - [items from final review that weren't addressed]
@@ -250,7 +232,7 @@ Invoke `/auto-paper-improvement-loop` to polish the paper:
 /idea-discovery "direction"         ← Workflow 1: find ideas
 implement                           ← write code
 /run-experiment                     ← deploy experiments
-/auto-review-loop "paper topic"     ← Workflow 2: iterate research
+/ulw-loop "paper topic"     ← Workflow 2: iterate research
 /paper-writing "NARRATIVE_REPORT.md"  ← Workflow 3: you are here
                                          submit! 🎉
 

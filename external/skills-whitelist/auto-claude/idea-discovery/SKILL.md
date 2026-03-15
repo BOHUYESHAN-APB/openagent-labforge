@@ -1,6 +1,6 @@
 ---
 name: idea-discovery
-description: "Workflow 1: Full idea discovery pipeline. Orchestrates research-lit → idea-creator → novelty-check → research-review to go from a broad research direction to validated, pilot-tested ideas. Use when user says \"找idea全流程\", \"idea discovery pipeline\", \"从零开始找方向\", or wants the complete idea exploration workflow."
+description: "Workflow 1: Full idea discovery pipeline. Orchestrates research-lit → idea-creator → novelty-check to go from a broad research direction to validated, pilot-tested ideas. Use when user says \"找idea全流程\", \"idea discovery pipeline\", \"从零开始找方向\", or wants the complete idea exploration workflow."
 argument-hint: [research-direction]
 allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agent, Skill, mcp__codex__codex, mcp__codex__codex-reply
 ---
@@ -11,11 +11,11 @@ Orchestrate a complete idea discovery workflow for: **$ARGUMENTS**
 
 ## Overview
 
-This skill chains four sub-skills into a single automated pipeline:
+This skill chains three sub-skills into a single automated pipeline:
 
 ```
-/research-lit → /idea-creator → /novelty-check → /research-review
-  (survey)      (brainstorm)    (verify novel)    (critical feedback)
+/research-lit → /idea-creator → /novelty-check
+  (survey)      (brainstorm)    (verify novel)
 ```
 
 Each phase builds on the previous one's output. The final deliverable is a validated `IDEA_REPORT.md` with ranked ideas, pilot results, and a suggested execution plan.
@@ -111,20 +111,15 @@ For each top idea (positive pilot signal), run a thorough novelty check:
 
 **Update `IDEA_REPORT.md`** with deep novelty results. Eliminate any idea that turns out to be already published.
 
-### Phase 4: External Critical Review
+### Phase 4: Internal Critical Review
 
-For the surviving top idea(s), get brutal feedback:
+For the surviving top idea(s), perform a rigorous internal critique:
 
-```
-/research-review "[top idea with hypothesis + pilot results]"
-```
+- Identify the strongest reviewer objections
+- List likely failure modes and missing controls
+- Propose minimum viable improvements to de-risk the idea
 
-**What this does:**
-- GPT-5.4 xhigh acts as a senior reviewer (NeurIPS/ICML level)
-- Scores the idea, identifies weaknesses, suggests minimum viable improvements
-- Provides concrete feedback on experimental design
-
-**Update `IDEA_REPORT.md`** with reviewer feedback and revised plan.
+**Update `IDEA_REPORT.md`** with internal review notes and a revised plan.
 
 ### Phase 5: Final Report
 
@@ -135,7 +130,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 
 **Direction**: $ARGUMENTS
 **Date**: [today]
-**Pipeline**: research-lit → idea-creator → novelty-check → research-review
+**Pipeline**: research-lit → idea-creator → novelty-check → internal review
 
 ## Executive Summary
 [2-3 sentences: best idea, key evidence, recommended next step]
@@ -149,8 +144,8 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 ### 🏆 Idea 1: [title] — RECOMMENDED
 - Pilot: POSITIVE (+X%)
 - Novelty: CONFIRMED (closest: [paper], differentiation: [what's different])
-- Reviewer score: X/10
-- Next step: implement full experiment → /auto-review-loop
+- Internal review notes: [top 2-3 risks + fixes]
+- Next step: implement full experiment → /ulw-loop
 
 ### Idea 2: [title] — BACKUP
 ...
@@ -161,7 +156,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 ## Next Steps
 - [ ] Implement Idea 1
 - [ ] /run-experiment to deploy full-scale experiments
-- [ ] /auto-review-loop to iterate until submission-ready
+- [ ] /ulw-loop to iterate until submission-ready
 - [ ] Or invoke /research-pipeline for the complete end-to-end flow
 ```
 
@@ -172,7 +167,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 - **Kill ideas early.** It's better to kill 10 bad ideas in Phase 3 than to implement one and fail.
 - **Empirical signal > theoretical appeal.** An idea with a positive pilot outranks a "sounds great" idea without evidence.
 - **Document everything.** Dead ends are just as valuable as successes for future reference.
-- **Be honest with the reviewer.** Include negative results and failed pilots in the review prompt.
+- **Be honest in the critique.** Include negative results and failed pilots in the review notes.
 - **Feishu notifications are optional.** If `~/.claude/feishu.json` exists, send `checkpoint` at each phase transition and `pipeline_done` at final report. If absent/off, skip silently.
 
 ## Composing with Workflow 2
@@ -183,7 +178,7 @@ After this pipeline produces a validated top idea:
 /idea-discovery "direction"         ← you are here (Workflow 1)
 implement                           ← write code for the top idea
 /run-experiment                     ← deploy full-scale experiments
-/auto-review-loop "top idea"        ← Workflow 2: iterate until submission-ready
+/ulw-loop "top idea"        ← Workflow 2: iterate until submission-ready
 
 Or use /research-pipeline for the full end-to-end flow.
 ```
