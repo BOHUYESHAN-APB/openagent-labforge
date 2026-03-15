@@ -2,14 +2,15 @@ import type { PluginInput } from "@opencode-ai/plugin"
 import type { Platform } from "./session-notification-sender"
 
 type SessionNotificationConfig = {
-  title: string
-  message: string
+  title?: string
+  message?: string
   playSound: boolean
   soundPath: string
   idleConfirmationDelay: number
-  activityGracePeriodMs: number
   skipIfIncompleteTodos: boolean
   maxTrackedSessions: number
+  /** Grace period in ms to ignore late-arriving activity events after scheduling (default: 100) */
+  activityGracePeriodMs?: number
 }
 
 export function createIdleNotificationScheduler(options: {
@@ -17,7 +18,7 @@ export function createIdleNotificationScheduler(options: {
   platform: Platform
   config: SessionNotificationConfig
   hasIncompleteTodos: (ctx: PluginInput, sessionID: string) => Promise<boolean>
-  send: (ctx: PluginInput, platform: Platform, title: string, message: string) => Promise<void>
+  send: (ctx: PluginInput, platform: Platform, sessionID: string) => Promise<void>
   playSound: (ctx: PluginInput, platform: Platform, soundPath: string) => Promise<void>
 }) {
   const notifiedSessions = new Set<string>()
@@ -26,28 +27,39 @@ export function createIdleNotificationScheduler(options: {
   const notificationVersions = new Map<string, number>()
   const executingNotifications = new Set<string>()
   const scheduledAt = new Map<string, number>()
+  const activityGracePeriodMs = options.config.activityGracePeriodMs ?? 100
 
   function cleanupOldSessions(): void {
     const maxSessions = options.config.maxTrackedSessions
     if (notifiedSessions.size > maxSessions) {
       const sessionsToRemove = Array.from(notifiedSessions).slice(0, notifiedSessions.size - maxSessions)
-      sessionsToRemove.forEach((id) => notifiedSessions.delete(id))
+      sessionsToRemove.forEach((id) => {
+        notifiedSessions.delete(id)
+      })
     }
     if (sessionActivitySinceIdle.size > maxSessions) {
       const sessionsToRemove = Array.from(sessionActivitySinceIdle).slice(0, sessionActivitySinceIdle.size - maxSessions)
-      sessionsToRemove.forEach((id) => sessionActivitySinceIdle.delete(id))
+      sessionsToRemove.forEach((id) => {
+        sessionActivitySinceIdle.delete(id)
+      })
     }
     if (notificationVersions.size > maxSessions) {
       const sessionsToRemove = Array.from(notificationVersions.keys()).slice(0, notificationVersions.size - maxSessions)
-      sessionsToRemove.forEach((id) => notificationVersions.delete(id))
+      sessionsToRemove.forEach((id) => {
+        notificationVersions.delete(id)
+      })
     }
     if (executingNotifications.size > maxSessions) {
       const sessionsToRemove = Array.from(executingNotifications).slice(0, executingNotifications.size - maxSessions)
-      sessionsToRemove.forEach((id) => executingNotifications.delete(id))
+      sessionsToRemove.forEach((id) => {
+        executingNotifications.delete(id)
+      })
     }
     if (scheduledAt.size > maxSessions) {
       const sessionsToRemove = Array.from(scheduledAt.keys()).slice(0, scheduledAt.size - maxSessions)
-      sessionsToRemove.forEach((id) => scheduledAt.delete(id))
+      sessionsToRemove.forEach((id) => {
+        scheduledAt.delete(id)
+      })
     }
   }
 
@@ -63,11 +75,13 @@ export function createIdleNotificationScheduler(options: {
   }
 
   function markSessionActivity(sessionID: string): void {
-    const gracePeriodMs = options.config.activityGracePeriodMs
-    const scheduledTimestamp = scheduledAt.get(sessionID)
-    if (scheduledTimestamp !== undefined) {
-      const elapsed = Date.now() - scheduledTimestamp
-      if (elapsed < gracePeriodMs) return
+    const scheduledTime = scheduledAt.get(sessionID)
+    if (
+      activityGracePeriodMs > 0 &&
+      scheduledTime !== undefined &&
+      Date.now() - scheduledTime <= activityGracePeriodMs
+    ) {
+      return
     }
     cancelPendingNotification(sessionID)
     if (!executingNotifications.has(sessionID)) {
@@ -122,7 +136,7 @@ export function createIdleNotificationScheduler(options: {
 
       notifiedSessions.add(sessionID)
 
-      await options.send(options.ctx, options.platform, options.config.title, options.config.message)
+      await options.send(options.ctx, options.platform, sessionID)
 
       if (options.config.playSound && options.config.soundPath) {
         await options.playSound(options.ctx, options.platform, options.config.soundPath)
@@ -144,6 +158,7 @@ export function createIdleNotificationScheduler(options: {
     if (executingNotifications.has(sessionID)) return
 
     sessionActivitySinceIdle.delete(sessionID)
+    scheduledAt.set(sessionID, Date.now())
 
     const currentVersion = (notificationVersions.get(sessionID) ?? 0) + 1
     notificationVersions.set(sessionID, currentVersion)

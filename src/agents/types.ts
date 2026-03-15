@@ -116,7 +116,8 @@ export type BuiltinAgentName =
   | "paper-evidence-synthesizer"
   | "metis"
   | "momus"
-  | "atlas";
+  | "atlas"
+  | "sisyphus-junior";
 
 export type OverridableAgentName = "build" | BuiltinAgentName;
 

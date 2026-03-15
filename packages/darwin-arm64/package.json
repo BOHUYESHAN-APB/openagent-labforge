@@ -1,11 +1,11 @@
 {
-  "name": "oh-my-opencode-darwin-arm64",
+  "name": "openagent-labforge-darwin-arm64",
   "version": "3.11.0",
-  "description": "Platform-specific binary for oh-my-opencode (darwin-arm64)",
+  "description": "Platform-specific binary for openagent-labforge (darwin-arm64)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/code-yeongyu/oh-my-openagent"
+    "url": "https://github.com/code-yeongyu/openagent-labforge"
   },
   "os": [
     "darwin"
@@ -17,6 +17,7 @@
     "bin"
   ],
   "bin": {
-    "oh-my-opencode": "./bin/oh-my-opencode"
+    "openagent-labforge": "./bin/openagent-labforge"
   }
 }
+

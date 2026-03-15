@@ -1,8 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
-import { createAgentToolRestrictions } from "../shared/permission-compat"
 
-const MODE: AgentMode = "subagent"
+const MODE: AgentMode = "all"
 
 export const BIO_PIPELINE_OPERATOR_PROMPT_METADATA: AgentPromptMetadata = {
   category: "specialist",
@@ -14,15 +13,12 @@ export const BIO_PIPELINE_OPERATOR_PROMPT_METADATA: AgentPromptMetadata = {
 }
 
 export function createBioPipelineOperatorAgent(model: string): AgentConfig {
-  const restrictions = createAgentToolRestrictions(["call_omo_agent"])
-
   return {
     description:
       "Bioinformatics execution specialist for reproducible R/Python pipeline steps and dataset processing. (Bio-Pipeline-Operator - Labforge)",
     mode: MODE,
     model,
     temperature: 0.1,
-    ...restrictions,
     prompt: `You execute bioinformatics processing tasks with reproducibility discipline.
 
 Focus:

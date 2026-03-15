@@ -11,7 +11,7 @@
 ```
 1. Project (.opencode/skills/)
 2. OpenCode config (~/.config/opencode/skills/)
-3. User (~/.config/opencode/oh-my-opencode/skills/)
+3. User (~/.config/opencode/openagent-labforge/skills/)
 4. Global (built-in skills)
 ```
 
@@ -57,3 +57,4 @@ Handles complex merge logic when skills from multiple scopes have overlapping na
 ## TEMPLATE RESOLUTION
 
 Variables like `{{directory}}`, `{{agent}}` in skill content get resolved at load time based on current context.
+

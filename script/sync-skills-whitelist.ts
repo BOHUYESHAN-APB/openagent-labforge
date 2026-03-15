@@ -5,7 +5,7 @@ import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promi
 import { basename, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
-type SourceName = "anthropic" | "openai-curated" | "openai-system" | "microsoft" | "skills-main"
+type SourceName = "anthropic" | "openai-curated" | "openai-system" | "microsoft" | "skills-main" | "auto-claude"
 type Decision = "allow" | "review" | "deny"
 
 interface SourceSpec {
@@ -39,6 +39,13 @@ interface Manifest {
 }
 
 const RESTRICTED_ANTHROPIC_SKILLS = new Set(["docx", "pdf", "pptx", "xlsx"])
+const DISABLED_AUTO_CLAUDE_SKILLS = new Set([
+  "auto-review-loop",
+  "auto-review-loop-llm",
+  "auto-review-loop-minimax",
+  "auto-paper-improvement-loop",
+  "research-review",
+])
 
 async function exists(path: string): Promise<boolean> {
   return stat(path).then(() => true).catch(() => false)
@@ -134,6 +141,13 @@ async function decideSkill(options: {
     return {
       decision: "deny",
       reason: "anthropic restricted document skill",
+    }
+  }
+
+  if (options.source === "auto-claude" && DISABLED_AUTO_CLAUDE_SKILLS.has(options.skillName)) {
+    return {
+      decision: "deny",
+      reason: "disabled in openagent-labforge (no MCP install)",
     }
   }
 
@@ -275,6 +289,12 @@ async function writeOutputs(options: {
 function getSources(workspaceRoot: string): SourceSpec[] {
   const optionalSkillsMain = process.env.SKILLS_MAIN_DIR
   const sources: SourceSpec[] = [
+    {
+      name: "auto-claude",
+      basePath: join(workspaceRoot, "external", "auto-claude-skills", "skills"),
+      rootLicensePath: join(workspaceRoot, "external", "auto-claude-skills", "LICENSE"),
+      maxDepth: 1,
+    },
     {
       name: "anthropic",
       basePath: join(workspaceRoot, "external", "anthropics-skills", "skills"),

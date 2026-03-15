@@ -1,6 +1,6 @@
 {
   // Classic profile: keep OpenCode's built-in plan/build behavior.
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/openagent-labforge.schema.json",
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/openagent-labforge/dev/assets/openagent-labforge.schema.json",
 
   "i18n": {
     // auto | en | zh-CN
@@ -26,3 +26,4 @@
     "task_system": false
   }
 }
+

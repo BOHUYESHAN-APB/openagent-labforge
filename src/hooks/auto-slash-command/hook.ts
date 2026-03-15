@@ -9,6 +9,7 @@ import {
   AUTO_SLASH_COMMAND_TAG_CLOSE,
   AUTO_SLASH_COMMAND_TAG_OPEN,
 } from "./constants"
+import { createProcessedCommandStore } from "./processed-command-store"
 import type {
   AutoSlashCommandHookInput,
   AutoSlashCommandHookOutput,
@@ -17,8 +18,22 @@ import type {
 } from "./types"
 import type { LoadedSkill } from "../../features/opencode-skill-loader"
 
-const sessionProcessedCommands = new Set<string>()
-const sessionProcessedCommandExecutions = new Set<string>()
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function getDeletedSessionID(properties: unknown): string | null {
+  if (!isRecord(properties)) {
+    return null
+  }
+
+  const info = properties.info
+  if (!isRecord(info)) {
+    return null
+  }
+
+  return typeof info.id === "string" ? info.id : null
+}
 
 export interface AutoSlashCommandHookOptions {
   skills?: LoadedSkill[]
@@ -33,6 +48,13 @@ export function createAutoSlashCommandHook(options?: AutoSlashCommandHookOptions
     getSkills: options?.getSkills,
     pluginsEnabled: options?.pluginsEnabled,
     enabledPluginsOverride: options?.enabledPluginsOverride,
+  }
+  const sessionProcessedCommands = createProcessedCommandStore()
+  const sessionProcessedCommandExecutions = createProcessedCommandStore()
+
+  const dispose = (): void => {
+    sessionProcessedCommands.clear()
+    sessionProcessedCommandExecutions.clear()
   }
 
   return {
@@ -63,7 +85,9 @@ export function createAutoSlashCommandHook(options?: AutoSlashCommandHookOptions
         return
       }
 
-      const commandKey = `${input.sessionID}:${input.messageID}:${parsed.command}`
+      const commandKey = input.messageID
+        ? `${input.sessionID}:${input.messageID}:${parsed.command}`
+        : `${input.sessionID}:${parsed.command}`
       if (sessionProcessedCommands.has(commandKey)) {
         return
       }
@@ -103,7 +127,7 @@ export function createAutoSlashCommandHook(options?: AutoSlashCommandHookOptions
       input: CommandExecuteBeforeInput,
       output: CommandExecuteBeforeOutput
     ): Promise<void> => {
-      const commandKey = `${input.sessionID}:${input.command}:${Date.now()}`
+      const commandKey = `${input.sessionID}:${input.command.toLowerCase()}:${input.arguments || ""}`
       if (sessionProcessedCommandExecutions.has(commandKey)) {
         return
       }
@@ -147,5 +171,23 @@ export function createAutoSlashCommandHook(options?: AutoSlashCommandHookOptions
         command: input.command,
       })
     },
+    event: async ({
+      event,
+    }: {
+      event: { type: string; properties?: unknown }
+    }): Promise<void> => {
+      if (event.type !== "session.deleted") {
+        return
+      }
+
+      const sessionID = getDeletedSessionID(event.properties)
+      if (!sessionID) {
+        return
+      }
+
+      sessionProcessedCommands.cleanupSession(sessionID)
+      sessionProcessedCommandExecutions.cleanupSession(sessionID)
+    },
+    dispose,
   }
 }

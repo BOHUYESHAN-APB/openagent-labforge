@@ -85,7 +85,27 @@ export function createToolExecuteBeforeHandler(args: {
           verification_session_id: undefined,
         })
         argsObject.run_in_background = false
-        argsObject.prompt = `${prompt ? `${prompt}\n\n` : ""}You are verifying the active ULTRAWORK loop result for this session. Review whether the original task is truly complete: ${loopState.prompt}\n\nIf the work is fully complete, end your response with <promise>${ULTRAWORK_VERIFICATION_PROMISE}</promise>. If the work is not complete, explain the blocking issues clearly and DO NOT emit that promise.\n\n<ulw_verification_attempt_id>${verificationAttemptId}</ulw_verification_attempt_id>`
+        const verificationPrompt = [
+          "You are verifying the active ULTRAWORK loop result for this session.",
+          "",
+          "Original ULTRAWORK task:",
+          loopState.prompt,
+          "",
+          "Verification protocol:",
+          "- Confirm every requirement in the task is satisfied.",
+          "- Inspect referenced files or outputs using Read/Grep/Glob.",
+          "- If a verification command was explicitly specified, run it. Do not invent new commands.",
+          "- Check for missing outputs, errors, or unresolved TODOs.",
+          "- For bioinformatics tasks, verify data provenance, pipeline steps, and output artifacts.",
+          "",
+          "Decision rules:",
+          `- If anything is missing or unverifiable, explain why and DO NOT emit <promise>${ULTRAWORK_VERIFICATION_PROMISE}</promise>.`,
+          `- If fully complete, end your response with <promise>${ULTRAWORK_VERIFICATION_PROMISE}</promise>.`,
+          "",
+          `<ulw_verification_attempt_id>${verificationAttemptId}</ulw_verification_attempt_id>`,
+        ].join("\n")
+
+        argsObject.prompt = `${prompt ? `${prompt}\n\n` : ""}${verificationPrompt}`
       }
     }
 

@@ -7,6 +7,7 @@ import { createHooks } from "./create-hooks"
 import { createManagers } from "./create-managers"
 import { createTools } from "./create-tools"
 import { createPluginInterface } from "./plugin-interface"
+import { createPluginDispose, type PluginDispose } from "./plugin-dispose"
 
 import { loadPluginConfig } from "./plugin-config"
 import { createModelCacheState } from "./plugin-state"
@@ -19,15 +20,18 @@ import {
 import { applyModelGovernor } from "./features/model-governor"
 import { startTmuxCheck } from "./tools"
 
-const OhMyOpenCodePlugin: Plugin = async (ctx) => {
+let activePluginDispose: PluginDispose | null = null
+
+const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
   // Initialize config context for plugin runtime (prevents warnings from hooks)
   initConfigContext("opencode", null)
-  log("[OhMyOpenCodePlugin] ENTRY - plugin loading", {
+  log("[OpenAgentLabforgePlugin] ENTRY - plugin loading", {
     directory: ctx.directory,
   })
 
   injectServerAuthIntoClient(ctx.client)
   startTmuxCheck()
+  await activePluginDispose?.()
 
   const pluginConfig = loadPluginConfig(ctx.directory, ctx)
 
@@ -83,6 +87,12 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     availableSkills: toolsResult.availableSkills,
   })
 
+  const dispose = createPluginDispose({
+    backgroundManager: managers.backgroundManager,
+    skillMcpManager: managers.skillMcpManager,
+    disposeHooks: hooks.disposeHooks,
+  })
+
   const pluginInterface = createPluginInterface({
     ctx,
     pluginConfig,
@@ -92,6 +102,8 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     tools: toolsResult.filteredTools,
   })
 
+  activePluginDispose = dispose
+
   return {
     ...pluginInterface,
 
@@ -99,19 +111,20 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
       _input: { sessionID: string },
       output: { context: string[] },
     ): Promise<void> => {
+      await hooks.compactionContextInjector?.capture(_input.sessionID)
       await hooks.compactionTodoPreserver?.capture(_input.sessionID)
       await hooks.claudeCodeHooks?.["experimental.session.compacting"]?.(
         _input,
         output,
       )
       if (hooks.compactionContextInjector) {
-        output.context.push(hooks.compactionContextInjector(_input.sessionID))
+        output.context.push(hooks.compactionContextInjector.inject(_input.sessionID))
       }
     },
   }
 }
 
-export default OhMyOpenCodePlugin
+export default OpenAgentLabforgePlugin
 
 export type {
   OhMyOpenCodeConfig,

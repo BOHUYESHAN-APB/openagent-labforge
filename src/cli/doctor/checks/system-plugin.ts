@@ -31,7 +31,7 @@ function parsePluginVersion(entry: string): string | null {
 }
 
 function findPluginEntry(entries: string[]): { entry: string; isLocalDev: boolean } | null {
-  const legacyName = "oh-my-opencode"
+  const legacyName = "openagent-labforge"
   for (const entry of entries) {
     if (entry === PACKAGE_NAME || entry.startsWith(`${PACKAGE_NAME}@`)) {
       return { entry, isLocalDev: false }
@@ -100,3 +100,4 @@ export function getPluginInfo(): PluginInfo {
 }
 
 export { detectConfigPath, findPluginEntry }
+

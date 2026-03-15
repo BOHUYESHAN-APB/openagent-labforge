@@ -14,6 +14,7 @@ export const BuiltinAgentNameSchema = z.enum([
   "metis",
   "momus",
   "atlas",
+  "sisyphus-junior",
 ])
 
 export const BuiltinSkillNameSchema = z.enum([

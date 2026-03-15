@@ -4,7 +4,7 @@
 
 ### Problem
 
-When using Ollama as a provider with oh-my-opencode agents, you may encounter:
+When using Ollama as a provider with openagent-labforge agents, you may encounter:
 
 ```
 JSON Parse error: Unexpected EOF
@@ -26,7 +26,7 @@ Claude Code SDK expects a single JSON object, not multiple NDJSON lines, causing
 **Why this happens:**
 - **Ollama API**: Returns streaming responses as NDJSON by design
 - **Claude Code SDK**: Doesn't properly handle NDJSON responses for tool calls
-- **oh-my-opencode**: Passes through the SDK's behavior (can't fix at this layer)
+- **openagent-labforge**: Passes through the SDK's behavior (can't fix at this layer)
 
 ## Solutions
 
@@ -67,7 +67,7 @@ The proper fix requires Claude Code SDK to:
 3. Merge `tool_calls` from multiple lines
 4. Return a single merged response
 
-**Tracking**: https://github.com/code-yeongyu/oh-my-opencode/issues/1124
+**Tracking**: https://github.com/code-yeongyu/openagent-labforge/issues/1124
 
 ## Workaround Implementation
 
@@ -114,7 +114,7 @@ curl -s http://localhost:11434/api/chat \
 
 ## Related Issues
 
-- **oh-my-opencode**: https://github.com/code-yeongyu/oh-my-opencode/issues/1124
+- **openagent-labforge**: https://github.com/code-yeongyu/openagent-labforge/issues/1124
 - **Ollama API Docs**: https://github.com/ollama/ollama/blob/main/docs/api.md
 
 ## Getting Help
@@ -125,3 +125,4 @@ If you encounter this issue:
 2. Set `stream: false` as a workaround
 3. Report any additional errors to the issue tracker
 4. Provide your configuration (without secrets) for debugging
+

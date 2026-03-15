@@ -16,7 +16,7 @@ const REPO = "ast-grep/ast-grep"
 
 // IMPORTANT: Update this when bumping @ast-grep/cli in package.json
 // This is only used as fallback when @ast-grep/cli package.json cannot be read
-const DEFAULT_VERSION = "0.40.0"
+const DEFAULT_VERSION = "0.41.1"
 
 function getAstGrepVersion(): string {
   try {
@@ -47,12 +47,12 @@ export function getCacheDir(): string {
   if (process.platform === "win32") {
     const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA
     const base = localAppData || join(homedir(), "AppData", "Local")
-    return join(base, "oh-my-opencode", "bin")
+    return join(base, "openagent-labforge", "bin")
   }
 
   const xdgCache = process.env.XDG_CACHE_HOME
   const base = xdgCache || join(homedir(), ".cache")
-  return join(base, "oh-my-opencode", "bin")
+  return join(base, "openagent-labforge", "bin")
 }
 
 export function getBinaryName(): string {
@@ -70,7 +70,7 @@ export async function downloadAstGrep(version: string = DEFAULT_VERSION): Promis
   const platformInfo = PLATFORM_MAP[platformKey]
 
   if (!platformInfo) {
-    log(`[oh-my-opencode] Unsupported platform for ast-grep: ${platformKey}`)
+    log(`[openagent-labforge] Unsupported platform for ast-grep: ${platformKey}`)
     return null
   }
 
@@ -86,7 +86,7 @@ export async function downloadAstGrep(version: string = DEFAULT_VERSION): Promis
   const assetName = `app-${arch}-${os}.zip`
   const downloadUrl = `https://github.com/${REPO}/releases/download/${version}/${assetName}`
 
-  log(`[oh-my-opencode] Downloading ast-grep binary...`)
+  log(`[openagent-labforge] Downloading ast-grep binary...`)
 
   try {
     const archivePath = join(cacheDir, assetName)
@@ -96,12 +96,12 @@ export async function downloadAstGrep(version: string = DEFAULT_VERSION): Promis
     cleanupArchive(archivePath)
     ensureExecutable(binaryPath)
 
-    log(`[oh-my-opencode] ast-grep binary ready.`)
+    log(`[openagent-labforge] ast-grep binary ready.`)
 
     return binaryPath
   } catch (err) {
     log(
-      `[oh-my-opencode] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`
+      `[openagent-labforge] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`
     )
     return null
   }
@@ -116,3 +116,4 @@ export async function ensureAstGrepBinary(): Promise<string | null> {
   const version = getAstGrepVersion()
   return downloadAstGrep(version)
 }
+

@@ -228,13 +228,14 @@ export function createChatMessageHandler(args: {
       }
     }
 
-    applyUltraworkModelOverrideOnMessage(
+    await applyUltraworkModelOverrideOnMessage(
       pluginConfig,
       input.agent,
       output,
       pluginContext.client.tui,
       input.sessionID,
       manualModelChangeDetected,
+      pluginContext.client,
     )
 
     const requestedModel = input.model

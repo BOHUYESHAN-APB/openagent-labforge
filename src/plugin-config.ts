@@ -11,6 +11,15 @@ import {
   migrateConfigFile,
 } from "./shared";
 
+const PARTIAL_STRING_ARRAY_KEYS = new Set([
+  "disabled_mcps",
+  "disabled_agents",
+  "disabled_skills",
+  "disabled_hooks",
+  "disabled_commands",
+  "disabled_tools",
+]);
+
 export function parseConfigPartially(
   rawConfig: Record<string, unknown>
 ): OhMyOpenCodeConfig | null {
@@ -23,6 +32,14 @@ export function parseConfigPartially(
   const invalidSections: string[] = [];
 
   for (const key of Object.keys(rawConfig)) {
+    if (PARTIAL_STRING_ARRAY_KEYS.has(key)) {
+      const sectionValue = rawConfig[key];
+      if (Array.isArray(sectionValue) && sectionValue.every((value) => typeof value === "string")) {
+        partialConfig[key] = sectionValue;
+      }
+      continue;
+    }
+
     const sectionResult = OhMyOpenCodeConfigSchema.safeParse({ [key]: rawConfig[key] });
     if (sectionResult.success) {
       const parsed = sectionResult.data as Record<string, unknown>;
@@ -140,7 +157,7 @@ export function loadPluginConfig(
   // User-level config path - prefer .jsonc over .json
   const configDir = getOpenCodeConfigDir({ binary: "opencode" });
   const userBasePath = path.join(configDir, "openagent-labforge");
-  const legacyUserBasePath = path.join(configDir, "oh-my-opencode");
+  const legacyUserBasePath = path.join(configDir, "openagent-labforge");
   const userDetected = detectConfigFile(userBasePath);
   const legacyUserDetected = detectConfigFile(legacyUserBasePath);
   const userConfigPath =
@@ -152,7 +169,7 @@ export function loadPluginConfig(
 
   // Project-level config path - prefer .jsonc over .json
   const projectBasePath = path.join(directory, ".opencode", "openagent-labforge");
-  const legacyProjectBasePath = path.join(directory, ".opencode", "oh-my-opencode");
+  const legacyProjectBasePath = path.join(directory, ".opencode", "openagent-labforge");
   const projectDetected = detectConfigFile(projectBasePath);
   const legacyProjectDetected = detectConfigFile(legacyProjectBasePath);
   const projectConfigPath =
@@ -185,3 +202,4 @@ export function loadPluginConfig(
   });
   return config;
 }
+

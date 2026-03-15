@@ -16,10 +16,7 @@ function stripTrailingCommas(json: string): string {
   return json.replace(/,(\s*[}\]])/g, "$1")
 }
 
-function removeFromBunLock(packageName: string): boolean {
-  const lockPath = path.join(USER_CONFIG_DIR, "bun.lock")
-  if (!fs.existsSync(lockPath)) return false
-
+function removeFromTextBunLock(lockPath: string, packageName: string): boolean {
   try {
     const content = fs.readFileSync(lockPath, "utf-8")
     const lock = JSON.parse(stripTrailingCommas(content)) as BunLockfile
@@ -44,6 +41,37 @@ function removeFromBunLock(packageName: string): boolean {
   } catch {
     return false
   }
+}
+
+function deleteBinaryBunLock(lockPath: string): boolean {
+  try {
+    fs.unlinkSync(lockPath)
+    log(`[auto-update-checker] Removed bun.lockb to force re-resolution`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function removeFromBunLock(packageName: string): boolean {
+  const cacheTextLockPath = path.join(CACHE_DIR, "bun.lock")
+  const cacheBinaryLockPath = path.join(CACHE_DIR, "bun.lockb")
+  const userTextLockPath = path.join(USER_CONFIG_DIR, "bun.lock")
+
+  if (fs.existsSync(cacheTextLockPath)) {
+    return removeFromTextBunLock(cacheTextLockPath, packageName)
+  }
+
+  // Binary lockfiles cannot be parsed; deletion forces bun to re-resolve
+  if (fs.existsSync(cacheBinaryLockPath)) {
+    return deleteBinaryBunLock(cacheBinaryLockPath)
+  }
+
+  if (fs.existsSync(userTextLockPath)) {
+    return removeFromTextBunLock(userTextLockPath, packageName)
+  }
+
+  return false
 }
 
 export function invalidatePackage(packageName: string = PACKAGE_NAME): boolean {

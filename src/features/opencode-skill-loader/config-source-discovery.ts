@@ -30,7 +30,7 @@ function getPackageRootDir(): string {
         if (
           parsed.name === "@bohuyeshan/openagent-labforge-core" ||
           parsed.name === "@labforge/openagent-labforge-core" ||
-          parsed.name === "oh-my-opencode"
+          parsed.name === "openagent-labforge"
         ) {
           packageRootDirCache = currentDir
           return currentDir
@@ -241,3 +241,4 @@ export async function discoverConfigSourceSkills(options: {
     configSourceSkillsInFlight.delete(cacheKey)
   }
 }
+

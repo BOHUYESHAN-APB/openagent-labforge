@@ -11,6 +11,7 @@ import { CommentCheckerConfigSchema } from "./comment-checker"
 import { BuiltinCommandNameSchema } from "./commands"
 import { ExperimentalConfigSchema } from "./experimental"
 import { GitMasterConfigSchema } from "./git-master"
+import { HookNameSchema } from "./hooks"
 import { I18nConfigSchema } from "./i18n"
 import { ModelGovernorConfigSchema } from "./model-governor"
 import { McpPolicyConfigSchema } from "./mcp-policy"
@@ -32,12 +33,12 @@ export const OhMyOpenCodeConfigSchema = z.object({
   mcp_policy: McpPolicyConfigSchema.optional(),
   /** Enable new task system (default: false) */
   new_task_system_enabled: z.boolean().optional(),
-  /** Default agent name for `oh-my-opencode run` (env: OPENCODE_DEFAULT_AGENT) */
+  /** Default agent name for `openagent-labforge run` (env: OPENCODE_DEFAULT_AGENT) */
   default_run_agent: z.string().optional(),
   disabled_mcps: z.array(AnyMcpNameSchema).optional(),
   disabled_agents: z.array(z.string()).optional(),
   disabled_skills: z.array(BuiltinSkillNameSchema).optional(),
-  disabled_hooks: z.array(z.string()).optional(),
+  disabled_hooks: z.array(HookNameSchema).optional(),
   disabled_commands: z.array(BuiltinCommandNameSchema).optional(),
   /** Disable specific tools by name (e.g., ["todowrite", "todoread"]) */
   disabled_tools: z.array(z.string()).optional(),
@@ -75,3 +76,4 @@ export const OhMyOpenCodeConfigSchema = z.object({
 })
 
 export type OhMyOpenCodeConfig = z.infer<typeof OhMyOpenCodeConfigSchema>
+

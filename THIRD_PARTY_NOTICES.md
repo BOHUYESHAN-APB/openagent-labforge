@@ -32,7 +32,14 @@ For operational attribution context, also see:
 - `NOTICE`
 - `docs/licensing.md`
 
-## 3) Third-Party MCP / Integration Matrix
+## 3) External Skills Sources
+
+- Auto-claude research skills
+  - Repository: https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep
+  - License: MIT (see `external/auto-claude-skills/LICENSE`)
+  - Local mirror: `external/auto-claude-skills`
+
+## 4) Third-Party MCP / Integration Matrix
 
 The following matrix is used as engineering attribution + intake tracking.
 Entries may be `Unknown` until verified from upstream repository sources.

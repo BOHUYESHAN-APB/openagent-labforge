@@ -4,7 +4,7 @@
 
 ## OVERVIEW
 
-37 files. Powers the `oh-my-opencode run <message>` command. Connects to OpenCode server, creates/resumes sessions, streams events, and polls for completion.
+37 files. Powers the `openagent-labforge run <message>` command. Connects to OpenCode server, creates/resumes sessions, streams events, and polls for completion.
 
 ## EXECUTION FLOW
 
@@ -54,3 +54,4 @@ Poll-based with two conditions:
 2. No running background tasks
 
 `on-complete-hook.ts` executes optional user command on completion (e.g., `--on-complete "notify-send done"`).
+

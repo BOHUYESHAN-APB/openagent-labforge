@@ -12,7 +12,7 @@ export async function showSpinnerToast(ctx: PluginInput, version: string, messag
     await ctx.client.tui
       .showToast({
         body: {
-          title: `${spinner} OhMyOpenCode ${version}`,
+          title: `${spinner} OpenAgent Labforge ${version}`,
           message,
           variant: "info" as const,
           duration: frameInterval + 50,
@@ -23,3 +23,4 @@ export async function showSpinnerToast(ctx: PluginInput, version: string, messag
     await new Promise((resolve) => setTimeout(resolve, frameInterval))
   }
 }
+

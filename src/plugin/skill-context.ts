@@ -34,10 +34,25 @@ export type SkillContext = {
   getMergedSkills: () => Promise<LoadedSkill[]>
 }
 
+const PROVIDER_GATED_SKILL_NAMES = new Set(["agent-browser", "playwright"])
+
 function mapScopeToLocation(scope: SkillScope): AvailableSkill["location"] {
   if (scope === "user" || scope === "opencode") return "user"
   if (scope === "project" || scope === "opencode-project") return "project"
   return "plugin"
+}
+
+function filterProviderGatedSkills(
+  skills: LoadedSkill[],
+  browserProvider: BrowserAutomationProvider,
+): LoadedSkill[] {
+  return skills.filter((skill) => {
+    if (!PROVIDER_GATED_SKILL_NAMES.has(skill.name)) {
+      return true
+    }
+
+    return skill.name === browserProvider
+  })
 }
 
 function buildSkillContextCacheKey(args: {
@@ -95,30 +110,45 @@ async function loadMergedSkills(args: {
 
     const includeClaudeSkills = args.pluginConfig.claude_code?.skills !== false
     const discoverStartedAt = performance.now()
-    const [configSourceSkills, userSkills, globalSkills, projectSkills, opencodeProjectSkills, agentsProjectSkills, agentsGlobalSkills] =
-      await Promise.all([
-        discoverConfigSourceSkills({
-          config: args.pluginConfig.skills,
-          configDir: args.directory,
-        }),
-        includeClaudeSkills ? discoverUserClaudeSkills() : Promise.resolve([]),
-        discoverOpencodeGlobalSkills(),
-        includeClaudeSkills ? discoverProjectClaudeSkills(args.directory) : Promise.resolve([]),
-        discoverOpencodeProjectSkills(args.directory),
-        discoverProjectAgentsSkills(args.directory),
-        discoverGlobalAgentsSkills(),
-      ])
+    const [
+      configSourceSkills,
+      userSkills,
+      globalSkills,
+      projectSkills,
+      opencodeProjectSkills,
+      agentsProjectSkills,
+      agentsGlobalSkills,
+    ] = await Promise.all([
+      discoverConfigSourceSkills({
+        config: args.pluginConfig.skills,
+        configDir: args.directory,
+      }),
+      includeClaudeSkills ? discoverUserClaudeSkills() : Promise.resolve([]),
+      discoverOpencodeGlobalSkills(),
+      includeClaudeSkills ? discoverProjectClaudeSkills(args.directory) : Promise.resolve([]),
+      discoverOpencodeProjectSkills(args.directory),
+      discoverProjectAgentsSkills(args.directory),
+      discoverGlobalAgentsSkills(),
+    ])
     args.phaseTimings && (args.phaseTimings.discoverTotalMs = Math.round(performance.now() - discoverStartedAt))
+
+    const filteredConfigSourceSkills = filterProviderGatedSkills(configSourceSkills, args.browserProvider)
+    const filteredUserSkills = filterProviderGatedSkills(userSkills, args.browserProvider)
+    const filteredGlobalSkills = filterProviderGatedSkills(globalSkills, args.browserProvider)
+    const filteredProjectSkills = filterProviderGatedSkills(projectSkills, args.browserProvider)
+    const filteredOpencodeProjectSkills = filterProviderGatedSkills(opencodeProjectSkills, args.browserProvider)
+    const filteredAgentsProjectSkills = filterProviderGatedSkills(agentsProjectSkills, args.browserProvider)
+    const filteredAgentsGlobalSkills = filterProviderGatedSkills(agentsGlobalSkills, args.browserProvider)
 
     const mergeStartedAt = performance.now()
     const mergedSkills = mergeSkills(
       builtinSkills,
       args.pluginConfig.skills,
-      configSourceSkills,
-      [...userSkills, ...agentsGlobalSkills],
-      globalSkills,
-      [...projectSkills, ...agentsProjectSkills],
-      opencodeProjectSkills,
+      filteredConfigSourceSkills,
+      [...filteredUserSkills, ...filteredAgentsGlobalSkills],
+      filteredGlobalSkills,
+      [...filteredProjectSkills, ...filteredAgentsProjectSkills],
+      filteredOpencodeProjectSkills,
       { configDir: args.directory },
     )
     args.phaseTimings && (args.phaseTimings.mergeMs = Math.round(performance.now() - mergeStartedAt))

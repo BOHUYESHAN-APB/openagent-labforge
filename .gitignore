@@ -16,10 +16,12 @@ external/openai-skills/
 external/openclaw-skills/
 external/skills-main/
 external/skills-quarantine/
+Future/
 
 # Platform binaries (built, not committed)
-packages/*/bin/oh-my-opencode
-packages/*/bin/oh-my-opencode.exe
+packages/*/bin/openagent-labforge
+packages/*/bin/openagent-labforge.exe
+packages/*/bin/*.map
 
 # IDE
 .idea/

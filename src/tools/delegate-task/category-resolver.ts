@@ -7,6 +7,8 @@ import { SISYPHUS_JUNIOR_AGENT } from "./sisyphus-junior-agent"
 import { resolveCategoryConfig } from "./categories"
 import { parseModelString } from "./model-string-parser"
 import { CATEGORY_MODEL_REQUIREMENTS } from "../../shared/model-requirements"
+import { normalizeFallbackModels } from "../../shared/model-resolver"
+import { buildFallbackChainFromModels } from "../../shared/fallback-chain-from-models"
 import { getAvailableModelsForDelegateTask } from "./available-models"
 import { resolveModelForDelegateTask } from "./model-selection"
 
@@ -60,7 +62,7 @@ export async function resolveCategoryExecution(
 
 To use this category:
 1. Connect a provider with this model: ${requirement.requiresModel}
-2. Or configure an alternative model in your oh-my-opencode.json for this category
+2. Or configure an alternative model in your openagent-labforge.json for this category
 
 Available categories: ${allCategoryNames}`,
       }
@@ -79,6 +81,7 @@ Available categories: ${allCategoryNames}`,
   }
 
   const requirement = CATEGORY_MODEL_REQUIREMENTS[args.category!]
+  const normalizedConfiguredFallbackModels = normalizeFallbackModels(resolved.config.fallback_models)
   let actualModel: string | undefined
   let modelInfo: ModelFallbackInfo | undefined
   let categoryModel: { providerID: string; modelID: string; variant?: string } | undefined
@@ -103,6 +106,7 @@ Available categories: ${allCategoryNames}`,
   } else {
     const resolution = resolveModelForDelegateTask({
       userModel: explicitCategoryModel ?? inheritedParentModel ?? overrideModel,
+      userFallbackModels: normalizedConfiguredFallbackModels,
       categoryDefaultModel: resolved.model,
       fallbackChain: requirement.fallbackChain,
       availableModels,
@@ -172,7 +176,7 @@ Available categories: ${allCategoryNames}`,
 
 Configure in one of:
 1. OpenCode: Set "model" in opencode.json
-2. Oh-My-OpenCode: Set category model in oh-my-opencode.json
+2. openagent-labforge: Set category model in openagent-labforge.json
 3. Provider: Connect a provider with available models
 
 Current category: ${args.category}
@@ -184,6 +188,14 @@ Available categories: ${categoryNames.join(", ")}`,
   const categoryConfigModel = resolved.config.model?.toLowerCase()
   const isUnstableAgent = resolved.config.is_unstable_agent === true || [unstableModel, categoryConfigModel].some(m => m ? m.includes("gemini") || m.includes("minimax") || m.includes("kimi") : false)
 
+  const defaultProviderID = categoryModel?.providerID
+    ?? parseModelString(actualModel ?? "")?.providerID
+    ?? "opencode"
+  const configuredFallbackChain = buildFallbackChainFromModels(
+    normalizedConfiguredFallbackModels,
+    defaultProviderID,
+  )
+
   return {
     agentToUse: SISYPHUS_JUNIOR_AGENT,
     categoryModel,
@@ -192,6 +204,7 @@ Available categories: ${categoryNames.join(", ")}`,
     modelInfo,
     actualModel,
     isUnstableAgent,
-    fallbackChain: requirement?.fallbackChain,
+    fallbackChain: configuredFallbackChain ?? requirement?.fallbackChain,
   }
 }
+

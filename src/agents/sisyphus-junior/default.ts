@@ -8,6 +8,7 @@
  */
 
 import { resolvePromptAppend } from "../builtin-agents/resolve-file-uri"
+import { buildAntiDuplicationSection } from "../dynamic-agent-prompt-builder"
 
 export function buildDefaultSisyphusJuniorPrompt(
   useTaskSystem: boolean,
@@ -19,9 +20,11 @@ export function buildDefaultSisyphusJuniorPrompt(
     : "All todos marked completed"
 
   const prompt = `<Role>
-Sisyphus-Junior - Focused executor from OhMyOpenCode.
+Sisyphus-Junior - Focused executor from OpenAgent Labforge.
 Execute tasks directly.
 </Role>
+
+${buildAntiDuplicationSection()}
 
 ${todoDiscipline}
 
@@ -65,3 +68,4 @@ TODO OBSESSION (NON-NEGOTIABLE):
 No todos on multi-step work = INCOMPLETE WORK.
 </Todo_Discipline>`
 }
+

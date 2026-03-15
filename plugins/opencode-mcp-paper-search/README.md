@@ -36,6 +36,6 @@ Notes:
 
 ## Compatibility
 
-- Requires `oh-my-opencode >=3.11.0 <4.0.0`
+- Requires `@bohuyeshan/openagent-labforge-core >=3.11.0 <4.0.0`
 
 License: Follows repository-level licensing boundary; third-party MCPs retain their original licenses.

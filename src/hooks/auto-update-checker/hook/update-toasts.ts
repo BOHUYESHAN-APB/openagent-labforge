@@ -9,7 +9,7 @@ export async function showUpdateAvailableToast(
   await ctx.client.tui
     .showToast({
       body: {
-        title: `OhMyOpenCode ${latestVersion}`,
+        title: `OpenAgent Labforge ${latestVersion}`,
         message: getToastMessage(true, latestVersion),
         variant: "info" as const,
         duration: 8000,
@@ -23,7 +23,7 @@ export async function showAutoUpdatedToast(ctx: PluginInput, oldVersion: string,
   await ctx.client.tui
     .showToast({
       body: {
-        title: "OhMyOpenCode Updated!",
+        title: "OpenAgent Labforge Updated!",
         message: `v${oldVersion} → v${newVersion}\nRestart OpenCode to apply.`,
         variant: "success" as const,
         duration: 8000,
@@ -32,3 +32,4 @@ export async function showAutoUpdatedToast(ctx: PluginInput, oldVersion: string,
     .catch(() => {})
   log(`[auto-update-checker] Auto-updated toast shown: v${oldVersion} → v${newVersion}`)
 }
+

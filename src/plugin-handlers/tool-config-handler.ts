@@ -3,25 +3,21 @@ import { getAgentDisplayName } from "../shared/agent-display-names";
 
 type AgentWithPermission = { permission?: Record<string, unknown> };
 
+function getConfigQuestionPermission(): string | null {
+  const configContent = process.env.OPENCODE_CONFIG_CONTENT;
+  if (!configContent) return null;
+  try {
+    const parsed = JSON.parse(configContent);
+    return parsed?.permission?.question ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function agentByKey(agentResult: Record<string, unknown>, key: string): AgentWithPermission | undefined {
   return (agentResult[key] ?? agentResult[getAgentDisplayName(key)]) as
     | AgentWithPermission
     | undefined;
-}
-
-function getConfigQuestionPermission(): "allow" | "deny" {
-  const configContent = process.env.OPENCODE_CONFIG_CONTENT
-  if (configContent) {
-    try {
-      const parsed = JSON.parse(configContent) as { permission?: { question?: string } }
-      if (parsed?.permission?.question === "deny") return "deny"
-    } catch {
-      // Ignore malformed config content and fall back to CLI run mode.
-    }
-  }
-
-  const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true"
-  return isCliRunMode ? "deny" : "allow"
 }
 
 export function applyToolConfig(params: {
@@ -46,7 +42,12 @@ export function applyToolConfig(params: {
       : {}),
   };
 
-  const questionPermission = getConfigQuestionPermission();
+  const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true";
+  const configQuestionPermission = getConfigQuestionPermission();
+  const questionPermission =
+    configQuestionPermission === "deny" ? "deny" :
+    isCliRunMode ? "deny" :
+    "allow";
 
   const librarian = agentByKey(params.agentResult, "librarian");
   if (librarian) {

@@ -1,6 +1,6 @@
 # Manifesto
 
-The principles and philosophy behind Oh My OpenCode.
+The principles and philosophy behind OpenAgent Labforge.
 
 ---
 
@@ -20,7 +20,7 @@ When you find yourself:
 
 That's not "human-AI collaboration." That's the AI failing to do its job.
 
-**Oh My OpenCode is built on this premise**: Human intervention during agentic work is fundamentally a wrong signal. If the system is designed correctly, the agent should complete the work without requiring you to babysit it.
+**OpenAgent Labforge is built on this premise**: Human intervention during agentic work is fundamentally a wrong signal. If the system is designed correctly, the agent should complete the work without requiring you to babysit it.
 
 ---
 
@@ -144,7 +144,7 @@ Human Intent → Agent Execution → Verified Result
           (intervention only on true failure)
 ```
 
-Everything in Oh My OpenCode is designed to make this loop work:
+Everything in OpenAgent Labforge is designed to make this loop work:
 
 | Feature | Purpose |
 |---------|---------|
@@ -193,3 +193,4 @@ That's the goal.
 
 - [Overview](./guide/overview.md)
 - [Orchestration Guide](./guide/orchestration.md)
+
