@@ -196,6 +196,7 @@ describe("session-notification", () => {
 
     const hook = createSessionNotification(createMockPluginInput(), {
       idleConfirmationDelay: 100, // Long delay
+      activityGracePeriodMs: 0,
       skipIfIncompleteTodos: false,
     })
 
@@ -271,6 +272,7 @@ describe("session-notification", () => {
 
     const hook = createSessionNotification(createMockPluginInput(), {
       idleConfirmationDelay: 50,
+      activityGracePeriodMs: 0,
       skipIfIncompleteTodos: false,
     })
 
@@ -305,6 +307,7 @@ describe("session-notification", () => {
 
     const hook = createSessionNotification(createMockPluginInput(), {
       idleConfirmationDelay: 50,
+      activityGracePeriodMs: 0,
       skipIfIncompleteTodos: false,
     })
 
@@ -364,6 +367,42 @@ describe("session-notification", () => {
 
     // then - only one notification should be sent
     expect(notificationCalls).toHaveLength(1)
+  })
+
+  test("should ignore activity within grace period", async () => {
+    // given - main session is set
+    const mainSessionID = "main-grace"
+    setMainSession(mainSessionID)
+
+    const hook = createSessionNotification(createMockPluginInput(), {
+      idleConfirmationDelay: 50,
+      activityGracePeriodMs: 100,
+      skipIfIncompleteTodos: false,
+      enforceMainSessionFilter: false,
+    })
+
+    // when - session goes idle
+    await hook({
+      event: {
+        type: "session.idle",
+        properties: { sessionID: mainSessionID },
+      },
+    })
+
+    // when - activity happens within grace period
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    await hook({
+      event: {
+        type: "tool.execute.before",
+        properties: { sessionID: mainSessionID },
+      },
+    })
+
+    // Wait for idle confirmation delay to pass
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // then - notification should still be sent
+    expect(notificationCalls.length).toBeGreaterThanOrEqual(1)
   })
 
   function createSenderMockCtx() {

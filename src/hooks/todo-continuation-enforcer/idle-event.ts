@@ -9,6 +9,7 @@ import { SystemDirectiveTypes } from "../../shared/system-directive"
 
 import {
   ABORT_WINDOW_MS,
+  BACKGROUND_TASK_ACTIVE_WINDOW_MS,
   CONTINUATION_COOLDOWN_MS,
   DEFAULT_SKIP_AGENTS,
   FAILURE_RESET_WINDOW_MS,
@@ -40,6 +41,15 @@ function hasRecentTodoContinuationDirective(messages: Array<{ info?: MessageInfo
   }
 
   return false
+}
+
+function isBackgroundTaskActive(task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }): boolean {
+  if (task.status !== "running") return false
+  const lastUpdate = task.progress?.lastUpdate?.getTime()
+  if (lastUpdate) return Date.now() - lastUpdate < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  const startedAt = task.startedAt?.getTime()
+  if (startedAt) return Date.now() - startedAt < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  return true
 }
 
 export async function handleSessionIdle(args: {
@@ -78,7 +88,7 @@ export async function handleSessionIdle(args: {
   }
 
   const hasRunningBgTasks = backgroundManager
-    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }) => isBackgroundTaskActive(task))
     : false
 
   if (hasRunningBgTasks) {
@@ -96,7 +106,7 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
       return
     }
-    if (hasRecentTodoContinuationDirective(messages)) {
+    if (hasRecentTodoContinuationDirective(messages) && state.lastInjectedAt && Date.now() - state.lastInjectedAt < CONTINUATION_COOLDOWN_MS) {
       log(`[${HOOK_NAME}] Skipped: recent todo continuation directive already injected`, { sessionID })
       return
     }
@@ -134,14 +144,6 @@ export async function handleSessionIdle(args: {
   }
 
   state.idleStrikeCount = (state.idleStrikeCount ?? 0) + 1
-  if (state.idleStrikeCount < 2) {
-    log(`[${HOOK_NAME}] Skipped: waiting for second idle before continuation`, {
-      sessionID,
-      idleStrikeCount: state.idleStrikeCount,
-      incompleteCount,
-    })
-    return
-  }
 
   if (
     state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES

@@ -19,6 +19,8 @@ interface SessionNotificationConfig {
   soundPath?: string
   /** Delay in ms before sending notification to confirm session is still idle (default: 1500) */
   idleConfirmationDelay?: number
+  /** Ignore activity events within grace period after idle (default: 100) */
+  activityGracePeriodMs?: number
   /** Skip notification if there are incomplete todos (default: true) */
   skipIfIncompleteTodos?: boolean
   /** Maximum number of sessions to track before cleanup (default: 100) */
@@ -42,6 +44,7 @@ export function createSessionNotification(
     playSound: false,
     soundPath: defaultSoundPath,
     idleConfirmationDelay: 1500,
+    activityGracePeriodMs: 100,
     skipIfIncompleteTodos: true,
     maxTrackedSessions: 100,
     enforceMainSessionFilter: true,

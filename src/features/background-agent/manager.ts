@@ -1501,32 +1501,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
 
       try {
         const sessionStatus = allStatuses[sessionID]
-        
-        if (sessionStatus?.type === "idle") {
-          // Edge guard: Validate session has actual output before completing
-          const hasValidOutput = await this.validateSessionHasOutput(sessionID)
-          if (!hasValidOutput) {
-            log("[background-agent] Polling idle but no valid output yet, waiting:", task.id)
-            continue
-          }
 
-          // Re-check status after async operation
-          if (task.status !== "running") continue
-
-          const hasIncompleteTodos = await this.checkSessionTodos(sessionID)
-          if (hasIncompleteTodos) {
-            log("[background-agent] Task has incomplete todos via polling, waiting:", task.id)
-            continue
-          }
-
-          await this.tryCompleteTask(task, "polling (idle status)")
-          continue
-        }
-
-        // Session is still actively running (not idle).
-        // Progress is already tracked via handleEvent(message.part.updated),
-        // so we skip the expensive session.messages() fetch here.
-        // Completion will be detected when session transitions to idle.
         if (sessionStatus?.type === "retry") {
           const retryMessage = typeof (sessionStatus as { message?: string }).message === "string"
             ? (sessionStatus as { message?: string }).message
@@ -1537,12 +1512,38 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           }
         }
 
-        log("[background-agent] Session still running, relying on event-based progress:", {
-          taskId: task.id,
-          sessionID,
-          sessionStatus: sessionStatus?.type ?? "not_in_status",
-          toolCalls: task.progress?.toolCalls ?? 0,
-        })
+        if (sessionStatus && sessionStatus.type !== "idle") {
+          // Session is still actively running (not idle).
+          // Progress is already tracked via handleEvent(message.part.updated),
+          // so we skip the expensive session.messages() fetch here.
+          // Completion will be detected when session transitions to idle.
+          log("[background-agent] Session still running, relying on event-based progress:", {
+            taskId: task.id,
+            sessionID,
+            sessionStatus: sessionStatus.type,
+            toolCalls: task.progress?.toolCalls ?? 0,
+          })
+          continue
+        }
+
+        // Edge guard: Validate session has actual output before completing
+        const hasValidOutput = await this.validateSessionHasOutput(sessionID)
+        if (!hasValidOutput) {
+          log("[background-agent] Polling idle but no valid output yet, waiting:", task.id)
+          continue
+        }
+
+        // Re-check status after async operation
+        if (task.status !== "running") continue
+
+        const hasIncompleteTodos = await this.checkSessionTodos(sessionID)
+        if (hasIncompleteTodos) {
+          log("[background-agent] Task has incomplete todos via polling, waiting:", task.id)
+          continue
+        }
+
+        await this.tryCompleteTask(task, "polling (idle or missing status)")
+        continue
       } catch (error) {
         log("[background-agent] Poll error for task:", { taskId: task.id, error })
       }

@@ -60,7 +60,12 @@ export function detectCurrentConfig(): DetectedConfig {
 
   const openCodeConfig = parseResult.config
   const plugins = openCodeConfig.plugin ?? []
-  result.isInstalled = plugins.some((p) => p.startsWith("@labforge/openagent-labforge-core") || p.startsWith("oh-my-opencode"))
+  result.isInstalled = plugins.some(
+    (p) =>
+      p.startsWith("@bohuyeshan/openagent-labforge-core") ||
+      p.startsWith("@labforge/openagent-labforge-core") ||
+      p.startsWith("oh-my-opencode"),
+  )
 
   if (!result.isInstalled) {
     return result

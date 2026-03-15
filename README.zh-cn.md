@@ -160,29 +160,40 @@ bun run build:skills-catalog
 
 ## 安装
 
-### 发布命名（Labforge）
+### 当前发布包
 
-- 核心包：`@labforge/openagent-labforge-core`
-- 完整包目标：`@labforge/openagent-labforge`
-- 论文/精简目标：`@labforge/openagent-labforge-paper`
+- 核心包：`@bohuyeshan/openagent-labforge-core`
+- 当前已发布版本线：`3.11.x`
+- `@labforge/...` 现在仅作为历史文档和迁移兼容说明保留
 
 ## 当前分发策略
 
-- 当前推荐使用方式：**本地编译 + 本地安装**
-- 正式 npm 发布暂时后置
+- 当前推荐使用方式：**直接通过 npm 安装已发布包**
+- 本地编译 + 本地安装仍保留给开发调试场景
 - 上游发布工作流差异记录见：`docs/release/upstream-publish-notes.md`
 
 ## 当前推荐使用方式
 
-1. 本地构建：
+1. 通过 npm 安装：
+
+```bash
+npm install --prefix ~/.config/opencode @bohuyeshan/openagent-labforge-core@latest
+```
+
+2. 在 `opencode.json` 中注册插件：
+
+```jsonc
+{
+  "plugin": ["@bohuyeshan/openagent-labforge-core"]
+}
+```
+
+3. 插件配置文件使用：
 
 ```bash
 bun run build:skills-catalog
 bun run build
 ```
-
-2. 在 OpenCode 配置目录中安装本地打包产物或本地开发版本。
-3. 插件配置文件使用：
 
 ```jsonc
 {
@@ -194,9 +205,19 @@ bun run build
 
 4. 默认推荐先用 `full` bundle；如只做论文/科研轻量工作流，可改 `paper`。
 
+5. 本地开发安装路径（可选）：
+
+```bash
+bun run build:skills-catalog
+bun run build
+npm pack
+npm install --prefix ~/.config/opencode /absolute/path/to/openagent-labforge-core-<version>.tgz
+```
+
 ## 当前运行时行为
 
 - 用户手动选中的模型在多会话、多 agent 场景下仍为最高优先级。
+- `gmn` 这类 OpenAI-compatible provider 建议只保留单个 GPT 模型定义（例如 `gmn/gpt-5.3-codex`），思考深度交给 OpenCode UI 控制。
 - `skills.bundle = "full"` 当前会加载完整 curated bundle（builtin + 精选 external skills）。
 - 外部 bundle skill 为避免与 builtin 同名冲突，会使用来源前缀命名，例如：
   - `openai-curated/openai-docs`
@@ -211,14 +232,43 @@ bun run build
 
 - 多窗口 / 多仓库切换仍然部分受 OpenCode 宿主初始化模型影响。
 - 插件已经减少了若干重复扫描，但在超大工作区或长期使用导致宿主数据目录很大时，冷启动仍可能有明显成本。
-- 当前不以正式 npm 发布为主，推荐方式仍是：本地构建 + 本地安装。
+- OpenCode 宿主数据目录很大、旧会话状态较重或工作区极大时，会话恢复体感可能仍明显慢于裸启动。
+
+## Provider 配置说明
+
+对 `gmn` 这类 OpenAI-compatible provider，推荐配置形态如下：
+
+```jsonc
+{
+  "provider": {
+    "gmn": {
+      "npm": "@ai-sdk/openai",
+      "options": {
+        "baseURL": "https://gmn.chuangzuoli.com/v1"
+      },
+      "models": {
+        "gpt-5.3-codex": {
+          "name": "GPT-5.3 Codex",
+          "limit": {
+            "context": 400000,
+            "output": 128000
+          }
+        }
+      }
+    }
+  },
+  "model": "gmn/gpt-5.3-codex"
+}
+```
+
+思考深度建议直接在 OpenCode 的 UI 中选择，不要再手工拆成 `low` / `medium` / `high` 多个模型别名。
 
 ### 给人类看的
 
 复制并粘贴以下提示词到你的 LLM Agent (Claude Code, AmpCode, Cursor 等):
 
 ```
-Install and configure @labforge/openagent-labforge-core by following the instructions here:
+Install and configure @bohuyeshan/openagent-labforge-core by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 

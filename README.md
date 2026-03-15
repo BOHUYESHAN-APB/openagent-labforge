@@ -162,29 +162,40 @@ To avoid collisions between curated sources, external bundle skills use source-p
 
 ## Installation
 
-### Release Naming (Labforge)
+### Published Package
 
-- Core package: `@labforge/openagent-labforge-core`
-- Full bundle target: `@labforge/openagent-labforge`
-- Paper-focused bundle target: `@labforge/openagent-labforge-paper`
+- Core package: `@bohuyeshan/openagent-labforge-core`
+- Current published version line: `3.11.x`
+- Legacy `@labforge/...` references remain in some historical docs and migration notes only
 
 ## Current Distribution Policy
 
-- Current recommended usage: **local build + local install**
-- Formal npm release is intentionally deferred for now
+- Current recommended usage: **npm install from the published package**
+- Local build + local install remains available for development and debugging
 - Upstream publish workflow differences are tracked in `docs/release/upstream-publish-notes.md`
 
 ## Recommended Current Usage
 
-1. Build locally:
+1. Install from npm:
+
+```bash
+npm install --prefix ~/.config/opencode @bohuyeshan/openagent-labforge-core@latest
+```
+
+2. Register the plugin in `opencode.json`:
+
+```jsonc
+{
+  "plugin": ["@bohuyeshan/openagent-labforge-core"]
+}
+```
+
+3. Use the bundle shortcut in plugin config:
 
 ```bash
 bun run build:skills-catalog
 bun run build
 ```
-
-2. Install or load the local build into your OpenCode config directory.
-3. Use the bundle shortcut in plugin config:
 
 ```jsonc
 {
@@ -196,9 +207,19 @@ bun run build
 
 4. Use `paper` if you want a smaller research-focused runtime surface.
 
+5. Local development path (optional):
+
+```bash
+bun run build:skills-catalog
+bun run build
+npm pack
+npm install --prefix ~/.config/opencode /absolute/path/to/openagent-labforge-core-<version>.tgz
+```
+
 ## Current Runtime Behavior
 
 - User-selected model remains highest priority across sessions and agents.
+- OpenAI-compatible providers such as `gmn` should keep a single GPT model entry (for example `gmn/gpt-5.3-codex`) and let the OpenCode UI control reasoning depth.
 - `skills.bundle = "full"` currently loads the complete curated bundle (builtin + curated external skills).
 - External bundle skills use source-prefixed IDs (for example `openai-curated/openai-docs`) to avoid collision with builtin skills.
 - Todo continuation is now more conservative:
@@ -210,14 +231,43 @@ bun run build
 
 - Multi-window / multi-repository switching still depends partly on OpenCode host-side initialization behavior.
 - The plugin now avoids several repeated scans, but `createSkillContext` and host-side session loading can still add noticeable cold-start cost in very large workspaces or long-running OpenCode installations.
-- Formal npm publishing is intentionally deferred; local build + local install is the supported path for now.
+- Large OpenCode host storage, stale session state, and very large workspaces can still make session hydration feel slower than raw startup.
+
+## Provider Note
+
+For OpenAI-compatible providers such as `gmn`, prefer a config shape like:
+
+```jsonc
+{
+  "provider": {
+    "gmn": {
+      "npm": "@ai-sdk/openai",
+      "options": {
+        "baseURL": "https://gmn.chuangzuoli.com/v1"
+      },
+      "models": {
+        "gpt-5.3-codex": {
+          "name": "GPT-5.3 Codex",
+          "limit": {
+            "context": 400000,
+            "output": 128000
+          }
+        }
+      }
+    }
+  },
+  "model": "gmn/gpt-5.3-codex"
+}
+```
+
+Keep reasoning depth in the OpenCode UI instead of hardcoding separate `low` / `medium` / `high` model aliases.
 
 ### For Humans
 
 Copy and paste this prompt to your LLM agent (Claude Code, AmpCode, Cursor, etc.):
 
 ```
-Install and configure @labforge/openagent-labforge-core by following the instructions here:
+Install and configure @bohuyeshan/openagent-labforge-core by following the instructions here:
 https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/docs/guide/installation.md
 ```
 

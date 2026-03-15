@@ -28,6 +28,7 @@ function getPackageRootDir(): string {
       try {
         const parsed = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: string }
         if (
+          parsed.name === "@bohuyeshan/openagent-labforge-core" ||
           parsed.name === "@labforge/openagent-labforge-core" ||
           parsed.name === "oh-my-opencode"
         ) {

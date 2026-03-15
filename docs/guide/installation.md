@@ -11,24 +11,34 @@ https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/refs/heads/dev/doc
 
 **Alternative, Not recommended, do this by yourself**
 
-Local build / local install is the recommended current path.
+### Current recommended npm workflow
 
-### Current recommended local workflow
+```bash
+npm install --prefix ~/.config/opencode @bohuyeshan/openagent-labforge-core@latest
+```
+
+Then register the plugin in `opencode.json` and use `openagent-labforge.jsonc` for plugin-specific config.
+
+```jsonc
+{
+  "plugin": ["@bohuyeshan/openagent-labforge-core"]
+}
+```
+
+### Local build workflow (development / debugging)
 
 ```bash
 bun run build:skills-catalog
 bun run build
 npm pack
-npm install --prefix ~/.config/opencode /absolute/path/to/labforge-openagent-labforge-core-<version>.tgz
+npm install --prefix ~/.config/opencode /absolute/path/to/openagent-labforge-core-<version>.tgz
 ```
-
-Then register the plugin in `opencode.json` and use `openagent-labforge.jsonc` for plugin-specific config.
 
 Run the interactive installer:
 
 ```bash
-bunx openagent-labforge install # recommended once formal publish exists
-npx openagent-labforge install # alternative once formal publish exists
+bunx openagent-labforge install
+npx openagent-labforge install
 ```
 
 > **Note**: The CLI ships with standalone binaries for all major platforms. No runtime (Bun/Node.js) is required for CLI execution after installation.

@@ -41,11 +41,6 @@ const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
   semantic_scholar_fastmcp,
 }
 
-function getOptInExtendedMcpNames(config?: OhMyOpenCodeConfig): string[] {
-  const enabledFromPolicy = config?.mcp_policy?.enable ?? []
-  return enabledFromPolicy.filter((name) => name in EXTENDED_BUILTIN_MCPS)
-}
-
 export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpenCodeConfig) {
   const mcps: Record<string, BuiltinMcpConfig> = {}
   const disabledSet = new Set(disabledMcps)
@@ -62,9 +57,13 @@ export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpen
     mcps.grep_app = grep_app
   }
 
-  for (const name of getOptInExtendedMcpNames(config)) {
+  for (const [name, builtin] of Object.entries(EXTENDED_BUILTIN_MCPS)) {
     if (disabledSet.has(name)) continue
-    mcps[name] = EXTENDED_BUILTIN_MCPS[name]
+    const forcedEnabled = config?.mcp_policy?.enable?.includes(name) ?? false
+    mcps[name] = {
+      ...builtin,
+      enabled: forcedEnabled ? true : builtin.enabled,
+    }
   }
 
   return mcps

@@ -9,6 +9,21 @@ function agentByKey(agentResult: Record<string, unknown>, key: string): AgentWit
     | undefined;
 }
 
+function getConfigQuestionPermission(): "allow" | "deny" {
+  const configContent = process.env.OPENCODE_CONFIG_CONTENT
+  if (configContent) {
+    try {
+      const parsed = JSON.parse(configContent) as { permission?: { question?: string } }
+      if (parsed?.permission?.question === "deny") return "deny"
+    } catch {
+      // Ignore malformed config content and fall back to CLI run mode.
+    }
+  }
+
+  const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true"
+  return isCliRunMode ? "deny" : "allow"
+}
+
 export function applyToolConfig(params: {
   config: Record<string, unknown>;
   pluginConfig: OhMyOpenCodeConfig;
@@ -31,8 +46,7 @@ export function applyToolConfig(params: {
       : {}),
   };
 
-  const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true";
-  const questionPermission = isCliRunMode ? "deny" : "allow";
+  const questionPermission = getConfigQuestionPermission();
 
   const librarian = agentByKey(params.agentResult, "librarian");
   if (librarian) {
