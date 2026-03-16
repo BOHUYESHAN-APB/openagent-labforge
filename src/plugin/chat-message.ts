@@ -21,6 +21,7 @@ import { setSessionAgent } from "../features/claude-code-session-state"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -87,9 +88,11 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const isInternalInitiatedPrompt = hasInternalInitiatorMarker(output.parts)
     const previousSessionModel = getSessionModel(input.sessionID)
     const currentInputModel = input.model
     const manualModelChangeDetected =
+      !isInternalInitiatedPrompt &&
       currentInputModel !== undefined &&
       previousSessionModel !== undefined &&
       (currentInputModel.providerID !== previousSessionModel.providerID ||
@@ -105,13 +108,15 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
-    if (rawInputModel !== undefined) {
+    if (!isInternalInitiatedPrompt && rawInputModel !== undefined) {
       setSessionAutoModelRouting(input.sessionID, isAutoModelSelection(rawInputModelId))
     }
     const autoModelRoutingEnabled = isSessionAutoModelRoutingEnabled(input.sessionID)
 
     if (strictUserModelPriority && lockedModel) {
-      if (!rawInputModel) {
+      if (isInternalInitiatedPrompt) {
+        input.model = lockedModel
+      } else if (!rawInputModel) {
         input.model = lockedModel
       } else if (isAutoModelSelection(rawInputModelId)) {
         clearSessionModelLock(input.sessionID)
@@ -268,41 +273,45 @@ export function createChatMessageHandler(args: {
           }
         : undefined
 
-    if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
-      clearSessionModelLock(input.sessionID)
-      clearSessionForcedModel(input.sessionID)
-    } else if (shouldLockToRequestedModel) {
-      setSessionModelLock(input.sessionID, requestedModel)
-      if (
-        modelBeforeUserLock &&
-        modelBeforeUserLock.providerID.length > 0 &&
-        modelBeforeUserLock.modelID.length > 0 &&
-        !sameModel(modelBeforeUserLock, requestedModel)
-      ) {
-        setSessionForcedModel(input.sessionID, modelBeforeUserLock)
-      } else {
+    if (!isInternalInitiatedPrompt) {
+      if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
+        clearSessionModelLock(input.sessionID)
         clearSessionForcedModel(input.sessionID)
+      } else if (shouldLockToRequestedModel) {
+        setSessionModelLock(input.sessionID, requestedModel)
+        if (
+          modelBeforeUserLock &&
+          modelBeforeUserLock.providerID.length > 0 &&
+          modelBeforeUserLock.modelID.length > 0 &&
+          !sameModel(modelBeforeUserLock, requestedModel)
+        ) {
+          setSessionForcedModel(input.sessionID, modelBeforeUserLock)
+        } else {
+          clearSessionForcedModel(input.sessionID)
+        }
       }
     }
 
-    if (shouldLockToRequestedModel) {
+    if (!isInternalInitiatedPrompt && shouldLockToRequestedModel) {
       output.message["model"] = requestedModel
     }
 
-    const finalOutputModel = output.message["model"]
-    if (
-      finalOutputModel &&
-      typeof finalOutputModel === "object" &&
-      "providerID" in finalOutputModel &&
-      "modelID" in finalOutputModel
-    ) {
-      const providerID = (finalOutputModel as { providerID?: string }).providerID
-      const modelID = (finalOutputModel as { modelID?: string }).modelID
-      if (typeof providerID === "string" && typeof modelID === "string") {
-        setSessionModel(input.sessionID, { providerID, modelID })
+    if (!isInternalInitiatedPrompt) {
+      const finalOutputModel = output.message["model"]
+      if (
+        finalOutputModel &&
+        typeof finalOutputModel === "object" &&
+        "providerID" in finalOutputModel &&
+        "modelID" in finalOutputModel
+      ) {
+        const providerID = (finalOutputModel as { providerID?: string }).providerID
+        const modelID = (finalOutputModel as { modelID?: string }).modelID
+        if (typeof providerID === "string" && typeof modelID === "string") {
+          setSessionModel(input.sessionID, { providerID, modelID })
+        }
+      } else if (requestedModel) {
+        setSessionModel(input.sessionID, requestedModel)
       }
-    } else if (requestedModel) {
-      setSessionModel(input.sessionID, requestedModel)
     }
   }
 }
@@ -318,4 +327,12 @@ function sameModel(
 ): boolean {
   if (!left || !right) return false
   return left.providerID === right.providerID && left.modelID === right.modelID
+}
+
+function hasInternalInitiatorMarker(parts: ChatMessagePart[]): boolean {
+  return parts.some((part) =>
+    part.type === "text" &&
+    typeof part.text === "string" &&
+    part.text.includes(OMO_INTERNAL_INITIATOR_MARKER),
+  )
 }

@@ -10,7 +10,8 @@ import { createEventHandler } from "./event"
 import { createChatMessageHandler } from "./chat-message"
 import { _resetForTesting, setMainSession } from "../features/claude-code-session-state"
 import { createModelFallbackHook, clearPendingModelFallback } from "../hooks/model-fallback/hook"
-import { setSessionAutoModelRouting } from "../shared/session-model-state"
+import { getSessionModel, setSessionAutoModelRouting, setSessionModel } from "../shared/session-model-state"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 describe("createEventHandler - model fallback", () => {
   const createHandler = (args?: { hooks?: any; pluginConfig?: any }) => {
     const abortCalls: string[] = []
@@ -629,5 +630,63 @@ describe("createEventHandler - model fallback", () => {
     //#then - no abort or prompt calls should have been made
     expect(abortCalls).toEqual([])
     expect(promptCalls).toEqual([])
+  })
+
+  test("does not overwrite user model state when message.updated user event is internal", async () => {
+    //#given
+    const sessionID = "ses_internal_user_message"
+    setSessionModel(sessionID, { providerID: "gmn", modelID: "gpt-5.3-codex" })
+
+    const eventHandler = createEventHandler({
+      ctx: {
+        directory: "/tmp",
+        client: {
+          session: {
+            abort: async () => ({}),
+            prompt: async () => ({}),
+            message: async () => ({
+              data: {
+                parts: [{ type: "text", text: `continue\n${OMO_INTERNAL_INITIATOR_MARKER}` }],
+              },
+            }),
+          },
+        },
+      } as any,
+      pluginConfig: {} as any,
+      firstMessageVariantGate: {
+        markSessionCreated: () => {},
+        clear: () => {},
+      },
+      managers: {
+        tmuxSessionManager: {
+          onSessionCreated: async () => {},
+          onSessionDeleted: async () => {},
+        },
+        skillMcpManager: {
+          disconnectSession: async () => {},
+        },
+      } as any,
+      hooks: {} as any,
+    })
+
+    //#when
+    await eventHandler({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            id: "msg_internal_1",
+            sessionID,
+            role: "user",
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            agent: "Sisyphus (Ultraworker)",
+          },
+        },
+      },
+    })
+
+    //#then
+    expect(getSessionModel(sessionID)).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 })

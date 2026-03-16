@@ -24,6 +24,7 @@ import { log } from "../shared/logger";
 import { shouldRetryError } from "../shared/model-error-classifier";
 import { buildFallbackChainFromModels } from "../shared/fallback-chain-from-models";
 import { extractRetryAttempt, normalizeRetryStatusMessage } from "../shared/retry-status-utils";
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker";
 import {
   clearSessionModel,
   clearSessionModelLock,
@@ -46,6 +47,16 @@ type FirstMessageVariantGate = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function hasInternalInitiatorMarker(parts: unknown): boolean {
+  if (!Array.isArray(parts)) return false;
+  return parts.some((part) => (
+    isRecord(part) &&
+    part.type === "text" &&
+    typeof part.text === "string" &&
+    part.text.includes(OMO_INTERNAL_INITIATOR_MARKER)
+  ));
 }
 
 function normalizeFallbackModelID(modelID: string): string {
@@ -149,6 +160,9 @@ export function createEventHandler(args: {
           body: { parts: Array<{ type: "text"; text: string }> };
           query: { directory: string };
         }) => Promise<unknown>;
+        message?: (input: {
+          path: { id: string; messageID: string };
+        }) => Promise<{ data?: { parts?: Array<{ type?: string; text?: string }> } }>;
         prompt: (input: {
           path: { id: string };
           body: { parts: Array<{ type: "text"; text: string }> };
@@ -171,6 +185,47 @@ export function createEventHandler(args: {
   const lastHandledModelErrorMessageID = new Map<string, string>();
   const lastHandledRetryStatusKey = new Map<string, string>();
   const lastKnownModelBySession = new Map<string, { providerID: string; modelID: string }>();
+  const internalMarkerCache = new Map<string, boolean>();
+  const INTERNAL_MARKER_CACHE_LIMIT = 1000;
+
+  const rememberInternalMarker = (cacheKey: string, hasMarker: boolean): void => {
+    internalMarkerCache.set(cacheKey, hasMarker);
+    if (internalMarkerCache.size > INTERNAL_MARKER_CACHE_LIMIT) {
+      internalMarkerCache.clear();
+    }
+  };
+
+  const isInternalInitiatedUserMessage = async (
+    sessionID: string,
+    props: Record<string, unknown> | undefined,
+    info: Record<string, unknown> | undefined,
+  ): Promise<boolean> => {
+    if (hasInternalInitiatorMarker(props?.parts)) return true;
+    if (hasInternalInitiatorMarker(info?.parts)) return true;
+    if (hasInternalInitiatorMarker(info?.content)) return true;
+
+    const messageID = typeof info?.id === "string" ? info.id : undefined;
+    if (!messageID) return false;
+
+    const cacheKey = `${sessionID}:${messageID}`;
+    const cached = internalMarkerCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const loadMessage = pluginContext.client.session.message;
+    if (typeof loadMessage !== "function") return false;
+
+    try {
+      const response = await loadMessage({
+        path: { id: sessionID, messageID },
+      });
+      const hasMarker = hasInternalInitiatorMarker(response.data?.parts);
+      rememberInternalMarker(cacheKey, hasMarker);
+      return hasMarker;
+    } catch {
+      rememberInternalMarker(cacheKey, false);
+      return false;
+    }
+  };
 
   const resolveFallbackProviderID = (sessionID: string, providerHint?: string): string => {
     const sessionModel = getSessionModel(sessionID);
@@ -355,15 +410,18 @@ export function createEventHandler(args: {
       const agent = info?.agent as string | undefined;
       const role = info?.role as string | undefined;
       if (sessionID && role === "user") {
-        const isCompactionMessage = agent ? isCompactionAgent(agent) : false;
-        if (agent && !isCompactionMessage) {
-          updateSessionAgent(sessionID, agent);
-        }
-        const providerID = info?.providerID as string | undefined;
-        const modelID = info?.modelID as string | undefined;
-        if (providerID && modelID && !isCompactionMessage) {
-          lastKnownModelBySession.set(sessionID, { providerID, modelID });
-          setSessionModel(sessionID, { providerID, modelID });
+        const isInternalUserMessage = await isInternalInitiatedUserMessage(sessionID, props, info);
+        if (!isInternalUserMessage) {
+          const isCompactionMessage = agent ? isCompactionAgent(agent) : false;
+          if (agent && !isCompactionMessage) {
+            updateSessionAgent(sessionID, agent);
+          }
+          const providerID = info?.providerID as string | undefined;
+          const modelID = info?.modelID as string | undefined;
+          if (providerID && modelID && !isCompactionMessage) {
+            lastKnownModelBySession.set(sessionID, { providerID, modelID });
+            setSessionModel(sessionID, { providerID, modelID });
+          }
         }
       }
 
