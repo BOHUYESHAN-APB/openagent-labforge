@@ -5,7 +5,6 @@ export const McpNameSchema = z.enum([
   "context7",
   "grep_app",
   "browser_puppeteer",
-  "paper_search_mcp",
 ])
 
 export type McpName = z.infer<typeof McpNameSchema>
