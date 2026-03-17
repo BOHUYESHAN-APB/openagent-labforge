@@ -3,6 +3,7 @@ import { context7 } from "./context7"
 import { grep_app } from "./grep-app"
 import {
   browser_puppeteer,
+  paper_search_mcp,
 } from "./extended"
 import type { OhMyOpenCodeConfig } from "../config/schema"
 
@@ -27,6 +28,7 @@ type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
 const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
   browser_puppeteer,
+  paper_search_mcp,
 }
 
 export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpenCodeConfig) {
