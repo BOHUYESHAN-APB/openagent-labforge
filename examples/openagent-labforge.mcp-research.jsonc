@@ -5,17 +5,10 @@
   "mcp_policy": {
     "network_profile": "auto",
     "bing_cn_english_fallback": true,
-    "enable": [
-      "arxiv_mcp",
-      "fetch_browser",
-      "browser_puppeteer",
-      "deepwiki_mcp",
-      "bing_cn_mcp"
-    ],
-    "disable": [
-      "paper_search_mcp",
-      "semantic_scholar_fastmcp"
-    ]
+    // Built-in MCPs are enabled by default.
+    // Use `enable` and `disable` only when you want overrides.
+    // "enable": ["arxiv_mcp", "fetch_browser"],
+    // "disable": ["semantic_scholar_fastmcp"]
   },
 
   // Manual hard-disable still wins when needed

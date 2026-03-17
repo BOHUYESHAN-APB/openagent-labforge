@@ -26,12 +26,10 @@ Meaning:
 
 ## Built-in MCP defaults (current)
 
-Always-on built-ins:
+Built-in MCPs default to enabled:
 - `websearch`
 - `context7`
 - `grep_app`
-
-Default-off (visible, user-toggleable):
 - `arxiv_mcp`
 - `browser_puppeteer`
 - `fetch_browser`
@@ -45,7 +43,7 @@ Default-off (visible, user-toggleable):
 ```jsonc
 {
   "mcp_policy": {
-    "network_profile": "restricted",
+    "network_profile": "auto",
     "bing_cn_english_fallback": true,
     "enable": ["arxiv_mcp", "fetch_browser"],
     "disable": ["semantic_scholar_fastmcp"]
