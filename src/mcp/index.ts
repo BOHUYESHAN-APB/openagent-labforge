@@ -2,13 +2,8 @@ import { createWebsearchConfig } from "./websearch"
 import { context7 } from "./context7"
 import { grep_app } from "./grep-app"
 import {
-  arxiv_mcp,
-  bing_cn_mcp,
-  browser_puppeteer,
   deepwiki_mcp,
-  fetch_browser,
   paper_search_mcp,
-  semantic_scholar_fastmcp,
 } from "./extended"
 import type { OhMyOpenCodeConfig } from "../config/schema"
 
@@ -32,13 +27,8 @@ type LocalMcpConfig = {
 type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
 const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
-  arxiv_mcp,
-  browser_puppeteer,
-  fetch_browser,
   deepwiki_mcp,
-  bing_cn_mcp,
   paper_search_mcp,
-  semantic_scholar_fastmcp,
 }
 
 export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpenCodeConfig) {

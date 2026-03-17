@@ -10,21 +10,11 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("arxiv_mcp")
-    expect(result).toHaveProperty("browser_puppeteer")
-    expect(result).toHaveProperty("fetch_browser")
     expect(result).toHaveProperty("deepwiki_mcp")
-    expect(result).toHaveProperty("bing_cn_mcp")
     expect(result).toHaveProperty("paper_search_mcp")
-    expect(result).toHaveProperty("semantic_scholar_fastmcp")
-    expect(result.arxiv_mcp?.enabled).toBe(true)
-    expect(result.browser_puppeteer?.enabled).toBe(true)
-    expect(result.fetch_browser?.enabled).toBe(true)
-    expect(result.deepwiki_mcp?.enabled).toBe(true)
-    expect(result.bing_cn_mcp?.enabled).toBe(true)
-    expect(result.paper_search_mcp?.enabled).toBe(true)
-    expect(result.semantic_scholar_fastmcp?.enabled).toBe(true)
-    expect(Object.keys(result)).toHaveLength(10)
+    expect(result.deepwiki_mcp?.enabled).toBe(false)
+    expect(result.paper_search_mcp?.enabled).toBe(false)
+    expect(Object.keys(result)).toHaveLength(5)
   })
 
   test("should filter out disabled built-in MCPs", () => {
@@ -35,7 +25,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).not.toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(Object.keys(result)).toHaveLength(9)
+    expect(Object.keys(result)).toHaveLength(4)
   })
 
   test("should filter out all built-in MCPs when all disabled", () => {
@@ -43,13 +33,8 @@ describe("createBuiltinMcps", () => {
       "websearch",
       "context7",
       "grep_app",
-      "arxiv_mcp",
-      "browser_puppeteer",
-      "fetch_browser",
       "deepwiki_mcp",
-      "bing_cn_mcp",
       "paper_search_mcp",
-      "semantic_scholar_fastmcp",
     ]
 
     const result = createBuiltinMcps(disabledMcps)
@@ -69,7 +54,7 @@ describe("createBuiltinMcps", () => {
     expect(result).not.toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
     expect(result).toHaveProperty("deepwiki_mcp")
-    expect(Object.keys(result)).toHaveLength(9)
+    expect(Object.keys(result)).toHaveLength(4)
   })
 
   test("should handle empty disabled_mcps by default", () => {
@@ -79,7 +64,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
     expect(result).toHaveProperty("paper_search_mcp")
-    expect(Object.keys(result)).toHaveLength(10)
+    expect(Object.keys(result)).toHaveLength(5)
   })
 
   test("should only filter built-in MCPs, ignoring unknown names", () => {
@@ -90,8 +75,8 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("arxiv_mcp")
-    expect(Object.keys(result)).toHaveLength(10)
+    expect(result).toHaveProperty("deepwiki_mcp")
+    expect(Object.keys(result)).toHaveLength(5)
   })
 
   test("should not throw when websearch disabled even if tavily configured without API key", () => {
@@ -123,14 +108,10 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("arxiv_mcp")
-    expect(result).toHaveProperty("browser_puppeteer")
-    expect(result).toHaveProperty("fetch_browser")
     expect(result).toHaveProperty("paper_search_mcp")
     expect(result).toHaveProperty("deepwiki_mcp")
     expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(result.deepwiki_mcp?.enabled).toBe(true)
-    expect(result.arxiv_mcp?.enabled).toBe(true)
-    expect(Object.keys(result)).toHaveLength(10)
+    expect(Object.keys(result)).toHaveLength(5)
   })
 })

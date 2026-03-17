@@ -7,7 +7,7 @@
     "bing_cn_english_fallback": true,
     // Built-in MCPs are enabled by default.
     // Use `enable` and `disable` only when you want overrides.
-    // "enable": ["arxiv_mcp", "fetch_browser"],
+    // "enable": ["paper_search_mcp", "deepwiki_mcp"],
     // "disable": ["semantic_scholar_fastmcp"]
   },
 
