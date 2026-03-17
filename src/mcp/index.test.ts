@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { createBuiltinMcps } from "./index"
 
 describe("createBuiltinMcps", () => {
-  test("should return all MCPs with extended ones disabled by default", () => {
+  test("should return all MCPs with extended ones enabled by default", () => {
     const disabledMcps: string[] = []
 
     const result = createBuiltinMcps(disabledMcps)
@@ -17,13 +17,13 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("bing_cn_mcp")
     expect(result).toHaveProperty("paper_search_mcp")
     expect(result).toHaveProperty("semantic_scholar_fastmcp")
-    expect(result.arxiv_mcp?.enabled).toBe(false)
-    expect(result.browser_puppeteer?.enabled).toBe(false)
-    expect(result.fetch_browser?.enabled).toBe(false)
-    expect(result.deepwiki_mcp?.enabled).toBe(false)
-    expect(result.bing_cn_mcp?.enabled).toBe(false)
-    expect(result.paper_search_mcp?.enabled).toBe(false)
-    expect(result.semantic_scholar_fastmcp?.enabled).toBe(false)
+    expect(result.arxiv_mcp?.enabled).toBe(true)
+    expect(result.browser_puppeteer?.enabled).toBe(true)
+    expect(result.fetch_browser?.enabled).toBe(true)
+    expect(result.deepwiki_mcp?.enabled).toBe(true)
+    expect(result.bing_cn_mcp?.enabled).toBe(true)
+    expect(result.paper_search_mcp?.enabled).toBe(true)
+    expect(result.semantic_scholar_fastmcp?.enabled).toBe(true)
     expect(Object.keys(result)).toHaveLength(10)
   })
 
@@ -130,7 +130,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("deepwiki_mcp")
     expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(result.deepwiki_mcp?.enabled).toBe(true)
-    expect(result.arxiv_mcp?.enabled).toBe(false)
+    expect(result.arxiv_mcp?.enabled).toBe(true)
     expect(Object.keys(result)).toHaveLength(10)
   })
 })
