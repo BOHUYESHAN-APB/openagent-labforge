@@ -5,10 +5,11 @@
   "mcp_policy": {
     "network_profile": "auto",
     "bing_cn_english_fallback": true,
-    // Built-in MCPs are enabled by default.
-    // Use `enable` and `disable` only when you want overrides.
-    // "disable": ["paper_search_mcp"],
-    // "disable": ["semantic_scholar_fastmcp"]
+    // Built-in MCPs (5) are enabled by default:
+    // websearch, context7, grep_app, browser_puppeteer, paper_search_mcp
+    // Use `enable` / `disable` only when you want an override.
+    // Example (turn one off):
+    // "disable": ["browser_puppeteer"]
   },
 
   // Manual hard-disable still wins when needed
