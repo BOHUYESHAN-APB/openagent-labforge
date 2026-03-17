@@ -4,7 +4,7 @@ export const McpNameSchema = z.enum([
   "websearch",
   "context7",
   "grep_app",
-  "deepwiki_mcp",
+  "browser_puppeteer",
   "paper_search_mcp",
 ])
 

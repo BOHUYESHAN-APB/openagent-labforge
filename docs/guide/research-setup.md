@@ -30,12 +30,12 @@ Built-in MCPs (plugin-provided):
 - `websearch`
 - `context7`
 - `grep_app`
-- `deepwiki_mcp`
+- `browser_puppeteer`
 - `paper_search_mcp`
 
 Defaults:
 - Enabled by default: `websearch`, `context7`, `grep_app`
-- Disabled by default (but available in UI): `deepwiki_mcp`, `paper_search_mcp`
+- Disabled by default (but available in UI): `browser_puppeteer`, `paper_search_mcp`
 
 ## MCP policy example
 
@@ -44,7 +44,7 @@ Defaults:
   "mcp_policy": {
     "network_profile": "auto",
     "bing_cn_english_fallback": true,
-    "enable": ["paper_search_mcp", "deepwiki_mcp"]
+    "enable": ["paper_search_mcp", "browser_puppeteer"]
   }
 }
 ```

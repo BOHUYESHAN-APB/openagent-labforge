@@ -10,9 +10,9 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("deepwiki_mcp")
+    expect(result).toHaveProperty("browser_puppeteer")
     expect(result).toHaveProperty("paper_search_mcp")
-    expect(result.deepwiki_mcp?.enabled).toBe(false)
+    expect(result.browser_puppeteer?.enabled).toBe(false)
     expect(result.paper_search_mcp?.enabled).toBe(false)
     expect(Object.keys(result)).toHaveLength(5)
   })
@@ -33,7 +33,7 @@ describe("createBuiltinMcps", () => {
       "websearch",
       "context7",
       "grep_app",
-      "deepwiki_mcp",
+      "browser_puppeteer",
       "paper_search_mcp",
     ]
 
@@ -53,7 +53,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).not.toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("deepwiki_mcp")
+    expect(result).toHaveProperty("browser_puppeteer")
     expect(Object.keys(result)).toHaveLength(4)
   })
 
@@ -75,7 +75,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("websearch")
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
-    expect(result).toHaveProperty("deepwiki_mcp")
+    expect(result).toHaveProperty("browser_puppeteer")
     expect(Object.keys(result)).toHaveLength(5)
   })
 
@@ -99,7 +99,7 @@ describe("createBuiltinMcps", () => {
   test("mcp_policy.enable turns extended MCPs on without hiding others", () => {
     const config = {
       mcp_policy: {
-        enable: ["paper_search_mcp", "deepwiki_mcp"],
+        enable: ["paper_search_mcp", "browser_puppeteer"],
       },
     }
 
@@ -109,9 +109,9 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
     expect(result).toHaveProperty("paper_search_mcp")
-    expect(result).toHaveProperty("deepwiki_mcp")
+    expect(result).toHaveProperty("browser_puppeteer")
     expect(result.paper_search_mcp?.enabled).toBe(true)
-    expect(result.deepwiki_mcp?.enabled).toBe(true)
+    expect(result.browser_puppeteer?.enabled).toBe(true)
     expect(Object.keys(result)).toHaveLength(5)
   })
 })
