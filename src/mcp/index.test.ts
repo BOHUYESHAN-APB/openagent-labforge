@@ -11,9 +11,9 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("context7")
     expect(result).toHaveProperty("grep_app")
     expect(result).toHaveProperty("browser_puppeteer")
-    expect(result.browser_puppeteer?.enabled).toBe(false)
+    expect(result.browser_puppeteer?.enabled).toBe(true)
     expect(result).toHaveProperty("paper_search_mcp")
-    expect(result.paper_search_mcp?.enabled).toBe(false)
+    expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(Object.keys(result)).toHaveLength(5)
   })
 

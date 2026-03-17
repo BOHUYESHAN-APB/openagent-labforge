@@ -24,7 +24,7 @@ export const arxiv_mcp: LocalMcpConfig = {
 export const browser_puppeteer: LocalMcpConfig = {
   type: "local",
   command: ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
-  enabled: false,
+  enabled: true,
 }
 
 export const fetch_browser: LocalMcpConfig = {
@@ -52,7 +52,7 @@ export const paper_search_mcp: LocalMcpConfig = {
   // `paper-search-mcp` currently does not expose a console script entrypoint.
   // Run it via module entrypoint instead.
   command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
-  enabled: false,
+  enabled: true,
 }
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {

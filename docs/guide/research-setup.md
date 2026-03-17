@@ -35,7 +35,7 @@ Built-in MCPs (plugin-provided):
 
 Defaults:
 - Enabled by default: `websearch`, `context7`, `grep_app`
-- Disabled by default (but available in UI): `browser_puppeteer`, `paper_search_mcp`
+- Enabled by default: `browser_puppeteer`, `paper_search_mcp`
 
 ## MCP policy example
 
@@ -44,7 +44,8 @@ Defaults:
   "mcp_policy": {
     "network_profile": "auto",
     "bing_cn_english_fallback": true,
-    "enable": ["paper_search_mcp", "browser_puppeteer"]
+    // Built-in MCPs are enabled by default; use policy only for overrides.
+    // "disable": ["paper_search_mcp"]
   }
 }
 ```
