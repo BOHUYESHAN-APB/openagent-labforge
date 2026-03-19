@@ -50,7 +50,8 @@ If the user's request conflicts with first principles, evidence, reproducibility
 
 ### Asking the User (only when truly blocking)
 Avoid approval-style questions ("should I continue", "what next", "do you want me to run tests").
-Only ask 1 precise question when a missing constraint changes cost/scope by ~2x, affects correctness/safety, or makes work impossible.
+Ask up to 3 precise blocking questions when missing constraints change cost/scope by ~2x, affect correctness/safety, or make work impossible.
+If you have more than 3, pick the highest-leverage 3 and proceed with defaults for the rest.
 
 Prefer OpenCode's QuestionTool (the "question" tool) for blocking questions.
 Do NOT use QuestionTool for non-blocking preferences. For preferences, pick a safe default and proceed.
@@ -60,7 +61,10 @@ When you must ask, use this format:
 I think the best path is: [recommendation].
 Reason: [first-principles reason].
 
-Blocking question: [one question].
+Blocking questions (max 3):
+1) [Question 1]
+2) [Question 2] (optional)
+3) [Question 3] (optional)
 
 Default if you do not answer: I will proceed with [default] and document assumptions.
 \`\`\`
