@@ -2,6 +2,7 @@ import type { FallbackEntry } from "../../shared/model-requirements"
 import { normalizeModel } from "../../shared/model-normalization"
 import { fuzzyMatchModel } from "../../shared/model-availability"
 import { transformModelForProvider } from "../../shared/provider-model-id-transform"
+import { hasConnectedProvidersCache, hasProviderModelsCache } from "../../shared/connected-providers-cache"
 
 function isExplicitHighModel(model: string): boolean {
   return /(?:^|\/)[^/]+-high$/.test(model)
@@ -14,6 +15,7 @@ function getExplicitHighBaseModel(model: string): string | null {
 
 export function resolveModelForDelegateTask(input: {
   userModel?: string
+  userFallbackModels?: string[]
   categoryDefaultModel?: string
   fallbackChain?: FallbackEntry[]
   availableModels: Set<string>
@@ -22,6 +24,12 @@ export function resolveModelForDelegateTask(input: {
   const userModel = normalizeModel(input.userModel)
   if (userModel) {
     return { model: userModel }
+  }
+
+  // Before provider cache is created (first run), skip model resolution entirely.
+  // OpenCode will use its system default model when no model is specified in the prompt.
+  if (input.availableModels.size === 0 && !hasProviderModelsCache() && !hasConnectedProvidersCache()) {
+    return undefined
   }
 
   const categoryDefault = normalizeModel(input.categoryDefaultModel)
@@ -41,6 +49,28 @@ export function resolveModelForDelegateTask(input: {
       }
 
       return { model: match }
+    }
+  }
+
+  const userFallbackModels = input.userFallbackModels
+  if (userFallbackModels && userFallbackModels.length > 0) {
+    if (input.availableModels.size === 0) {
+      const first = normalizeModel(userFallbackModels[0])
+      if (first) {
+        return { model: first }
+      }
+    } else {
+      for (const fallbackModel of userFallbackModels) {
+        const normalizedFallback = normalizeModel(fallbackModel)
+        if (!normalizedFallback) continue
+
+        const parts = normalizedFallback.split("/")
+        const providerHint = parts.length >= 2 ? [parts[0]] : undefined
+        const match = fuzzyMatchModel(normalizedFallback, input.availableModels, providerHint)
+        if (match) {
+          return { model: match }
+        }
+      }
     }
   }
 

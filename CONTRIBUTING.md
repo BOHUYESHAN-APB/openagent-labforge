@@ -1,6 +1,6 @@
-# Contributing to Oh My OpenCode
+# Contributing to OpenAgent Labforge
 
-First off, thanks for taking the time to contribute! This document provides guidelines and instructions for contributing to oh-my-opencode.
+First off, thanks for taking the time to contribute! This document provides guidelines and instructions for contributing to openagent-labforge.
 
 ## Table of Contents
 
@@ -63,8 +63,8 @@ If English isn't your first language, don't worry! We value your contributions r
 
 ```bash
 # Clone the repository
-git clone https://github.com/code-yeongyu/oh-my-opencode.git
-cd oh-my-opencode
+git clone https://github.com/code-yeongyu/openagent-labforge.git
+cd openagent-labforge
 
 # Install dependencies (bun only - never use npm/yarn)
 bun install
@@ -87,19 +87,19 @@ After making changes, you can test your local build in OpenCode:
 
    ```json
    {
-     "plugin": ["file:///absolute/path/to/oh-my-opencode/dist/index.js"]
+     "plugin": ["file:///absolute/path/to/openagent-labforge/dist/index.js"]
    }
    ```
 
-   For example, if your project is at `/Users/yourname/projects/oh-my-opencode`:
+   For example, if your project is at `/Users/yourname/projects/openagent-labforge`:
 
    ```json
    {
-     "plugin": ["file:///Users/yourname/projects/oh-my-opencode/dist/index.js"]
+     "plugin": ["file:///Users/yourname/projects/openagent-labforge/dist/index.js"]
    }
    ```
 
-   > **Note**: Remove `"oh-my-opencode"` from the plugin array if it exists, to avoid conflicts with the npm version.
+   > **Note**: Remove `"openagent-labforge"` from the plugin array if it exists, to avoid conflicts with the npm version.
 
 3. **Restart OpenCode** to load the changes.
 
@@ -108,9 +108,9 @@ After making changes, you can test your local build in OpenCode:
 ## Project Structure
 
 ```
-oh-my-opencode/
+openagent-labforge/
 ├── src/
-│   ├── index.ts         # Plugin entry (OhMyOpenCodePlugin)
+│   ├── index.ts         # Plugin entry (OpenAgentLabforgePlugin)
 │   ├── plugin-config.ts # JSONC multi-level config (Zod v4)
 │   ├── agents/          # 11 agents (Sisyphus, Hephaestus, Oracle, Librarian, Explore, Atlas, Prometheus, Metis, Momus, Multimodal-Looker, Sisyphus-Junior)
 │   ├── hooks/           # Lifecycle hooks for orchestration, recovery, UX, and context management
@@ -272,4 +272,5 @@ export function createMyHook(input: PluginInput) {
 
 ---
 
-Thank you for contributing to Oh My OpenCode! Your efforts help make AI-assisted coding better for everyone.
+Thank you for contributing to OpenAgent Labforge! Your efforts help make AI-assisted coding better for everyone.
+

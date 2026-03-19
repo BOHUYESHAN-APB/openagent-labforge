@@ -17,8 +17,11 @@ import {
   buildOracleSection,
   buildHardBlocksSection,
   buildAntiPatternsSection,
+  buildToolCallFormatSection,
+  buildAntiDuplicationSection,
   categorizeTools,
 } from "../dynamic-agent-prompt-builder";
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback";
 const MODE: AgentMode = "all";
 
 function buildTodoDisciplineSection(useTaskSystem: boolean): string {
@@ -127,7 +130,7 @@ export function buildHephaestusPrompt(
   const hardBlocks = buildHardBlocksSection();
   const antiPatterns = buildAntiPatternsSection();
   const todoDiscipline = buildTodoDisciplineSection(useTaskSystem);
-
+  const toolCallFormat = buildToolCallFormatSection();
   return `You are Hephaestus, an autonomous deep worker for software engineering.
 
 ## Identity
@@ -155,10 +158,12 @@ Asking the user is the LAST resort after exhausting creative alternatives.
 - Run verification (lint, tests, build) WITHOUT asking
 - Make decisions. Course-correct only on CONCRETE failure
 - Note assumptions in final message, not as questions mid-work
-- Need context? Fire explore/librarian in background IMMEDIATELY — keep working while they search
+- Need context? Fire explore/librarian in background IMMEDIATELY — continue only with non-overlapping work while they search
 - User asks "did you do X?" and you didn't → Acknowledge briefly, DO X immediately
 - User asks a question implying work → Answer briefly, DO the implied work in the same turn
 - You wrote a plan in your response → EXECUTE the plan before ending turn — plans are starting lines, not finish lines
+
+${buildFirstPrinciplesPushbackSection("executor")}
 
 ## Hard Constraints
 
@@ -166,6 +171,7 @@ ${hardBlocks}
 
 ${antiPatterns}
 
+${toolCallFormat}
 ## Phase 0 - Intent Gate (EVERY task)
 
 ${keyTriggers}
@@ -290,10 +296,12 @@ Prompt structure for each agent:
 - Fire 2-5 explore agents in parallel for any non-trivial codebase question
 - Parallelize independent file reads — don't read files one at a time
 - NEVER use \`run_in_background=false\` for explore/librarian
-- Continue your work immediately after launching background agents
+- Continue only with non-overlapping work after launching background agents
 - Collect results with \`background_output(task_id="...")\` when needed
 - BEFORE final answer, cancel DISPOSABLE tasks individually: \`background_cancel(taskId="bg_explore_xxx")\`, \`background_cancel(taskId="bg_librarian_xxx")\`
 - **NEVER use \`background_cancel(all=true)\`** — it kills tasks whose results you haven't collected yet
+
+${buildAntiDuplicationSection()}
 
 ### Search Stop Conditions
 
@@ -522,7 +530,7 @@ export function createHephaestusAgent(
 
   return {
     description:
-      "Autonomous Deep Worker - goal-oriented execution with GPT 5.4 Codex. Explores thoroughly before acting, uses explore/librarian agents for comprehensive context, completes tasks end-to-end. Inspired by AmpCode deep mode. (Hephaestus - OhMyOpenCode)",
+      "Autonomous Deep Worker - goal-oriented execution with GPT 5.4 Codex. Explores thoroughly before acting, uses explore/librarian agents for comprehensive context, completes tasks end-to-end. Inspired by AmpCode deep mode. (Hephaestus - OpenAgent Labforge)",
     mode: MODE,
     model,
     maxTokens: 32000,
@@ -536,3 +544,4 @@ export function createHephaestusAgent(
   };
 }
 createHephaestusAgent.mode = MODE;
+

@@ -24,9 +24,32 @@ export function hasUnansweredQuestion(messages: Message[]): boolean {
     /是否要/u,
     /你希望/u,
     /你想要/u,
+    /你觉得/u,
+    /你怎么看/u,
+    /请给(?:我)?意见/u,
+    /请反馈/u,
+    /测试后(?:告诉我|反馈)/u,
+    /跑完测试(?:告诉我|反馈)/u,
+    /确认后(?:告诉我|回复我|我再继续)/u,
+    /你来决定/u,
+    /你决定/u,
+    /请(?:选择|选一个)/u,
     /完成后回我/u,
     /重启后告诉我/u,
     /回我一句/u,
+    /需要你确认/u,
+    /等待(?:你的|用户)(?:确认|反馈|决定|回复|意见)/u,
+    /what do you think/iu,
+    /any preference/iu,
+    /your (?:feedback|input|decision|opinion)/iu,
+    /after you (?:test|review)/iu,
+    /once you (?:test|review)/iu,
+    /please review/iu,
+    /review and confirm/iu,
+    /should i proceed/iu,
+    /would you like me to continue/iu,
+    /do you want me to continue/iu,
+    /let me know when/iu,
     /which (one|option|path|approach)/iu,
     /would you like/iu,
     /please provide/iu,
@@ -57,7 +80,7 @@ export function hasUnansweredQuestion(messages: Message[]): boolean {
         .join("\n")
       if (combinedText.length > 0) {
         const normalized = combinedText.trim()
-        const looksLikeQuestion = /[?？]$/.test(normalized)
+        const looksLikeQuestion = /[?？]/.test(normalized)
           || waitPatterns.some((pattern) => pattern.test(normalized))
         if (looksLikeQuestion) {
           log(`[${HOOK_NAME}] Detected textual prompt awaiting user response`)

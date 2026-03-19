@@ -38,8 +38,8 @@ export function getConfigPaths(): { project: string; user: string; opencode: str
   const cwd = process.cwd()
   const configDir = getOpenCodeConfigDir({ binary: "opencode" })
   return {
-    project: detectConfigFile(join(cwd, ".opencode", "oh-my-opencode")).path,
-    user: detectConfigFile(join(configDir, "oh-my-opencode")).path,
+    project: detectConfigFile(join(cwd, ".opencode", "openagent-labforge")).path,
+    user: detectConfigFile(join(configDir, "openagent-labforge")).path,
     opencode: detectConfigFile(join(configDir, "opencode")).path,
   }
 }
@@ -114,3 +114,4 @@ export function getMergedServers(): ServerWithSource[] {
     return b.priority - a.priority
   })
 }
+

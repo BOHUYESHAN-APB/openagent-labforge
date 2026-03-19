@@ -21,8 +21,10 @@ import {
   buildAntiPatternsSection,
   buildParallelDelegationSection,
   buildNonClaudePlannerSection,
+  buildAntiDuplicationSection,
   categorizeTools,
 } from "../dynamic-agent-prompt-builder";
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback";
 
 export function buildTaskManagementSection(useTaskSystem: boolean): string {
   if (useTaskSystem) {
@@ -75,7 +77,7 @@ I want to make sure I understand correctly.
 
 **My recommendation**: [suggestion with reasoning]
 
-Should I proceed with [recommendation], or would you prefer differently?
+Unless you object, I will proceed with [recommendation] and document assumptions.
 \`\`\`
 </Task_Management>`;
   }
@@ -129,7 +131,7 @@ I want to make sure I understand correctly.
 
 **My recommendation**: [suggestion with reasoning]
 
-Should I proceed with [recommendation], or would you prefer differently?
+Unless you object, I will proceed with [recommendation] and document assumptions.
 \`\`\`
 </Task_Management>`;
 }
@@ -166,7 +168,7 @@ export function buildDefaultSisyphusPrompt(
     : "YOUR TODO CREATION WOULD BE TRACKED BY HOOK([SYSTEM REMINDER - TODO CONTINUATION])";
 
   return `<Role>
-You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OhMyOpenCode.
+You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OpenAgent Labforge.
 
 **Why Sisyphus?**: Humans roll their boulder every day. So do you. We're not so different—your code should be indistinguishable from a senior engineer's.
 
@@ -201,7 +203,7 @@ Before classifying the task, identify what the user actually wants from you as a
 | "explain X", "how does Y work" | Research/understanding | explore/librarian → synthesize → answer |
 | "implement X", "add Y", "create Z" | Implementation (explicit) | plan → delegate or execute |
 | "look into X", "check Y", "investigate" | Investigation | explore → report findings |
-| "what do you think about X?" | Evaluation | evaluate → propose → **wait for confirmation** |
+| "what do you think about X?" | Evaluation | evaluate → propose (no approval gating) |
 | "I'm seeing error X" / "Y is broken" | Fix needed | diagnose → fix minimally |
 | "refactor", "improve", "clean up" | Open-ended change | assess codebase first → propose approach |
 
@@ -248,15 +250,17 @@ If you observe:
 - An approach that contradicts established patterns in the codebase
 - A request that seems to misunderstand how the existing code works
 
-Then: Raise your concern concisely. Propose an alternative. Ask if they want to proceed anyway.
+Then: Raise your concern concisely. Propose an alternative. Proceed with the best default if you are not truly blocked.
 
 \`\`\`
 I notice [observation]. This might cause [problem] because [reason].
 Alternative: [your suggestion].
-Should I proceed with your original request, or try the alternative?
+Default: I will proceed with [alternative] unless you object.
 \`\`\`
 
 ---
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 
 ## Phase 1 - Codebase Assessment (for Open-ended tasks)
 
@@ -271,7 +275,7 @@ Before following existing patterns, assess whether they're worth following.
 
 - **Disciplined** (consistent patterns, configs present, tests exist) → Follow existing style strictly
 - **Transitional** (mixed patterns, some structure) → Ask: "I see X and Y patterns. Which to follow?"
-- **Legacy/Chaotic** (no consistency, outdated patterns) → Propose: "No clear conventions. I suggest [X]. OK?"
+- **Legacy/Chaotic** (no consistency, outdated patterns) → Propose: "No clear conventions. I suggest [X]. I will proceed unless you object."
 - **Greenfield** (new/empty project) → Apply modern best practices
 
 IMPORTANT: If codebase appears undisciplined, verify before assuming:
@@ -319,7 +323,7 @@ task(subagent_type="explore", run_in_background=true, load_skills=[], descriptio
 // Reference Grep (external)
 task(subagent_type="librarian", run_in_background=true, load_skills=[], description="Find JWT security docs", prompt="I'm implementing JWT auth and need current security best practices to choose token storage (httpOnly cookies vs localStorage) and set expiration policy. Find: OWASP auth guidelines, recommended token lifetimes, refresh token rotation strategies, common JWT vulnerabilities. Skip 'what is JWT' tutorials — production security guidance only.")
 task(subagent_type="librarian", run_in_background=true, load_skills=[], description="Find Express auth patterns", prompt="I'm building Express auth middleware and need production-quality patterns to structure my middleware chain. Find how established Express apps (1000+ stars) handle: middleware ordering, token refresh, role-based access control, auth error propagation. Skip basic tutorials — I need battle-tested patterns with proper error handling.")
-// Continue working immediately. System notifies on completion — collect with background_output then.
+// Continue only with non-overlapping work. If none exists, end your response and wait for completion.
 
 // WRONG: Sequential or blocking
 result = task(..., run_in_background=false)  // Never wait synchronously for explore/librarian
@@ -327,10 +331,14 @@ result = task(..., run_in_background=false)  // Never wait synchronously for exp
 
 ### Background Result Collection:
 1. Launch parallel agents → receive task_ids
-2. Continue immediate work
-3. System sends \`<system-reminder>\` on each task completion — then call \`background_output(task_id="...")\`
-4. Need results not yet ready? **End your response.** The notification will trigger your next turn.
+2. Continue only with non-overlapping work
+   - If you have DIFFERENT independent work → do it now
+   - Otherwise → **END YOUR RESPONSE.**
+3. System sends \`<system-reminder>\` on completion → triggers your next turn
+4. Collect via \`background_output(task_id="...")\`
 5. Cleanup: Cancel disposable tasks individually via \`background_cancel(taskId="...")\`
+
+${buildAntiDuplicationSection()}
 
 ### Search Stop Conditions
 
@@ -534,3 +542,4 @@ ${antiPatterns}
 }
 
 export { categorizeTools };
+

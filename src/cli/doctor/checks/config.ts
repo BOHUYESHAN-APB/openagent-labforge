@@ -10,9 +10,9 @@ import { getModelResolutionInfoWithOverrides } from "./model-resolution"
 import type { OmoConfig } from "./model-resolution-types"
 
 const USER_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), "openagent-labforge")
-const USER_LEGACY_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), "oh-my-opencode")
+const USER_LEGACY_CONFIG_BASE = join(getOpenCodeConfigDir({ binary: "opencode" }), "openagent-labforge")
 const PROJECT_CONFIG_BASE = join(process.cwd(), ".opencode", "openagent-labforge")
-const PROJECT_LEGACY_CONFIG_BASE = join(process.cwd(), ".opencode", "oh-my-opencode")
+const PROJECT_LEGACY_CONFIG_BASE = join(process.cwd(), ".opencode", "openagent-labforge")
 
 interface ConfigValidationResult {
   exists: boolean
@@ -170,3 +170,4 @@ export async function checkConfig(): Promise<CheckResult> {
     issues,
   }
 }
+

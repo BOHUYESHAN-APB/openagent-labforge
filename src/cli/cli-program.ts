@@ -15,14 +15,14 @@ const VERSION = packageJson.version
 const program = new Command()
 
 program
-  .name("oh-my-opencode")
+  .name("openagent-labforge")
   .description("The ultimate OpenCode plugin - multi-model orchestration, LSP tools, and more")
   .version(VERSION, "-v, --version", "Show version number")
   .enablePositionalOptions()
 
 program
   .command("install")
-  .description("Install and configure oh-my-opencode with interactive setup")
+  .description("Install and configure openagent-labforge with interactive setup")
   .option("--no-tui", "Run in non-interactive mode (requires all options)")
   .option("--claude <value>", "Claude subscription: no, yes, max20")
   .option("--openai <value>", "OpenAI/ChatGPT subscription: no, yes (default: no)")
@@ -31,12 +31,13 @@ program
   .option("--opencode-zen <value>", "OpenCode Zen access: no, yes (default: no)")
   .option("--zai-coding-plan <value>", "Z.ai Coding Plan subscription: no, yes (default: no)")
   .option("--kimi-for-coding <value>", "Kimi For Coding subscription: no, yes (default: no)")
+  .option("--opencode-go <value>", "OpenCode Go subscription: no, yes (default: no)")
   .option("--skip-auth", "Skip authentication setup hints")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode install
-  $ bunx oh-my-opencode install --no-tui --claude=max20 --openai=yes --gemini=yes --copilot=no
-  $ bunx oh-my-opencode install --no-tui --claude=no --gemini=no --copilot=yes --opencode-zen=yes
+  $ bunx openagent-labforge install
+  $ bunx openagent-labforge install --no-tui --claude=max20 --openai=yes --gemini=yes --copilot=no
+  $ bunx openagent-labforge install --no-tui --claude=no --gemini=no --copilot=yes --opencode-zen=yes
 
 Model Providers (Priority: Native > Copilot > OpenCode Zen > Z.ai > Kimi):
   Claude        Native anthropic/ models (Opus, Sonnet, Haiku)
@@ -57,6 +58,7 @@ Model Providers (Priority: Native > Copilot > OpenCode Zen > Z.ai > Kimi):
       opencodeZen: options.opencodeZen,
       zaiCodingPlan: options.zaiCodingPlan,
       kimiForCoding: options.kimiForCoding,
+      opencodeGo: options.opencodeGo,
       skipAuth: options.skipAuth ?? false,
     }
     const exitCode = await install(args)
@@ -69,6 +71,7 @@ program
    .passThroughOptions()
   .description("Run opencode with todo/background task completion enforcement")
   .option("-a, --agent <name>", "Agent to use (default: from CLI/env/config, fallback: Sisyphus)")
+  .option("-m, --model <provider/model>", "Model override (e.g., anthropic/claude-sonnet-4)")
   .option("-d, --directory <path>", "Working directory")
   .option("-p, --port <port>", "Server port (attaches if port already in use)", parseInt)
   .option("--attach <url>", "Attach to existing opencode server URL")
@@ -79,18 +82,20 @@ program
   .option("--session-id <id>", "Resume existing session instead of creating new one")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode run "Fix the bug in index.ts"
-  $ bunx oh-my-opencode run --agent Sisyphus "Implement feature X"
-  $ bunx oh-my-opencode run --port 4321 "Fix the bug"
-  $ bunx oh-my-opencode run --attach http://127.0.0.1:4321 "Fix the bug"
-  $ bunx oh-my-opencode run --json "Fix the bug" | jq .sessionId
-  $ bunx oh-my-opencode run --on-complete "notify-send Done" "Fix the bug"
-  $ bunx oh-my-opencode run --session-id ses_abc123 "Continue the work"
+  $ bunx openagent-labforge run "Fix the bug in index.ts"
+  $ bunx openagent-labforge run --agent Sisyphus "Implement feature X"
+  $ bunx openagent-labforge run --port 4321 "Fix the bug"
+  $ bunx openagent-labforge run --attach http://127.0.0.1:4321 "Fix the bug"
+  $ bunx openagent-labforge run --json "Fix the bug" | jq .sessionId
+  $ bunx openagent-labforge run --on-complete "notify-send Done" "Fix the bug"
+  $ bunx openagent-labforge run --session-id ses_abc123 "Continue the work"
+  $ bunx openagent-labforge run --model anthropic/claude-sonnet-4 "Fix the bug"
+  $ bunx openagent-labforge run --agent Sisyphus --model openai/gpt-5.4 "Implement feature X"
 
 Agent resolution order:
   1) --agent flag
   2) OPENCODE_DEFAULT_AGENT
-  3) oh-my-opencode.json "default_run_agent"
+  3) openagent-labforge.json "default_run_agent"
   4) Sisyphus (fallback)
 
 Available core agents:
@@ -108,6 +113,7 @@ Unlike 'opencode run', this command waits until:
     const runOptions: RunOptions = {
       message,
       agent: options.agent,
+      model: options.model,
       directory: options.directory,
       port: options.port,
       attach: options.attach,
@@ -128,9 +134,9 @@ program
   .option("--json", "Output in JSON format for scripting")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode get-local-version
-  $ bunx oh-my-opencode get-local-version --json
-  $ bunx oh-my-opencode get-local-version --directory /path/to/project
+  $ bunx openagent-labforge get-local-version
+  $ bunx openagent-labforge get-local-version --json
+  $ bunx openagent-labforge get-local-version --directory /path/to/project
 
 This command shows:
   - Current installed version
@@ -149,16 +155,16 @@ This command shows:
 
 program
   .command("doctor")
-  .description("Check oh-my-opencode installation health and diagnose issues")
+  .description("Check openagent-labforge installation health and diagnose issues")
   .option("--status", "Show compact system dashboard")
   .option("--verbose", "Show detailed diagnostic information")
   .option("--json", "Output results in JSON format")
   .addHelpText("after", `
 Examples:
-  $ bunx oh-my-opencode doctor            # Show problems only
-  $ bunx oh-my-opencode doctor --status   # Compact dashboard
-  $ bunx oh-my-opencode doctor --verbose  # Deep diagnostics
-  $ bunx oh-my-opencode doctor --json     # JSON output
+  $ bunx openagent-labforge doctor            # Show problems only
+  $ bunx openagent-labforge doctor --status   # Compact dashboard
+  $ bunx openagent-labforge doctor --verbose  # Deep diagnostics
+  $ bunx openagent-labforge doctor --json     # JSON output
 `)
   .action(async (options) => {
     const mode = options.status ? "status" : options.verbose ? "verbose" : "default"
@@ -174,7 +180,7 @@ program
   .command("version")
   .description("Show version information")
   .action(() => {
-    console.log(`oh-my-opencode v${VERSION}`)
+    console.log(`openagent-labforge v${VERSION}`)
   })
 
 program.addCommand(createMcpOAuthCommand())
@@ -182,3 +188,4 @@ program.addCommand(createMcpOAuthCommand())
 export function runCli(): void {
   program.parse()
 }
+

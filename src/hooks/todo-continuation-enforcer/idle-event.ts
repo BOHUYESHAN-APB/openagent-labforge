@@ -9,6 +9,7 @@ import { SystemDirectiveTypes } from "../../shared/system-directive"
 
 import {
   ABORT_WINDOW_MS,
+  BACKGROUND_TASK_ACTIVE_WINDOW_MS,
   CONTINUATION_COOLDOWN_MS,
   DEFAULT_SKIP_AGENTS,
   FAILURE_RESET_WINDOW_MS,
@@ -17,6 +18,7 @@ import {
 } from "./constants"
 import { isLastAssistantMessageAborted } from "./abort-detection"
 import { hasUnansweredQuestion } from "./pending-question-detection"
+import { shouldStopForStagnation } from "./stagnation-detection"
 import { getIncompleteCount } from "./todo"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
@@ -42,6 +44,15 @@ function hasRecentTodoContinuationDirective(messages: Array<{ info?: MessageInfo
   return false
 }
 
+function isBackgroundTaskActive(task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }): boolean {
+  if (task.status !== "running") return false
+  const lastUpdate = task.progress?.lastUpdate?.getTime()
+  if (lastUpdate) return Date.now() - lastUpdate < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  const startedAt = task.startedAt?.getTime()
+  if (startedAt) return Date.now() - startedAt < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  return true
+}
+
 export async function handleSessionIdle(args: {
   ctx: PluginInput
   sessionID: string
@@ -49,6 +60,7 @@ export async function handleSessionIdle(args: {
   backgroundManager?: BackgroundManager
   skipAgents?: string[]
   isContinuationStopped?: (sessionID: string) => boolean
+  shouldSkipContinuation?: (sessionID: string) => boolean
 }): Promise<void> {
   const {
     ctx,
@@ -57,6 +69,7 @@ export async function handleSessionIdle(args: {
     backgroundManager,
     skipAgents = DEFAULT_SKIP_AGENTS,
     isContinuationStopped,
+    shouldSkipContinuation,
   } = args
 
   log(`[${HOOK_NAME}] session.idle`, { sessionID })
@@ -78,7 +91,7 @@ export async function handleSessionIdle(args: {
   }
 
   const hasRunningBgTasks = backgroundManager
-    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }) => isBackgroundTaskActive(task))
     : false
 
   if (hasRunningBgTasks) {
@@ -96,7 +109,7 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
       return
     }
-    if (hasRecentTodoContinuationDirective(messages)) {
+    if (hasRecentTodoContinuationDirective(messages) && state.lastInjectedAt && Date.now() - state.lastInjectedAt < CONTINUATION_COOLDOWN_MS) {
       log(`[${HOOK_NAME}] Skipped: recent todo continuation directive already injected`, { sessionID })
       return
     }
@@ -118,12 +131,14 @@ export async function handleSessionIdle(args: {
   }
 
   if (!todos || todos.length === 0) {
+    sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] No todos`, { sessionID })
     return
   }
 
   const incompleteCount = getIncompleteCount(todos)
   if (incompleteCount === 0) {
+    sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] All todos complete`, { sessionID, total: todos.length })
     return
   }
@@ -134,14 +149,6 @@ export async function handleSessionIdle(args: {
   }
 
   state.idleStrikeCount = (state.idleStrikeCount ?? 0) + 1
-  if (state.idleStrikeCount < 2) {
-    log(`[${HOOK_NAME}] Skipped: waiting for second idle before continuation`, {
-      sessionID,
-      idleStrikeCount: state.idleStrikeCount,
-      incompleteCount,
-    })
-    return
-  }
 
   if (
     state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES
@@ -215,6 +222,16 @@ export async function handleSessionIdle(args: {
 
   if (isContinuationStopped?.(sessionID)) {
     log(`[${HOOK_NAME}] Skipped: continuation stopped for session`, { sessionID })
+    return
+  }
+
+  if (shouldSkipContinuation?.(sessionID)) {
+    log(`[${HOOK_NAME}] Skipped: another continuation hook already injected`, { sessionID })
+    return
+  }
+
+  const progressUpdate = sessionStateStore.trackContinuationProgress(sessionID, incompleteCount, todos)
+  if (shouldStopForStagnation({ sessionID, incompleteCount, progressUpdate })) {
     return
   }
 

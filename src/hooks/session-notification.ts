@@ -3,6 +3,7 @@ import { subagentSessions, getMainSessionID } from "../features/claude-code-sess
 import {
   startBackgroundCheck,
 } from "./session-notification-utils"
+import { buildReadyNotificationContent } from "./session-notification-content"
 import {
   type Platform,
 } from "./session-notification-sender"
@@ -19,6 +20,8 @@ interface SessionNotificationConfig {
   soundPath?: string
   /** Delay in ms before sending notification to confirm session is still idle (default: 1500) */
   idleConfirmationDelay?: number
+  /** Ignore activity events within grace period after idle (default: 100) */
+  activityGracePeriodMs?: number
   /** Skip notification if there are incomplete todos (default: true) */
   skipIfIncompleteTodos?: boolean
   /** Maximum number of sessions to track before cleanup (default: 100) */
@@ -42,6 +45,7 @@ export function createSessionNotification(
     playSound: false,
     soundPath: defaultSoundPath,
     idleConfirmationDelay: 1500,
+    activityGracePeriodMs: 100,
     skipIfIncompleteTodos: true,
     maxTrackedSessions: 100,
     enforceMainSessionFilter: true,
@@ -53,7 +57,28 @@ export function createSessionNotification(
     platform: currentPlatform,
     config: mergedConfig,
     hasIncompleteTodos,
-    send: sessionNotificationSender.sendSessionNotification,
+    send: async (hookCtx, platform, sessionID) => {
+      if (
+        typeof hookCtx.client.session.get !== "function"
+        && typeof hookCtx.client.session.messages !== "function"
+      ) {
+        await sessionNotificationSender.sendSessionNotification(
+          hookCtx,
+          platform,
+          mergedConfig.title,
+          mergedConfig.message,
+        )
+        return
+      }
+
+      const content = await buildReadyNotificationContent(hookCtx, {
+        sessionID,
+        baseTitle: mergedConfig.title,
+        baseMessage: mergedConfig.message,
+      })
+
+      await sessionNotificationSender.sendSessionNotification(hookCtx, platform, content.title, content.message)
+    },
     playSound: sessionNotificationSender.playSessionNotificationSound,
   })
 

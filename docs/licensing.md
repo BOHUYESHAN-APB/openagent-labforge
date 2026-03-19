@@ -2,7 +2,7 @@
 
 This repository contains mixed provenance:
 
-1. Upstream-derived code (from oh-my-openagent / oh-my-opencode lineage, with original upstream descriptions retained where appropriate)
+1. Upstream-derived code (from openagent-labforge / openagent-labforge lineage, with original upstream descriptions retained where appropriate)
 2. New repository additions (workflows/docs/features by this derivative project)
 3. Third-party integrations (especially MCP servers)
 
@@ -11,6 +11,7 @@ This repository contains mixed provenance:
 - `LICENSE.md` — root license text and baseline terms
 - `NOTICE` — provenance attribution summary
 - `THIRD_PARTY_NOTICES.md` — third-party matrix and MCP intake status
+- `external/skills-manifest.json` — external skills intake ledger (allow/review/deny)
 
 ## How to add a new third-party MCP
 
@@ -36,3 +37,11 @@ This repository contains mixed provenance:
 - Unknown license or unclear terms → defer.
 - Unknown key requirement → no default enablement.
 - Google-dependent retrieval tools require network-aware gating and explicit opt-in.
+
+## External skills (SKILL.md bundles)
+
+External skills are stored under `external/*` with attribution recorded in:
+
+- `external/skills-manifest.json` (license decision + hashes)
+- `THIRD_PARTY_NOTICES.md` (source provenance summary)
+

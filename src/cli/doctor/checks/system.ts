@@ -82,9 +82,9 @@ export async function checkSystem(): Promise<CheckResult> {
 
   if (!pluginInfo.registered) {
     issues.push({
-      title: "oh-my-opencode is not registered",
+      title: "openagent-labforge is not registered",
       description: "Plugin entry is missing from OpenCode configuration.",
-      fix: "Run: bunx oh-my-opencode install",
+      fix: "Run: bunx openagent-labforge install",
       severity: "error",
       affects: ["all agents"],
     })
@@ -108,7 +108,7 @@ export async function checkSystem(): Promise<CheckResult> {
     issues.push({
       title: "Loaded plugin is outdated",
       description: `Loaded ${systemInfo.loadedVersion}, latest ${latestVersion}.`,
-      fix: `Update: cd "${loadedInfo.cacheDir}" && bun add oh-my-opencode@${installTag}`,
+      fix: `Update: cd "${loadedInfo.cacheDir}" && bun add openagent-labforge@${installTag}`,
       severity: "warning",
       affects: ["plugin features"],
     })
@@ -128,3 +128,4 @@ export async function checkSystem(): Promise<CheckResult> {
     issues,
   }
 }
+

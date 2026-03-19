@@ -3,12 +3,17 @@ import type { AutoRetryHelpers } from "./auto-retry"
 import { HOOK_NAME } from "./constants"
 import { log } from "../../shared/logger"
 import { extractStatusCode, extractErrorName, classifyErrorType, isRetryableError } from "./error-classifier"
-import { createFallbackState, prepareFallback } from "./fallback-state"
+import { createFallbackState } from "./fallback-state"
 import { getFallbackModelsForSession } from "./fallback-models"
 import { SessionCategoryRegistry } from "../../shared/session-category-registry"
+import { resolveFallbackBootstrapModel } from "./fallback-bootstrap-model"
+import { dispatchFallbackRetry } from "./fallback-retry-dispatcher"
+import { createSessionStatusHandler } from "./session-status-handler"
+import { isSessionAutoModelRoutingEnabled } from "../../shared/session-model-state"
 
 export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
-  const { config, pluginConfig, sessionStates, sessionLastAccess, sessionRetryInFlight, sessionAwaitingFallbackResult, sessionFallbackTimeouts } = deps
+  const { config, pluginConfig, sessionStates, sessionLastAccess, sessionRetryInFlight, sessionAwaitingFallbackResult, sessionFallbackTimeouts, sessionStatusRetryKeys } = deps
+  const sessionStatusHandler = createSessionStatusHandler(deps, helpers, sessionStatusRetryKeys)
 
   const handleSessionCreated = (props: Record<string, unknown> | undefined) => {
     const sessionInfo = props?.info as { id?: string; model?: string } | undefined
@@ -33,6 +38,7 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
       sessionRetryInFlight.delete(sessionID)
       sessionAwaitingFallbackResult.delete(sessionID)
       helpers.clearSessionFallbackTimeout(sessionID)
+      sessionStatusRetryKeys.delete(sessionID)
       SessionCategoryRegistry.remove(sessionID)
     }
   }
@@ -49,6 +55,7 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
 
     sessionRetryInFlight.delete(sessionID)
     sessionAwaitingFallbackResult.delete(sessionID)
+    sessionStatusRetryKeys.delete(sessionID)
 
     const state = sessionStates.get(sessionID)
     if (state?.pendingFallbackModel) {
@@ -70,6 +77,7 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
     const hadTimeout = sessionFallbackTimeouts.has(sessionID)
     helpers.clearSessionFallbackTimeout(sessionID)
     sessionRetryInFlight.delete(sessionID)
+    sessionStatusRetryKeys.delete(sessionID)
 
     const state = sessionStates.get(sessionID)
     if (state?.pendingFallbackModel) {
@@ -88,6 +96,10 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
 
     if (!sessionID) {
       log(`[${HOOK_NAME}] session.error without sessionID, skipping`)
+      return
+    }
+    if (!isSessionAutoModelRoutingEnabled(sessionID)) {
+      log(`[${HOOK_NAME}] session.error fallback skipped - auto model routing disabled`, { sessionID })
       return
     }
 
@@ -138,53 +150,32 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
     }
 
     if (!state) {
-      const currentModel = props?.model as string | undefined
-      if (currentModel) {
-        state = createFallbackState(currentModel)
-        sessionStates.set(sessionID, state)
-        sessionLastAccess.set(sessionID, Date.now())
-      } else {
-        const detectedAgent = resolvedAgent
-        const agentConfig = detectedAgent
-          ? pluginConfig?.agents?.[detectedAgent as keyof typeof pluginConfig.agents]
-          : undefined
-        const agentModel = agentConfig?.model as string | undefined
-        if (agentModel) {
-          log(`[${HOOK_NAME}] Derived model from agent config`, { sessionID, agent: detectedAgent, model: agentModel })
-          state = createFallbackState(agentModel)
-          sessionStates.set(sessionID, state)
-          sessionLastAccess.set(sessionID, Date.now())
-        } else {
-          log(`[${HOOK_NAME}] No model info available, cannot fallback`, { sessionID })
-          return
-        }
+      const initialModel = resolveFallbackBootstrapModel({
+        sessionID,
+        source: "session.error",
+        eventModel: props?.model as string | undefined,
+        resolvedAgent,
+        pluginConfig,
+      })
+      if (!initialModel) {
+        log(`[${HOOK_NAME}] No model info available, cannot fallback`, { sessionID })
+        return
       }
+
+      state = createFallbackState(initialModel)
+      sessionStates.set(sessionID, state)
+      sessionLastAccess.set(sessionID, Date.now())
     } else {
       sessionLastAccess.set(sessionID, Date.now())
     }
 
-    const result = prepareFallback(sessionID, state, fallbackModels, config)
-
-    if (result.success && config.notify_on_fallback) {
-      await deps.ctx.client.tui
-        .showToast({
-          body: {
-            title: "Model Fallback",
-            message: `Switching to ${result.newModel?.split("/").pop() || result.newModel} for next request`,
-            variant: "warning",
-            duration: 5000,
-          },
-        })
-        .catch(() => {})
-    }
-
-    if (result.success && result.newModel) {
-      await helpers.autoRetryWithFallback(sessionID, result.newModel, resolvedAgent, "session.error")
-    }
-
-    if (!result.success) {
-      log(`[${HOOK_NAME}] Fallback preparation failed`, { sessionID, error: result.error })
-    }
+    await dispatchFallbackRetry(deps, helpers, {
+      sessionID,
+      state,
+      fallbackModels,
+      resolvedAgent,
+      source: "session.error",
+    })
   }
 
   return async ({ event }: { event: { type: string; properties?: unknown } }) => {
@@ -196,6 +187,7 @@ export function createEventHandler(deps: HookDeps, helpers: AutoRetryHelpers) {
     if (event.type === "session.deleted") { handleSessionDeleted(props); return }
     if (event.type === "session.stop") { await handleSessionStop(props); return }
     if (event.type === "session.idle") { handleSessionIdle(props); return }
+    if (event.type === "session.status") { await sessionStatusHandler(props); return }
     if (event.type === "session.error") { await handleSessionError(props); return }
   }
 }

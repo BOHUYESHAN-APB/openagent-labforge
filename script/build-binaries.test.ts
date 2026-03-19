@@ -58,8 +58,8 @@ describe("build-binaries", () => {
       const linuxBaseline = platforms.find((p) => p.target === "bun-linux-x64-baseline");
 
       // then
-      expect(windowsBaseline?.binary).toBe("oh-my-opencode.exe");
-      expect(linuxBaseline?.binary).toBe("oh-my-opencode");
+      expect(windowsBaseline?.binary).toBe("openagent-labforge.exe");
+      expect(linuxBaseline?.binary).toBe("openagent-labforge");
     });
 
     it("has descriptions mentioning no AVX2 for baseline platforms", async () => {
@@ -77,3 +77,4 @@ describe("build-binaries", () => {
     });
   });
 });
+

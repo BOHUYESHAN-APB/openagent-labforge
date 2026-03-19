@@ -6,7 +6,7 @@ This document defines the migration from upstream-compatible publishing identity
 
 - Publish under a new npm identity.
 - Start semantic versioning at `1.0.0` for the new package name.
-- Keep compatibility notes for users migrating from `oh-my-opencode`.
+- Keep compatibility notes for users migrating from `openagent-labforge`.
 
 ## Target Package Names
 
@@ -19,28 +19,28 @@ This document defines the migration from upstream-compatible publishing identity
 ## Why 1.0.0 Is Correct Here
 
 - New package name means new semver lineage.
-- Current `oh-my-opencode@3.11.0` cannot be republished.
+- Current `openagent-labforge@3.11.0` cannot be republished.
 - A reset baseline reduces confusion and signals independent governance.
 
 ## Migration Scope (Code + Runtime)
 
-The following areas contain `oh-my-opencode`-bound identity and must be migrated before release:
+The following areas contain `openagent-labforge`-bound identity and must be migrated before release:
 
 1. package metadata
    - `package.json` (`name`, `bin`, optional dependency names, repo links)
    - platform package manifests under `packages/*/package.json`
 
 2. CLI naming and installer
-   - CLI command name currently tied to `oh-my-opencode`
+   - CLI command name currently tied to `openagent-labforge`
    - install prompts and config manager plugin entry logic
 
 3. config file and path conventions
-   - `.opencode/oh-my-opencode.jsonc`
-   - `~/.config/opencode/oh-my-opencode.jsonc`
+   - `.opencode/openagent-labforge.jsonc`
+   - `~/.config/opencode/openagent-labforge.jsonc`
    - fallback handling for legacy filename during migration
 
 4. cache / data / logs
-   - cache subdirectory names using `oh-my-opencode`
+   - cache subdirectory names using `openagent-labforge`
    - auto-update and doctor package constants
 
 5. docs and examples
@@ -71,3 +71,4 @@ The following areas contain `oh-my-opencode`-bound identity and must be migrated
 
 - Force-updating upstream users automatically.
 - Breaking existing legacy config loading without transition window.
+

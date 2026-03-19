@@ -1,6 +1,6 @@
 {
   // Enhanced profile: full orchestration. More capable, higher token usage.
-  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/openagent-labforge.schema.json",
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/openagent-labforge/dev/assets/openagent-labforge.schema.json",
 
   "i18n": {
     "language": "auto"
@@ -38,3 +38,4 @@
     "oracle": { "category": "ultrabrain" }
   }
 }
+

@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { PACKAGE_NAME, USER_CONFIG_DIR } from "./constants"
+import { CACHE_DIR, PACKAGE_NAME, USER_CONFIG_DIR } from "./constants"
 import { log } from "../../shared/logger"
 
 interface BunLockfile {
@@ -16,10 +16,7 @@ function stripTrailingCommas(json: string): string {
   return json.replace(/,(\s*[}\]])/g, "$1")
 }
 
-function removeFromBunLock(packageName: string): boolean {
-  const lockPath = path.join(USER_CONFIG_DIR, "bun.lock")
-  if (!fs.existsSync(lockPath)) return false
-
+function removeFromTextBunLock(lockPath: string, packageName: string): boolean {
   try {
     const content = fs.readFileSync(lockPath, "utf-8")
     const lock = JSON.parse(stripTrailingCommas(content)) as BunLockfile
@@ -46,19 +43,55 @@ function removeFromBunLock(packageName: string): boolean {
   }
 }
 
+function deleteBinaryBunLock(lockPath: string): boolean {
+  try {
+    fs.unlinkSync(lockPath)
+    log(`[auto-update-checker] Removed bun.lockb to force re-resolution`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function removeFromBunLock(packageName: string): boolean {
+  const cacheTextLockPath = path.join(CACHE_DIR, "bun.lock")
+  const cacheBinaryLockPath = path.join(CACHE_DIR, "bun.lockb")
+  const userTextLockPath = path.join(USER_CONFIG_DIR, "bun.lock")
+
+  if (fs.existsSync(cacheTextLockPath)) {
+    return removeFromTextBunLock(cacheTextLockPath, packageName)
+  }
+
+  // Binary lockfiles cannot be parsed; deletion forces bun to re-resolve
+  if (fs.existsSync(cacheBinaryLockPath)) {
+    return deleteBinaryBunLock(cacheBinaryLockPath)
+  }
+
+  if (fs.existsSync(userTextLockPath)) {
+    return removeFromTextBunLock(userTextLockPath, packageName)
+  }
+
+  return false
+}
+
 export function invalidatePackage(packageName: string = PACKAGE_NAME): boolean {
   try {
-    const pkgDir = path.join(USER_CONFIG_DIR, "node_modules", packageName)
+    const pkgDirs = [
+      path.join(USER_CONFIG_DIR, "node_modules", packageName),
+      path.join(CACHE_DIR, "node_modules", packageName),
+    ]
     const pkgJsonPath = path.join(USER_CONFIG_DIR, "package.json")
 
     let packageRemoved = false
     let dependencyRemoved = false
     let lockRemoved = false
 
-    if (fs.existsSync(pkgDir)) {
-      fs.rmSync(pkgDir, { recursive: true, force: true })
-      log(`[auto-update-checker] Package removed: ${pkgDir}`)
-      packageRemoved = true
+    for (const pkgDir of pkgDirs) {
+      if (fs.existsSync(pkgDir)) {
+        fs.rmSync(pkgDir, { recursive: true, force: true })
+        log(`[auto-update-checker] Package removed: ${pkgDir}`)
+        packageRemoved = true
+      }
     }
 
     if (fs.existsSync(pkgJsonPath)) {

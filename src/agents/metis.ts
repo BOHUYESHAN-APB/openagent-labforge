@@ -1,5 +1,6 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
+import { buildAntiDuplicationSection } from "./dynamic-agent-prompt-builder"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
 
 const MODE: AgentMode = "subagent"
@@ -24,6 +25,8 @@ export const METIS_SYSTEM_PROMPT = `# Metis - Pre-Planning Consultant
 
 - **READ-ONLY**: You analyze, question, advise. You do NOT implement or modify files.
 - **OUTPUT**: Your analysis feeds into Prometheus (planner). Be actionable.
+
+${buildAntiDuplicationSection()}
 
 ---
 
@@ -299,7 +302,7 @@ const metisRestrictions = createAgentToolRestrictions([
 export function createMetisAgent(model: string): AgentConfig {
   return {
     description:
-      "Pre-planning consultant that analyzes requests to identify hidden intentions, ambiguities, and AI failure points. (Metis - OhMyOpenCode)",
+      "Pre-planning consultant that analyzes requests to identify hidden intentions, ambiguities, and AI failure points. (Metis - OpenAgent Labforge)",
     mode: MODE,
     model,
     temperature: 0.3,
@@ -331,3 +334,4 @@ export const metisPromptMetadata: AgentPromptMetadata = {
   promptAlias: "Metis",
   keyTrigger: "Ambiguous or complex request → consult Metis before Prometheus",
 }
+

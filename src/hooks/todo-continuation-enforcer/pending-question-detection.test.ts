@@ -97,4 +97,43 @@ describe("hasUnansweredQuestion", () => {
     ]
     expect(hasUnansweredQuestion(messages)).toBe(true)
   })
+
+  test("given assistant asks user to test and respond, returns true", () => {
+    const messages = [
+      { info: { role: "user" } },
+      {
+        info: { role: "assistant" },
+        parts: [
+          { type: "text", text: "请先跑一下测试，测试后告诉我结果，我再继续下一步。" },
+        ],
+      },
+    ]
+    expect(hasUnansweredQuestion(messages)).toBe(true)
+  })
+
+  test("given assistant asks for review feedback, returns true", () => {
+    const messages = [
+      { info: { role: "user" } },
+      {
+        info: { role: "assistant" },
+        parts: [
+          { type: "text", text: "Please review and confirm before I continue." },
+        ],
+      },
+    ]
+    expect(hasUnansweredQuestion(messages)).toBe(true)
+  })
+
+  test("given assistant progress update without user prompt, returns false", () => {
+    const messages = [
+      { info: { role: "user" } },
+      {
+        info: { role: "assistant" },
+        parts: [
+          { type: "text", text: "我已完成当前步骤，接下来会继续实现并同步进展。" },
+        ],
+      },
+    ]
+    expect(hasUnansweredQuestion(messages)).toBe(false)
+  })
 })

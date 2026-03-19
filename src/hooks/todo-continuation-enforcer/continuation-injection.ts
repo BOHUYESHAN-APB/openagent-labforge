@@ -19,6 +19,7 @@ import {
   CONTINUATION_PROMPT,
   DEFAULT_SKIP_AGENTS,
   HOOK_NAME,
+  BACKGROUND_TASK_ACTIVE_WINDOW_MS,
 } from "./constants"
 import { getMessageDir } from "./message-directory"
 import { getIncompleteCount } from "./todo"
@@ -32,6 +33,15 @@ function hasWritePermission(tools: Record<string, ToolPermission> | undefined): 
     !tools ||
     (editPermission !== false && editPermission !== "deny" && writePermission !== false && writePermission !== "deny")
   )
+}
+
+function isBackgroundTaskActive(task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }): boolean {
+  if (task.status !== "running") return false
+  const lastUpdate = task.progress?.lastUpdate?.getTime()
+  if (lastUpdate) return Date.now() - lastUpdate < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  const startedAt = task.startedAt?.getTime()
+  if (startedAt) return Date.now() - startedAt < BACKGROUND_TASK_ACTIVE_WINDOW_MS
+  return true
 }
 
 export async function injectContinuation(args: {
@@ -65,7 +75,7 @@ export async function injectContinuation(args: {
   }
 
   const hasRunningBgTasks = backgroundManager
-    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string; progress?: { lastUpdate?: Date }; startedAt?: Date }) => isBackgroundTaskActive(task))
     : false
 
   if (hasRunningBgTasks) {
@@ -164,7 +174,9 @@ ${todoList}`
     if (injectionState) {
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
+      injectionState.idleStrikeCount = 0
     }
   } catch (error) {
     log(`[${HOOK_NAME}] Injection failed`, { sessionID, error: String(error) })
@@ -172,6 +184,7 @@ ${todoList}`
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()
       injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+      injectionState.idleStrikeCount = 0
     }
   }
 }

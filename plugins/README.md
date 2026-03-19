@@ -7,13 +7,13 @@ This directory contains companion plugins that ship with the core `openagent-lab
 We maintain two bundle targets:
 
 1. `full`
-   - Core harness (`oh-my-opencode`)
+   - Core harness (`openagent-labforge-core`)
    - `opencode-agent-bio-paper`
    - `opencode-mcp-paper-search`
    - Audience: bioinformatics + literature end-to-end workflows
 
 2. `paper-only`
-   - Core harness (`oh-my-opencode`)
+   - Core harness (`openagent-labforge-core`)
    - `opencode-agent-bio-paper` in paper profile
    - `opencode-mcp-paper-search`
    - Audience: search, read, summarize, cite, outline, draft

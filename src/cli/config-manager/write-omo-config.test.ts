@@ -34,7 +34,7 @@ describe("writeOmoConfig", () => {
 
   beforeEach(() => {
     testConfigDir = join(tmpdir(), `omo-write-config-${Date.now()}-${Math.random().toString(36).slice(2)}`)
-    testConfigPath = join(testConfigDir, "oh-my-opencode.json")
+    testConfigPath = join(testConfigDir, "openagent-labforge.json")
 
     mkdirSync(testConfigDir, { recursive: true })
     process.env.OPENCODE_CONFIG_DIR = testConfigDir
@@ -78,3 +78,4 @@ describe("writeOmoConfig", () => {
     }
   })
 })
+

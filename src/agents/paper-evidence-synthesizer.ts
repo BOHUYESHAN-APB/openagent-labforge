@@ -1,6 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback"
 
 const MODE: AgentMode = "subagent"
 
@@ -29,6 +30,8 @@ Focus:
 - claim extraction and evidence strength grading
 - cross-paper agreement/conflict analysis
 - citation-grounded concise summaries
+
+${buildFirstPrinciplesPushbackSection("research-synthesizer")}
 
 Rules:
 - Separate evidence from interpretation explicitly.

@@ -46,6 +46,7 @@ export function detectCurrentConfig(): DetectedConfig {
     hasOpencodeZen: true,
     hasZaiCodingPlan: false,
     hasKimiForCoding: false,
+    hasOpencodeGo: false,
   }
 
   const { format, path } = detectConfigFormat()
@@ -60,7 +61,13 @@ export function detectCurrentConfig(): DetectedConfig {
 
   const openCodeConfig = parseResult.config
   const plugins = openCodeConfig.plugin ?? []
-  result.isInstalled = plugins.some((p) => p.startsWith("@labforge/openagent-labforge-core") || p.startsWith("oh-my-opencode"))
+  const LEGACY_PACKAGE_NAMES = [
+    "@bohuyeshan/openagent-labforge-core",
+    "@labforge/openagent-labforge-core",
+    "openagent-labforge",
+    "openagent-labforge",
+  ]
+  result.isInstalled = plugins.some((p) => LEGACY_PACKAGE_NAMES.some((name) => p.startsWith(name)))
 
   if (!result.isInstalled) {
     return result
@@ -77,3 +84,4 @@ export function detectCurrentConfig(): DetectedConfig {
 
   return result
 }
+

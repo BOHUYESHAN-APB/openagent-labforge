@@ -1,8 +1,8 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
-import { createAgentToolRestrictions } from "../shared/permission-compat"
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback"
 
-const MODE: AgentMode = "subagent"
+const MODE: AgentMode = "all"
 
 export const BIO_METHODOLOGIST_PROMPT_METADATA: AgentPromptMetadata = {
   category: "specialist",
@@ -14,21 +14,20 @@ export const BIO_METHODOLOGIST_PROMPT_METADATA: AgentPromptMetadata = {
 }
 
 export function createBioMethodologistAgent(model: string): AgentConfig {
-  const restrictions = createAgentToolRestrictions(["task", "call_omo_agent"])
-
   return {
     description:
       "Bioinformatics planning specialist for method selection, pipeline design, and reproducibility strategy. (Bio-Methodologist - Labforge)",
     mode: MODE,
     model,
     temperature: 0.1,
-    ...restrictions,
     prompt: `You are a bioinformatics planning specialist.
 
 Focus:
 - experimental design alignment
 - pipeline architecture and reproducibility
 - method trade-offs and risk analysis
+
+${buildFirstPrinciplesPushbackSection("bio-planner")}
 
 Rules:
 - Prioritize reproducibility and explicit assumptions.

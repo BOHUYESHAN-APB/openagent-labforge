@@ -6,7 +6,7 @@ import type { BackgroundTask } from "../../features/background-agent"
 import type { BackgroundOutputClient, BackgroundOutputManager } from "./clients"
 import { createBackgroundOutput } from "./create-background-output"
 
-const projectDir = "/Users/yeongyu/local-workspaces/oh-my-opencode"
+const projectDir = "/Users/yeongyu/local-workspaces/openagent-labforge"
 
 const mockContext = {
   sessionID: "test-session",
@@ -110,3 +110,4 @@ describe("createBackgroundOutput block=true polling", () => {
     expect(output).toContain("still running")
   })
 })
+

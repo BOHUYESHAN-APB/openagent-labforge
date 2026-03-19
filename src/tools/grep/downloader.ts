@@ -39,7 +39,7 @@ function getPlatformKey(): string {
 
 function getInstallDir(): string {
   const homeDir = process.env.HOME || process.env.USERPROFILE || "."
-  return join(homeDir, ".cache", "oh-my-opencode", "bin")
+  return join(homeDir, ".cache", "openagent-labforge", "bin")
 }
 
 function getRgPath(): string {
@@ -125,3 +125,4 @@ export function getInstalledRipgrepPath(): string | null {
   const rgPath = getRgPath()
   return existsSync(rgPath) ? rgPath : null
 }
+

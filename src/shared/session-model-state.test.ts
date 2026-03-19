@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test"
 import {
+  clearSessionAutoModelRouting,
   clearSessionForcedModel,
   clearSessionModel,
   clearSessionModelLock,
+  getSessionAutoModelRouting,
   getSessionForcedModel,
   getSessionModel,
   getSessionModelLock,
+  isSessionAutoModelRoutingEnabled,
+  setSessionAutoModelRouting,
   setSessionForcedModel,
   setSessionModel,
   setSessionModelLock,
@@ -90,5 +94,39 @@ describe("session-model-state", () => {
 
     //#then
     expect(getSessionForcedModel(sessionID)).toBeUndefined()
+  })
+
+  test("stores and clears auto model routing flag", () => {
+    //#given
+    const sessionID = "ses_auto_routing"
+
+    //#when
+    setSessionAutoModelRouting(sessionID, true)
+
+    //#then
+    expect(getSessionAutoModelRouting(sessionID)).toBe(true)
+    expect(isSessionAutoModelRoutingEnabled(sessionID)).toBe(true)
+
+    //#when
+    clearSessionAutoModelRouting(sessionID)
+
+    //#then
+    expect(getSessionAutoModelRouting(sessionID)).toBeUndefined()
+    expect(isSessionAutoModelRoutingEnabled(sessionID)).toBe(false)
+  })
+
+  test("clearSessionModel also clears auto model routing flag", () => {
+    //#given
+    const sessionID = "ses_auto_routing_clear"
+    setSessionModel(sessionID, { providerID: "auto", modelID: "deep" })
+    setSessionAutoModelRouting(sessionID, true)
+
+    //#when
+    clearSessionModel(sessionID)
+
+    //#then
+    expect(getSessionModel(sessionID)).toBeUndefined()
+    expect(getSessionAutoModelRouting(sessionID)).toBeUndefined()
+    expect(isSessionAutoModelRoutingEnabled(sessionID)).toBe(false)
   })
 })

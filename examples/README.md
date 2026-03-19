@@ -14,7 +14,7 @@ Profiles:
 - `openagent-labforge.classic.jsonc`: Keep OpenCode default `plan` and `build` lightweight.
 - `openagent-labforge.hybrid.jsonc`: Enable Labforge agents without replacing default `plan/build`.
 - `openagent-labforge.enhanced.jsonc`: Full orchestration (may use more tokens).
-- `openagent-labforge.mcp-research.jsonc`: MCP-heavy setup with default-off risky endpoints and policy-based toggles.
+- `openagent-labforge.mcp-research.jsonc`: MCP-heavy setup with policy-based toggles (built-in MCPs default to enabled).
 - `openagent-labforge.skills-whitelist.jsonc`: Load only allowlisted skills synchronized from external sources.
 - `openagent-labforge.skills-full.jsonc`: Load the generated unified full skills bundle.
 - `openagent-labforge.skills-paper.jsonc`: Load the generated unified paper skills bundle.

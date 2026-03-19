@@ -19,12 +19,13 @@ describe("resolveCategoryExecution", () => {
 		providerModelsSpy?.mockRestore()
 	})
 
-	const createMockExecutorContext = (): ExecutorContext => ({
+	const createMockExecutorContext = (overrides: Partial<ExecutorContext> = {}): ExecutorContext => ({
 		client: {} as any,
 		manager: {} as any,
 		directory: "/tmp/test",
 		userCategories: {},
 		sisyphusJuniorModel: undefined,
+		...overrides,
 	})
 
 	test("returns clear error when category exists but required model is not available", async () => {
@@ -155,5 +156,35 @@ describe("resolveCategoryExecution", () => {
 			type: "inherited",
 			source: "override",
 		})
+	})
+
+	test("uses category fallback_models for background/runtime fallback chain", async () => {
+		//#given
+		const args = {
+			category: "deep",
+			prompt: "test prompt",
+			description: "Test task",
+			run_in_background: false,
+			load_skills: [],
+			blockedBy: undefined,
+			enableSkillTools: false,
+		}
+		const executorCtx = createMockExecutorContext()
+		executorCtx.userCategories = {
+			deep: {
+				model: "quotio/claude-opus-4-6",
+				fallback_models: ["quotio/kimi-k2.5", "openai/gpt-5.2(high)"],
+			},
+		}
+
+		//#when
+		const result = await resolveCategoryExecution(args, executorCtx, undefined, "anthropic/claude-sonnet-4-6")
+
+		//#then
+		expect(result.error).toBeUndefined()
+		expect(result.fallbackChain).toEqual([
+			{ providers: ["quotio"], model: "kimi-k2.5", variant: undefined },
+			{ providers: ["openai"], model: "gpt-5.2", variant: "high" },
+		])
 	})
 })

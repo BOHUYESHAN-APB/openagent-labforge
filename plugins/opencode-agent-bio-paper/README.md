@@ -22,7 +22,7 @@ Planned capabilities:
 
 ## Compatibility
 
-- Requires `oh-my-opencode >=3.11.0 <4.0.0`
+- Requires `@bohuyeshan/openagent-labforge-core >=3.11.0 <4.0.0`
 - Part of both bundles defined in `plugins/BUNDLES.md`
 
 License: TBD (intend MIT for original code; must not copy upstream SUL-licensed code).

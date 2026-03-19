@@ -47,12 +47,13 @@
 ## MULTI-LEVEL CONFIG MERGE
 
 ```
-User (~/.config/opencode/oh-my-opencode.jsonc)
+User (~/.config/opencode/openagent-labforge.jsonc)
   ↓ deepMerge
-Project (.opencode/oh-my-opencode.jsonc)
+Project (.opencode/openagent-labforge.jsonc)
   ↓ Zod defaults
 Final Config
 ```
 
 - `agents`, `categories`, `claude_code`: deep merged
 - `disabled_*` arrays: Set union
+

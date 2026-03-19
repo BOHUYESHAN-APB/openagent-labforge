@@ -26,29 +26,26 @@ Meaning:
 
 ## Built-in MCP defaults (current)
 
-Always-on built-ins:
+Built-in MCPs (plugin-provided):
 - `websearch`
 - `context7`
 - `grep_app`
-
-Default-off (visible, user-toggleable):
-- `arxiv_mcp`
 - `browser_puppeteer`
-- `fetch_browser`
-- `deepwiki_mcp`
-- `bing_cn_mcp`
 - `paper_search_mcp`
-- `semantic_scholar_fastmcp`
+
+Defaults:
+- Enabled by default: `websearch`, `context7`, `grep_app`
+- Enabled by default: `browser_puppeteer`, `paper_search_mcp`
 
 ## MCP policy example
 
 ```jsonc
 {
   "mcp_policy": {
-    "network_profile": "restricted",
+    "network_profile": "auto",
     "bing_cn_english_fallback": true,
-    "enable": ["arxiv_mcp", "fetch_browser"],
-    "disable": ["semantic_scholar_fastmcp"]
+    // Built-in MCPs are enabled by default; use policy only for overrides.
+    // "disable": ["paper_search_mcp"]
   }
 }
 ```

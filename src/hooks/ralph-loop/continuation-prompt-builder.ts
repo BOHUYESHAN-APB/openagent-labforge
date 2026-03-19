@@ -14,6 +14,10 @@ IMPORTANT:
 - Continue from where you left off
 - When FULLY complete, output: <promise>{{PROMISE}}</promise>
 - Do not stop until the task is truly done
+- Do NOT ask the user "what next" or "should I continue" between steps
+- Only ask the user if you are truly blocked
+- If blocked, ask up to 3 precise blocking questions using OpenCode's QuestionTool (the "question" tool)
+- If not blocked, choose safe defaults, proceed, and document assumptions
 
 Original task:
 {{PROMPT}}`
@@ -24,9 +28,16 @@ You already emitted <promise>{{INITIAL_PROMISE}}</promise>. This does NOT finish
 
 REQUIRED NOW:
 - Call Oracle using task(subagent_type="oracle", load_skills=[], run_in_background=false, ...)
-- Ask Oracle to verify whether the original task is actually complete
+- Provide Oracle with the original task text and the concrete outputs to verify (files, commands, logs)
+- Oracle must verify by evidence. If evidence is missing, Oracle must reject.
 - The system will inspect the Oracle session directly for the verification result
 - If Oracle does not verify, continue fixing the task and do not consider it complete
+- Do NOT ask the user "what next" or "should I continue" between steps
+- Only ask the user if you are truly blocked
+- If blocked, ask up to 3 precise blocking questions using OpenCode's QuestionTool (the "question" tool)
+
+Optional domain checks:
+- If the task is bioinformatics or data analysis, consult bio-methodologist or bio-pipeline-operator before final Oracle review.
 
 Original task:
 {{PROMPT}}`
@@ -41,6 +52,12 @@ REQUIRED NOW:
 - Do not claim completion early or argue with the failed verification
 - After fixing the remaining issues, request Oracle review again using task(subagent_type="oracle", load_skills=[], run_in_background=false, ...)
 - Only when the work is ready for review again, output: <promise>{{PROMISE}}</promise>
+- Do NOT ask the user "what next" or "should I continue" between steps
+- Only ask the user if you are truly blocked
+- If blocked, ask up to 3 precise blocking questions using OpenCode's QuestionTool (the "question" tool)
+
+Optional domain checks:
+- If the task is bioinformatics or data analysis, consult bio-methodologist or bio-pipeline-operator before final Oracle review.
 
 Original task:
 {{PROMPT}}`

@@ -26,7 +26,7 @@ export async function resolveSession(options: {
   for (let attempt = 1; attempt <= SESSION_CREATE_MAX_RETRIES; attempt++) {
     const res = await client.session.create({
       body: {
-        title: "oh-my-opencode run",
+        title: "openagent-labforge run",
         // In CLI run mode there's no TUI to answer questions.
         permission: [
           { permission: "question", action: "deny" as const, pattern: "*" },
@@ -68,3 +68,4 @@ export async function resolveSession(options: {
 
   throw new Error("Failed to create session after all retries")
 }
+

@@ -126,7 +126,7 @@ const x = 1;
   })
 
   describe("isSystemDirective", () => {
-    test("should return true for OH-MY-OPENCODE system directives", () => {
+    test("should return true for openagent-labforge system directives", () => {
       const directive = createSystemDirective("TEST")
       expect(isSystemDirective(directive)).toBe(true)
     })
@@ -189,3 +189,4 @@ Another system reminder with research keyword.
     })
   })
 })
+

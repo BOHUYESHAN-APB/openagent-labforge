@@ -1,15 +1,15 @@
-# oh-my-opencode — O P E N C O D E Plugin
+# openagent-labforge — O P E N C O D E Plugin
 
 **Generated:** 2026-03-06 | **Commit:** 7fe44024 | **Branch:** dev
 
 ## OVERVIEW
 
-OpenCode plugin (npm: `oh-my-opencode`) that extends Claude Code (OpenCode fork) with multi-agent orchestration, 46 lifecycle hooks, 26 tools, skill/command/MCP systems, and Claude Code compatibility. 1268 TypeScript files, 160k LOC.
+OpenCode plugin (npm: `openagent-labforge`) that extends Claude Code (OpenCode fork) with multi-agent orchestration, 46 lifecycle hooks, 26 tools, skill/command/MCP systems, and Claude Code compatibility. 1268 TypeScript files, 160k LOC.
 
 ## STRUCTURE
 
 ```
-oh-my-opencode/
+openagent-labforge/
 ├── src/
 │   ├── index.ts              # Plugin entry: loadConfig → createManagers → createTools → createHooks → createPluginInterface
 │   ├── plugin-config.ts      # JSONC multi-level config: user → project → defaults (Zod v4)
@@ -30,7 +30,7 @@ oh-my-opencode/
 ## INITIALIZATION FLOW
 
 ```
-OhMyOpenCodePlugin(ctx)
+OpenAgentLabforgePlugin(ctx)
   ├─→ loadPluginConfig()         # JSONC parse → project/user merge → Zod validate → migrate
   ├─→ createManagers()           # TmuxSessionManager, BackgroundManager, SkillMcpManager, ConfigHandler
   ├─→ createTools()              # SkillContext + AvailableCategories + ToolRegistry (26 tools)
@@ -65,13 +65,13 @@ OhMyOpenCodePlugin(ctx)
 | Add new command | `src/features/builtin-commands/` | Template in templates/ |
 | Add new CLI command | `src/cli/cli-program.ts` | Commander.js subcommand |
 | Add new doctor check | `src/cli/doctor/checks/` | Register in checks/index.ts |
-| Modify config schema | `src/config/schema/` + update root schema | Zod v4, add to OhMyOpenCodeConfigSchema |
+| Modify config schema | `src/config/schema/` + update root schema | Zod v4, add to OpenAgent LabforgeConfigSchema |
 | Add new category | `src/tools/delegate-task/constants.ts` | DEFAULT_CATEGORIES + CATEGORY_MODEL_REQUIREMENTS |
 
 ## MULTI-LEVEL CONFIG
 
 ```
-Project (.opencode/oh-my-opencode.jsonc)  →  User (~/.config/opencode/oh-my-opencode.jsonc)  →  Defaults
+Project (.opencode/openagent-labforge.jsonc)  →  User (~/.config/opencode/openagent-labforge.jsonc)  →  Defaults
 ```
 
 - `agents`, `categories`, `claude_code`: deep merged recursively
@@ -128,9 +128,9 @@ bun test                    # Bun test suite
 bun run build              # Build plugin (ESM + declarations + schema)
 bun run build:all          # Build + platform binaries
 bun run typecheck           # tsc --noEmit
-bunx oh-my-opencode install # Interactive setup
-bunx oh-my-opencode doctor  # Health diagnostics
-bunx oh-my-opencode run     # Non-interactive session
+bunx openagent-labforge install # Interactive setup
+bunx openagent-labforge doctor  # Health diagnostics
+bunx openagent-labforge run     # Non-interactive session
 ```
 
 ## CI/CD
@@ -146,7 +146,7 @@ bunx oh-my-opencode run     # Non-interactive session
 
 ## NOTES
 
-- Logger writes to `/tmp/oh-my-opencode.log` — check there for debugging
+- Logger writes to `/tmp/openagent-labforge.log` — check there for debugging
 - Background tasks: 5 concurrent per model/provider (configurable)
 - Plugin load timeout: 10s for Claude Code plugins
 - Model fallback priority: Claude > OpenAI > Gemini > Copilot > OpenCode Zen > Z.ai > Kimi
@@ -155,3 +155,5 @@ bunx oh-my-opencode run     # Non-interactive session
 - Test setup: `test-setup.ts` preloaded via bunfig.toml, mock-heavy tests run in isolation in CI
 - 98 barrel export files (index.ts) establish module boundaries
 - Architecture rules enforced via `.sisyphus/rules/modular-code-enforcement.md`
+
+
