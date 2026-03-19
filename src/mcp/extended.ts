@@ -17,7 +17,7 @@ export type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
 export const arxiv_mcp: LocalMcpConfig = {
   type: "local",
-  command: ["uvx", "arxiv-mcp-server"],
+  command: ["uvx", "--native-tls", "arxiv-mcp-server"],
   enabled: false,
 }
 
@@ -51,12 +51,23 @@ export const paper_search_mcp: LocalMcpConfig = {
   // NOTE:
   // `paper-search-mcp` currently does not expose a console script entrypoint.
   // Run it via module entrypoint instead.
-  command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
+  // NOTE:
+  // Some Windows environments intercept TLS and break uv's bundled cert store.
+  // `--native-tls` uses the system certificate store, avoiding "UnknownIssuer".
+  command: [
+    "uvx",
+    "--native-tls",
+    "--from",
+    "paper-search-mcp",
+    "python",
+    "-m",
+    "paper_search_mcp.server",
+  ],
   enabled: true,
 }
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {
   type: "local",
-  command: ["uvx", "semantic-scholar-fastmcp-mcp-server"],
+  command: ["uvx", "--native-tls", "semantic-scholar-fastmcp-mcp-server"],
   enabled: false,
 }
