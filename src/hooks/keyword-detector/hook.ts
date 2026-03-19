@@ -50,6 +50,16 @@ export function createKeywordDetectorHook(ctx: PluginInput, _collector?: Context
       const modelID = input.model?.modelID
       let detectedKeywords = detectKeywordsWithType(cleanText, currentAgent, modelID)
 
+      // Ralph/ULTRAWORK loop commands already inject their own long-form instructions.
+      // Re-injecting ultrawork-mode again bloats context and tends to make the agent overly cautious.
+      const isLoopTemplate =
+        cleanText.includes("You are starting an ULTRAWORK Loop") ||
+        cleanText.includes("You are starting a Ralph Loop") ||
+        cleanText.includes("Cancel the currently active Ralph Loop")
+      if (isLoopTemplate) {
+        detectedKeywords = detectedKeywords.filter((k) => k.type !== "ultrawork")
+      }
+
       if (isPlannerAgent(currentAgent)) {
         detectedKeywords = detectedKeywords.filter((k) => k.type !== "ultrawork")
       }
