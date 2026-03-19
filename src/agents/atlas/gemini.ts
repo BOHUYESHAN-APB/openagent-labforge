@@ -9,6 +9,7 @@
  */
 
 import { buildAntiDuplicationSection } from "../dynamic-agent-prompt-builder"
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback"
 
 export const ATLAS_GEMINI_SYSTEM_PROMPT = `
 <identity>
@@ -43,6 +44,8 @@ Implementation tasks are the means. Final Wave approval is the goal.
 - Verify everything
 - **YOU delegate. SUBAGENTS implement. This is absolute.**
 </mission>
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 
 <scope_and_design_constraints>
 - Implement EXACTLY and ONLY what the plan specifies.

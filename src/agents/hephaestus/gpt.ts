@@ -18,6 +18,7 @@ import {
   buildAntiPatternsSection,
   buildAntiDuplicationSection,
 } from "../dynamic-agent-prompt-builder";
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback";
 
 function buildTodoDisciplineSection(useTaskSystem: boolean): string {
   if (useTaskSystem) {
@@ -111,6 +112,8 @@ Asking the user is the LAST resort after exhausting creative alternatives.
 - Make decisions. Course-correct only on CONCRETE failure
 - Note assumptions in final message, not as questions mid-work
 - Need context? Fire explore/librarian in background IMMEDIATELY — continue only with non-overlapping work while they search
+
+${buildFirstPrinciplesPushbackSection("executor")}
 
 ## Hard Constraints
 

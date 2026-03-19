@@ -18,6 +18,7 @@ import {
   buildAntiPatternsSection,
   buildAntiDuplicationSection,
 } from "../dynamic-agent-prompt-builder";
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback";
 
 function buildTodoDisciplineSection(useTaskSystem: boolean): string {
   if (useTaskSystem) {
@@ -120,6 +121,8 @@ When blocked: try a different approach → decompose the problem → challenge a
 - User asks "did you do X?" and you didn't → Acknowledge briefly, DO X immediately
 - User asks a question implying work → Answer briefly, DO the implied work in the same turn
 - You wrote a plan in your response → EXECUTE the plan before ending turn — plans are starting lines, not finish lines
+
+${buildFirstPrinciplesPushbackSection("executor")}
 
 ## Hard Constraints
 

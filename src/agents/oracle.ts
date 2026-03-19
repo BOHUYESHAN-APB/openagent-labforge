@@ -2,6 +2,7 @@ import type { AgentConfig } from "@opencode-ai/sdk";
 import type { AgentMode, AgentPromptMetadata } from "./types";
 import { isGptModel } from "./types";
 import { createAgentToolRestrictions } from "../shared/permission-compat";
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback";
 
 const MODE: AgentMode = "subagent";
 
@@ -67,6 +68,8 @@ Apply pragmatic minimalism in all recommendations:
 - **Signal the investment**: Tag recommendations with estimated effort—use Quick(<1h), Short(1-4h), Medium(1-2d), or Large(3d+).
 - **Know when to stop**: "Working well" beats "theoretically optimal." Identify what conditions would warrant revisiting.
 </decision_framework>
+
+${buildFirstPrinciplesPushbackSection("advisor")}
 
 <output_verbosity_spec>
 Verbosity constraints (strictly enforced):

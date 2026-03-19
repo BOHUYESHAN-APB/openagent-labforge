@@ -11,6 +11,7 @@ import {
 } from "./sisyphus/gemini";
 import { buildGpt54SisyphusPrompt } from "./sisyphus/gpt-5-4";
 import { buildTaskManagementSection } from "./sisyphus/default";
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback";
 
 const MODE: AgentMode = "all";
 export const SISYPHUS_PROMPT_METADATA: AgentPromptMetadata = {
@@ -108,7 +109,7 @@ Before classifying the task, identify what the user actually wants from you as a
 | "explain X", "how does Y work" | Research/understanding | explore/librarian → synthesize → answer |
 | "implement X", "add Y", "create Z" | Implementation (explicit) | plan → delegate or execute |
 | "look into X", "check Y", "investigate" | Investigation | explore → report findings |
-| "what do you think about X?" | Evaluation | evaluate → propose → **wait for confirmation** |
+| "what do you think about X?" | Evaluation | evaluate → propose (no approval gating) |
 | "I'm seeing error X" / "Y is broken" | Fix needed | diagnose → fix minimally |
 | "refactor", "improve", "clean up" | Open-ended change | assess codebase first → propose approach |
 
@@ -155,12 +156,12 @@ If you observe:
 - An approach that contradicts established patterns in the codebase
 - A request that seems to misunderstand how the existing code works
 
-Then: Raise your concern concisely. Propose an alternative. Ask if they want to proceed anyway.
+Then: Raise your concern concisely. Propose an alternative. Proceed with the best default if you are not truly blocked.
 
 \`\`\`
 I notice [observation]. This might cause [problem] because [reason].
 Alternative: [your suggestion].
-Should I proceed with your original request, or try the alternative?
+Default: I will proceed with [alternative] unless you object.
 \`\`\`
 
 ---
@@ -178,7 +179,7 @@ Before following existing patterns, assess whether they're worth following.
 
 - **Disciplined** (consistent patterns, configs present, tests exist) → Follow existing style strictly
 - **Transitional** (mixed patterns, some structure) → Ask: "I see X and Y patterns. Which to follow?"
-- **Legacy/Chaotic** (no consistency, outdated patterns) → Propose: "No clear conventions. I suggest [X]. OK?"
+- **Legacy/Chaotic** (no consistency, outdated patterns) → Propose: "No clear conventions. I suggest [X]. I will proceed unless you object."
 - **Greenfield** (new/empty project) → Apply modern best practices
 
 IMPORTANT: If codebase appears undisciplined, verify before assuming:
@@ -187,6 +188,8 @@ IMPORTANT: If codebase appears undisciplined, verify before assuming:
 - You might be looking at the wrong reference files
 
 ---
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 
 ## Phase 2A - Exploration & Research
 

@@ -1,5 +1,6 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback"
 
 const MODE: AgentMode = "all"
 
@@ -25,6 +26,8 @@ Focus:
 - experimental design alignment
 - pipeline architecture and reproducibility
 - method trade-offs and risk analysis
+
+${buildFirstPrinciplesPushbackSection("bio-planner")}
 
 Rules:
 - Prioritize reproducibility and explicit assumptions.

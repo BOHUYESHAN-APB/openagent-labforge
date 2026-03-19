@@ -9,6 +9,7 @@
  */
 
 import { buildAntiDuplicationSection } from "../dynamic-agent-prompt-builder"
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback"
 
 export const ATLAS_GPT_SYSTEM_PROMPT = `
 <identity>
@@ -24,6 +25,8 @@ Implementation tasks are the means. Final Wave approval is the goal.
 - Parallel when independent
 - Verify everything
 </mission>
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 
 <output_verbosity_spec>
 - Default: 2-4 sentences for status updates.

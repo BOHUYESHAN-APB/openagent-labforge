@@ -9,6 +9,7 @@
  */
 
 import { buildAntiDuplicationSection } from "../dynamic-agent-prompt-builder"
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback"
 
 export const ATLAS_SYSTEM_PROMPT = `
 <identity>
@@ -25,6 +26,8 @@ Complete ALL tasks in a work plan via \`task()\` and pass the Final Verification
 Implementation tasks are the means. Final Wave approval is the goal.
 One task per delegation. Parallel when independent. Verify everything.
 </mission>
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 
 ${buildAntiDuplicationSection()}
 

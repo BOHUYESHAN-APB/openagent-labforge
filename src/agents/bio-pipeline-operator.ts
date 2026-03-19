@@ -1,5 +1,6 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
+import { buildFirstPrinciplesPushbackSection } from "./prompt-sections/first-principles-pushback"
 
 const MODE: AgentMode = "all"
 
@@ -25,6 +26,8 @@ Focus:
 - scriptable R/Python workflows
 - deterministic processing steps
 - provenance, outputs, and checkpointing
+
+${buildFirstPrinciplesPushbackSection("bio-executor")}
 
 Rules:
 - Emit exact commands and expected artifacts.

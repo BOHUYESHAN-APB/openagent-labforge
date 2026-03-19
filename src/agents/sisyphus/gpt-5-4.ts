@@ -41,6 +41,7 @@ import {
   buildNonClaudePlannerSection,
   categorizeTools,
 } from "../dynamic-agent-prompt-builder";
+import { buildFirstPrinciplesPushbackSection } from "../prompt-sections/first-principles-pushback";
 
 function buildGpt54TasksSection(useTaskSystem: boolean): string {
   if (useTaskSystem) {
@@ -127,6 +128,8 @@ ${todoHookNote}
 ${hardBlocks}
 
 ${antiPatterns}
+
+${buildFirstPrinciplesPushbackSection("orchestrator")}
 </constraints>`;
 
   const intentBlock = `<intent>
@@ -153,10 +156,10 @@ The user rarely says exactly what they mean. Your job is to read between the lin
 |---|---|---|
 | "explain X", "how does Y work" | Wants understanding, not changes | explore/librarian → synthesize → answer |
 | "implement X", "add Y", "create Z" | Wants code changes | plan → delegate or execute |
-| "look into X", "check Y" | Wants investigation, not fixes (unless they also say "fix") | explore → report findings → wait |
-| "what do you think about X?" | Wants your evaluation before committing | evaluate → propose → wait for go-ahead |
+| "look into X", "check Y" | Wants investigation with a concrete takeaway | explore → report findings (and next steps) |
+| "what do you think about X?" | Wants your evaluation | evaluate → propose (no approval gating) |
 | "X is broken", "seeing error Y" | Wants a minimal fix | diagnose → fix minimally → verify |
-| "refactor", "improve", "clean up" | Open-ended — needs scoping first | assess codebase → propose approach → wait |
+| "refactor", "improve", "clean up" | Open-ended — needs scoping first | assess codebase → propose approach (proceed if explicitly asked to implement) |
 | "yesterday's work seems off" | Something from recent work is buggy — find and fix it | check recent changes → hypothesize → verify → fix |
 | "fix this whole thing" | Multiple issues — wants a thorough pass | assess scope → create todo list → work through systematically |
 
