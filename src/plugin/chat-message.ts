@@ -6,11 +6,13 @@ import { contextCollector } from "../features/context-injector"
 import { loadSoulRules, selectSoulContent } from "../shared/soul-rules"
 import { isAutoModelSelection } from "../shared/model-normalization"
 import {
+  clearSessionAutoModelRouting,
   clearSessionForcedModel,
   clearSessionModelLock,
   getSessionForcedModel,
   getSessionModel,
   getSessionModelLock,
+  setSessionAutoModelRouting,
   setSessionForcedModel,
   setSessionModel,
   setSessionModelLock,
@@ -110,6 +112,7 @@ export function createChatMessageHandler(args: {
       } else if (isAutoModelSelection(rawInputModelId)) {
         clearSessionModelLock(input.sessionID)
         clearSessionForcedModel(input.sessionID)
+        setSessionAutoModelRouting(input.sessionID, true)
       } else if (!sameModel(rawInputModel, lockedModel)) {
         if (forcedModel && sameModel(rawInputModel, forcedModel)) {
           input.model = lockedModel
@@ -258,7 +261,9 @@ export function createChatMessageHandler(args: {
     if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
       clearSessionModelLock(input.sessionID)
       clearSessionForcedModel(input.sessionID)
+      setSessionAutoModelRouting(input.sessionID, true)
     } else if (shouldLockToRequestedModel) {
+      clearSessionAutoModelRouting(input.sessionID)
       setSessionModelLock(input.sessionID, requestedModel)
       if (
         modelBeforeUserLock &&

@@ -42,6 +42,46 @@ const EMPTY_PLUGIN_COMPONENTS = {
 }
 
 describe("applyMcpConfig", () => {
+  test("keeps default-off built-in MCP visible for manual workspace toggling", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: false },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig()
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(mergedMcp).toHaveProperty("bing_cn_mcp")
+    expect(mergedMcp.bing_cn_mcp.enabled).toBe(false)
+  })
+
+  test("allows workspace MCP config to enable a default-off built-in MCP", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: false },
+    })
+    const config: Record<string, unknown> = {
+      mcp: {
+        bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: true },
+      },
+    }
+    const pluginConfig = createPluginConfig()
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(mergedMcp).toHaveProperty("bing_cn_mcp")
+    expect(mergedMcp.bing_cn_mcp.enabled).toBe(true)
+  })
+
   test("preserves enabled:false from user config after merge with .mcp.json MCPs", async () => {
     //#given
     const userMcp = {

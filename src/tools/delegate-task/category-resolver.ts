@@ -60,7 +60,7 @@ export async function resolveCategoryExecution(
 
 To use this category:
 1. Connect a provider with this model: ${requirement.requiresModel}
-2. Or configure an alternative model in your oh-my-opencode.json for this category
+2. Or configure an alternative model in your openagent-labforge.json for this category
 
 Available categories: ${allCategoryNames}`,
       }
@@ -84,25 +84,22 @@ Available categories: ${allCategoryNames}`,
   let categoryModel: { providerID: string; modelID: string; variant?: string } | undefined
 
   const overrideModel = sisyphusJuniorModel
-  const inheritedParentModel = inheritedModel
   const explicitCategoryModel = userCategories?.[args.category!]?.model
 
   if (!requirement) {
     // Precedence:
     // explicit category model > inherited parent model > sisyphus-junior default > category resolved model
-    // This keeps `sisyphus-junior.model` useful as a global default while allowing
-    // per-category overrides via `categories[category].model`.
-    actualModel = explicitCategoryModel ?? inheritedParentModel ?? overrideModel ?? resolved.model
+    actualModel = explicitCategoryModel ?? inheritedModel ?? overrideModel ?? resolved.model
     if (actualModel) {
-      modelInfo = explicitCategoryModel || overrideModel
-        ? { model: actualModel, type: "user-defined", source: "override" }
-        : inheritedParentModel && actualModel === inheritedParentModel
-          ? { model: actualModel, type: "inherited", source: "override" }
+      modelInfo = inheritedModel && actualModel === inheritedModel
+        ? { model: actualModel, type: "inherited", source: "override" }
+        : explicitCategoryModel || overrideModel
+          ? { model: actualModel, type: "user-defined", source: "override" }
         : { model: actualModel, type: "system-default", source: "system-default" }
     }
   } else {
     const resolution = resolveModelForDelegateTask({
-      userModel: explicitCategoryModel ?? inheritedParentModel ?? overrideModel,
+      userModel: explicitCategoryModel ?? inheritedModel ?? overrideModel,
       categoryDefaultModel: resolved.model,
       fallbackChain: requirement.fallbackChain,
       availableModels,
@@ -127,13 +124,13 @@ Available categories: ${allCategoryNames}`,
       }
 
       const type: "user-defined" | "inherited" | "category-default" | "system-default" =
-        (explicitCategoryModel || overrideModel)
-          ? "user-defined"
-          : (inheritedParentModel && actualModel === inheritedParentModel)
-              ? "inherited"
-          : (systemDefaultModel && actualModel === systemDefaultModel)
-              ? "system-default"
-              : "category-default"
+        (inheritedModel && actualModel === inheritedModel)
+          ? "inherited"
+          : (explicitCategoryModel || overrideModel)
+              ? "user-defined"
+            : (systemDefaultModel && actualModel === systemDefaultModel)
+                ? "system-default"
+                : "category-default"
 
       const source: "override" | "category-default" | "system-default" =
         type === "user-defined" || type === "inherited"
@@ -172,7 +169,7 @@ Available categories: ${allCategoryNames}`,
 
 Configure in one of:
 1. OpenCode: Set "model" in opencode.json
-2. Oh-My-OpenCode: Set category model in oh-my-opencode.json
+2. openagent-labforge: Set category model in openagent-labforge.json
 3. Provider: Connect a provider with available models
 
 Current category: ${args.category}
@@ -195,3 +192,4 @@ Available categories: ${categoryNames.join(", ")}`,
     fallbackChain: requirement?.fallbackChain,
   }
 }
+

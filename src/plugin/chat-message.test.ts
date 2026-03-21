@@ -224,6 +224,40 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
+  test("keeps pinned model across agent switches when user does not explicitly reselect a model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const pinnedInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const pinnedOutput = createMockOutput()
+    await handler(pinnedInput, pinnedOutput)
+
+    const switchedAgentInput = createMockInput("sisyphus", undefined)
+    const switchedAgentOutput = createMockOutput()
+    await handler(switchedAgentInput, switchedAgentOutput)
+
+    //#when
+    const switchedBackInput = createMockInput("hephaestus", undefined)
+    const switchedBackOutput = createMockOutput()
+    await handler(switchedBackInput, switchedBackOutput)
+
+    //#then
+    expect(switchedAgentOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(switchedBackOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
   test("clears sticky lock when user explicitly switches to auto", async () => {
     //#given
     const args = createMockHandlerArgs({
