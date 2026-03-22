@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { createBuiltinMcps } from "./index"
 
 describe("createBuiltinMcps", () => {
-  test("should return all MCPs with extended ones disabled by default", () => {
+  test("should return all MCPs with paper search enabled by default", () => {
     const disabledMcps: string[] = []
 
     const result = createBuiltinMcps(disabledMcps)
@@ -22,7 +22,7 @@ describe("createBuiltinMcps", () => {
     expect(result.fetch_browser?.enabled).toBe(false)
     expect(result.deepwiki_mcp?.enabled).toBe(false)
     expect(result.bing_cn_mcp?.enabled).toBe(false)
-    expect(result.paper_search_mcp?.enabled).toBe(false)
+    expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(result.semantic_scholar_fastmcp?.enabled).toBe(false)
     expect(Object.keys(result)).toHaveLength(10)
   })
@@ -131,6 +131,7 @@ describe("createBuiltinMcps", () => {
     expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(result.deepwiki_mcp?.enabled).toBe(true)
     expect(result.arxiv_mcp?.enabled).toBe(false)
+    expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(Object.keys(result)).toHaveLength(10)
   })
 })

@@ -12,10 +12,7 @@
       "deepwiki_mcp",
       "bing_cn_mcp"
     ],
-    "disable": [
-      "paper_search_mcp",
-      "semantic_scholar_fastmcp"
-    ]
+    "disable": ["semantic_scholar_fastmcp"]
   },
 
   // Manual hard-disable still wins when needed

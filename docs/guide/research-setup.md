@@ -37,8 +37,10 @@ Default-off (visible, user-toggleable):
 - `fetch_browser`
 - `deepwiki_mcp`
 - `bing_cn_mcp`
-- `paper_search_mcp`
 - `semantic_scholar_fastmcp`
+
+Default-on:
+- `paper_search_mcp`
 
 ## MCP policy example
 
