@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test"
 
 import { createChatMessageHandler } from "./chat-message"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 
 type ChatMessagePart = { type: string; text?: string; [key: string]: unknown }
 type ChatMessageHandlerOutput = { message: Record<string, unknown>; parts: ChatMessagePart[] }
@@ -351,5 +352,86 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
       providerID: "anthropic",
       modelID: "claude-opus-4-6",
     })
+  })
+
+  test("does not clear locked model when internal continuation carries auto model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const firstInput = createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const firstOutput = createMockOutput()
+    await handler(firstInput, firstOutput)
+
+    const internalAutoInput = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
+    const internalAutoOutput: ChatMessageHandlerOutput = {
+      message: {},
+      parts: [{ type: "text", text: `continue work\n${OMO_INTERNAL_INITIATOR_MARKER}` }],
+    }
+
+    //#when
+    await handler(internalAutoInput, internalAutoOutput)
+
+    const continueInput = createMockInput("hephaestus", undefined)
+    const continueOutput = createMockOutput()
+    await handler(continueInput, continueOutput)
+
+    //#then
+    expect(internalAutoOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
+  test("keeps locked model when internal ultrawork continuation is injected", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+        agents: {
+          sisyphus: {
+            ultrawork: {
+              model: "openai/gpt-5.4",
+              variant: "max",
+            },
+          },
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    const firstInput = createMockInput("sisyphus", { providerID: "gmn", modelID: "gpt-5.3-codex" })
+    const firstOutput = createMockOutput()
+    await handler(firstInput, firstOutput)
+
+    const internalUlwInput = createMockInput("sisyphus", undefined)
+    const internalUlwOutput: ChatMessageHandlerOutput = {
+      message: {},
+      parts: [{ type: "text", text: `ultrawork continue\n${OMO_INTERNAL_INITIATOR_MARKER}` }],
+    }
+
+    //#when
+    await handler(internalUlwInput, internalUlwOutput)
+
+    //#then
+    expect(internalUlwOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(internalUlwOutput.message["variant"]).toBeUndefined()
+    expect(internalUlwOutput.message["thinking"]).toBeUndefined()
   })
 })

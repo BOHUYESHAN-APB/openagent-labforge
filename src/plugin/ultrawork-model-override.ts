@@ -111,9 +111,21 @@ export function applyUltraworkModelOverrideOnMessage(
   tui: unknown,
   sessionID?: string,
   manualModelChangeDetected = false,
+  internalInitiatedPromptDetected = false,
+  sessionModelLocked = false,
 ): void {
   if (manualModelChangeDetected) {
     log("[ultrawork-model-override] Skip override; manual model change detected")
+    return
+  }
+
+  if (internalInitiatedPromptDetected) {
+    log("[ultrawork-model-override] Skip override; internal initiator prompt detected")
+    return
+  }
+
+  if (sessionModelLocked) {
+    log("[ultrawork-model-override] Skip override; session model lock is active")
     return
   }
 

@@ -17,6 +17,7 @@ import {
   setSessionModel,
   setSessionModelLock,
 } from "../shared/session-model-state"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { setSessionAgent } from "../features/claude-code-session-state"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
@@ -87,6 +88,12 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const outputText = output.parts
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => part.text ?? "")
+      .join("\n")
+    const internalInitiatedPromptDetected = outputText.includes(OMO_INTERNAL_INITIATOR_MARKER)
+
     const previousSessionModel = getSessionModel(input.sessionID)
     const currentInputModel = input.model
     const manualModelChangeDetected =
@@ -110,9 +117,13 @@ export function createChatMessageHandler(args: {
       if (!rawInputModel) {
         input.model = lockedModel
       } else if (isAutoModelSelection(rawInputModelId)) {
-        clearSessionModelLock(input.sessionID)
-        clearSessionForcedModel(input.sessionID)
-        setSessionAutoModelRouting(input.sessionID, true)
+        if (internalInitiatedPromptDetected) {
+          input.model = lockedModel
+        } else {
+          clearSessionModelLock(input.sessionID)
+          clearSessionForcedModel(input.sessionID)
+          setSessionAutoModelRouting(input.sessionID, true)
+        }
       } else if (!sameModel(rawInputModel, lockedModel)) {
         if (forcedModel && sameModel(rawInputModel, forcedModel)) {
           input.model = lockedModel
@@ -238,6 +249,8 @@ export function createChatMessageHandler(args: {
       pluginContext.client.tui,
       input.sessionID,
       manualModelChangeDetected,
+      internalInitiatedPromptDetected,
+      Boolean(getSessionModelLock(input.sessionID)),
     )
 
     const requestedModel = input.model
@@ -259,9 +272,17 @@ export function createChatMessageHandler(args: {
         : undefined
 
     if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
-      clearSessionModelLock(input.sessionID)
-      clearSessionForcedModel(input.sessionID)
-      setSessionAutoModelRouting(input.sessionID, true)
+      if (internalInitiatedPromptDetected) {
+        if (lockedModel) {
+          input.model = lockedModel
+          output.message["model"] = lockedModel
+          clearSessionAutoModelRouting(input.sessionID)
+        }
+      } else {
+        clearSessionModelLock(input.sessionID)
+        clearSessionForcedModel(input.sessionID)
+        setSessionAutoModelRouting(input.sessionID, true)
+      }
     } else if (shouldLockToRequestedModel) {
       clearSessionAutoModelRouting(input.sessionID)
       setSessionModelLock(input.sessionID, requestedModel)

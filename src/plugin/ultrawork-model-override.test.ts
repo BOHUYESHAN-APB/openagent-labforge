@@ -385,6 +385,53 @@ describe("applyUltraworkModelOverrideOnMessage", () => {
     expect(output.message["thinking"]).toBeUndefined()
   })
 
+  test("should skip override when internal initiator prompt is detected", () => {
+    //#given
+    const config = createConfig("sisyphus", { model: "anthropic/claude-opus-4-6", variant: "max" })
+    const output = createOutput("ultrawork do something", { messageId: "msg_123" })
+    const tui = createMockTui()
+
+    //#when
+    applyUltraworkModelOverrideOnMessage(
+      config,
+      "sisyphus",
+      output,
+      tui,
+      undefined,
+      false,
+      true,
+    )
+
+    //#then
+    expect(dbOverrideSpy).not.toHaveBeenCalled()
+    expect(output.message["variant"]).toBeUndefined()
+    expect(output.message["thinking"]).toBeUndefined()
+  })
+
+  test("should skip override when session model lock is active", () => {
+    //#given
+    const config = createConfig("sisyphus", { model: "anthropic/claude-opus-4-6", variant: "max" })
+    const output = createOutput("ultrawork do something", { messageId: "msg_123" })
+    const tui = createMockTui()
+
+    //#when
+    applyUltraworkModelOverrideOnMessage(
+      config,
+      "sisyphus",
+      output,
+      tui,
+      undefined,
+      false,
+      false,
+      true,
+    )
+
+    //#then
+    expect(dbOverrideSpy).not.toHaveBeenCalled()
+    expect(output.message["variant"]).toBeUndefined()
+    expect(output.message["thinking"]).toBeUndefined()
+  })
+
   test("should log the model transition with deferred DB tag", () => {
     //#given
     const config = createConfig("sisyphus", { model: "anthropic/claude-opus-4-6" })
