@@ -42,7 +42,10 @@ export const deepwiki_mcp: RemoteMcpConfig = {
 
 export const bing_cn_mcp: LocalMcpConfig = {
   type: "local",
-  command: ["npx", "-y", "bing-cn-mcp-server"],
+  // NOTE:
+  // The upstream MCP package name is `bing-cn-mcp` (bin: `bing-cn-mcp`).
+  // `bing-cn-mcp-server` is not an npm package and will fail with E404.
+  command: ["npx", "-y", "bing-cn-mcp"],
   enabled: false,
 }
 
