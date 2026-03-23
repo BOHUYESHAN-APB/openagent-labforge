@@ -45,7 +45,7 @@ describe("applyMcpConfig", () => {
   test("keeps default-off built-in MCP visible for manual workspace toggling", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: false },
+      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: false },
     })
     const config: Record<string, unknown> = { mcp: {} }
     const pluginConfig = createPluginConfig()
@@ -63,11 +63,11 @@ describe("applyMcpConfig", () => {
   test("allows workspace MCP config to enable a default-off built-in MCP", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: false },
+      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: false },
     })
     const config: Record<string, unknown> = {
       mcp: {
-        bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: true },
+        bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: true },
       },
     }
     const pluginConfig = createPluginConfig()
@@ -232,7 +232,7 @@ describe("applyMcpConfig", () => {
   test("enables websearch when bing_cn_mcp is enabled and fallback policy is active", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp-server"], enabled: true },
+          bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: true },
       websearch: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: false },
     })
     const config: Record<string, unknown> = { mcp: {} }

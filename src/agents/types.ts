@@ -110,6 +110,7 @@ export type BuiltinAgentName =
   | "oracle"
   | "librarian"
   | "explore"
+  | "article-writer"
   | "multimodal-looker"
   | "bio-methodologist"
   | "bio-pipeline-operator"

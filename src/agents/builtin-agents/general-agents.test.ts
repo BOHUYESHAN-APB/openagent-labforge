@@ -33,4 +33,41 @@ describe("collectPendingBuiltinAgents", () => {
     //#then
     expect(result.pendingAgentConfigs.get("oracle")?.model).toBe("gmn/gpt-5.3-codex")
   })
+
+  test("includes article-writer in availableAgents when metadata and model requirement are present", () => {
+    //#given
+    const source = createSubagentFactory("article-writer")
+
+    //#when
+    const result = collectPendingBuiltinAgents({
+      agentSources: {
+        "article-writer": source,
+      } as any,
+      agentMetadata: {
+        "article-writer": {
+          category: "specialist",
+          cost: "CHEAP",
+          triggers: [{ domain: "External writing", trigger: "Polished public prose" }],
+        },
+      } as any,
+      disabledAgents: [],
+      agentOverrides: {},
+      mergedCategories: {},
+      availableModels: new Set(["openai/gpt-5.4", "anthropic/claude-sonnet-4-6"]),
+    })
+
+    //#then
+    expect(result.pendingAgentConfigs.get("article-writer")?.description).toBe("article-writer agent")
+    expect(result.availableAgents).toEqual([
+      {
+        name: "article-writer",
+        description: "article-writer agent",
+        metadata: {
+          category: "specialist",
+          cost: "CHEAP",
+          triggers: [{ domain: "External writing", trigger: "Polished public prose" }],
+        },
+      },
+    ])
+  })
 })
