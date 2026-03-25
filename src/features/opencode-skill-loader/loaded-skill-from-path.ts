@@ -6,6 +6,7 @@ import { resolveSkillPathReferences } from "../../shared/skill-path-resolver"
 import type { CommandDefinition } from "../claude-code-command-loader/types"
 import { parseAllowedTools } from "./allowed-tools-parser"
 import { loadMcpJsonFromDir, parseSkillMcpConfigFromFrontmatter } from "./skill-mcp-config"
+import { validateSkillMetadata } from "./skill-metadata-validator"
 import type { SkillScope, SkillMetadata, LoadedSkill, LazyContentLoader } from "./types"
 
 function buildWrappedTemplate(body: string, resolvedPath: string): string {
@@ -28,7 +29,19 @@ export async function loadSkillFromPath(options: {
 
   try {
     const content = await fs.readFile(options.skillPath, "utf-8")
-    const { data, body } = parseFrontmatter<SkillMetadata>(content)
+    const { data, body, parseError } = parseFrontmatter<SkillMetadata>(content)
+
+    const validationError = validateSkillMetadata({
+      data,
+      defaultName: options.defaultName,
+      skillPath: options.skillPath,
+      parseError,
+      resolvedPath: options.resolvedPath,
+    })
+
+    if (validationError) {
+      return null
+    }
 
     const frontmatterMcp = parseSkillMcpConfigFromFrontmatter(content)
     const mcpJsonMcp = await loadMcpJsonFromDir(options.resolvedPath)

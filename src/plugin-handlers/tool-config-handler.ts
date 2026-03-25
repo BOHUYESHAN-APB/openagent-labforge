@@ -38,6 +38,29 @@ export function applyToolConfig(params: {
   if (librarian) {
     librarian.permission = { ...librarian.permission, "grep_app_*": "allow" };
   }
+  const githubScout = agentByKey(params.agentResult, "github-scout");
+  if (githubScout) {
+    githubScout.permission = {
+      ...githubScout.permission,
+      "grep_app_*": "allow",
+      websearch_web_search_exa: "allow",
+    };
+  }
+  const techScout = agentByKey(params.agentResult, "tech-scout");
+  if (techScout) {
+    techScout.permission = {
+      ...techScout.permission,
+      "grep_app_*": "allow",
+      websearch_web_search_exa: "allow",
+      "context7_resolve-library-id": "allow",
+      "context7_query-docs": "allow",
+      paper_search_mcp_search_arxiv: "allow",
+      paper_search_mcp_search_google_scholar: "allow",
+      paper_search_mcp_search_pubmed: "allow",
+      paper_search_mcp_search_biorxiv: "allow",
+      paper_search_mcp_search_medrxiv: "allow",
+    };
+  }
   const looker = agentByKey(params.agentResult, "multimodal-looker");
   if (looker) {
     looker.permission = { ...looker.permission, task: "deny", look_at: "deny" };

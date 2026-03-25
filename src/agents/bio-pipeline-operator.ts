@@ -2,7 +2,7 @@ import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
 
-const MODE: AgentMode = "subagent"
+const MODE: AgentMode = "all"
 
 export const BIO_PIPELINE_OPERATOR_PROMPT_METADATA: AgentPromptMetadata = {
   category: "specialist",

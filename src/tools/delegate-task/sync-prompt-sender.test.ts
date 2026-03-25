@@ -125,6 +125,127 @@ bunDescribe("sendSyncPrompt", () => {
     bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
   })
 
+  bunTest("applies agent tool restrictions for github-scout agent", async () => {
+    //#given
+    const { sendSyncPrompt } = require("./sync-prompt-sender")
+
+    let promptArgs: any
+    const promptAsync = bunMock(async (input: any) => {
+      promptArgs = input
+      return { data: {} }
+    })
+
+    const mockClient = {
+      session: {
+        promptAsync,
+      },
+    }
+
+    const input = {
+      sessionID: "test-session",
+      agentToUse: "github-scout",
+      args: {
+        description: "test task",
+        prompt: "test prompt",
+        category: "quick",
+        run_in_background: false,
+        load_skills: [],
+      },
+      systemContent: undefined,
+      categoryModel: undefined,
+      toastManager: null,
+      taskId: undefined,
+    }
+
+    //#when
+    await sendSyncPrompt(mockClient, input)
+
+    //#then
+    bunExpect(promptAsync).toHaveBeenCalled()
+    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
+  })
+
+  bunTest("applies agent tool restrictions for tech-scout agent", async () => {
+    //#given
+    const { sendSyncPrompt } = require("./sync-prompt-sender")
+
+    let promptArgs: any
+    const promptAsync = bunMock(async (input: any) => {
+      promptArgs = input
+      return { data: {} }
+    })
+
+    const mockClient = {
+      session: {
+        promptAsync,
+      },
+    }
+
+    const input = {
+      sessionID: "test-session",
+      agentToUse: "tech-scout",
+      args: {
+        description: "test task",
+        prompt: "test prompt",
+        category: "quick",
+        run_in_background: false,
+        load_skills: [],
+      },
+      systemContent: undefined,
+      categoryModel: undefined,
+      toastManager: null,
+      taskId: undefined,
+    }
+
+    //#when
+    await sendSyncPrompt(mockClient, input)
+
+    //#then
+    bunExpect(promptAsync).toHaveBeenCalled()
+    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
+  })
+
+  bunTest("applies agent tool restrictions for article-writer agent", async () => {
+    //#given
+    const { sendSyncPrompt } = require("./sync-prompt-sender")
+
+    let promptArgs: any
+    const promptAsync = bunMock(async (input: any) => {
+      promptArgs = input
+      return { data: {} }
+    })
+
+    const mockClient = {
+      session: {
+        promptAsync,
+      },
+    }
+
+    const input = {
+      sessionID: "test-session",
+      agentToUse: "article-writer",
+      args: {
+        description: "test task",
+        prompt: "test prompt",
+        category: "writing",
+        run_in_background: false,
+        load_skills: [],
+      },
+      systemContent: undefined,
+      categoryModel: undefined,
+      toastManager: null,
+      taskId: undefined,
+    }
+
+    //#when
+    await sendSyncPrompt(mockClient, input)
+
+    //#then
+    bunExpect(promptAsync).toHaveBeenCalled()
+    bunExpect(promptArgs.body.tools.call_omo_agent).toBe(false)
+    bunExpect(promptArgs.body.tools.task).toBe(false)
+  })
+
   bunTest("does not restrict call_omo_agent for sisyphus agent", async () => {
     //#given
     const { sendSyncPrompt } = require("./sync-prompt-sender")

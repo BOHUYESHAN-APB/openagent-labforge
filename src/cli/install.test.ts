@@ -103,12 +103,14 @@ describe("install CLI - binary check behavior", () => {
 
     // then should create opencode.json
     const configPath = join(tempDir, "opencode.json")
+    const skillPath = join(tempDir, "skills", "openagent-labforge", "SKILL.md")
     expect(existsSync(configPath)).toBe(true)
+    expect(existsSync(skillPath)).toBe(true)
 
     // then opencode.json should have plugin entry
     const config = JSON.parse(readFileSync(configPath, "utf-8"))
     expect(config.plugin).toBeDefined()
-    expect(config.plugin.some((p: string) => p.includes("oh-my-opencode"))).toBe(true)
+    expect(config.plugin.some((p: string) => p.includes("openagent-labforge-core"))).toBe(true)
 
     // then exit code should be 0 (success)
     expect(exitCode).toBe(0)

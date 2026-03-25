@@ -78,6 +78,38 @@ describe("applyToolConfig", () => {
         expect(agent.permission.todowrite).toBeUndefined()
         expect(agent.permission.todoread).toBeUndefined()
       })
+
+      it("#then should grant research tools to github-scout", () => {
+        const params = createParams({
+          taskSystem: false,
+          agents: ["github-scout"],
+        })
+
+        applyToolConfig(params)
+
+        const agent = params.agentResult["github-scout"] as {
+          permission: Record<string, unknown>
+        }
+        expect(agent.permission["grep_app_*"]).toBe("allow")
+        expect(agent.permission.websearch_web_search_exa).toBe("allow")
+      })
+
+      it("#then should grant research and paper tools to tech-scout", () => {
+        const params = createParams({
+          taskSystem: false,
+          agents: ["tech-scout"],
+        })
+
+        applyToolConfig(params)
+
+        const agent = params.agentResult["tech-scout"] as {
+          permission: Record<string, unknown>
+        }
+        expect(agent.permission["grep_app_*"]).toBe("allow")
+        expect(agent.permission.websearch_web_search_exa).toBe("allow")
+        expect(agent.permission["context7_resolve-library-id"]).toBe("allow")
+        expect(agent.permission.paper_search_mcp_search_arxiv).toBe("allow")
+      })
     })
   })
 })

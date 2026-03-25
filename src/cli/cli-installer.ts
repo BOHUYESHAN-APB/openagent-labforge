@@ -5,6 +5,7 @@ import {
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
+  writeBootstrapSkill,
   writeOmoConfig,
 } from "./config-manager"
 import {
@@ -43,7 +44,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
 
   printHeader(isUpdate)
 
-  const totalSteps = 4
+  const totalSteps = 5
   let step = 1
 
   printStep(step++, totalSteps, "Checking OpenCode installation...")
@@ -82,6 +83,14 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
     return 1
   }
   printSuccess(`Config written ${SYMBOLS.arrow} ${color.dim(omoResult.configPath)}`)
+
+  printStep(step++, totalSteps, "Bootstrapping openagent-labforge skill...")
+  const bootstrapSkillResult = writeBootstrapSkill()
+  if (!bootstrapSkillResult.success) {
+    printError(`Failed: ${bootstrapSkillResult.error}`)
+    return 1
+  }
+  printSuccess(`Skill ${bootstrapSkillResult.action} ${SYMBOLS.arrow} ${color.dim(bootstrapSkillResult.skillPath)}`)
 
   printBox(formatConfigSummary(config), isUpdate ? "Updated Configuration" : "Installation Complete")
 

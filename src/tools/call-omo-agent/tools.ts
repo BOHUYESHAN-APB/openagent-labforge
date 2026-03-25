@@ -1,15 +1,26 @@
 import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
 import { ALLOWED_AGENTS, CALL_OMO_AGENT_DESCRIPTION } from "./constants"
-import type { AllowedAgentType, CallOmoAgentArgs, ToolContextWithMetadata } from "./types"
+import type {
+  AllowedAgentType,
+  CallOmoAgentArgs,
+  CallOmoAgentToolOptions,
+  ToolContextWithMetadata,
+} from "./types"
 import type { BackgroundManager } from "../../features/background-agent"
 import { log } from "../../shared"
-import { executeBackground } from "./background-executor"
-import { executeSync } from "./sync-executor"
+import {
+  executeBackgroundTask,
+  executeSyncContinuation,
+  executeSyncTask,
+  resolveParentContext,
+  resolveSubagentExecution,
+} from "../delegate-task/executor"
 
 export function createCallOmoAgent(
   ctx: PluginInput,
   backgroundManager: BackgroundManager,
-  disabledAgents: string[] = []
+  disabledAgents: string[] = [],
+  options: CallOmoAgentToolOptions,
 ): ToolDefinition {
   const agentDescriptions = ALLOWED_AGENTS.map(
     (name) => `- ${name}: Specialized agent for ${name} tasks`
@@ -23,7 +34,7 @@ export function createCallOmoAgent(
       prompt: tool.schema.string().describe("The task for the agent to perform"),
       subagent_type: tool.schema
         .string()
-        .describe("The type of specialized agent to use for this task (explore or librarian only)"),
+        .describe("The type of specialized agent to use for this task"),
       run_in_background: tool.schema
         .boolean()
         .describe("REQUIRED. true: run asynchronously (use background_output to get results), false: run synchronously and wait for completion"),
@@ -54,10 +65,108 @@ export function createCallOmoAgent(
         if (args.session_id) {
           return `Error: session_id is not supported in background mode. Use run_in_background=false to continue an existing session.`
         }
-        return await executeBackground(args, toolCtx, backgroundManager, ctx.client)
+
+        const delegateArgs = {
+          ...args,
+          load_skills: [],
+        }
+        const parentContext = await resolveParentContext(toolCtx, ctx.client)
+        const inheritedModel = parentContext.model
+          ? `${parentContext.model.providerID}/${parentContext.model.modelID}`
+          : undefined
+        const resolution = await resolveSubagentExecution(
+          delegateArgs,
+          {
+            manager: backgroundManager,
+            client: ctx.client,
+            directory: options.directory,
+            agentOverrides: options.agentOverrides,
+            onSyncSessionCreated: options.onSyncSessionCreated,
+            syncPollTimeoutMs: options.syncPollTimeoutMs,
+          },
+          parentContext.agent,
+          "",
+          inheritedModel,
+        )
+        if (resolution.error) {
+          return resolution.error
+        }
+
+        return executeBackgroundTask(
+          delegateArgs,
+          toolCtx,
+          {
+            manager: backgroundManager,
+            client: ctx.client,
+            directory: options.directory,
+            agentOverrides: options.agentOverrides,
+            onSyncSessionCreated: options.onSyncSessionCreated,
+            syncPollTimeoutMs: options.syncPollTimeoutMs,
+          },
+          parentContext,
+          resolution.agentToUse,
+          resolution.categoryModel,
+          undefined,
+          resolution.fallbackChain,
+        )
       }
 
-      return await executeSync(args, toolCtx, ctx)
+      const delegateArgs = {
+        ...args,
+        load_skills: [],
+      }
+
+      if (delegateArgs.session_id) {
+        return executeSyncContinuation(delegateArgs, toolCtx, {
+          manager: backgroundManager,
+          client: ctx.client,
+          directory: options.directory,
+          agentOverrides: options.agentOverrides,
+          onSyncSessionCreated: options.onSyncSessionCreated,
+          syncPollTimeoutMs: options.syncPollTimeoutMs,
+        })
+      }
+
+      const parentContext = await resolveParentContext(toolCtx, ctx.client)
+      const inheritedModel = parentContext.model
+        ? `${parentContext.model.providerID}/${parentContext.model.modelID}`
+        : undefined
+      const resolution = await resolveSubagentExecution(
+        delegateArgs,
+        {
+          manager: backgroundManager,
+          client: ctx.client,
+          directory: options.directory,
+          agentOverrides: options.agentOverrides,
+          onSyncSessionCreated: options.onSyncSessionCreated,
+          syncPollTimeoutMs: options.syncPollTimeoutMs,
+        },
+        parentContext.agent,
+        "",
+        inheritedModel,
+      )
+      if (resolution.error) {
+        return resolution.error
+      }
+
+      return executeSyncTask(
+        delegateArgs,
+        toolCtx,
+        {
+          manager: backgroundManager,
+          client: ctx.client,
+          directory: options.directory,
+          agentOverrides: options.agentOverrides,
+          onSyncSessionCreated: options.onSyncSessionCreated,
+          syncPollTimeoutMs: options.syncPollTimeoutMs,
+        },
+        parentContext,
+        resolution.agentToUse,
+        resolution.categoryModel,
+        undefined,
+        undefined,
+        resolution.fallbackChain,
+      )
     },
   })
 }

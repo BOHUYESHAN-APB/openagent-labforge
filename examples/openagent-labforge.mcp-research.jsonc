@@ -4,13 +4,13 @@
   // Research-oriented MCP policy (safe defaults)
   "mcp_policy": {
     "network_profile": "auto",
-    "bing_cn_english_fallback": true,
+    "search_english_fallback": true,
     "enable": [
       "arxiv_mcp",
       "fetch_browser",
       "browser_puppeteer",
       "deepwiki_mcp",
-      "bing_cn_mcp"
+      "open_websearch_mcp"
     ],
     "disable": ["semantic_scholar_fastmcp"]
   },

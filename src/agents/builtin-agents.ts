@@ -7,7 +7,10 @@ import { createSisyphusAgent } from "./sisyphus"
 import { createOracleAgent, ORACLE_PROMPT_METADATA } from "./oracle"
 import { createLibrarianAgent, LIBRARIAN_PROMPT_METADATA } from "./librarian"
 import { createExploreAgent, EXPLORE_PROMPT_METADATA } from "./explore"
+import { createGitHubScoutAgent, GITHUB_SCOUT_PROMPT_METADATA } from "./github-scout"
+import { createTechScoutAgent, TECH_SCOUT_PROMPT_METADATA } from "./tech-scout"
 import { createArticleWriterAgent, ARTICLE_WRITER_PROMPT_METADATA } from "./article-writer"
+import { createScientificWriterAgent, SCIENTIFIC_WRITER_PROMPT_METADATA } from "./scientific-writer"
 import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
 import {
   createBioMethodologistAgent,
@@ -48,7 +51,10 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   oracle: createOracleAgent,
   librarian: createLibrarianAgent,
   explore: createExploreAgent,
+  "github-scout": createGitHubScoutAgent,
+  "tech-scout": createTechScoutAgent,
   "article-writer": createArticleWriterAgent,
+  "scientific-writer": createScientificWriterAgent,
   "multimodal-looker": createMultimodalLookerAgent,
   "bio-methodologist": createBioMethodologistAgent,
   "bio-pipeline-operator": createBioPipelineOperatorAgent,
@@ -68,7 +74,10 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   oracle: ORACLE_PROMPT_METADATA,
   librarian: LIBRARIAN_PROMPT_METADATA,
   explore: EXPLORE_PROMPT_METADATA,
+  "github-scout": GITHUB_SCOUT_PROMPT_METADATA,
+  "tech-scout": TECH_SCOUT_PROMPT_METADATA,
   "article-writer": ARTICLE_WRITER_PROMPT_METADATA,
+  "scientific-writer": SCIENTIFIC_WRITER_PROMPT_METADATA,
   "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
   "bio-methodologist": BIO_METHODOLOGIST_PROMPT_METADATA,
   "bio-pipeline-operator": BIO_PIPELINE_OPERATOR_PROMPT_METADATA,

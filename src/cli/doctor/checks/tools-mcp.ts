@@ -13,7 +13,7 @@ const BUILTIN_MCP_SERVERS = [
   "browser_puppeteer",
   "fetch_browser",
   "deepwiki_mcp",
-  "bing_cn_mcp",
+  "open_websearch_mcp",
   "paper_search_mcp",
   "semantic_scholar_fastmcp",
 ]

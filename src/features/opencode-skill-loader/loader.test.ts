@@ -17,6 +17,13 @@ function createTestSkill(name: string, content: string, mcpJson?: object): strin
   return skillDir
 }
 
+function createSkillAt(baseDir: string, name: string, content: string): string {
+  const skillDir = join(baseDir, name)
+  mkdirSync(skillDir, { recursive: true })
+  writeFileSync(join(skillDir, "SKILL.md"), content)
+  return skillDir
+}
+
 describe("skill loader MCP parsing", () => {
   beforeEach(() => {
     mkdirSync(TEST_DIR, { recursive: true })
@@ -30,7 +37,7 @@ describe("skill loader MCP parsing", () => {
     it("parses skill with nested MCP config", async () => {
       // given
       const skillContent = `---
-name: test-skill
+name: test-mcp-skill
 description: A test skill with MCP
 mcp:
   sqlite:
@@ -54,7 +61,7 @@ This is the skill body.
 
       try {
         const skills = await discoverSkills({ includeClaudeCodePaths: false })
-        const skill = skills.find(s => s.name === "test-skill")
+        const skill = skills.find(s => s.name === "test-mcp-skill")
 
         // then
         expect(skill).toBeDefined()
@@ -104,6 +111,7 @@ This is a simple skill.
       // given
       const skillContent = `---
 name: env-skill
+description: Skill with env vars
 mcp:
   api-server:
     command: node
@@ -133,8 +141,8 @@ Skill with env vars.
       }
     })
 
-    it("handles malformed YAML gracefully", async () => {
-      // given - malformed YAML causes entire frontmatter to fail parsing
+    it("skips skills with malformed YAML frontmatter", async () => {
+      // given - malformed YAML causes frontmatter validation failure
       const skillContent = `---
 name: bad-yaml
 mcp: [this is not valid yaml for mcp
@@ -150,11 +158,9 @@ Skill body.
 
       try {
         const skills = await discoverSkills({ includeClaudeCodePaths: false })
-        // then - when YAML fails, skill uses directory name as fallback
         const skill = skills.find(s => s.name === "bad-yaml-skill")
 
-        expect(skill).toBeDefined()
-        expect(skill?.mcpConfig).toBeUndefined()
+        expect(skill).toBeUndefined()
       } finally {
         process.chdir(originalCwd)
       }
@@ -204,6 +210,7 @@ Skill body.
       // given
       const skillContent = `---
 name: priority-skill
+description: Skill whose mcp.json should win
 mcp:
   from-yaml:
     command: yaml-cmd
@@ -242,6 +249,7 @@ Skill body.
       // given
       const skillContent = `---
 name: direct-format
+description: Skill with direct mcp.json format
 ---
 Skill body.
 `
@@ -614,6 +622,126 @@ Skill body.
       //#then
       expect(skill).toBeDefined()
       expect(skill?.scope).toBe("project")
+    })
+
+    it("#given nested cwd under git root #when discoverProjectAgentsSkills is called #then it walks upward to git root", async () => {
+      //#given
+      const projectRoot = join(TEST_DIR, "repo-root")
+      const nestedDir = join(projectRoot, "packages", "app", "src")
+      const agentsProjectSkillsDir = join(projectRoot, ".agents", "skills")
+      const skillContent = `---
+name: inherited-agent-skill
+description: A skill discovered by walking upward
+---
+Skill body.
+`
+
+      mkdirSync(join(projectRoot, ".git"), { recursive: true })
+      mkdirSync(nestedDir, { recursive: true })
+      createSkillAt(agentsProjectSkillsDir, "inherited-agent-skill", skillContent)
+
+      //#when
+      const { discoverProjectAgentsSkills } = await import("./loader")
+      const skills = await discoverProjectAgentsSkills(nestedDir)
+      const skill = skills.find(s => s.name === "inherited-agent-skill")
+
+      //#then
+      expect(skill).toBeDefined()
+      expect(skill?.scope).toBe("project")
+    })
+
+    it("#given duplicate project skills in parent directories #when discoverProjectAgentsSkills is called #then closer directory wins", async () => {
+      //#given
+      const projectRoot = join(TEST_DIR, "dedupe-root")
+      const nestedWorkspace = join(projectRoot, "packages", "app")
+      const rootAgentsSkillsDir = join(projectRoot, ".agents", "skills")
+      const nestedAgentsSkillsDir = join(nestedWorkspace, ".agents", "skills")
+
+      mkdirSync(join(projectRoot, ".git"), { recursive: true })
+      mkdirSync(nestedWorkspace, { recursive: true })
+
+      createSkillAt(
+        rootAgentsSkillsDir,
+        "shared-agent-skill",
+        `---
+name: shared-agent-skill
+description: Root version
+---
+Root body.
+`
+      )
+
+      createSkillAt(
+        nestedAgentsSkillsDir,
+        "shared-agent-skill",
+        `---
+name: shared-agent-skill
+description: Nested version
+---
+Nested body.
+`
+      )
+
+      //#when
+      const { discoverProjectAgentsSkills } = await import("./loader")
+      const skills = await discoverProjectAgentsSkills(join(nestedWorkspace, "src"))
+      const matches = skills.filter(s => s.name === "shared-agent-skill")
+
+      //#then
+      expect(matches).toHaveLength(1)
+      expect(matches[0]?.definition.description).toContain("Nested version")
+    })
+  })
+
+  describe("OpenCode skill metadata validation", () => {
+    it("skips skills whose name does not match the containing directory", async () => {
+      // given
+      const skillContent = `---
+name: different-name
+description: Skill with mismatched directory name
+---
+Skill body.
+`
+      createTestSkill("directory-name-skill", skillContent)
+
+      // when
+      const { discoverSkills } = await import("./loader")
+      const originalCwd = process.cwd()
+      process.chdir(TEST_DIR)
+
+      try {
+        const skills = await discoverSkills({ includeClaudeCodePaths: false })
+
+        // then
+        expect(skills.find(s => s.name === "different-name")).toBeUndefined()
+      } finally {
+        process.chdir(originalCwd)
+      }
+    })
+
+    it("skips skills with invalid OpenCode skill names", async () => {
+      // given
+      const skillContent = `---
+name: Invalid_Name
+description: Skill with invalid OpenCode name
+---
+Skill body.
+`
+      createTestSkill("Invalid_Name", skillContent)
+
+      // when
+      const { discoverSkills } = await import("./loader")
+      const originalCwd = process.cwd()
+      process.chdir(TEST_DIR)
+
+      try {
+        const skills = await discoverSkills({ includeClaudeCodePaths: false })
+
+        // then
+        expect(skills.find(s => s.name === "Invalid_Name")).toBeUndefined()
+      } finally {
+        process.chdir(originalCwd)
+      }
     })
   })
 })

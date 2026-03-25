@@ -45,7 +45,7 @@ describe("applyMcpConfig", () => {
   test("keeps default-off built-in MCP visible for manual workspace toggling", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: false },
+      open_websearch_mcp: { type: "local", command: ["npx", "-y", "open-websearch@2.0.0"], enabled: false },
     })
     const config: Record<string, unknown> = { mcp: {} }
     const pluginConfig = createPluginConfig()
@@ -56,18 +56,18 @@ describe("applyMcpConfig", () => {
 
     //#then
     const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
-    expect(mergedMcp).toHaveProperty("bing_cn_mcp")
-    expect(mergedMcp.bing_cn_mcp.enabled).toBe(false)
+    expect(mergedMcp).toHaveProperty("open_websearch_mcp")
+    expect(mergedMcp.open_websearch_mcp.enabled).toBe(false)
   })
 
   test("allows workspace MCP config to enable a default-off built-in MCP", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: false },
+      open_websearch_mcp: { type: "local", command: ["npx", "-y", "open-websearch@2.0.0"], enabled: false },
     })
     const config: Record<string, unknown> = {
       mcp: {
-        bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: true },
+        open_websearch_mcp: { type: "local", command: ["npx", "-y", "open-websearch@2.0.0"], enabled: true },
       },
     }
     const pluginConfig = createPluginConfig()
@@ -78,8 +78,8 @@ describe("applyMcpConfig", () => {
 
     //#then
     const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
-    expect(mergedMcp).toHaveProperty("bing_cn_mcp")
-    expect(mergedMcp.bing_cn_mcp.enabled).toBe(true)
+    expect(mergedMcp).toHaveProperty("open_websearch_mcp")
+    expect(mergedMcp.open_websearch_mcp.enabled).toBe(true)
   })
 
   test("preserves enabled:false from user config after merge with .mcp.json MCPs", async () => {
@@ -229,16 +229,16 @@ describe("applyMcpConfig", () => {
     expect(mergedMcp.context7.enabled).toBe(false)
   })
 
-  test("enables websearch when bing_cn_mcp is enabled and fallback policy is active", async () => {
+  test("enables websearch when open_websearch_mcp is enabled and fallback policy is active", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-          bing_cn_mcp: { type: "local", command: ["npx", "-y", "bing-cn-mcp"], enabled: true },
+      open_websearch_mcp: { type: "local", command: ["npx", "-y", "open-websearch@2.0.0"], enabled: true },
       websearch: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: false },
     })
     const config: Record<string, unknown> = { mcp: {} }
     const pluginConfig = createPluginConfig({
       mcp_policy: {
-        bing_cn_english_fallback: true,
+        search_english_fallback: true,
       } as any,
     })
 
@@ -272,5 +272,22 @@ describe("applyMcpConfig", () => {
     const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
     expect(mergedMcp.paper_search_mcp.enabled).toBe(false)
     expect(mergedMcp.semantic_scholar_fastmcp.enabled).toBe(false)
+  })
+
+  test("adds prompt probe compatibility handler to paper_search_mcp", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      paper_search_mcp: { type: "local", command: ["uvx", "paper-search-mcp"], enabled: true },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig()
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(typeof mergedMcp.paper_search_mcp.onCallError).toBe("function")
   })
 })

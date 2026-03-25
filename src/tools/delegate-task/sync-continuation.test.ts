@@ -411,6 +411,70 @@ describe("executeSyncContinuation - toast cleanup error paths", () => {
     expect(result).toContain("session_id: ses_test_12345678")
   })
 
+  test("applies resume agent restrictions after base continuation tool defaults", async () => {
+    //#given - a restricted agent should still deny delegation tools on continuation
+    let promptBody: any = null
+    const mockClient = {
+      session: {
+        messages: async () => ({
+          data: [
+            {
+              info: {
+                id: "msg_001",
+                role: "assistant",
+                time: { created: 2000 },
+                finish: "end_turn",
+                agent: "article-writer",
+                providerID: "openai",
+                modelID: "gpt-5.4",
+              },
+              parts: [{ type: "text", text: "Response" }],
+            },
+          ],
+        }),
+        promptAsync: async (input: any) => {
+          promptBody = input.body
+          return {}
+        },
+        status: async () => ({
+          data: { ses_test: { type: "idle" } },
+        }),
+      },
+    }
+
+    const { executeSyncContinuation } = require("./sync-continuation")
+
+    const deps = {
+      pollSyncSession: async () => null,
+      fetchSyncResult: async () => ({ ok: true as const, textContent: "Result" }),
+    }
+
+    const mockCtx = {
+      sessionID: "parent-session",
+      callID: "call-123",
+      metadata: () => {},
+    }
+
+    const mockExecutorCtx = {
+      client: mockClient,
+    }
+
+    const args = {
+      session_id: "ses_test_12345678",
+      prompt: "continue writing",
+      description: "resume article writer task",
+      load_skills: [],
+      run_in_background: false,
+    }
+
+    //#when
+    await executeSyncContinuation(args, mockCtx, mockExecutorCtx, deps)
+
+    //#then
+    expect(promptBody.tools.task).toBe(false)
+    expect(promptBody.tools.call_omo_agent).toBe(false)
+  })
+
   test("omits subagent from task_metadata when no agent info in session messages", async () => {
     //#given - mock session messages without any agent info
     const mockClient = {

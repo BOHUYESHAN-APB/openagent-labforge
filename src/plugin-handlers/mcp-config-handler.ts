@@ -35,12 +35,12 @@ function applyMcpPolicy(
     setMcpEnabled(merged, "semantic_scholar_fastmcp", false)
   }
 
-  const bingFallback = policy.bing_cn_english_fallback ?? true
-  const bingEnabled =
-    Boolean(merged.bing_cn_mcp) &&
-    merged.bing_cn_mcp.enabled !== false
+  const searchFallback = policy.search_english_fallback ?? policy.bing_cn_english_fallback ?? true
+  const searchMcpEnabled =
+    Boolean(merged.open_websearch_mcp) &&
+    merged.open_websearch_mcp.enabled !== false
 
-  if (bingFallback && bingEnabled) {
+  if (searchFallback && searchMcpEnabled) {
     setMcpEnabled(merged, "websearch", true)
   }
 }
@@ -61,7 +61,15 @@ function withPromptProbeCompatibility(merged: Record<string, McpEntry>): Record<
 
   for (const [name, entry] of Object.entries(compatWrapped)) {
     if (!entry || typeof entry !== "object") continue
-    if (name !== "context7" && name !== "grep_app" && name !== "websearch") continue
+    if (
+      name !== "context7" &&
+      name !== "grep_app" &&
+      name !== "websearch" &&
+      name !== "open_websearch_mcp" &&
+      name !== "paper_search_mcp"
+    ) {
+      continue
+    }
 
     const original = entry as Record<string, unknown>
     const wrapped: Record<string, unknown> = { ...original }

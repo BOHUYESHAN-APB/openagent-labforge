@@ -5,6 +5,7 @@ import type {
   McpServerConfig,
 } from "./types"
 import { expandEnvVarsInObject } from "./env-expander"
+import { normalizeLocalMcpCommand } from "../../shared"
 
 export function transformMcpServer(
   name: string,
@@ -30,6 +31,10 @@ export function transformMcpServer(
       config.headers = expanded.headers
     }
 
+    if (typeof expanded.timeout === "number") {
+      config.timeout = expanded.timeout
+    }
+
     return config
   }
 
@@ -37,7 +42,10 @@ export function transformMcpServer(
     throw new Error(`MCP server "${name}" requires command for stdio type`)
   }
 
-  const commandArray = [expanded.command, ...(expanded.args ?? [])]
+  const commandArray = normalizeLocalMcpCommand([
+    expanded.command,
+    ...(expanded.args ?? []),
+  ])
 
   const config: McpLocalConfig = {
     type: "local",
@@ -47,6 +55,10 @@ export function transformMcpServer(
 
   if (expanded.env && Object.keys(expanded.env).length > 0) {
     config.environment = expanded.env
+  }
+
+  if (typeof expanded.timeout === "number") {
+    config.timeout = expanded.timeout
   }
 
   return config

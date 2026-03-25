@@ -103,7 +103,7 @@ export function buildToolSelectionTable(
   }
 
   rows.push("")
-  rows.push("**Default flow**: explore/librarian (background) + tools → oracle (if required)")
+  rows.push("**Default flow**: tools first, then `task(subagent_type=...)` for subagents, then oracle if a second opinion is required")
 
   return rows.join("\n")
 }
@@ -206,6 +206,9 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
   return `### Category + Skills Delegation System
 
 **task() combines categories and skills for optimal task execution.**
+
+**Use \`task(subagent_type=...)\` for direct subagent delegation when you want first-class child-session UI and inspectable task cards.**
+Treat \`call_omo_agent\` as a compatibility path, not the preferred delegation route.
 
 #### Available Categories (Domain-Optimized Models)
 

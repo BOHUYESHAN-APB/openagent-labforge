@@ -1,32 +1,45 @@
-import { getAgentDisplayName } from "../shared/agent-display-names";
+import { getAgentConfigKey } from "../shared/agent-display-names"
 
-function getCoreAgentOrder(): string[] {
-  return [
-    getAgentDisplayName("sisyphus"),
-    getAgentDisplayName("hephaestus"),
-    getAgentDisplayName("prometheus"),
-    getAgentDisplayName("atlas"),
-  ];
-}
+const AGENT_PRIORITY_ORDER = [
+  "sisyphus",
+  "hephaestus",
+  "prometheus",
+  "atlas",
+  "oracle",
+  "librarian",
+  "explore",
+  "github-scout",
+  "tech-scout",
+  "bio-methodologist",
+  "bio-pipeline-operator",
+  "paper-evidence-synthesizer",
+  "multimodal-looker",
+  "article-writer",
+  "scientific-writer",
+  "metis",
+  "momus",
+  "sisyphus-junior",
+  "build",
+  "plan",
+]
+
+const AGENT_PRIORITY_INDEX = new Map(
+  AGENT_PRIORITY_ORDER.map((name, index) => [name, index]),
+)
 
 export function reorderAgentsByPriority(
   agents: Record<string, unknown>,
 ): Record<string, unknown> {
-  const ordered: Record<string, unknown> = {};
-  const seen = new Set<string>();
+  return Object.fromEntries(
+    Object.entries(agents).sort(([aKey], [bKey]) => {
+      const aPriority = AGENT_PRIORITY_INDEX.get(getAgentConfigKey(aKey)) ?? Number.MAX_SAFE_INTEGER
+      const bPriority = AGENT_PRIORITY_INDEX.get(getAgentConfigKey(bKey)) ?? Number.MAX_SAFE_INTEGER
 
-  for (const key of getCoreAgentOrder()) {
-    if (Object.prototype.hasOwnProperty.call(agents, key)) {
-      ordered[key] = agents[key];
-      seen.add(key);
-    }
-  }
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority
+      }
 
-  for (const [key, value] of Object.entries(agents)) {
-    if (!seen.has(key)) {
-      ordered[key] = value;
-    }
-  }
-
-  return ordered;
+      return 0
+    }),
+  )
 }

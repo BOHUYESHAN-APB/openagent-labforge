@@ -11,10 +11,23 @@ const EXPLORATION_AGENT_DENYLIST: Record<string, boolean> = {
   call_omo_agent: false,
 }
 
+const WRITING_AGENT_DENYLIST: Record<string, boolean> = {
+  task: false,
+  call_omo_agent: false,
+}
+
 const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
   explore: EXPLORATION_AGENT_DENYLIST,
 
   librarian: EXPLORATION_AGENT_DENYLIST,
+
+  "github-scout": EXPLORATION_AGENT_DENYLIST,
+
+  "tech-scout": EXPLORATION_AGENT_DENYLIST,
+
+  "article-writer": WRITING_AGENT_DENYLIST,
+
+  "scientific-writer": WRITING_AGENT_DENYLIST,
 
   oracle: {
     write: false,

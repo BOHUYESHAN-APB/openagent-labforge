@@ -2,6 +2,13 @@ import type { ALLOWED_AGENTS } from "./constants"
 
 export type AllowedAgentType = (typeof ALLOWED_AGENTS)[number]
 
+export interface CallOmoAgentToolOptions {
+  directory: string
+  agentOverrides?: import("../../config/schema").AgentOverrides
+  onSyncSessionCreated?: (event: { sessionID: string; parentID: string; title: string }) => Promise<void>
+  syncPollTimeoutMs?: number
+}
+
 export interface CallOmoAgentArgs {
   description: string
   prompt: string
@@ -31,4 +38,7 @@ export type ToolContextWithMetadata = {
   agent: string
   abort: AbortSignal
   metadata?: (input: { title?: string; metadata?: Record<string, unknown> }) => void
+  callID?: string
+  callId?: string
+  call_id?: string
 }

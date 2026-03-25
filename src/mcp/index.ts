@@ -3,14 +3,15 @@ import { context7 } from "./context7"
 import { grep_app } from "./grep-app"
 import {
   arxiv_mcp,
-  bing_cn_mcp,
   browser_puppeteer,
   deepwiki_mcp,
   fetch_browser,
+  open_websearch_mcp,
   paper_search_mcp,
   semantic_scholar_fastmcp,
 } from "./extended"
 import type { OhMyOpenCodeConfig } from "../config/schema"
+import { normalizeLocalMcpCommand } from "../shared"
 
 export { McpNameSchema, type McpName } from "./types"
 
@@ -26,7 +27,8 @@ type LocalMcpConfig = {
   type: "local"
   command: string[]
   enabled: boolean
-  env?: Record<string, string>
+  environment?: Record<string, string>
+  timeout?: number
 }
 
 type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
@@ -36,7 +38,7 @@ const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
   browser_puppeteer,
   fetch_browser,
   deepwiki_mcp,
-  bing_cn_mcp,
+  open_websearch_mcp,
   paper_search_mcp,
   semantic_scholar_fastmcp,
 }
@@ -60,8 +62,16 @@ export function createBuiltinMcps(disabledMcps: string[] = [], config?: OhMyOpen
   for (const [name, builtin] of Object.entries(EXTENDED_BUILTIN_MCPS)) {
     if (disabledSet.has(name)) continue
     const forcedEnabled = config?.mcp_policy?.enable?.includes(name) ?? false
+    const normalizedBuiltin =
+      builtin.type === "local"
+        ? {
+            ...builtin,
+            command: normalizeLocalMcpCommand(builtin.command),
+          }
+        : builtin
+
     mcps[name] = {
-      ...builtin,
+      ...normalizedBuiltin,
       enabled: forcedEnabled ? true : builtin.enabled,
     }
   }

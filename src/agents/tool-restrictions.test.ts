@@ -5,6 +5,10 @@ import { createExploreAgent } from "./explore"
 import { createMomusAgent } from "./momus"
 import { createMetisAgent } from "./metis"
 import { createAtlasAgent } from "./atlas"
+import { createArticleWriterAgent } from "./article-writer"
+import { createBioMethodologistAgent } from "./bio-methodologist"
+import { createBioPipelineOperatorAgent } from "./bio-pipeline-operator"
+import { createScientificWriterAgent } from "./scientific-writer"
 
 const TEST_MODEL = "anthropic/claude-sonnet-4-5"
 
@@ -109,6 +113,56 @@ describe("read-only agent tool restrictions", () => {
       // then
       expect(permission["task"]).toBeUndefined()
       expect(permission["call_omo_agent"]).toBeUndefined()
+    })
+  })
+
+  describe("Article Writer", () => {
+    test("denies delegation tools for focused writing", () => {
+      // given
+      const agent = createArticleWriterAgent(TEST_MODEL)
+
+      // when
+      const permission = (agent.permission ?? {}) as Record<string, string>
+
+      // then
+      expect(permission["task"]).toBe("deny")
+      expect(permission["call_omo_agent"]).toBe("deny")
+    })
+  })
+
+  describe("Bio Methodologist", () => {
+    test("is available as both main agent and subagent", () => {
+      // given
+      const agent = createBioMethodologistAgent(TEST_MODEL)
+
+      // then
+      expect(createBioMethodologistAgent.mode).toBe("all")
+      expect(agent.mode).toBe("all")
+    })
+  })
+
+  describe("Bio Pipeline Operator", () => {
+    test("is available as both main agent and subagent", () => {
+      // given
+      const agent = createBioPipelineOperatorAgent(TEST_MODEL)
+
+      // then
+      expect(createBioPipelineOperatorAgent.mode).toBe("all")
+      expect(agent.mode).toBe("all")
+    })
+  })
+
+  describe("Scientific Writer", () => {
+    test("denies delegation tools for focused scientific writing", () => {
+      // given
+      const agent = createScientificWriterAgent(TEST_MODEL)
+
+      // when
+      const permission = (agent.permission ?? {}) as Record<string, string>
+
+      // then
+      expect(permission["task"]).toBe("deny")
+      expect(permission["call_omo_agent"]).toBe("deny")
     })
   })
 })

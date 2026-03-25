@@ -7,7 +7,9 @@ export const McpPolicyConfigSchema = z.object({
   enable: z.array(z.string()).optional(),
   /** Force-disable specific MCP names after merge */
   disable: z.array(z.string()).optional(),
-  /** When true, enabling bing_cn_mcp also enables websearch as English fallback */
+  /** When true, enabling open_websearch_mcp also enables websearch as English fallback */
+  search_english_fallback: z.boolean().optional(),
+  /** Deprecated alias kept for compatibility */
   bing_cn_english_fallback: z.boolean().optional(),
 })
 

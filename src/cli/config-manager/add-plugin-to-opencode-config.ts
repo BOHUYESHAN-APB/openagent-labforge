@@ -8,6 +8,9 @@ import { parseOpenCodeConfigFileWithError, type OpenCodeConfig } from "./parse-o
 import { getPluginNameWithVersion } from "./plugin-name-with-version"
 
 const PACKAGE_NAME = "@labforge/openagent-labforge-core"
+const LEGACY_PACKAGE_NAMES = [
+  "@bohuyeshan/openagent-labforge-core",
+] as const
 
 export async function addPluginToOpenCodeConfig(currentVersion: string): Promise<ConfigMergeResult> {
   try {
@@ -41,7 +44,15 @@ export async function addPluginToOpenCodeConfig(currentVersion: string): Promise
 
     const config = parseResult.config
     const plugins = config.plugin ?? []
-    const existingIndex = plugins.findIndex((p) => p === PACKAGE_NAME || p.startsWith(`${PACKAGE_NAME}@`))
+    const existingIndex = plugins.findIndex((p) => {
+      const normalized = p.toLowerCase()
+      return normalized === PACKAGE_NAME.toLowerCase()
+        || normalized.startsWith(`${PACKAGE_NAME.toLowerCase()}@`)
+        || LEGACY_PACKAGE_NAMES.some((legacyName) =>
+          normalized === legacyName.toLowerCase()
+          || normalized.startsWith(`${legacyName.toLowerCase()}@`)
+        )
+    })
 
     if (existingIndex !== -1) {
       if (plugins[existingIndex] === pluginEntry) {

@@ -6,6 +6,7 @@ import {
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
+  writeBootstrapSkill,
   writeOmoConfig,
 } from "./config-manager"
 import { detectedToInitialValues, formatConfigSummary, SYMBOLS } from "./install-validators"
@@ -60,6 +61,15 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
     return 1
   }
   spinner.stop(`Config written to ${color.cyan(omoResult.configPath)}`)
+
+  spinner.start("Bootstrapping openagent-labforge skill")
+  const bootstrapSkillResult = writeBootstrapSkill()
+  if (!bootstrapSkillResult.success) {
+    spinner.stop(`Failed to write bootstrap skill: ${bootstrapSkillResult.error}`)
+    p.outro(color.red("Installation failed."))
+    return 1
+  }
+  spinner.stop(`Skill ${bootstrapSkillResult.action} at ${color.cyan(bootstrapSkillResult.skillPath)}`)
 
   if (!config.hasClaude) {
     console.log()

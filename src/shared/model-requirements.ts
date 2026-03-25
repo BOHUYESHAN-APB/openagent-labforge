@@ -86,12 +86,62 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       { providers: ["opencode"], model: "gpt-5-nano" },
     ],
   },
+  "github-scout": {
+    fallbackChain: [
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "medium",
+      },
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3-flash",
+      },
+      { providers: ["opencode"], model: "minimax-m2.5-free" },
+    ],
+  },
+  "tech-scout": {
+    fallbackChain: [
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3.1-pro",
+        variant: "high",
+      },
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "high",
+      },
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-sonnet-4-6",
+      },
+    ],
+  },
   "article-writer": {
     fallbackChain: [
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",
         variant: "medium",
+      },
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-sonnet-4-6",
+      },
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3.1-pro",
+        variant: "high",
+      },
+    ],
+  },
+  "scientific-writer": {
+    fallbackChain: [
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "high",
       },
       {
         providers: ["anthropic", "github-copilot", "opencode"],

@@ -14,16 +14,46 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("browser_puppeteer")
     expect(result).toHaveProperty("fetch_browser")
     expect(result).toHaveProperty("deepwiki_mcp")
-    expect(result).toHaveProperty("bing_cn_mcp")
+    expect(result).toHaveProperty("open_websearch_mcp")
     expect(result).toHaveProperty("paper_search_mcp")
     expect(result).toHaveProperty("semantic_scholar_fastmcp")
     expect(result.arxiv_mcp?.enabled).toBe(false)
     expect(result.browser_puppeteer?.enabled).toBe(false)
     expect(result.fetch_browser?.enabled).toBe(false)
     expect(result.deepwiki_mcp?.enabled).toBe(false)
-    expect(result.bing_cn_mcp?.enabled).toBe(false)
+    expect(result.open_websearch_mcp?.enabled).toBe(false)
     expect(result.paper_search_mcp?.enabled).toBe(true)
     expect(result.semantic_scholar_fastmcp?.enabled).toBe(false)
+    expect(result.open_websearch_mcp).toMatchObject({
+      type: "local",
+      timeout: 90000,
+      environment: {
+        MODE: "stdio",
+        DEFAULT_SEARCH_ENGINE: "duckduckgo",
+        ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
+        SEARCH_MODE: "request",
+      },
+    })
+
+    if (process.platform === "win32") {
+      expect(result.open_websearch_mcp).toMatchObject({
+        type: "local",
+      command: ["cmd", "/c", "npx", "-y", "open-websearch@2.0.0"],
+      })
+    } else {
+      expect(result.open_websearch_mcp).toMatchObject({
+        type: "local",
+      command: ["npx", "-y", "open-websearch@2.0.0"],
+      })
+    }
+
+    expect(result.paper_search_mcp).toMatchObject({
+      type: "local",
+      command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
+      enabled: true,
+      timeout: 90000,
+    })
+
     expect(Object.keys(result)).toHaveLength(10)
   })
 
@@ -47,7 +77,7 @@ describe("createBuiltinMcps", () => {
       "browser_puppeteer",
       "fetch_browser",
       "deepwiki_mcp",
-      "bing_cn_mcp",
+      "open_websearch_mcp",
       "paper_search_mcp",
       "semantic_scholar_fastmcp",
     ]

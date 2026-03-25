@@ -36,7 +36,7 @@ Default-off (visible, user-toggleable):
 - `browser_puppeteer`
 - `fetch_browser`
 - `deepwiki_mcp`
-- `bing_cn_mcp`
+- `open_websearch_mcp`
 - `semantic_scholar_fastmcp`
 
 Default-on:
@@ -48,7 +48,7 @@ Default-on:
 {
   "mcp_policy": {
     "network_profile": "restricted",
-    "bing_cn_english_fallback": true,
+    "search_english_fallback": true,
     "enable": ["arxiv_mcp", "fetch_browser"],
     "disable": ["semantic_scholar_fastmcp"]
   }

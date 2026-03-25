@@ -10,27 +10,33 @@ export type LocalMcpConfig = {
   type: "local"
   command: string[]
   enabled: boolean
-  env?: Record<string, string>
+  environment?: Record<string, string>
+  timeout?: number
 }
 
 export type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
+
+const LOCAL_MCP_STARTUP_TIMEOUT_MS = 90_000
 
 export const arxiv_mcp: LocalMcpConfig = {
   type: "local",
   command: ["uvx", "arxiv-mcp-server"],
   enabled: false,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
 export const browser_puppeteer: LocalMcpConfig = {
   type: "local",
   command: ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
   enabled: false,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
 export const fetch_browser: LocalMcpConfig = {
   type: "local",
   command: ["npx", "-y", "@TheSethRose/Fetch-Browser"],
   enabled: false,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
 export const deepwiki_mcp: RemoteMcpConfig = {
@@ -40,26 +46,36 @@ export const deepwiki_mcp: RemoteMcpConfig = {
   oauth: false,
 }
 
-export const bing_cn_mcp: LocalMcpConfig = {
+export const open_websearch_mcp: LocalMcpConfig = {
   type: "local",
   // NOTE:
-  // The upstream MCP package name is `bing-cn-mcp` (bin: `bing-cn-mcp`).
-  // `bing-cn-mcp-server` is not an npm package and will fail with E404.
-  command: ["npx", "-y", "bing-cn-mcp"],
+  // `open-websearch` is a multi-engine, no-key search MCP with stdio support.
+  // We force stdio mode here and default to DuckDuckGo to avoid Bing-only fragility.
+  command: ["npx", "-y", "open-websearch@2.0.0"],
   enabled: false,
+  environment: {
+    MODE: "stdio",
+    DEFAULT_SEARCH_ENGINE: "duckduckgo",
+    ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
+    SEARCH_MODE: "request",
+  },
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
 export const paper_search_mcp: LocalMcpConfig = {
   type: "local",
   // NOTE:
-  // `paper-search-mcp` currently does not expose a console script entrypoint.
-  // Run it via module entrypoint instead.
+  // Upstream documents a console entrypoint, but `uvx paper-search-mcp` is not
+  // executable in this Windows environment. Prefer the older module launcher,
+  // which has proven import compatibility through uvx.
   command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
   enabled: true,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {
   type: "local",
   command: ["uvx", "semantic-scholar-fastmcp-mcp-server"],
   enabled: false,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }

@@ -13,6 +13,16 @@ import {
 } from "../../features/claude-code-session-state"
 import type { ContextCollector } from "../../features/context-injector"
 
+const ROUTING_CAPABLE_AGENTS = new Set([
+  "sisyphus",
+  "hephaestus",
+  "atlas",
+  "prometheus",
+  "build",
+  "plan",
+  "sisyphus-junior",
+])
+
 export function createKeywordDetectorHook(ctx: PluginInput, _collector?: ContextCollector) {
   return {
     "chat.message": async (
@@ -35,6 +45,14 @@ export function createKeywordDetectorHook(ctx: PluginInput, _collector?: Context
       }
 
       const currentAgent = getSessionAgent(input.sessionID) ?? input.agent
+
+      if (currentAgent && !ROUTING_CAPABLE_AGENTS.has(currentAgent)) {
+        log(`[keyword-detector] Skipping keyword injection for explicitly selected specialist agent`, {
+          sessionID: input.sessionID,
+          agent: currentAgent,
+        })
+        return
+      }
 
       // Remove system-reminder content to prevent automated system messages from triggering mode keywords
       const cleanText = removeSystemReminders(promptText)
