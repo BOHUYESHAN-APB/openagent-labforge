@@ -1,18 +1,20 @@
 # Aggregate Packages
 
-This directory defines aggregate installer packages for simplified onboarding.
+This directory defines aggregate installer package skeletons for later release
+work.
 
 ## Packages
 
 - `packages/labforge-full`
-  - npm target: `@labforge/openagent-labforge`
   - intended profile: full
+  - current status: release scaffold only
 
 - `packages/labforge-paper`
-  - npm target: `@labforge/openagent-labforge-paper`
   - intended profile: paper-only
+  - current status: release scaffold only
 
 ## Notes
 
-- Current manifests are release skeletons and are marked private.
-- After core identity migration is complete, set `private` to `false` for publish.
+- Current manifests are private and are not the main supported install path.
+- The current real install flow is still local build + local tgz replacement of
+  `@bohuyeshan/openagent-labforge-core`.
