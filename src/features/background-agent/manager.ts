@@ -357,8 +357,8 @@ export class BackgroundManager {
         system: input.skillContent,
         tools: (() => {
           const tools = {
-            task: false,
-            call_omo_agent: true,
+            task: true,
+            call_omo_agent: false,
             question: false,
             ...getAgentToolRestrictions(input.agent),
           }
@@ -630,8 +630,8 @@ export class BackgroundManager {
         ...(resumeVariant ? { variant: resumeVariant } : {}),
         tools: (() => {
           const tools = {
-            task: false,
-            call_omo_agent: true,
+            task: true,
+            call_omo_agent: false,
             question: false,
             ...getAgentToolRestrictions(existingTask.agent),
           }
