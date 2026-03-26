@@ -1,296 +1,145 @@
 # CLI Reference
 
-Complete reference for the `oh-my-opencode` command-line interface.
+Reference for the current `openagent-labforge` command-line workflow.
+
+---
+
+## Current Reality
+
+The CLI is primarily used for:
+
+- local installation into an OpenCode environment
+- environment diagnostics
+- non-interactive session running
+- MCP OAuth maintenance
+
+At this stage, the most reliable release workflow is still local build + local tarball install.
+
+---
 
 ## Basic Usage
 
 ```bash
-# Display help
-bunx oh-my-opencode
-
-# Or with npx
-npx oh-my-opencode
+bunx openagent-labforge --help
 ```
+
+If you already built the local package, you can also use the binary exposed by the installed package.
+
+---
 
 ## Commands
 
-| Command             | Description                               |
-| ------------------- | ----------------------------------------- |
-| `install`           | Interactive setup wizard                  |
-| `doctor`            | Environment diagnostics and health checks |
-| `run`               | OpenCode session runner                   |
-| `mcp oauth`         | MCP OAuth authentication management       |
-| `auth`              | Google Antigravity OAuth authentication   |
-| `get-local-version` | Display local version information         |
+| Command | Purpose |
+| --- | --- |
+| `install` | interactive or non-interactive setup for OpenCode |
+| `doctor` | verify install/config/runtime health |
+| `run` | non-interactive OpenCode session runner |
+| `mcp oauth` | manage OAuth login/logout/status for remote MCPs |
+| `get-local-version` | print local package version info |
 
 ---
 
 ## install
 
-Interactive installation tool for initial Oh-My-OpenCode setup. Provides a TUI based on `@clack/prompts`.
-
-### Usage
+Use the installer when setting up or refreshing the plugin in an OpenCode config directory.
 
 ```bash
-bunx oh-my-opencode install
+bunx openagent-labforge install
 ```
 
-### Installation Process
+### What it does
 
-1. **Provider Selection**: Choose your AI provider (Claude, ChatGPT, or Gemini)
-2. **API Key Input**: Enter the API key for your selected provider
-3. **Configuration File Creation**: Generates `opencode.json` or `oh-my-opencode.json` files
-4. **Plugin Registration**: Automatically registers the oh-my-opencode plugin in OpenCode settings
+1. checks OpenCode installation/config
+2. registers the plugin package in OpenCode config
+3. writes `openagent-labforge` config
+4. bootstraps the managed skill at:
+   - `~/.config/opencode/skills/openagent-labforge/SKILL.md`
 
-### Options
+### Important note
 
-| Option      | Description                                                      |
-| ----------- | ---------------------------------------------------------------- |
-| `--no-tui`  | Run in non-interactive mode without TUI (for CI/CD environments) |
-| `--verbose` | Display detailed logs                                            |
+For local development, the practical workflow is still:
+
+1. `bun run build`
+2. `bun pm pack`
+3. replace the local tgz in the OpenCode config directory
+4. run `bun install` there
+
+See `docs/guide/installation.md` for the exact sequence.
 
 ---
 
 ## doctor
 
-Diagnoses your environment to ensure Oh-My-OpenCode is functioning correctly. Performs 17+ health checks.
-
-### Usage
+Use doctor to check whether the local install surface is coherent.
 
 ```bash
-bunx oh-my-opencode doctor
+bunx openagent-labforge doctor
 ```
 
-### Diagnostic Categories
+Typical things it checks:
 
-| Category           | Check Items                                               |
-| ------------------ | --------------------------------------------------------- |
-| **Installation**   | OpenCode version (>= 1.0.150), plugin registration status |
-| **Configuration**  | Configuration file validity, JSONC parsing                |
-| **Authentication** | Anthropic, OpenAI, Google API key validity                |
-| **Dependencies**   | Bun, Node.js, Git installation status                     |
-| **Tools**          | LSP server status, MCP server status                      |
-| **Updates**        | Latest version check                                      |
+- OpenCode version and plugin registration
+- config parsing and schema validity
+- MCP availability / configuration shape
+- local runtime prerequisites
+- provider/auth wiring
 
-### Options
+Useful flags:
 
-| Option              | Description                                                      |
-| ------------------- | ---------------------------------------------------------------- |
-| `--category <name>` | Check specific category only (e.g., `--category authentication`) |
-| `--json`            | Output results in JSON format                                    |
-| `--verbose`         | Include detailed information                                     |
-
-### Example Output
-
-```
-oh-my-opencode doctor
-
-┌──────────────────────────────────────────────────┐
-│  Oh-My-OpenCode Doctor                           │
-└──────────────────────────────────────────────────┘
-
-Installation
-  ✓ OpenCode version: 1.0.155 (>= 1.0.150)
-  ✓ Plugin registered in opencode.json
-
-Configuration
-  ✓ oh-my-opencode.json is valid
-  ⚠ categories.visual-engineering: using default model
-
-Authentication
-  ✓ Anthropic API key configured
-  ✓ OpenAI API key configured
-  ✗ Google API key not found
-
-Dependencies
-  ✓ Bun 1.2.5 installed
-  ✓ Node.js 22.0.0 installed
-  ✓ Git 2.45.0 installed
-
-Summary: 10 passed, 1 warning, 1 failed
+```bash
+bunx openagent-labforge doctor --verbose
+bunx openagent-labforge doctor --json
 ```
 
 ---
 
 ## run
 
-Executes OpenCode sessions and monitors task completion.
-
-### Usage
+Run a non-interactive OpenCode session from the CLI.
 
 ```bash
-bunx oh-my-opencode run [prompt]
+bunx openagent-labforge run "summarize this repo"
 ```
 
-### Options
-
-| Option                   | Description                                       |
-| ------------------------ | ------------------------------------------------- |
-| `--enforce-completion`   | Keep session active until all TODOs are completed |
-| `--timeout <seconds>`    | Set maximum execution time                        |
-| `--agent <name>`         | Specify agent to use                              |
-| `--directory <path>`     | Set working directory                             |
-| `--port <number>`        | Set port for session                              |
-| `--attach`               | Attach to existing session                        |
-| `--json`                 | Output in JSON format                             |
-| `--no-timestamp`         | Disable timestamped output                        |
-| `--session-id <id>`      | Resume existing session                           |
-| `--on-complete <action>` | Action on completion                              |
-| `--verbose`              | Enable verbose logging                            |
+This is mainly useful for scripted checks, CI-style experimentation, or controlled local workflows.
 
 ---
 
 ## mcp oauth
 
-Manages OAuth 2.1 authentication for remote MCP servers.
-
-### Usage
+Manage OAuth state for MCP servers that require remote authorization.
 
 ```bash
-# Login to an OAuth-protected MCP server
-bunx oh-my-opencode mcp oauth login <server-name> --server-url https://api.example.com
-
-# Login with explicit client ID and scopes
-bunx oh-my-opencode mcp oauth login my-api --server-url https://api.example.com --client-id my-client --scopes "read,write"
-
-# Remove stored OAuth tokens
-bunx oh-my-opencode mcp oauth logout <server-name>
-
-# Check OAuth token status
-bunx oh-my-opencode mcp oauth status [server-name]
+bunx openagent-labforge mcp oauth login <server-name> --server-url https://example.com/mcp
+bunx openagent-labforge mcp oauth logout <server-name>
+bunx openagent-labforge mcp oauth status [server-name]
 ```
 
-### Options
-
-| Option               | Description                                                               |
-| -------------------- | ------------------------------------------------------------------------- |
-| `--server-url <url>` | MCP server URL (required for login)                                       |
-| `--client-id <id>`   | OAuth client ID (optional if server supports Dynamic Client Registration) |
-| `--scopes <scopes>`  | Comma-separated OAuth scopes                                              |
-
-### Token Storage
-
-Tokens are stored in `~/.config/opencode/mcp-oauth.json` with `0600` permissions (owner read/write only). Key format: `{serverHost}/{resource}`.
+This is relevant for remote MCPs, not for local stdio MCPs such as the current `open_websearch_mcp` built-in path.
 
 ---
 
-## Configuration Files
+## Config Files
 
-The CLI searches for configuration files in the following locations (in priority order):
+Current config search order is project over user:
 
-1. **Project Level**: `.opencode/oh-my-opencode.json`
-2. **User Level**: `~/.config/opencode/oh-my-opencode.json`
+1. `.opencode/openagent-labforge.jsonc`
+2. `~/.config/opencode/openagent-labforge.jsonc`
 
-### JSONC Support
+JSONC is supported.
 
-Configuration files support **JSONC (JSON with Comments)** format. You can use comments and trailing commas.
+Use the generated schema at:
 
-```jsonc
+```json
 {
-  // Agent configuration
-  "sisyphus_agent": {
-    "disabled": false,
-    "planner_enabled": true,
-  },
-
-  /* Category customization */
-  "categories": {
-    "visual-engineering": {
-      "model": "google/gemini-3.1-pro",
-    },
-  },
+  "$schema": "https://raw.githubusercontent.com/BOHUYESHAN-APB/openagent-labforge/main/assets/openagent-labforge.schema.json"
 }
 ```
 
 ---
 
-## Troubleshooting
+## Release Status
 
-### "OpenCode version too old" Error
+The project is being cleaned for a better public release surface, but the most trustworthy install path remains the local packaging workflow described in `docs/guide/installation.md`.
 
-```bash
-# Update OpenCode
-npm install -g opencode@latest
-# or
-bun install -g opencode@latest
-```
-
-### "Plugin not registered" Error
-
-```bash
-# Reinstall plugin
-bunx oh-my-opencode install
-```
-
-### Doctor Check Failures
-
-```bash
-# Diagnose with detailed information
-bunx oh-my-opencode doctor --verbose
-
-# Check specific category only
-bunx oh-my-opencode doctor --category authentication
-```
-
----
-
-## Non-Interactive Mode
-
-Use the `--no-tui` option for CI/CD environments.
-
-```bash
-# Run doctor in CI environment
-bunx oh-my-opencode doctor --no-tui --json
-
-# Save results to file
-bunx oh-my-opencode doctor --json > doctor-report.json
-```
-
----
-
-## Developer Information
-
-### CLI Structure
-
-```
-src/cli/
-├── cli-program.ts        # Commander.js-based main entry
-├── install.ts            # @clack/prompts-based TUI installer
-├── config-manager/       # JSONC parsing, multi-source config management
-│   └── *.ts
-├── doctor/               # Health check system
-│   ├── index.ts          # Doctor command entry
-│   └── checks/           # 17+ individual check modules
-├── run/                  # Session runner
-│   └── *.ts
-└── mcp-oauth/            # OAuth management commands
-    └── *.ts
-```
-
-### Adding New Doctor Checks
-
-Create `src/cli/doctor/checks/my-check.ts`:
-
-```typescript
-import type { DoctorCheck } from "../types";
-
-export const myCheck: DoctorCheck = {
-  name: "my-check",
-  category: "environment",
-  check: async () => {
-    // Check logic
-    const isOk = await someValidation();
-
-    return {
-      status: isOk ? "pass" : "fail",
-      message: isOk ? "Everything looks good" : "Something is wrong",
-    };
-  },
-};
-```
-
-Register in `src/cli/doctor/checks/index.ts`:
-
-```typescript
-export { myCheck } from "./my-check";
-```
+Treat `install` and `doctor` as stable operator tools; treat future npm/release publishing as a separate release-preparation track.
