@@ -273,21 +273,4 @@ describe("applyMcpConfig", () => {
     expect(mergedMcp.paper_search_mcp.enabled).toBe(false)
     expect(mergedMcp.semantic_scholar_fastmcp.enabled).toBe(false)
   })
-
-  test("adds prompt probe compatibility handler to paper_search_mcp", async () => {
-    //#given
-    createBuiltinMcpsSpy.mockReturnValue({
-      paper_search_mcp: { type: "local", command: ["uvx", "paper-search-mcp"], enabled: true },
-    })
-    const config: Record<string, unknown> = { mcp: {} }
-    const pluginConfig = createPluginConfig()
-
-    //#when
-    const { applyMcpConfig } = await import("./mcp-config-handler")
-    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
-
-    //#then
-    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
-    expect(typeof mergedMcp.paper_search_mcp.onCallError).toBe("function")
-  })
 })

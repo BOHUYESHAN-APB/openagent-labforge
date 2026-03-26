@@ -1,5 +1,16 @@
 import * as path from "node:path"
 import * as os from "node:os"
+import { accessSync, constants, mkdirSync } from "node:fs"
+
+function resolveWritableDirectory(preferredDirectory: string): string {
+  try {
+    mkdirSync(preferredDirectory, { recursive: true })
+    accessSync(preferredDirectory, constants.W_OK)
+    return preferredDirectory
+  } catch {
+    return os.tmpdir()
+  }
+}
 
 /**
  * Returns the user-level data directory.
@@ -10,7 +21,7 @@ import * as os from "node:os"
  * including Windows, so we match that behavior exactly.
  */
 export function getDataDir(): string {
-  return process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share")
+  return resolveWritableDirectory(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
 }
 
 /**
@@ -27,7 +38,7 @@ export function getOpenCodeStorageDir(): string {
  * - All platforms: XDG_CACHE_HOME or ~/.cache
  */
 export function getCacheDir(): string {
-  return process.env.XDG_CACHE_HOME ?? path.join(os.homedir(), ".cache")
+  return resolveWritableDirectory(process.env.XDG_CACHE_HOME ?? path.join(os.homedir(), ".cache"))
 }
 
 /**

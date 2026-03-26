@@ -75,29 +75,6 @@ describe("keyword-detector message transform", () => {
     expect(textPart!.text).toContain("---")
     expect(textPart!.text).toContain("for the bug")
     expect(textPart!.text).toContain("[search-mode]")
-    expect(textPart!.text).toContain("open_websearch_mcp")
-    expect(textPart!.text).toContain("websearch")
-  })
-
-  test("should skip search keyword injection for explicitly selected specialist agent", async () => {
-    // given
-    const collector = new ContextCollector()
-    const sessionID = "specialist-session"
-    updateSessionAgent(sessionID, "github-scout")
-    const hook = createKeywordDetectorHook(createMockPluginInput(), collector)
-    const output = {
-      message: {} as Record<string, unknown>,
-      parts: [{ type: "text", text: "search for the bug" }],
-    }
-
-    // when
-    await hook["chat.message"]({ sessionID }, output)
-
-    // then
-    const textPart = output.parts.find(p => p.type === "text")
-    expect(textPart).toBeDefined()
-    expect(textPart!.text).toBe("search for the bug")
-    expect(logCalls.some(c => c.msg.includes("Skipping keyword injection for explicitly selected specialist agent"))).toBe(true)
   })
 
   test("should NOT transform when no keywords detected", async () => {

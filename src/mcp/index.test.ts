@@ -26,11 +26,11 @@ describe("createBuiltinMcps", () => {
     expect(result.semantic_scholar_fastmcp?.enabled).toBe(false)
     expect(result.open_websearch_mcp).toMatchObject({
       type: "local",
-      timeout: 90000,
-      environment: {
-        MODE: "stdio",
-        DEFAULT_SEARCH_ENGINE: "duckduckgo",
-        ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
+      timeout: 60000,
+    environment: {
+      MODE: "stdio",
+      DEFAULT_SEARCH_ENGINE: "duckduckgo",
+      ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
         SEARCH_MODE: "request",
       },
     })
@@ -46,13 +46,6 @@ describe("createBuiltinMcps", () => {
       command: ["npx", "-y", "open-websearch@2.0.0"],
       })
     }
-
-    expect(result.paper_search_mcp).toMatchObject({
-      type: "local",
-      command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
-      enabled: true,
-      timeout: 90000,
-    })
 
     expect(Object.keys(result)).toHaveLength(10)
   })

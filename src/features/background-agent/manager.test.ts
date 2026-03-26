@@ -7,6 +7,7 @@ import { MIN_IDLE_TIME_MS } from "./constants"
 import { BackgroundManager } from "./manager"
 import { ConcurrencyManager } from "./concurrency"
 import { initTaskToastManager, _resetTaskToastManagerForTesting } from "../task-toast-manager/manager"
+import { _resetForTesting as resetProcessCleanupForTesting } from "./process-cleanup"
 
 
 const TASK_TTL_MS = 30 * 60 * 1000
@@ -1595,6 +1596,14 @@ describe("BackgroundManager.resume model persistence", () => {
 })
 
 describe("BackgroundManager process cleanup", () => {
+  beforeEach(() => {
+    resetProcessCleanupForTesting()
+  })
+
+  afterEach(() => {
+    resetProcessCleanupForTesting()
+  })
+
   test("should remove listeners after last shutdown", () => {
     // given
     const signals = getCleanupSignals()

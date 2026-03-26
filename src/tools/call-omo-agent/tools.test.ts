@@ -5,25 +5,30 @@ import { createCallOmoAgent } from "./tools"
 
 describe("createCallOmoAgent", () => {
   const mockCtx = {
-    client: {},
+    client: {
+      app: {
+        agents: async () => ({
+          data: [
+            { name: "explore", mode: "subagent" },
+            { name: "librarian", mode: "subagent" },
+          ],
+        }),
+      },
+    },
     directory: "/test",
   } as unknown as PluginInput
-
-  ;(mockCtx as any).client = {
-    app: {
-      agents: mock(async () => ({
-        data: [
-          { name: "explore", mode: "subagent" },
-          { name: "librarian", mode: "subagent" },
-        ],
-      })),
-    },
-  }
 
   const mockBackgroundManager = {
     launch: mock(() => Promise.resolve({
       id: "test-task-id",
-      sessionID: null,
+      sessionID: "test-session-id",
+      description: "Test task",
+      agent: "test-agent",
+      status: "pending",
+    })),
+    getTask: mock(() => ({
+      id: "test-task-id",
+      sessionID: "test-session-id",
       description: "Test task",
       agent: "test-agent",
       status: "pending",
@@ -42,7 +47,6 @@ describe("createCallOmoAgent", () => {
         prompt: "Test prompt",
         subagent_type: "explore",
         run_in_background: true,
-        session_id: "existing-session",
       },
       { sessionID: "test", messageID: "msg", agent: "test", abort: new AbortController().signal }
     )
@@ -63,7 +67,6 @@ describe("createCallOmoAgent", () => {
         prompt: "Test prompt",
         subagent_type: "explore",
         run_in_background: true,
-        session_id: "existing-session",
       },
       { sessionID: "test", messageID: "msg", agent: "test", abort: new AbortController().signal }
     )
@@ -84,15 +87,14 @@ describe("createCallOmoAgent", () => {
         prompt: "Test prompt",
         subagent_type: "explore",
         run_in_background: true,
-        session_id: "existing-session",
       },
       { sessionID: "test", messageID: "msg", agent: "test", abort: new AbortController().signal }
     )
 
     //#then
-    // Disabled-agent check should pass, then validation should reject session_id in background mode
+    // Disabled-agent gate should pass and the compatibility wrapper should be able to launch through delegate-task.
     expect(result).not.toContain("disabled via disabled_agents")
-    expect(result).toContain("session_id is not supported in background mode")
+    expect(result).toContain("Background task launched")
   })
 
   test("should allow all agents when disabled_agents is empty", async () => {
@@ -107,13 +109,12 @@ describe("createCallOmoAgent", () => {
         prompt: "Test prompt",
         subagent_type: "explore",
         run_in_background: true,
-        session_id: "existing-session",
       },
       { sessionID: "test", messageID: "msg", agent: "test", abort: new AbortController().signal }
     )
 
     //#then
     expect(result).not.toContain("disabled via disabled_agents")
-    expect(result).toContain("session_id is not supported in background mode")
+    expect(result).toContain("Background task launched")
   })
 })

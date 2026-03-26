@@ -16,7 +16,7 @@ export type LocalMcpConfig = {
 
 export type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
-const LOCAL_MCP_STARTUP_TIMEOUT_MS = 90_000
+const LOCAL_MCP_STARTUP_TIMEOUT_MS = 60_000
 
 export const arxiv_mcp: LocalMcpConfig = {
   type: "local",
@@ -65,9 +65,8 @@ export const open_websearch_mcp: LocalMcpConfig = {
 export const paper_search_mcp: LocalMcpConfig = {
   type: "local",
   // NOTE:
-  // Upstream documents a console entrypoint, but `uvx paper-search-mcp` is not
-  // executable in this Windows environment. Prefer the older module launcher,
-  // which has proven import compatibility through uvx.
+  // `paper-search-mcp` currently does not expose a console script entrypoint.
+  // Run it via module entrypoint instead.
   command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
   enabled: true,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,

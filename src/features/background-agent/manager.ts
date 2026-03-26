@@ -47,6 +47,7 @@ import { MESSAGE_STORAGE } from "../hook-message-injector"
 import { join } from "node:path"
 import { pruneStaleTasksAndNotifications } from "./task-poller"
 import { checkAndInterruptStaleTasks } from "./task-poller"
+import { clearSessionFallbackChain, setSessionFallbackChain } from "../../hooks/model-fallback/hook"
 
 type OpencodeClient = PluginInput["client"]
 
@@ -286,6 +287,7 @@ export class BackgroundManager {
 
     const sessionID = createResult.data.id
     subagentSessions.add(sessionID)
+    setSessionFallbackChain(sessionID, input.fallbackChain)
 
     log("[background-agent] tmux callback check", {
       hasCallback: !!this.onSubagentSessionCreated,
@@ -587,6 +589,7 @@ export class BackgroundManager {
     this.startPolling()
     if (existingTask.sessionID) {
       subagentSessions.add(existingTask.sessionID)
+      setSessionFallbackChain(existingTask.sessionID, existingTask.fallbackChain)
     }
 
     if (input.parentSessionID) {
@@ -708,7 +711,7 @@ export class BackgroundManager {
         name: extractErrorName(assistantError),
         message: extractErrorMessage(assistantError),
       }
-      this.tryFallbackRetry(task, errorInfo, "message.updated")
+      if (this.tryFallbackRetry(task, errorInfo, "message.updated")) return
     }
 
     if (event.type === "message.part.updated" || event.type === "message.part.delta") {
@@ -812,7 +815,7 @@ export class BackgroundManager {
         toastManager.removeTask(task.id)
       }
       if (task.sessionID) {
-        subagentSessions.delete(task.sessionID)
+        this.clearTaskSessionState(task.sessionID)
       }
     }
 
@@ -865,7 +868,7 @@ export class BackgroundManager {
           toastManager.removeTask(task.id)
         }
         if (task.sessionID) {
-          subagentSessions.delete(task.sessionID)
+          this.clearTaskSessionState(task.sessionID)
         }
       }
 
@@ -909,9 +912,15 @@ export class BackgroundManager {
       processKey: (key: string) => this.processKey(key),
     })
     if (result && previousSessionID) {
-      subagentSessions.delete(previousSessionID)
+      this.clearTaskSessionState(previousSessionID)
     }
     return result
+  }
+
+  private clearTaskSessionState(sessionID: string): void {
+    subagentSessions.delete(sessionID)
+    clearSessionFallbackChain(sessionID)
+    SessionCategoryRegistry.remove(sessionID)
   }
 
   markForNotification(task: BackgroundTask): void {
@@ -1101,7 +1110,7 @@ export class BackgroundManager {
         path: { id: task.sessionID },
       }).catch(() => {})
 
-      SessionCategoryRegistry.remove(task.sessionID)
+      this.clearTaskSessionState(task.sessionID)
     }
 
     if (options?.skipNotification) {
@@ -1216,7 +1225,7 @@ export class BackgroundManager {
         path: { id: task.sessionID },
       }).catch(() => {})
 
-      SessionCategoryRegistry.remove(task.sessionID)
+      this.clearTaskSessionState(task.sessionID)
     }
 
     try {
@@ -1462,8 +1471,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
         }
         this.tasks.delete(taskId)
         if (task.sessionID) {
-          subagentSessions.delete(task.sessionID)
-          SessionCategoryRegistry.remove(task.sessionID)
+          this.clearTaskSessionState(task.sessionID)
         }
       },
     })
