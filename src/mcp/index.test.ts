@@ -26,11 +26,11 @@ describe("createBuiltinMcps", () => {
     expect(result.semantic_scholar_fastmcp?.enabled).toBe(false)
     expect(result.open_websearch_mcp).toMatchObject({
       type: "local",
-      timeout: 60000,
-    environment: {
-      MODE: "stdio",
-      DEFAULT_SEARCH_ENGINE: "duckduckgo",
-      ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
+      timeout: 90000,
+      environment: {
+        MODE: "stdio",
+        DEFAULT_SEARCH_ENGINE: "duckduckgo",
+        ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,exa,brave,baidu,csdn,juejin",
         SEARCH_MODE: "request",
       },
     })
@@ -38,14 +38,21 @@ describe("createBuiltinMcps", () => {
     if (process.platform === "win32") {
       expect(result.open_websearch_mcp).toMatchObject({
         type: "local",
-      command: ["cmd", "/c", "npx", "-y", "open-websearch@2.0.0"],
+        command: ["cmd", "/c", "npx", "-y", "open-websearch@2.0.0"],
       })
     } else {
       expect(result.open_websearch_mcp).toMatchObject({
         type: "local",
-      command: ["npx", "-y", "open-websearch@2.0.0"],
+        command: ["npx", "-y", "open-websearch@2.0.0"],
       })
     }
+
+    expect(result.paper_search_mcp).toMatchObject({
+      type: "local",
+      command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
+      timeout: 90000,
+      enabled: true,
+    })
 
     expect(Object.keys(result)).toHaveLength(10)
   })

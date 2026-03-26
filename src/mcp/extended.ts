@@ -16,7 +16,7 @@ export type LocalMcpConfig = {
 
 export type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 
-const LOCAL_MCP_STARTUP_TIMEOUT_MS = 60_000
+const LOCAL_MCP_STARTUP_TIMEOUT_MS = 90_000
 
 export const arxiv_mcp: LocalMcpConfig = {
   type: "local",
@@ -65,9 +65,10 @@ export const open_websearch_mcp: LocalMcpConfig = {
 export const paper_search_mcp: LocalMcpConfig = {
   type: "local",
   // NOTE:
-  // `paper-search-mcp` currently does not expose a console script entrypoint.
-  // Run it via module entrypoint instead.
-  command: ["uvx", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
+  // The documented console-script launcher has proven unreliable in this
+  // Windows/OpenCode environment. Use the module entrypoint and enable
+  // native TLS for uv's package fetch path.
+  command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
   enabled: true,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }

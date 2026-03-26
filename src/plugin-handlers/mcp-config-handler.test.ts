@@ -254,7 +254,7 @@ describe("applyMcpConfig", () => {
   test("disables selected MCPs in restricted network profile", async () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
-      paper_search_mcp: { type: "local", command: ["uvx", "paper-search-mcp"], enabled: true },
+      paper_search_mcp: { type: "local", command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"], enabled: true },
       semantic_scholar_fastmcp: { type: "local", command: ["uvx", "semantic-scholar-fastmcp-mcp-server"], enabled: true },
     })
     const config: Record<string, unknown> = { mcp: {} }
@@ -272,5 +272,26 @@ describe("applyMcpConfig", () => {
     const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
     expect(mergedMcp.paper_search_mcp.enabled).toBe(false)
     expect(mergedMcp.semantic_scholar_fastmcp.enabled).toBe(false)
+  })
+
+  test("adds prompt probe compatibility handler to paper_search_mcp", async () => {
+    //#given
+    createBuiltinMcpsSpy.mockReturnValue({
+      paper_search_mcp: {
+        type: "local",
+        command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
+        enabled: true,
+      },
+    })
+    const config: Record<string, unknown> = { mcp: {} }
+    const pluginConfig = createPluginConfig()
+
+    //#when
+    const { applyMcpConfig } = await import("./mcp-config-handler")
+    await applyMcpConfig({ config, pluginConfig, pluginComponents: EMPTY_PLUGIN_COMPONENTS })
+
+    //#then
+    const mergedMcp = config.mcp as Record<string, Record<string, unknown>>
+    expect(typeof mergedMcp.paper_search_mcp.onCallError).toBe("function")
   })
 })

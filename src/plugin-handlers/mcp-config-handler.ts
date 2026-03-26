@@ -65,7 +65,8 @@ function withPromptProbeCompatibility(merged: Record<string, McpEntry>): Record<
       name !== "context7" &&
       name !== "grep_app" &&
       name !== "websearch" &&
-      name !== "open_websearch_mcp"
+      name !== "open_websearch_mcp" &&
+      name !== "paper_search_mcp"
     ) {
       continue
     }
