@@ -121,7 +121,6 @@ jobs:
   publish-main:
     runs-on: ubuntu-latest
     needs: [test, typecheck]
-    if: github.repository == 'code-yeongyu/oh-my-openagent'
     outputs:
       version: ${{ steps.version.outputs.version }}
       dist_tag: ${{ steps.version.outputs.dist_tag }}
@@ -151,7 +150,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           if [ -z "$VERSION" ]; then
-            PREV=$(curl -s https://registry.npmjs.org/oh-my-opencode/latest | jq -r '.version // "0.0.0"')
+            PREV=$(curl -s https://registry.npmjs.org/%40bohuyeshan%2Fopenagent-labforge-core/latest | jq -r '.version // "0.0.0"')
             BASE="${PREV%%-*}"
             IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE"
             case "${{ inputs.bump }}" in
@@ -175,7 +174,7 @@ jobs:
         id: check
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/oh-my-opencode/${VERSION}")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/%40bohuyeshan%2Fopenagent-labforge-core/${VERSION}")
           if [ "$STATUS" = "200" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "✓ @bohuyeshan/openagent-labforge-core@${VERSION} already published"
@@ -215,22 +214,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: true
 
-  trigger-platform:
-    runs-on: ubuntu-latest
-    needs: publish-main
-    if: inputs.skip_platform != true
-    steps:
-      - name: Trigger platform publish workflow
-        run: |
-          gh workflow run publish-platform.yml \
-            --repo ${{ github.repository }} \
-            --ref ${{ github.ref }} \
-            -f version=${{ needs.publish-main.outputs.version }} \
-            -f dist_tag=${{ needs.publish-main.outputs.dist_tag }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release:
+  create-release:
     runs-on: ubuntu-latest
     needs: publish-main
     steps:
@@ -238,29 +222,59 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: git fetch --force --tags
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Extract latest changelog entry
+        run: bun run script/extract-latest-changelog.ts > /tmp/changelog.md
+
+      - name: Create or update draft release
+        run: |
+          VERSION="${{ needs.publish-main.outputs.version }}"
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            gh release edit "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/changelog.md --draft=true
+          else
+            gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/changelog.md --draft
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-platform:
+    needs: [publish-main, create-release]
+    if: inputs.skip_platform != true
+    uses: ./.github/workflows/publish-platform.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      version: ${{ needs.publish-main.outputs.version }}
+      dist_tag: ${{ needs.publish-main.outputs.dist_tag }}
+    secrets: inherit
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - publish-main
+      - create-release
+      - publish-platform
+    if: always() && needs.publish-main.result == 'success' && needs.create-release.result == 'success' && (needs.publish-platform.result == 'success' || needs.publish-platform.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
-        run: bun install
-        env:
-          BUN_INSTALL_ALLOW_SCRIPTS: "@ast-grep/napi"
+      - name: Extract latest changelog entry
+        run: bun run script/extract-latest-changelog.ts > /tmp/changelog.md
 
-      - name: Generate changelog
-        run: |
-          bun run script/generate-changelog.ts > /tmp/changelog.md
-          cat /tmp/changelog.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub release
+      - name: Publish GitHub release
         run: |
           VERSION="${{ needs.publish-main.outputs.version }}"
-          gh release view "v${VERSION}" >/dev/null 2>&1 || \
-            gh release create "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/changelog.md
+          gh release edit "v${VERSION}" --title "v${VERSION}" --notes-file /tmp/changelog.md --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
