@@ -12,6 +12,7 @@ export { addPluginToOpenCodeConfig } from "./config-manager/add-plugin-to-openco
 export { generateOmoConfig } from "./config-manager/generate-omo-config"
 export { writeOmoConfig } from "./config-manager/write-omo-config"
 export { writeBootstrapSkill } from "./config-manager/write-bootstrap-skill"
+export { syncStaticAgentToOpenCodeConfig } from "./config-manager/sync-static-agent-to-opencode-config"
 export { syncStaticMcpToOpenCodeConfig } from "./config-manager/sync-static-mcp-to-opencode-config"
 
 export { isOpenCodeInstalled, getOpenCodeVersion } from "./config-manager/opencode-binary"

@@ -49,6 +49,10 @@ describe("runCliInstaller", () => {
         success: true,
         configPath: "/tmp/opencode.jsonc",
       }),
+      spyOn(configManager, "syncStaticAgentToOpenCodeConfig").mockResolvedValue({
+        success: true,
+        configPath: "/tmp/opencode.jsonc",
+      }),
       spyOn(configManager, "writeBootstrapSkill").mockReturnValue({
         success: true,
         skillPath: "/tmp/skills/openagent-labforge/SKILL.md",

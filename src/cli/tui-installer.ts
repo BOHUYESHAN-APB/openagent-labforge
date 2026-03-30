@@ -6,6 +6,7 @@ import {
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
+  syncStaticAgentToOpenCodeConfig,
   syncStaticMcpToOpenCodeConfig,
   writeBootstrapSkill,
   writeOmoConfig,
@@ -71,6 +72,15 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
     return 1
   }
   spinner.stop(`Static MCP config synced to ${color.cyan(staticMcpResult.configPath)}`)
+
+  spinner.start("Syncing static agent configuration")
+  const staticAgentResult = await syncStaticAgentToOpenCodeConfig(process.cwd())
+  if (!staticAgentResult.success) {
+    spinner.stop(`Failed to sync static agent config: ${staticAgentResult.error}`)
+    p.outro(color.red("Installation failed."))
+    return 1
+  }
+  spinner.stop(`Static agent config synced to ${color.cyan(staticAgentResult.configPath)}`)
 
   spinner.start("Bootstrapping openagent-labforge skill")
   const bootstrapSkillResult = writeBootstrapSkill()
