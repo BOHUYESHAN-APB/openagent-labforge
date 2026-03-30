@@ -19,7 +19,7 @@ describe("createBuiltinMcps", () => {
     expect(result).toHaveProperty("paper_search_mcp")
     expect(result).toHaveProperty("semantic_scholar_fastmcp")
     expect(result.arxiv_mcp?.enabled).toBe(false)
-    expect(result.browser_puppeteer?.enabled).toBe(true)
+    expect(result.browser_puppeteer?.enabled).toBe(false)
     expect(result["chrome-devtools-mcp"]?.enabled).toBe(false)
     expect(result.fetch_browser?.enabled).toBe(false)
     expect(result.deepwiki_mcp?.enabled).toBe(false)
@@ -54,6 +54,13 @@ describe("createBuiltinMcps", () => {
       command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
       timeout: 90000,
       enabled: true,
+    })
+
+    expect(result.semantic_scholar_fastmcp).toMatchObject({
+      type: "local",
+      command: ["uvx", "--native-tls", "semantic-scholar-fastmcp"],
+      timeout: 90000,
+      enabled: false,
     })
 
     expect(Object.keys(result)).toHaveLength(11)

@@ -255,7 +255,7 @@ describe("applyMcpConfig", () => {
     //#given
     createBuiltinMcpsSpy.mockReturnValue({
       paper_search_mcp: { type: "local", command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"], enabled: true },
-      semantic_scholar_fastmcp: { type: "local", command: ["uvx", "semantic-scholar-fastmcp"], enabled: true },
+      semantic_scholar_fastmcp: { type: "local", command: ["uvx", "--native-tls", "semantic-scholar-fastmcp"], enabled: true },
     })
     const config: Record<string, unknown> = { mcp: {} }
     const pluginConfig = createPluginConfig({

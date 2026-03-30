@@ -82,7 +82,7 @@ export const paper_search_mcp: LocalMcpConfig = {
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {
   type: "local",
-  command: ["uvx", "semantic-scholar-fastmcp"],
+  command: ["uvx", "--native-tls", "semantic-scholar-fastmcp"],
   enabled: false,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
