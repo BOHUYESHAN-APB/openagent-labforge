@@ -4,6 +4,7 @@ import { fileURLToPath } from "url"
 import picomatch from "picomatch"
 import type { SkillsConfig } from "../../config/schema"
 import { log } from "../../shared"
+import { resolveSymlinkAsync } from "../../shared/file-utils"
 import { normalizeSkillsConfig } from "./merger/skills-config-normalizer"
 import { deduplicateSkillsByName } from "./skill-deduplication"
 import { loadSkillsFromDir } from "./skill-directory-loader"
@@ -28,6 +29,7 @@ function getPackageRootDir(): string {
       try {
         const parsed = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: string }
         if (
+          parsed.name === "@bohuyeshan/openagent-labforge-core" ||
           parsed.name === "@labforge/openagent-labforge-core" ||
           parsed.name === "oh-my-opencode"
         ) {
@@ -136,12 +138,14 @@ async function loadSourcePath(options: {
 
   if (!stat.isDirectory()) return []
 
+  const resolvedBasePath = await resolveSymlinkAsync(absolutePath)
+
   const directorySkills = await loadSkillsFromDir({
-    skillsDir: absolutePath,
+    skillsDir: resolvedBasePath,
     scope: "config",
     maxDepth: options.recursive ? MAX_RECURSIVE_DEPTH : 0,
   })
-  return filterByGlob(directorySkills, absolutePath, options.globPattern)
+  return filterByGlob(directorySkills, resolvedBasePath, options.globPattern)
 }
 
 export async function discoverConfigSourceSkills(options: {

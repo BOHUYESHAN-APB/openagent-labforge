@@ -7,9 +7,10 @@ import { detectConfigFormat } from "./opencode-config-format"
 import { parseOpenCodeConfigFileWithError, type OpenCodeConfig } from "./parse-opencode-config-file"
 import { getPluginNameWithVersion } from "./plugin-name-with-version"
 
-const PACKAGE_NAME = "@labforge/openagent-labforge-core"
+const PACKAGE_NAME = "@bohuyeshan/openagent-labforge-core"
 const LEGACY_PACKAGE_NAMES = [
-  "@bohuyeshan/openagent-labforge-core",
+  "@labforge/openagent-labforge-core",
+  "oh-my-opencode",
 ] as const
 
 export async function addPluginToOpenCodeConfig(currentVersion: string): Promise<ConfigMergeResult> {

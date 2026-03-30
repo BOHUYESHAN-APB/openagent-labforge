@@ -1,7 +1,7 @@
 {
-  "name": "oh-my-opencode-windows-x64-baseline",
-  "version": "3.11.0",
-  "description": "Platform-specific binary for oh-my-opencode (windows-x64-baseline, no AVX2)",
+  "name": "openagent-labforge-windows-x64-baseline",
+  "version": "3.12.0",
+  "description": "Platform-specific binary for openagent-labforge (windows-x64-baseline, no AVX2)",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,6 +17,6 @@
     "bin"
   ],
   "bin": {
-    "oh-my-opencode": "./bin/oh-my-opencode.exe"
+    "openagent-labforge": "./bin/openagent-labforge.exe"
   }
 }

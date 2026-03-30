@@ -6,6 +6,7 @@ export const McpNameSchema = z.enum([
   "grep_app",
   "arxiv_mcp",
   "browser_puppeteer",
+  "chrome-devtools-mcp",
   "fetch_browser",
   "deepwiki_mcp",
   "open_websearch_mcp",

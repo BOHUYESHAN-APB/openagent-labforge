@@ -32,6 +32,13 @@ export const browser_puppeteer: LocalMcpConfig = {
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
 
+export const chrome_devtools_mcp: LocalMcpConfig = {
+  type: "local",
+  command: ["npx", "-y", "chrome-devtools-mcp@latest"],
+  enabled: false,
+  timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
+}
+
 export const fetch_browser: LocalMcpConfig = {
   type: "local",
   command: ["npx", "-y", "@TheSethRose/Fetch-Browser"],
@@ -75,7 +82,7 @@ export const paper_search_mcp: LocalMcpConfig = {
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {
   type: "local",
-  command: ["uvx", "semantic-scholar-fastmcp-mcp-server"],
+  command: ["uvx", "semantic-scholar-fastmcp"],
   enabled: false,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }

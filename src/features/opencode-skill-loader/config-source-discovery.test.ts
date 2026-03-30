@@ -51,8 +51,8 @@ describe("config source discovery", () => {
     const configDir = join(TEST_DIR, "config")
     const sourceDir = join(configDir, "custom-skills")
 
-    writeSkill(join(sourceDir, "keep", "kept"), "kept-skill", "Should be kept")
-    writeSkill(join(sourceDir, "skip", "skipped"), "skipped-skill", "Should be skipped")
+    writeSkill(join(sourceDir, "keep", "kept"), "kept", "Should be kept")
+    writeSkill(join(sourceDir, "skip", "skipped"), "skipped", "Should be skipped")
     const config = SkillsConfigSchema.parse({
       sources: [{ path: "./custom-skills", recursive: true, glob: "keep/**" }],
     })
@@ -65,8 +65,8 @@ describe("config source discovery", () => {
 
     // then
     const names = skills.map((skill) => skill.name)
-    expect(names).toContain("keep/kept-skill")
-    expect(names).not.toContain("skip/skipped-skill")
+    expect(names).toContain("keep/kept")
+    expect(names).not.toContain("skip/skipped")
   })
 
   it("normalizes windows separators before glob matching", () => {

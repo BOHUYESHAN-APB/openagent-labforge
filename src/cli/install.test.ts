@@ -111,6 +111,10 @@ describe("install CLI - binary check behavior", () => {
     const config = JSON.parse(readFileSync(configPath, "utf-8"))
     expect(config.plugin).toBeDefined()
     expect(config.plugin.some((p: string) => p.includes("openagent-labforge-core"))).toBe(true)
+    expect(config.mcp).toBeDefined()
+    expect(config.mcp.browser_puppeteer.enabled).toBe(false)
+    expect(config.mcp["chrome-devtools-mcp"].enabled).toBe(false)
+    expect(config.mcp.paper_search_mcp.enabled).toBe(true)
 
     // then exit code should be 0 (success)
     expect(exitCode).toBe(0)

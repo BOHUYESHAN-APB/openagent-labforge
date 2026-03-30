@@ -9,6 +9,7 @@ interface ParseConfigResult {
 
 export interface OpenCodeConfig {
   plugin?: string[]
+  mcp?: Record<string, unknown>
   [key: string]: unknown
 }
 

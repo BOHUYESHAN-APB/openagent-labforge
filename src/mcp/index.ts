@@ -4,6 +4,7 @@ import { grep_app } from "./grep-app"
 import {
   arxiv_mcp,
   browser_puppeteer,
+  chrome_devtools_mcp,
   deepwiki_mcp,
   fetch_browser,
   open_websearch_mcp,
@@ -36,6 +37,7 @@ type BuiltinMcpConfig = RemoteMcpConfig | LocalMcpConfig
 const EXTENDED_BUILTIN_MCPS: Record<string, BuiltinMcpConfig> = {
   arxiv_mcp,
   browser_puppeteer,
+  "chrome-devtools-mcp": chrome_devtools_mcp,
   fetch_browser,
   deepwiki_mcp,
   open_websearch_mcp,

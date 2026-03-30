@@ -71,6 +71,22 @@ function getCliConfigDir(): string {
   return join(xdgConfig, "opencode")
 }
 
+function resolvePluginConfigPath(configDir: string): string {
+  const candidates = [
+    join(configDir, "openagent-labforge.jsonc"),
+    join(configDir, "openagent-labforge.json"),
+    join(configDir, "oh-my-opencode.jsonc"),
+    join(configDir, "oh-my-opencode.json"),
+  ]
+
+  const existing = candidates.find((path) => existsSync(path))
+  if (existing) {
+    return existing
+  }
+
+  return candidates[0]
+}
+
 export function getOpenCodeConfigDir(options: OpenCodeConfigDirOptions): string {
   const { binary, version, checkExisting = true } = options
 
@@ -102,7 +118,7 @@ export function getOpenCodeConfigPaths(options: OpenCodeConfigDirOptions): OpenC
     configJson: join(configDir, "opencode.json"),
     configJsonc: join(configDir, "opencode.jsonc"),
     packageJson: join(configDir, "package.json"),
-    pluginConfig: join(configDir, "openagent-labforge.json"),
+    pluginConfig: resolvePluginConfigPath(configDir),
   }
 }
 

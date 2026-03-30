@@ -11,7 +11,7 @@ export function createOhMyOpenCodeJsonSchema(): Record<string, unknown> {
     $schema: "http://json-schema.org/draft-07/schema#",
     $id: "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/dev/assets/openagent-labforge.schema.json",
     title: "OpenAgent Labforge Configuration",
-    description: "Configuration schema for @labforge/openagent-labforge-core",
+    description: "Configuration schema for @bohuyeshan/openagent-labforge-core",
     ...jsonSchema,
   }
 }

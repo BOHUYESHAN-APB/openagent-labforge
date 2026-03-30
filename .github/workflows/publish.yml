@@ -178,7 +178,7 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://registry.npmjs.org/oh-my-opencode/${VERSION}")
           if [ "$STATUS" = "200" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "✓ oh-my-opencode@${VERSION} already published"
+            echo "✓ @bohuyeshan/openagent-labforge-core@${VERSION} already published"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
@@ -204,7 +204,7 @@ jobs:
           bunx tsc --emitDeclarationOnly
           bun run build:schema
 
-      - name: Publish oh-my-opencode
+      - name: Publish @bohuyeshan/openagent-labforge-core
         if: steps.check.outputs.skip != 'true'
         run: |
           TAG_ARG=""
@@ -214,41 +214,6 @@ jobs:
           npm publish --access public --provenance $TAG_ARG
         env:
           NPM_CONFIG_PROVENANCE: true
-
-      - name: Publish oh-my-openagent
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          # Update package name to oh-my-openagent
-          jq '.name = "oh-my-openagent"' package.json > tmp.json && mv tmp.json package.json
-          
-          # Update optionalDependencies to use oh-my-openagent naming
-          jq '.optionalDependencies = {
-            "oh-my-openagent-darwin-arm64": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-darwin-x64": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-darwin-x64-baseline": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-arm64": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-arm64-musl": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-x64": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-x64-baseline": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-x64-musl": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-linux-x64-musl-baseline": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-windows-x64": "${{ steps.version.outputs.version }}",
-            "oh-my-openagent-windows-x64-baseline": "${{ steps.version.outputs.version }}"
-          }' package.json > tmp.json && mv tmp.json package.json
-          
-          TAG_ARG=""
-          if [ -n "${{ steps.version.outputs.dist_tag }}" ]; then
-            TAG_ARG="--tag ${{ steps.version.outputs.dist_tag }}"
-          fi
-          npm publish --access public --provenance $TAG_ARG || echo "oh-my-openagent publish may have failed (package may already exist)"
-        env:
-          NPM_CONFIG_PROVENANCE: true
-
-      - name: Restore package.json
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          # Restore original package name
-          jq '.name = "oh-my-opencode"' package.json > tmp.json && mv tmp.json package.json
 
   trigger-platform:
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@ import {
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
+  syncStaticMcpToOpenCodeConfig,
   writeBootstrapSkill,
   writeOmoConfig,
 } from "./config-manager"
@@ -44,7 +45,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
 
   printHeader(isUpdate)
 
-  const totalSteps = 5
+  const totalSteps = 6
   let step = 1
 
   printStep(step++, totalSteps, "Checking OpenCode installation...")
@@ -83,6 +84,14 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
     return 1
   }
   printSuccess(`Config written ${SYMBOLS.arrow} ${color.dim(omoResult.configPath)}`)
+
+  printStep(step++, totalSteps, "Syncing static MCP configuration...")
+  const staticMcpResult = syncStaticMcpToOpenCodeConfig()
+  if (!staticMcpResult.success) {
+    printError(`Failed: ${staticMcpResult.error}`)
+    return 1
+  }
+  printSuccess(`Static MCP config synced ${SYMBOLS.arrow} ${color.dim(staticMcpResult.configPath)}`)
 
   printStep(step++, totalSteps, "Bootstrapping openagent-labforge skill...")
   const bootstrapSkillResult = writeBootstrapSkill()

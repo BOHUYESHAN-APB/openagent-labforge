@@ -1,6 +1,6 @@
 import { fetchNpmDistTags } from "./npm-dist-tags"
 
-const PACKAGE_NAME = "@labforge/openagent-labforge-core"
+const PACKAGE_NAME = "@bohuyeshan/openagent-labforge-core"
 const PRIORITIZED_TAGS = ["latest", "beta", "next"] as const
 
 function getFallbackEntry(version: string): string {

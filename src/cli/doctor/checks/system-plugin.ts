@@ -3,6 +3,11 @@ import { existsSync, readFileSync } from "node:fs"
 import { PACKAGE_NAME } from "../constants"
 import { getOpenCodeConfigPaths, parseJsonc } from "../../../shared"
 
+const LEGACY_PACKAGE_NAMES = [
+  "@labforge/openagent-labforge-core",
+  "oh-my-opencode",
+] as const
+
 export interface PluginInfo {
   registered: boolean
   configPath: string | null
@@ -24,26 +29,23 @@ function detectConfigPath(): string | null {
 }
 
 function parsePluginVersion(entry: string): string | null {
-  if (!entry.startsWith(`${PACKAGE_NAME}@`)) return null
-  const value = entry.slice(PACKAGE_NAME.length + 1)
+  const packageName = [PACKAGE_NAME, ...LEGACY_PACKAGE_NAMES].find((name) => entry.startsWith(`${name}@`))
+  if (!packageName) return null
+
+  const value = entry.slice(packageName.length + 1)
   if (!value || value === "latest") return null
   return value
 }
 
 function findPluginEntry(entries: string[]): { entry: string; isLocalDev: boolean } | null {
-  const legacyName = "oh-my-opencode"
   for (const entry of entries) {
-    if (entry === PACKAGE_NAME || entry.startsWith(`${PACKAGE_NAME}@`)) {
-      return { entry, isLocalDev: false }
-    }
-    if (entry === legacyName || entry.startsWith(`${legacyName}@`)) {
-      return { entry, isLocalDev: false }
-    }
-    if (entry.startsWith("file://") && entry.includes(PACKAGE_NAME)) {
-      return { entry, isLocalDev: true }
-    }
-    if (entry.startsWith("file://") && entry.includes(legacyName)) {
-      return { entry, isLocalDev: true }
+    for (const name of [PACKAGE_NAME, ...LEGACY_PACKAGE_NAMES]) {
+      if (entry === name || entry.startsWith(`${name}@`)) {
+        return { entry, isLocalDev: false }
+      }
+      if (entry.startsWith("file://") && entry.includes(name)) {
+        return { entry, isLocalDev: true }
+      }
     }
   }
 

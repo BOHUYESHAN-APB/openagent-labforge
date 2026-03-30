@@ -5,6 +5,12 @@ import { getPluginConfigPath } from "./config-context"
 import { detectConfigFormat } from "./opencode-config-format"
 import { parseOpenCodeConfigFileWithError } from "./parse-opencode-config-file"
 
+const PACKAGE_NAMES = [
+  "@bohuyeshan/openagent-labforge-core",
+  "@labforge/openagent-labforge-core",
+  "oh-my-opencode",
+] as const
+
 function detectProvidersFromPluginConfig(): {
   hasOpenAI: boolean
   hasOpencodeZen: boolean
@@ -60,7 +66,7 @@ export function detectCurrentConfig(): DetectedConfig {
 
   const openCodeConfig = parseResult.config
   const plugins = openCodeConfig.plugin ?? []
-  result.isInstalled = plugins.some((p) => p.startsWith("@labforge/openagent-labforge-core") || p.startsWith("oh-my-opencode"))
+  result.isInstalled = plugins.some((p) => PACKAGE_NAMES.some((name) => p.startsWith(name)))
 
   if (!result.isInstalled) {
     return result
