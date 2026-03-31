@@ -73,6 +73,33 @@ describe("opencode-server-auth", () => {
     })
   })
 
+  test("#given method-style setConfig using this #when injecting #then preserves method context", () => {
+    process.env.OPENCODE_SERVER_PASSWORD = "secret"
+    delete process.env.OPENCODE_SERVER_USERNAME
+
+    const sdkClient = {
+      _fns: {
+        touched: true,
+      },
+      lastConfig: undefined as { headers?: Record<string, string> } | undefined,
+      setConfig(config: { headers?: Record<string, string> }) {
+        sdkClient.lastConfig = config
+        return this._fns
+      },
+    }
+
+    const client = {
+      _client: sdkClient,
+    }
+
+    expect(() => injectServerAuthIntoClient(client)).not.toThrow()
+    expect(sdkClient.lastConfig).toEqual({
+      headers: {
+        Authorization: "Basic b3BlbmNvZGU6c2VjcmV0",
+      },
+    })
+  })
+
   test("#given server password #when injecting wraps internal fetch #then wrapped fetch adds Authorization header", async () => {
     //#given
     process.env.OPENCODE_SERVER_PASSWORD = "secret"

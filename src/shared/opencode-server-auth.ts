@@ -53,11 +53,11 @@ function tryInjectViaSetConfigHeaders(internal: UnknownRecord, auth: string): bo
     return false
   }
 
-  setConfig({
+  Reflect.apply(setConfig, internal, [{
     headers: {
       Authorization: auth,
     },
-  })
+  }])
 
   return true
 }
@@ -78,12 +78,14 @@ function tryInjectViaInterceptors(internal: UnknownRecord, auth: string): boolea
     return false
   }
 
-  use((request: Request): Request => {
-    if (!request.headers.get("Authorization")) {
-      request.headers.set("Authorization", auth)
-    }
-    return request
-  })
+  Reflect.apply(use, requestInterceptors, [
+    (request: Request): Request => {
+      if (!request.headers.get("Authorization")) {
+        request.headers.set("Authorization", auth)
+      }
+      return request
+    },
+  ])
 
   return true
 }
@@ -95,7 +97,7 @@ function tryInjectViaFetchWrapper(internal: UnknownRecord, auth: string): boolea
     return false
   }
 
-  const config = getConfig()
+  const config = Reflect.apply(getConfig, internal, [])
   if (!isRecord(config)) {
     return false
   }
@@ -105,9 +107,9 @@ function tryInjectViaFetchWrapper(internal: UnknownRecord, auth: string): boolea
     return false
   }
 
-  setConfig({
+  Reflect.apply(setConfig, internal, [{
     fetch: wrapRequestFetch(fetchValue, auth),
-  })
+  }])
 
   return true
 }
