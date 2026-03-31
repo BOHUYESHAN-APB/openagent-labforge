@@ -39,7 +39,6 @@ export function enforceStrictUserModelPriorityOnAgents(agents: Record<string, un
       }
 
       const sanitized = { ...(value as Record<string, unknown>) }
-      delete sanitized.model
       delete sanitized.fallback_models
 
       return [name, sanitized]
