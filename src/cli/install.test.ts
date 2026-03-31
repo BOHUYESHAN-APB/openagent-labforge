@@ -117,6 +117,7 @@ describe("install CLI - binary check behavior", () => {
     expect(config.mcp.browser_puppeteer.enabled).toBe(false)
     expect(config.mcp["chrome-devtools-mcp"].enabled).toBe(false)
     expect(config.mcp.paper_search_mcp.enabled).toBe(true)
+    expect(config.mcp.semantic_scholar_fastmcp.enabled).toBe(false)
 
     // then exit code should be 0 (success)
     expect(exitCode).toBe(0)
