@@ -150,7 +150,8 @@ export async function applyAgentConfig(params: {
   const builderEnabled =
     params.pluginConfig.sisyphus_agent?.default_builder_enabled ?? false;
   const plannerEnabled = params.pluginConfig.sisyphus_agent?.planner_enabled ?? true;
-  const replacePlan = params.pluginConfig.sisyphus_agent?.replace_plan ?? true;
+  const replacePlan = params.pluginConfig.sisyphus_agent?.replace_plan ?? false;
+  const hijackBuild = params.pluginConfig.sisyphus_agent?.hijack_build ?? false;
   const shouldDemotePlan = plannerEnabled && replacePlan;
   const configuredDefaultAgent = getConfiguredDefaultAgent(params.config);
 
@@ -204,7 +205,7 @@ export async function applyAgentConfig(params: {
       ? Object.fromEntries(
           Object.entries(configAgent)
             .filter(([key]) => {
-              if (key === "build") return false;
+              if (key === "build" && hijackBuild) return false;
               if (key === "plan" && shouldDemotePlan) return false;
               if (key in builtinAgents) return false;
               return true;
@@ -253,7 +254,7 @@ export async function applyAgentConfig(params: {
       ...filterDisabledAgents(filteredProjectAgents),
       ...filterDisabledAgents(filteredPluginAgents),
       ...filteredConfigAgents,
-      build: { ...migratedBuild, mode: "subagent", hidden: true },
+      ...(hijackBuild ? { build: { ...migratedBuild, mode: "subagent", hidden: true } } : {}),
       ...(planDemoteConfig ? { plan: planDemoteConfig } : {}),
     };
   } else {

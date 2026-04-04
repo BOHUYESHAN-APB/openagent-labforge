@@ -6,6 +6,7 @@
 
 - normalized session agent storage to config keys so display-name recovery does not break continuation paths
 - split atlas idle continuation logic into dedicated modules to reduce event-handler complexity and stabilize session resume behavior
+- restored OpenCode's lightweight `build` and `plan` agents by default; our plugin now only hijacks them when explicitly configured
 
 ### OpenCode compatibility
 

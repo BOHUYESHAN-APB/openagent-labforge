@@ -207,7 +207,7 @@ describe("Plan agent demote behavior", () => {
     expect(ordered).toEqual(coreAgents)
   })
 
-  test("plan agent should be demoted to subagent without inheriting prometheus prompt", async () => {
+  test("plan agent should be demoted to subagent without inheriting prometheus prompt when replace_plan is enabled", async () => {
     // #given
     const pluginConfig: OhMyOpenCodeConfig = {
       sisyphus_agent: {
@@ -243,6 +243,43 @@ describe("Plan agent demote behavior", () => {
     expect(agents.plan.mode).toBe("subagent")
     expect(agents.plan.prompt).toBeUndefined()
     expect(agents[getAgentDisplayName("prometheus")]?.prompt).toBeDefined()
+  })
+
+  test("plan agent remains visible by default when planner is enabled", async () => {
+    // #given
+    const pluginConfig: OhMyOpenCodeConfig = {
+      sisyphus_agent: {
+        planner_enabled: true,
+      },
+    }
+    const config: Record<string, unknown> = {
+      model: "anthropic/claude-opus-4-6",
+      agent: {
+        plan: {
+          name: "plan",
+          mode: "primary",
+          prompt: "original plan prompt",
+        },
+      },
+    }
+    const handler = createConfigHandler({
+      ctx: { directory: "/tmp" },
+      pluginConfig,
+      modelCacheState: {
+        anthropicContext1MEnabled: false,
+        modelContextLimitsCache: new Map(),
+      },
+    })
+
+    // #when
+    await handler(config)
+
+    // #then
+    const agents = config.agent as Record<string, { mode?: string; prompt?: string }>
+    expect(agents.plan).toBeDefined()
+    expect(agents.plan.mode).toBe("primary")
+    expect(agents.plan.prompt).toBe("original plan prompt")
+    expect(agents[getAgentDisplayName("prometheus")]).toBeDefined()
   })
 
   test("plan agent remains unchanged when planner is disabled", async () => {
@@ -346,6 +383,78 @@ describe("Agent permission defaults", () => {
     const hephaestusKey = getAgentDisplayName("hephaestus")
     expect(agentConfig[hephaestusKey]).toBeDefined()
     expect(agentConfig[hephaestusKey].permission?.task).toBe("allow")
+  })
+})
+
+describe("Build agent visibility", () => {
+  test("build agent remains visible by default when present in config", async () => {
+    // #given
+    const pluginConfig: OhMyOpenCodeConfig = {
+      sisyphus_agent: {},
+    }
+    const config: Record<string, unknown> = {
+      model: "anthropic/claude-opus-4-6",
+      agent: {
+        build: {
+          name: "build",
+          mode: "primary",
+          prompt: "original build prompt",
+        },
+      },
+    }
+    const handler = createConfigHandler({
+      ctx: { directory: "/tmp" },
+      pluginConfig,
+      modelCacheState: {
+        anthropicContext1MEnabled: false,
+        modelContextLimitsCache: new Map(),
+      },
+    })
+
+    // #when
+    await handler(config)
+
+    // #then
+    const agents = config.agent as Record<string, { mode?: string; prompt?: string }>
+    expect(agents.build).toBeDefined()
+    expect(agents.build.mode).toBe("primary")
+    expect(agents.build.prompt).toBe("original build prompt")
+  })
+
+  test("build agent is demoted only when hijack_build is enabled", async () => {
+    // #given
+    const pluginConfig: OhMyOpenCodeConfig = {
+      sisyphus_agent: {
+        hijack_build: true,
+      },
+    }
+    const config: Record<string, unknown> = {
+      model: "anthropic/claude-opus-4-6",
+      agent: {
+        build: {
+          name: "build",
+          mode: "primary",
+          prompt: "original build prompt",
+        },
+      },
+    }
+    const handler = createConfigHandler({
+      ctx: { directory: "/tmp" },
+      pluginConfig,
+      modelCacheState: {
+        anthropicContext1MEnabled: false,
+        modelContextLimitsCache: new Map(),
+      },
+    })
+
+    // #when
+    await handler(config)
+
+    // #then
+    const agents = config.agent as Record<string, { mode?: string; hidden?: boolean }>
+    expect(agents.build).toBeDefined()
+    expect(agents.build.mode).toBe("subagent")
+    expect(agents.build.hidden).toBe(true)
   })
 })
 
