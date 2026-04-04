@@ -1,4 +1,5 @@
 import type { CommandDefinition } from "../claude-code-command-loader"
+import { isAgentRegistered } from "../claude-code-session-state"
 import type { BuiltinCommandName, BuiltinCommands } from "./types"
 import { INIT_DEEP_TEMPLATE } from "./templates/init-deep"
 import { RALPH_LOOP_TEMPLATE, ULW_LOOP_TEMPLATE, CANCEL_RALPH_TEMPLATE } from "./templates/ralph-loop"
@@ -7,7 +8,22 @@ import { REFACTOR_TEMPLATE } from "./templates/refactor"
 import { START_WORK_TEMPLATE } from "./templates/start-work"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
 
-const BUILTIN_COMMAND_DEFINITIONS: Record<BuiltinCommandName, Omit<CommandDefinition, "name">> = {
+export interface LoadBuiltinCommandsOptions {
+  useRegisteredAgents?: boolean
+}
+
+function resolveStartWorkAgent(options?: LoadBuiltinCommandsOptions): "atlas" | "sisyphus" {
+  if (options?.useRegisteredAgents) {
+    return isAgentRegistered("atlas") ? "atlas" : "sisyphus"
+  }
+
+  return "atlas"
+}
+
+function createBuiltinCommandDefinitions(
+  options?: LoadBuiltinCommandsOptions,
+): Record<BuiltinCommandName, Omit<CommandDefinition, "name">> {
+  return {
   "init-deep": {
     description: "(builtin) Initialize hierarchical AGENTS.md knowledge base",
     template: `<command-instruction>
@@ -57,7 +73,7 @@ ${REFACTOR_TEMPLATE}
   },
   "start-work": {
     description: "(builtin) Start Sisyphus work session from Prometheus plan",
-    agent: "atlas",
+    agent: resolveStartWorkAgent(options),
     template: `<command-instruction>
 ${START_WORK_TEMPLATE}
 </command-instruction>
@@ -94,15 +110,18 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[goal]",
   },
+  }
 }
 
 export function loadBuiltinCommands(
-  disabledCommands?: BuiltinCommandName[]
+  disabledCommands?: BuiltinCommandName[],
+  options?: LoadBuiltinCommandsOptions,
 ): BuiltinCommands {
   const disabled = new Set(disabledCommands ?? [])
   const commands: BuiltinCommands = {}
+  const builtinCommandDefinitions = createBuiltinCommandDefinitions(options)
 
-  for (const [name, definition] of Object.entries(BUILTIN_COMMAND_DEFINITIONS)) {
+  for (const [name, definition] of Object.entries(builtinCommandDefinitions)) {
     if (!disabled.has(name as BuiltinCommandName)) {
       const { argumentHint: _argumentHint, ...openCodeCompatible } = definition
       commands[name] = { ...openCodeCompatible, name } as CommandDefinition

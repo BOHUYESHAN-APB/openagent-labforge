@@ -11,6 +11,10 @@ import {
 } from "./sisyphus/gemini";
 import { buildGpt54SisyphusPrompt } from "./sisyphus/gpt-5-4";
 import { buildTaskManagementSection } from "./sisyphus/default";
+import {
+  ENGINEERING_EXECUTION_CAPABILITY,
+  ENGINEERING_ORCHESTRATION_CAPABILITY,
+} from "./engineering-capability";
 
 const MODE: AgentMode = "all";
 export const SISYPHUS_PROMPT_METADATA: AgentPromptMetadata = {
@@ -453,14 +457,14 @@ export function createSisyphusAgent(
   const agents = availableAgents ?? [];
 
   if (isGpt5_4Model(model)) {
-    const prompt = buildGpt54SisyphusPrompt(
+    const prompt = `${buildGpt54SisyphusPrompt(
       model,
       agents,
       tools,
       skills,
       categories,
       useTaskSystem,
-    );
+    )}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}`;
     return {
       description:
         "Powerful AI orchestrator. Plans obsessively with todos, assesses search complexity before exploration, delegates strategically via category+skills combinations. Uses explore for internal code (parallel-friendly), librarian for external docs. (Sisyphus - OhMyOpenCode)",
@@ -507,6 +511,8 @@ export function createSisyphusAgent(
       `${buildGeminiDelegationOverride()}\n\n${buildGeminiVerificationOverride()}\n\n<Constraints>`
     );
   }
+
+  prompt = `${prompt}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}`
 
   const permission = {
     question: "allow",

@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { tmpdir, homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createStartWorkHook } from "./index"
+import { getAgentDisplayName } from "../../shared/agent-display-names"
 import {
   writeBoulderState,
   clearBoulderState,
@@ -11,7 +12,6 @@ import {
 } from "../../features/boulder-state"
 import type { BoulderState } from "../../features/boulder-state"
 import * as sessionState from "../../features/claude-code-session-state"
-import * as worktreeDetector from "./worktree-detector"
 import * as worktreeDetector from "./worktree-detector"
 
 describe("start-work hook", () => {
@@ -25,7 +25,20 @@ describe("start-work hook", () => {
     } as Parameters<typeof createStartWorkHook>[0]
   }
 
+  function createStartWorkPrompt(options?: {
+    sessionContext?: string
+    userRequest?: string
+  }): string {
+    const sessionContext = options?.sessionContext ?? ""
+    const userRequest = options?.userRequest ?? ""
+
+    return `<session-context>${sessionContext}</session-context>${userRequest ? `\n\n<user-request>${userRequest}</user-request>` : ""}`
+  }
+
   beforeEach(() => {
+    sessionState._resetForTesting()
+    sessionState.registerAgentName("atlas")
+    sessionState.registerAgentName("sisyphus")
     testDir = join(tmpdir(), `start-work-test-${randomUUID()}`)
     sisyphusDir = join(testDir, ".sisyphus")
     if (!existsSync(testDir)) {
@@ -38,6 +51,7 @@ describe("start-work hook", () => {
   })
 
   afterEach(() => {
+    sessionState._resetForTesting()
     clearBoulderState(testDir)
     if (existsSync(testDir)) {
       rmSync(testDir, { recursive: true, force: true })
@@ -403,6 +417,98 @@ describe("start-work hook", () => {
       // then
       expect(updateSpy).toHaveBeenCalledWith("ses-prometheus-to-sisyphus", "atlas")
       updateSpy.mockRestore()
+    })
+
+    test("should stamp outgoing message with active agent display name", async () => {
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt() }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-prometheus-to-atlas" },
+        output,
+      )
+
+      expect(output.message.agent).toBe(getAgentDisplayName("atlas"))
+    })
+
+    test("should keep current worker when atlas is unavailable", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("sisyphus")
+      sessionState.updateSessionAgent("ses-prometheus-to-sisyphus", "sisyphus")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt() }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-prometheus-to-sisyphus" },
+        output,
+      )
+
+      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(sessionState.getSessionAgent("ses-prometheus-to-sisyphus")).toBe("sisyphus")
+    })
+
+    test("should fall back to sisyphus instead of keeping prometheus when atlas is unavailable", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("prometheus")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.updateSessionAgent("ses-prometheus-to-worker", "prometheus")
+
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+      writeFileSync(join(plansDir, "worker-plan.md"), "# Plan\n- [ ] Task 1")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt() }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-prometheus-to-worker" },
+        output,
+      )
+
+      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(sessionState.getSessionAgent("ses-prometheus-to-worker")).toBe("sisyphus")
+      expect(readBoulderState(testDir)?.agent).toBe("sisyphus")
+    })
+
+    test("should rewrite stale prometheus boulder state to sisyphus when resuming without atlas", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("prometheus")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.updateSessionAgent("ses-prometheus-resume", "prometheus")
+
+      const planPath = join(testDir, "resume-plan.md")
+      writeFileSync(planPath, "# Plan\n- [ ] Task 1")
+      writeBoulderState(testDir, {
+        active_plan: planPath,
+        started_at: "2026-01-02T10:00:00Z",
+        session_ids: ["old-session"],
+        plan_name: "resume-plan",
+        agent: "prometheus",
+      })
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt() }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-prometheus-resume" },
+        output,
+      )
+
+      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(readBoulderState(testDir)?.agent).toBe("sisyphus")
     })
   })
 

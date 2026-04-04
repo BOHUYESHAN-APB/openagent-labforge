@@ -4,6 +4,7 @@ import type { CategoriesConfig, GitMasterConfig } from "../config/schema"
 import type { LoadedSkill } from "../features/opencode-skill-loader/types"
 import type { BrowserAutomationProvider } from "../config/schema"
 import { createSisyphusAgent } from "./sisyphus"
+import { createWaseAgent, WASE_PROMPT_METADATA } from "./wase"
 import { createOracleAgent, ORACLE_PROMPT_METADATA } from "./oracle"
 import { createLibrarianAgent, LIBRARIAN_PROMPT_METADATA } from "./librarian"
 import { createExploreAgent, EXPLORE_PROMPT_METADATA } from "./explore"
@@ -11,11 +12,16 @@ import { createGitHubScoutAgent, GITHUB_SCOUT_PROMPT_METADATA } from "./github-s
 import { createTechScoutAgent, TECH_SCOUT_PROMPT_METADATA } from "./tech-scout"
 import { createArticleWriterAgent, ARTICLE_WRITER_PROMPT_METADATA } from "./article-writer"
 import { createScientificWriterAgent, SCIENTIFIC_WRITER_PROMPT_METADATA } from "./scientific-writer"
+import { createBioOrchestratorAgent, BIO_ORCHESTRATOR_PROMPT_METADATA } from "./bio-orchestrator"
 import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
 import {
   createBioMethodologistAgent,
   BIO_METHODOLOGIST_PROMPT_METADATA,
 } from "./bio-methodologist"
+import {
+  createWetLabDesignerAgent,
+  WET_LAB_DESIGNER_PROMPT_METADATA,
+} from "./wet-lab-designer"
 import {
   createBioPipelineOperatorAgent,
   BIO_PIPELINE_OPERATOR_PROMPT_METADATA,
@@ -38,7 +44,7 @@ import { CATEGORY_DESCRIPTIONS } from "../tools/delegate-task/constants"
 import { mergeCategories } from "../shared/merge-categories"
 import { buildAvailableSkills } from "./builtin-agents/available-skills"
 import { collectPendingBuiltinAgents } from "./builtin-agents/general-agents"
-import { maybeCreateSisyphusConfig } from "./builtin-agents/sisyphus-agent"
+import { maybeCreateSisyphusConfig, maybeCreateWaseConfig } from "./builtin-agents/sisyphus-agent"
 import { maybeCreateHephaestusConfig } from "./builtin-agents/hephaestus-agent"
 import { maybeCreateAtlasConfig } from "./builtin-agents/atlas-agent"
 import { buildCustomAgentMetadata, parseRegisteredAgentSummaries } from "./custom-agent-summaries"
@@ -47,6 +53,7 @@ type AgentSource = AgentFactory | AgentConfig
 
 const agentSources: Record<BuiltinAgentName, AgentSource> = {
   sisyphus: createSisyphusAgent,
+  wase: createWaseAgent,
   hephaestus: createHephaestusAgent,
   oracle: createOracleAgent,
   librarian: createLibrarianAgent,
@@ -55,8 +62,10 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   "tech-scout": createTechScoutAgent,
   "article-writer": createArticleWriterAgent,
   "scientific-writer": createScientificWriterAgent,
+  "bio-orchestrator": createBioOrchestratorAgent,
   "multimodal-looker": createMultimodalLookerAgent,
   "bio-methodologist": createBioMethodologistAgent,
+  "wet-lab-designer": createWetLabDesignerAgent,
   "bio-pipeline-operator": createBioPipelineOperatorAgent,
   "paper-evidence-synthesizer": createPaperEvidenceSynthesizerAgent,
   metis: createMetisAgent,
@@ -78,13 +87,16 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   "tech-scout": TECH_SCOUT_PROMPT_METADATA,
   "article-writer": ARTICLE_WRITER_PROMPT_METADATA,
   "scientific-writer": SCIENTIFIC_WRITER_PROMPT_METADATA,
+  "bio-orchestrator": BIO_ORCHESTRATOR_PROMPT_METADATA,
   "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
   "bio-methodologist": BIO_METHODOLOGIST_PROMPT_METADATA,
+  "wet-lab-designer": WET_LAB_DESIGNER_PROMPT_METADATA,
   "bio-pipeline-operator": BIO_PIPELINE_OPERATOR_PROMPT_METADATA,
   "paper-evidence-synthesizer": PAPER_EVIDENCE_SYNTHESIZER_PROMPT_METADATA,
   metis: metisPromptMetadata,
   momus: momusPromptMetadata,
   atlas: atlasPromptMetadata,
+  wase: WASE_PROMPT_METADATA,
 }
 
 export async function createBuiltinAgents(
@@ -182,6 +194,26 @@ export async function createBuiltinAgents(
   })
   if (sisyphusConfig) {
     result["sisyphus"] = sisyphusConfig
+  }
+
+  const waseConfig = maybeCreateWaseConfig({
+    disabledAgents,
+    agentOverrides,
+    uiSelectedModel,
+    availableModels,
+    systemDefaultModel,
+    isFirstRunNoCache,
+    availableAgents,
+    availableSkills,
+    availableCategories,
+    mergedCategories,
+    directory,
+    userCategories: categories,
+    useTaskSystem,
+    disableOmoEnv,
+  })
+  if (waseConfig) {
+    result["wase"] = waseConfig
   }
 
   const hephaestusConfig = maybeCreateHephaestusConfig({

@@ -8,11 +8,13 @@ import {
   getMainSessionID,
   _resetForTesting,
 } from "./state"
+import { getAgentDisplayName, setAgentDisplayLanguage } from "../../shared/agent-display-names"
 
 describe("claude-code-session-state", () => {
   beforeEach(() => {
     // given - clean state before each test
     _resetForTesting()
+    setAgentDisplayLanguage("en")
   })
 
   afterEach(() => {
@@ -21,28 +23,28 @@ describe("claude-code-session-state", () => {
   })
 
   describe("setSessionAgent", () => {
-    test("should store agent for session", () => {
+    test("should store config key for display-name agent input", () => {
       // given
       const sessionID = "test-session-1"
-      const agent = "Prometheus (Planner)"
+      const agent = "探索者"
 
       // when
       setSessionAgent(sessionID, agent)
 
       // then
-      expect(getSessionAgent(sessionID)).toBe(agent)
+      expect(getSessionAgent(sessionID)).toBe("explore")
     })
 
     test("should NOT overwrite existing agent (first-write wins)", () => {
       // given
       const sessionID = "test-session-1"
-      setSessionAgent(sessionID, "Prometheus (Planner)")
+      setSessionAgent(sessionID, "探索者")
 
       // when - try to overwrite
       setSessionAgent(sessionID, "sisyphus")
 
       // then - first agent preserved
-      expect(getSessionAgent(sessionID)).toBe("Prometheus (Planner)")
+      expect(getSessionAgent(sessionID)).toBe("explore")
     })
 
     test("should return undefined for unknown session", () => {
@@ -54,13 +56,13 @@ describe("claude-code-session-state", () => {
   })
 
   describe("updateSessionAgent", () => {
-    test("should overwrite existing agent", () => {
+    test("should overwrite existing agent and normalize to config key", () => {
       // given
       const sessionID = "test-session-1"
       setSessionAgent(sessionID, "Prometheus (Planner)")
 
       // when - force update
-      updateSessionAgent(sessionID, "sisyphus")
+      updateSessionAgent(sessionID, "总调度器 (超脑)")
 
       // then
       expect(getSessionAgent(sessionID)).toBe("sisyphus")
@@ -71,8 +73,8 @@ describe("claude-code-session-state", () => {
     test("should remove agent from session", () => {
       // given
       const sessionID = "test-session-1"
-      setSessionAgent(sessionID, "Prometheus (Planner)")
-      expect(getSessionAgent(sessionID)).toBe("Prometheus (Planner)")
+      setSessionAgent(sessionID, getAgentDisplayName("prometheus"))
+      expect(getSessionAgent(sessionID)).toBe("prometheus")
 
       // when
       clearSessionAgent(sessionID)
@@ -106,15 +108,15 @@ describe("claude-code-session-state", () => {
     test("should correctly identify Prometheus agent for permission checks", () => {
       // given - Prometheus session
       const sessionID = "test-prometheus-session"
-      const prometheusAgent = "Prometheus (Planner)"
+      const prometheusAgent = getAgentDisplayName("prometheus")
 
       // when - agent is set (simulating chat.message hook)
       setSessionAgent(sessionID, prometheusAgent)
 
       // then - getSessionAgent returns correct agent for prometheus-md-only hook
       const agent = getSessionAgent(sessionID)
-      expect(agent).toBe("Prometheus (Planner)")
-      expect(["Prometheus (Planner)"].includes(agent!)).toBe(true)
+      expect(agent).toBe("prometheus")
+      expect(["prometheus"].includes(agent!)).toBe(true)
     })
 
     test("should return undefined when agent not set (bug scenario)", () => {
@@ -135,7 +137,7 @@ describe("claude-code-session-state", () => {
 
       // User switches to custom agent (via UI)
       setSessionAgent(sessionID, customAgent)
-      expect(getSessionAgent(sessionID)).toBe(customAgent)
+      expect(getSessionAgent(sessionID)).toBe("mycustomagent")
 
       // when - first message after switch sends default agent
       // This simulates the bug: input.agent = "Sisyphus" on first message
@@ -143,7 +145,7 @@ describe("claude-code-session-state", () => {
       setSessionAgent(sessionID, defaultAgent)
 
       // then - custom agent should be preserved, NOT overwritten
-      expect(getSessionAgent(sessionID)).toBe(customAgent)
+      expect(getSessionAgent(sessionID)).toBe("mycustomagent")
     })
 
     test("should allow explicit agent update via updateSessionAgent", () => {
@@ -158,7 +160,7 @@ describe("claude-code-session-state", () => {
       updateSessionAgent(sessionID, newAgent)
 
       // then - should be updated
-      expect(getSessionAgent(sessionID)).toBe(newAgent)
+      expect(getSessionAgent(sessionID)).toBe("anotheragent")
     })
   })
 })

@@ -1,9 +1,14 @@
-import { describe, test, expect } from "bun:test"
+import { beforeEach, describe, test, expect } from "bun:test"
 import { loadBuiltinCommands } from "./commands"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { _resetForTesting, registerAgentName } from "../claude-code-session-state"
 import type { BuiltinCommandName } from "./types"
 
 describe("loadBuiltinCommands", () => {
+  beforeEach(() => {
+    _resetForTesting()
+  })
+
   test("should include handoff command in loaded commands", () => {
     //#given
     const disabledCommands: BuiltinCommandName[] = []
@@ -57,6 +62,22 @@ describe("loadBuiltinCommands", () => {
 
     //#then
     expect(commands.handoff.description).toContain("context summary")
+  })
+
+  test("should route start-work to atlas when registered-agent mode is enabled and atlas exists", () => {
+    registerAgentName("atlas")
+
+    const commands = loadBuiltinCommands([], { useRegisteredAgents: true })
+
+    expect(commands["start-work"].agent).toBe("atlas")
+  })
+
+  test("should route start-work to sisyphus when registered-agent mode is enabled and atlas is unavailable", () => {
+    registerAgentName("sisyphus")
+
+    const commands = loadBuiltinCommands([], { useRegisteredAgents: true })
+
+    expect(commands["start-work"].agent).toBe("sisyphus")
   })
 })
 

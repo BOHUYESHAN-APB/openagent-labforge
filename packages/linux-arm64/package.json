@@ -1,6 +1,6 @@
 {
   "name": "openagent-labforge-linux-arm64",
-  "version": "3.12.0",
+  "version": "3.13.0",
   "description": "Platform-specific binary for openagent-labforge (linux-arm64)",
   "license": "MIT",
   "repository": {

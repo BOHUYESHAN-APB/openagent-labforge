@@ -3,11 +3,86 @@
 // Wrapper script that detects platform and spawns the correct binary
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getPlatformPackageCandidates, getBinaryPath } from "./platform.js";
 
 const require = createRequire(import.meta.url);
+const CURRENT_DIR = dirname(fileURLToPath(import.meta.url));
+
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function getCorePackageVersion() {
+  const pkg = readJson(join(CURRENT_DIR, "..", "package.json"));
+  return typeof pkg?.version === "string" ? pkg.version : null;
+}
+
+function getPlatformPackageVersion(pkg) {
+  try {
+    const pkgJsonPath = require.resolve(`${pkg}/package.json`);
+    const parsed = readJson(pkgJsonPath);
+    return typeof parsed?.version === "string" ? parsed.version : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveBunCommand() {
+  const envBun = process.env.BUN || process.env.BUN_PATH;
+  if (envBun && existsSync(envBun)) {
+    return envBun;
+  }
+
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA || join(process.env.USERPROFILE || "", "AppData", "Roaming");
+    const localAppData = process.env.LOCALAPPDATA || join(process.env.USERPROFILE || "", "AppData", "Local");
+    const candidates = [
+      join(appData, "npm", "bun.cmd"),
+      join(appData, "npm", "bun.exe"),
+      join(localAppData, "bun", "bin", "bun.exe"),
+      "bun.cmd",
+      "bun.exe",
+      "bun",
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate.includes("\\") && !candidate.includes("/")) {
+        return candidate;
+      }
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return "bun";
+}
+
+function runJsCliFallback() {
+  const cliPath = join(CURRENT_DIR, "..", "dist", "cli", "index.js");
+  const bunCommand = resolveBunCommand();
+  const result = spawnSync(bunCommand, [cliPath, ...process.argv.slice(2)], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+
+  if (result.error) {
+    console.error(`\nopenagent-labforge: Failed to execute JS CLI fallback.`);
+    console.error(`Error: ${result.error.message}\n`);
+    process.exit(2);
+  }
+
+  if (result.signal) process.exit(getSignalExitCode(result.signal));
+  process.exit(result.status ?? 1);
+}
 
 function getLibcFamily() {
   if (process.platform !== "linux") return undefined;
@@ -50,6 +125,7 @@ function main() {
   const { platform, arch } = process;
   const libcFamily = getLibcFamily();
   const avx2Supported = supportsAvx2();
+  const coreVersion = getCorePackageVersion();
 
   let packageCandidates;
   try {
@@ -67,20 +143,30 @@ function main() {
   const resolvedBinaries = packageCandidates
     .map((pkg) => {
       try {
-        return { pkg, binPath: require.resolve(getBinaryPath(pkg, platform)) };
+        return {
+          pkg,
+          binPath: require.resolve(getBinaryPath(pkg, platform)),
+          version: getPlatformPackageVersion(pkg),
+        };
       } catch {
         return null;
       }
     })
-    .filter((entry) => entry !== null);
+    .filter((entry) => entry !== null)
+    .filter((entry) => {
+      if (!coreVersion || !entry.version) return true;
+      if (entry.version === coreVersion) return true;
+
+      console.error(
+        `openagent-labforge: Skipping stale platform binary ${entry.pkg}@${entry.version} ` +
+          `(core package is ${coreVersion}).`
+      );
+      return false;
+    });
 
   if (resolvedBinaries.length === 0) {
-    console.error(`\nopenagent-labforge: Platform binary not installed.`);
-    console.error(`\nYour platform: ${platform}-${arch}${libcFamily === "musl" ? "-musl" : ""}`);
-    console.error(`Expected packages (in order): ${packageCandidates.join(", ")}`);
-    console.error(`\nTo fix, run:`);
-    console.error(`  npm install ${packageCandidates[0]}\n`);
-    process.exit(1);
+    runJsCliFallback();
+    return;
   }
 
   for (let index = 0; index < resolvedBinaries.length; index += 1) {

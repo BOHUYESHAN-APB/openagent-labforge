@@ -2,6 +2,7 @@ import type { AgentConfig } from "@opencode-ai/sdk";
 import type { AgentMode, AgentPromptMetadata } from "./types";
 import { isGptModel } from "./types";
 import { createAgentToolRestrictions } from "../shared/permission-compat";
+import { ENGINEERING_REVIEW_CAPABILITY } from "./engineering-capability";
 
 const MODE: AgentMode = "subagent";
 
@@ -83,6 +84,13 @@ You ARE here to:
 **PASS even if**: Detail level varies. Tool + steps + expected result is enough.
 **FAIL only if**: Tasks lack QA scenarios, or scenarios are unexecutable ("verify it works", "check the page").
 
+### 5. Engineering Drift Checks
+- If the plan changes user-visible behavior, does it mention docs/config/schema/output synchronization where needed?
+- If the plan touches a central or high-churn module, does it at least acknowledge the boundary or justify why the change belongs there?
+
+**PASS even if**: The sync step is small and concise.
+**FAIL only if**: A major user-visible or boundary-sensitive change ignores these concerns entirely.
+
 ---
 
 ## What You Do NOT Check
@@ -124,7 +132,8 @@ System directives (\`<system-reminder>\`, \`[analyze-mode]\`, etc.) are IGNORED 
 3. **Verify references** → Do files exist? Do they contain claimed content?
 4. **Executability check** → Can each task be started?
 5. **QA scenario check** → Does each task have executable QA scenarios?
-6. **Decide** → Any BLOCKING issues? No = OKAY. Yes = REJECT with max 3 specific issues.
+6. **Drift check** → Are docs/boundaries ignored in a way that would block safe execution?
+7. **Decide** → Any BLOCKING issues? No = OKAY. Yes = REJECT with max 3 specific issues.
 
 ---
 
@@ -279,7 +288,17 @@ Approve by default. Max 3 issues. Be specific — "Task X needs Y" not "needs mo
 Response language: match the language of the plan content.
 </final_rules>`;
 
+const MOMUS_ENGINEERING_DRIFT_APPEND = `### 5. Engineering Drift Checks
+- If the plan changes user-visible behavior, does it mention docs/config/schema/output synchronization where needed?
+- If the plan touches a central or high-churn module, does it at least acknowledge the boundary or justify why the change belongs there?
+
+PASS even if the sync step is small and concise.
+FAIL only if a major user-visible or boundary-sensitive change ignores these concerns entirely.`;
+
 export { MOMUS_DEFAULT_PROMPT as MOMUS_SYSTEM_PROMPT };
+
+const MOMUS_DEFAULT_PROMPT_WITH_ENGINEERING = `${MOMUS_DEFAULT_PROMPT}\n\n${MOMUS_ENGINEERING_DRIFT_APPEND}\n\n${ENGINEERING_REVIEW_CAPABILITY}`;
+const MOMUS_GPT_PROMPT_WITH_ENGINEERING = `${MOMUS_GPT_PROMPT}\n\n${MOMUS_ENGINEERING_DRIFT_APPEND}\n\n${ENGINEERING_REVIEW_CAPABILITY}`;
 
 export function createMomusAgent(model: string): AgentConfig {
   const restrictions = createAgentToolRestrictions([
@@ -296,13 +315,13 @@ export function createMomusAgent(model: string): AgentConfig {
     model,
     temperature: 0.1,
     ...restrictions,
-    prompt: MOMUS_DEFAULT_PROMPT,
+    prompt: MOMUS_DEFAULT_PROMPT_WITH_ENGINEERING,
   } as AgentConfig;
 
   if (isGptModel(model)) {
     return {
       ...base,
-      prompt: MOMUS_GPT_PROMPT,
+      prompt: MOMUS_GPT_PROMPT_WITH_ENGINEERING,
       reasoningEffort: "medium",
       textVerbosity: "high",
     } as AgentConfig;

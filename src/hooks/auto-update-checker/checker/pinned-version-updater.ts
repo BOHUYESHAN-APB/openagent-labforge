@@ -2,6 +2,11 @@ import * as fs from "node:fs"
 import { log } from "../../../shared/logger"
 import { PACKAGE_NAME } from "../constants"
 
+const LEGACY_PACKAGE_NAMES = [
+  "oh-my-opencode",
+  "@labforge/openagent-labforge-core",
+] as const
+
 function replacePluginEntry(configPath: string, oldEntry: string, newEntry: string): boolean {
   try {
     const content = fs.readFileSync(configPath, "utf-8")
@@ -58,5 +63,16 @@ export function updatePinnedVersion(configPath: string, oldEntry: string, newVer
 
 export function revertPinnedVersion(configPath: string, failedVersion: string, originalEntry: string): boolean {
   const failedEntry = `${PACKAGE_NAME}@${failedVersion}`
-  return replacePluginEntry(configPath, failedEntry, originalEntry)
+  if (replacePluginEntry(configPath, failedEntry, originalEntry)) {
+    return true
+  }
+
+  for (const legacyName of LEGACY_PACKAGE_NAMES) {
+    const legacyFailedEntry = `${legacyName}@${failedVersion}`
+    if (replacePluginEntry(configPath, legacyFailedEntry, originalEntry)) {
+      return true
+    }
+  }
+
+  return false
 }

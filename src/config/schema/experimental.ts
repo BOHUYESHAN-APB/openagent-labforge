@@ -23,6 +23,8 @@ export const ExperimentalConfigSchema = z.object({
   model_fallback_title: z.boolean().optional(),
   /** Force final chat model to stay on user-selected model when explicitly chosen (default: true) */
   strict_user_model_priority: z.boolean().optional(),
+  /** Semantic mode hint injection policy for keyword detector: off | suggest | enforce */
+  semantic_mode_hint: z.enum(["off", "suggest", "enforce"]).optional(),
 })
 
 export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>

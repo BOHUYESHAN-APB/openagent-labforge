@@ -9,7 +9,12 @@ import {
   readBoulderState,
 } from "../../features/boulder-state"
 import type { BoulderState } from "../../features/boulder-state"
-import { _resetForTesting, subagentSessions, updateSessionAgent } from "../../features/claude-code-session-state"
+import {
+  _resetForTesting,
+  registerAgentName,
+  subagentSessions,
+  updateSessionAgent,
+} from "../../features/claude-code-session-state"
 
 const TEST_STORAGE_ROOT = join(tmpdir(), `atlas-message-storage-${randomUUID()}`)
 const TEST_MESSAGE_STORAGE = join(TEST_STORAGE_ROOT, "message")
@@ -761,6 +766,8 @@ describe("atlas hook", () => {
      beforeEach(() => {
        _resetForTesting()
        subagentSessions.clear()
+       registerAgentName("atlas")
+       registerAgentName("sisyphus")
        setupMessageStorage(MAIN_SESSION_ID, "atlas")
      })
 
@@ -815,6 +822,35 @@ describe("atlas hook", () => {
       })
 
       // then - should not call prompt
+      expect(mockInput._promptMock).not.toHaveBeenCalled()
+    })
+
+    test("should skip when boulder agent is unavailable", async () => {
+      _resetForTesting()
+      subagentSessions.clear()
+      registerAgentName("sisyphus")
+      setupMessageStorage(MAIN_SESSION_ID, "atlas")
+
+      const planPath = join(TEST_DIR, "missing-agent-plan.md")
+      writeFileSync(planPath, "# Plan\n- [ ] Task 1")
+
+      writeBoulderState(TEST_DIR, {
+        active_plan: planPath,
+        started_at: "2026-01-02T10:00:00Z",
+        session_ids: [MAIN_SESSION_ID],
+        plan_name: "missing-agent-plan",
+      })
+
+      const mockInput = createMockPluginInput()
+      const hook = createAtlasHook(mockInput)
+
+      await hook.handler({
+        event: {
+          type: "session.idle",
+          properties: { sessionID: MAIN_SESSION_ID },
+        },
+      })
+
       expect(mockInput._promptMock).not.toHaveBeenCalled()
     })
 

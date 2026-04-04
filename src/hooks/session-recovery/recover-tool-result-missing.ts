@@ -3,6 +3,8 @@ import type { MessageData } from "./types"
 import { readParts } from "./storage"
 import { isSqliteBackend } from "../../shared/opencode-storage-detection"
 import { normalizeSDKResponse } from "../../shared"
+import { collectMissingToolUseIds } from "./tool-pairing"
+import { log } from "../../shared/logger"
 
 type Client = ReturnType<typeof createOpencodeClient>
 type ClientWithPromptAsync = {
@@ -12,20 +14,10 @@ type ClientWithPromptAsync = {
 }
 
 
-interface ToolUsePart {
-  type: "tool_use"
-  id: string
-  name: string
-  input: Record<string, unknown>
-}
-
 interface MessagePart {
   type: string
   id?: string
-}
-
-function extractToolUseIds(parts: MessagePart[]): string[] {
-  return parts.filter((part): part is ToolUsePart => part.type === "tool_use" && !!part.id).map((part) => part.id)
+  tool_use_id?: string
 }
 
 async function readPartsFromSDKFallback(
@@ -66,8 +58,12 @@ export async function recoverToolResultMissing(
     }
   }
 
-  const toolUseIds = extractToolUseIds(parts)
+  const toolUseIds = collectMissingToolUseIds(parts)
   if (toolUseIds.length === 0) {
+    log("[session-recovery] tool_result_missing detected but no missing tool_use IDs found", {
+      sessionID,
+      failedMessageID: failedAssistantMsg.info?.id,
+    })
     return false
   }
 
@@ -83,6 +79,11 @@ export async function recoverToolResultMissing(
   }
 
   try {
+    log("[session-recovery] injecting synthetic tool_result parts", {
+      sessionID,
+      failedMessageID: failedAssistantMsg.info?.id,
+      missingToolUseIds: toolUseIds,
+    })
     await (client as unknown as ClientWithPromptAsync).session.promptAsync(promptInput)
 
     return true

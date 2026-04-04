@@ -1,6 +1,7 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 
 import type { BackgroundManager } from "../../features/background-agent"
+import { getSessionAgent, isUltraworkAutonomousSession } from "../../features/claude-code-session-state"
 import {
   createInternalAgentTextPart,
   normalizeSDKResponse,
@@ -16,10 +17,12 @@ import { isSqliteBackend } from "../../shared/opencode-storage-detection"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
 
 import {
+  AUTONOMOUS_CONTINUATION_PROMPT,
   CONTINUATION_PROMPT,
   DEFAULT_SKIP_AGENTS,
   HOOK_NAME,
 } from "./constants"
+import { isCompactionGuardActive } from "./compaction-guard"
 import { getMessageDir } from "./message-directory"
 import { getIncompleteCount } from "./todo"
 import type { ResolvedMessageInfo, Todo } from "./types"
@@ -88,7 +91,7 @@ export async function injectContinuation(args: {
     return
   }
 
-  let agentName = resolvedInfo?.agent
+  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 
@@ -120,6 +123,14 @@ export async function injectContinuation(args: {
     return
   }
 
+  if (!agentName) {
+    const compactionState = sessionStateStore.getExistingState(sessionID)
+    if (compactionState && isCompactionGuardActive(compactionState, Date.now())) {
+      log(`[${HOOK_NAME}] Skipped: agent unknown after compaction`, { sessionID })
+      return
+    }
+  }
+
   if (!hasWritePermission(tools)) {
     log(`[${HOOK_NAME}] Skipped: agent lacks write permission`, { sessionID, agent: agentName })
     return
@@ -127,7 +138,12 @@ export async function injectContinuation(args: {
 
   const incompleteTodos = todos.filter((todo) => todo.status !== "completed" && todo.status !== "cancelled")
   const todoList = incompleteTodos.map((todo) => `- [${todo.status}] ${todo.content}`).join("\n")
-  const prompt = `${CONTINUATION_PROMPT}
+  const isAutonomous =
+    isUltraworkAutonomousSession(sessionID) ||
+    getAgentConfigKey(agentName ?? "") === "wase"
+  const basePrompt = isAutonomous ? AUTONOMOUS_CONTINUATION_PROMPT : CONTINUATION_PROMPT
+
+  const prompt = `${basePrompt}
 
 [Status: ${todos.length - freshIncompleteCount}/${todos.length} completed, ${freshIncompleteCount} remaining]
 
@@ -164,6 +180,7 @@ ${todoList}`
     if (injectionState) {
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }
   } catch (error) {

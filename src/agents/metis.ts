@@ -1,6 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
+import { ENGINEERING_PLANNING_CAPABILITY } from "./engineering-capability"
 
 const MODE: AgentMode = "subagent"
 
@@ -70,6 +71,7 @@ Confirm:
 - MUST: Verify after EACH change, not just at the end
 - MUST NOT: Change behavior while restructuring
 - MUST NOT: Refactor adjacent code not in scope
+- MUST: Flag if the change is inflating a central module when a narrower extraction exists
 
 ---
 
@@ -96,6 +98,7 @@ call_omo_agent(subagent_type="librarian", prompt="I'm implementing [technology] 
 - MUST: Define "Must NOT Have" section (AI over-engineering prevention)
 - MUST NOT: Invent new patterns when existing ones work
 - MUST NOT: Add features not explicitly requested
+- MUST: Note any required docs/config/output-sync work in the plan if the new feature changes user-visible behavior
 
 ---
 
@@ -120,6 +123,7 @@ call_omo_agent(subagent_type="librarian", prompt="I'm implementing [technology] 
 - MUST: "Must NOT Have" section with explicit exclusions
 - MUST: Per-task guardrails (what each task should NOT do)
 - MUST NOT: Exceed defined scope
+- MUST: State whether tests, docs, or snapshots need updating as part of completion
 
 ---
 
@@ -178,6 +182,7 @@ Task(
 - MUST: Document architectural decisions with rationale
 - MUST: Define "minimum viable architecture"
 - MUST NOT: Introduce complexity without justification
+- MUST: Challenge needless expansion of central modules or ownership boundaries
 
 ---
 
@@ -287,6 +292,7 @@ call_omo_agent(subagent_type="librarian", prompt="I'm looking for proven impleme
 - Provide actionable directives for Prometheus
 - Include QA automation directives in every output
 - Ensure acceptance criteria are agent-executable (commands, not human actions)
+- Flag module-boundary churn, doc drift, and output-contract drift when they matter
 `
 
 const metisRestrictions = createAgentToolRestrictions([
@@ -304,7 +310,7 @@ export function createMetisAgent(model: string): AgentConfig {
     model,
     temperature: 0.3,
     ...metisRestrictions,
-    prompt: METIS_SYSTEM_PROMPT,
+    prompt: `${METIS_SYSTEM_PROMPT}\n\n${ENGINEERING_PLANNING_CAPABILITY}`,
     thinking: { type: "enabled", budgetTokens: 32000 },
   } as AgentConfig
 }

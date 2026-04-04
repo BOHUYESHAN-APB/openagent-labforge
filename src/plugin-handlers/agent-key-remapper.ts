@@ -7,9 +7,18 @@ export function remapAgentKeysToDisplayNames(
 
   for (const [key, value] of Object.entries(agents)) {
     const displayName = getAgentDisplayName(key)
-    if (displayName && displayName !== key) {
-      result[displayName] = value
-    } else {
+    const targetKey = displayName && displayName !== key
+      ? displayName
+      : key
+
+    if (result[targetKey] === undefined) {
+      result[targetKey] = value
+      continue
+    }
+
+    // Collision guard: if a remapped display key already exists,
+    // keep the existing entry and preserve this one under its original key.
+    if (targetKey !== key && result[key] === undefined) {
       result[key] = value
     }
   }

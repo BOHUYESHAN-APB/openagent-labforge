@@ -78,14 +78,14 @@ function tryInjectViaInterceptors(internal: UnknownRecord, auth: string): boolea
     return false
   }
 
-  Reflect.apply(use, requestInterceptors, [
+  use.call(requestInterceptors,
     (request: Request): Request => {
       if (!request.headers.get("Authorization")) {
         request.headers.set("Authorization", auth)
       }
       return request
     },
-  ])
+  )
 
   return true
 }
@@ -166,12 +166,11 @@ export function injectServerAuthIntoClient(client: unknown): void {
   try {
     const internal = getInternalClient(client)
     if (internal) {
-      const injectedHeaders = tryInjectViaSetConfigHeaders(internal, auth)
-      const injectedInterceptors = tryInjectViaInterceptors(internal, auth)
-      const injectedFetch = tryInjectViaFetchWrapper(internal, auth)
-      const injectedMutable = tryInjectViaMutableInternalConfig(internal, auth)
-
-      const injected = injectedHeaders || injectedInterceptors || injectedFetch || injectedMutable
+      const injected =
+        tryInjectViaSetConfigHeaders(internal, auth) ||
+        tryInjectViaInterceptors(internal, auth) ||
+        tryInjectViaFetchWrapper(internal, auth) ||
+        tryInjectViaMutableInternalConfig(internal, auth)
 
       if (!injected) {
         log("[opencode-server-auth] OPENCODE_SERVER_PASSWORD is set but SDK client structure is incompatible", {

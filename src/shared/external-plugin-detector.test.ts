@@ -1,5 +1,10 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test"
-import { detectExternalNotificationPlugin, getNotificationConflictWarning } from "./external-plugin-detector"
+import {
+  detectExternalNotificationPlugin,
+  detectExternalSkillPlugin,
+  getNotificationConflictWarning,
+  getSkillPluginConflictWarning,
+} from "./external-plugin-detector"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as os from "node:os"
@@ -283,6 +288,46 @@ describe("external-plugin-detector", () => {
       expect(warning).toContain("session.idle")
       expect(warning).toContain("auto-disabled")
       expect(warning).toContain("force_enable")
+    })
+  })
+
+  describe("detectExternalSkillPlugin", () => {
+    test("should detect opencode-skills plugin", () => {
+      const opencodeDir = path.join(tempDir, ".opencode")
+      fs.mkdirSync(opencodeDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(opencodeDir, "opencode.json"),
+        JSON.stringify({ plugin: ["opencode-skills"] }),
+      )
+
+      const result = detectExternalSkillPlugin(tempDir)
+
+      expect(result.detected).toBe(true)
+      expect(result.pluginName).toBe("opencode-skills")
+    })
+
+    test("should return detected=false when no external skill plugin is configured", () => {
+      const opencodeDir = path.join(tempDir, ".opencode")
+      fs.mkdirSync(opencodeDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(opencodeDir, "opencode.json"),
+        JSON.stringify({ plugin: ["oh-my-opencode"] }),
+      )
+
+      const result = detectExternalSkillPlugin(tempDir)
+
+      expect(result.detected).toBe(false)
+      expect(result.pluginName).toBeNull()
+    })
+  })
+
+  describe("getSkillPluginConflictWarning", () => {
+    test("should generate warning message with plugin name", () => {
+      const warning = getSkillPluginConflictWarning("opencode-skills")
+
+      expect(warning).toContain("opencode-skills")
+      expect(warning).toContain("duplicate skill/tool registration")
+      expect(warning).toContain("claude_code.skills")
     })
   })
 })

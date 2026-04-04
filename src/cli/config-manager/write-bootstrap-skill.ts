@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { getConfigDir } from "./config-context"
 import { formatErrorWithSuggestion } from "./format-error-with-suggestion"
@@ -62,6 +62,13 @@ export interface BootstrapSkillWriteResult {
   error?: string
 }
 
+export interface BootstrapSkillCleanupResult {
+  success: boolean
+  skillPath: string
+  removed?: boolean
+  error?: string
+}
+
 export function getBootstrapSkillPath(): string {
   return join(getConfigDir(), "skills", BOOTSTRAP_SKILL_NAME, "SKILL.md")
 }
@@ -93,6 +100,30 @@ export function writeBootstrapSkill(): BootstrapSkillWriteResult {
       success: false,
       skillPath,
       error: formatErrorWithSuggestion(err, "write bootstrap skill"),
+    }
+  }
+}
+
+export function cleanupManagedBootstrapSkill(): BootstrapSkillCleanupResult {
+  const skillPath = getBootstrapSkillPath()
+
+  try {
+    if (!existsSync(skillPath)) {
+      return { success: true, skillPath, removed: false }
+    }
+
+    const existingContent = readFileSync(skillPath, "utf-8")
+    if (!existingContent.includes(MANAGED_MARKER)) {
+      return { success: true, skillPath, removed: false }
+    }
+
+    rmSync(join(getConfigDir(), "skills", BOOTSTRAP_SKILL_NAME), { recursive: true, force: true })
+    return { success: true, skillPath, removed: true }
+  } catch (err) {
+    return {
+      success: false,
+      skillPath,
+      error: formatErrorWithSuggestion(err, "cleanup bootstrap skill"),
     }
   }
 }

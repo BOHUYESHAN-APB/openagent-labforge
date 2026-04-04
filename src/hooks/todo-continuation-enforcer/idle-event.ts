@@ -1,14 +1,16 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 
 import type { BackgroundManager } from "../../features/background-agent"
+import { getSessionAgent, isUltraworkAutonomousSession } from "../../features/claude-code-session-state"
 import type { ToolPermission } from "../../features/hook-message-injector"
 import { normalizeSDKResponse } from "../../shared"
-import { log } from "../../shared/logger"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
-import { SystemDirectiveTypes } from "../../shared/system-directive"
+import { log } from "../../shared/logger"
 
 import {
   ABORT_WINDOW_MS,
+  AUTONOMOUS_CONTINUATION_COOLDOWN_MS,
+  AUTONOMOUS_MAX_CONSECUTIVE_FAILURES,
   CONTINUATION_COOLDOWN_MS,
   DEFAULT_SKIP_AGENTS,
   FAILURE_RESET_WINDOW_MS,
@@ -16,32 +18,18 @@ import {
   MAX_CONSECUTIVE_FAILURES,
 } from "./constants"
 import { isLastAssistantMessageAborted } from "./abort-detection"
+import { acknowledgeCompactionGuard, isCompactionGuardActive } from "./compaction-guard"
+import { startCountdown } from "./countdown"
 import { hasUnansweredQuestion } from "./pending-question-detection"
-import { getIncompleteCount } from "./todo"
+import { resolveLatestMessageInfo } from "./resolve-message-info"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
-import { startCountdown } from "./countdown"
+import { shouldStopForStagnation } from "./stagnation-detection"
+import { getIncompleteCount } from "./todo"
 
-function hasRecentTodoContinuationDirective(messages: Array<{ info?: MessageInfo; parts?: Array<{ text?: string; type?: string }> }>): boolean {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const info = messages[i].info
-    if (!info) continue
-    if (info.role === "user") return false
-
-    const parts = messages[i].parts
-    if (!parts) continue
-
-    const hasDirective = parts.some((part) =>
-      part.type === "text" && typeof part.text === "string" && part.text.includes(SystemDirectiveTypes.TODO_CONTINUATION),
-    )
-    if (hasDirective) {
-      return true
-    }
-  }
-
-  return false
-}
-
+// Follow upstream continuation gating closely: compaction and stagnation are the
+// two main protections that keep idle sessions from being re-prompted forever.
+// We retain our autonomous cooldown/failure tuning on top of that base flow.
 export async function handleSessionIdle(args: {
   ctx: PluginInput
   sessionID: string
@@ -62,6 +50,8 @@ export async function handleSessionIdle(args: {
   log(`[${HOOK_NAME}] session.idle`, { sessionID })
 
   const state = sessionStateStore.getState(sessionID)
+  const observedCompactionEpoch = state.recentCompactionEpoch
+  const isAutonomous = isUltraworkAutonomousSession(sessionID)
   if (state.isRecovering) {
     log(`[${HOOK_NAME}] Skipped: in recovery`, { sessionID })
     return
@@ -96,10 +86,6 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
       return
     }
-    if (hasRecentTodoContinuationDirective(messages)) {
-      log(`[${HOOK_NAME}] Skipped: recent todo continuation directive already injected`, { sessionID })
-      return
-    }
     if (hasUnansweredQuestion(messages)) {
       log(`[${HOOK_NAME}] Skipped: pending question awaiting user response`, { sessionID })
       return
@@ -118,28 +104,20 @@ export async function handleSessionIdle(args: {
   }
 
   if (!todos || todos.length === 0) {
+    sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] No todos`, { sessionID })
     return
   }
 
   const incompleteCount = getIncompleteCount(todos)
   if (incompleteCount === 0) {
+    sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] All todos complete`, { sessionID, total: todos.length })
     return
   }
 
   if (state.inFlight) {
     log(`[${HOOK_NAME}] Skipped: injection in flight`, { sessionID })
-    return
-  }
-
-  state.idleStrikeCount = (state.idleStrikeCount ?? 0) + 1
-  if (state.idleStrikeCount < 2) {
-    log(`[${HOOK_NAME}] Skipped: waiting for second idle before continuation`, {
-      sessionID,
-      idleStrikeCount: state.idleStrikeCount,
-      incompleteCount,
-    })
     return
   }
 
@@ -155,66 +133,92 @@ export async function handleSessionIdle(args: {
     })
   }
 
-  if (state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+  const maxConsecutiveFailures = isAutonomous
+    ? AUTONOMOUS_MAX_CONSECUTIVE_FAILURES
+    : MAX_CONSECUTIVE_FAILURES
+
+  if (state.consecutiveFailures >= maxConsecutiveFailures) {
     log(`[${HOOK_NAME}] Skipped: max consecutive failures reached`, {
       sessionID,
       consecutiveFailures: state.consecutiveFailures,
-      maxConsecutiveFailures: MAX_CONSECUTIVE_FAILURES,
+      maxConsecutiveFailures,
+      isAutonomous,
     })
     return
   }
 
-  const effectiveCooldown =
-    CONTINUATION_COOLDOWN_MS * Math.pow(2, Math.min(state.consecutiveFailures, 5))
+  const baseCooldownMs = isAutonomous
+    ? AUTONOMOUS_CONTINUATION_COOLDOWN_MS
+    : CONTINUATION_COOLDOWN_MS
+  const effectiveCooldown = baseCooldownMs * Math.pow(2, Math.min(state.consecutiveFailures, 5))
   if (state.lastInjectedAt && Date.now() - state.lastInjectedAt < effectiveCooldown) {
     log(`[${HOOK_NAME}] Skipped: cooldown active`, {
       sessionID,
       effectiveCooldown,
+      baseCooldownMs,
+      isAutonomous,
       consecutiveFailures: state.consecutiveFailures,
     })
     return
   }
 
   let resolvedInfo: ResolvedMessageInfo | undefined
-  let hasCompactionMessage = false
+  let encounteredCompaction = false
   try {
-    const messagesResp = await ctx.client.session.messages({
-      path: { id: sessionID },
-    })
-    const messages = normalizeSDKResponse(messagesResp, [] as Array<{ info?: MessageInfo }>)
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const info = messages[i].info
-      if (info?.agent === "compaction") {
-        hasCompactionMessage = true
-        continue
-      }
-      if (info?.agent || info?.model || (info?.modelID && info?.providerID)) {
-        resolvedInfo = {
-          agent: info.agent,
-          model: info.model ?? (info.providerID && info.modelID ? { providerID: info.providerID, modelID: info.modelID } : undefined),
-          tools: info.tools as Record<string, ToolPermission> | undefined,
-        }
-        break
-      }
-    }
+    const messageInfoResult = await resolveLatestMessageInfo(ctx, sessionID)
+    resolvedInfo = messageInfoResult.resolvedInfo
+    encounteredCompaction = messageInfoResult.encounteredCompaction
   } catch (error) {
     log(`[${HOOK_NAME}] Failed to fetch messages for agent check`, { sessionID, error: String(error) })
   }
 
-  log(`[${HOOK_NAME}] Agent check`, { sessionID, agentName: resolvedInfo?.agent, skipAgents, hasCompactionMessage })
+  const sessionAgent = getSessionAgent(sessionID)
+  if (!resolvedInfo?.agent && sessionAgent) {
+    resolvedInfo = { ...resolvedInfo, agent: sessionAgent }
+  }
+
+  const acknowledgedCompaction = resolvedInfo?.agent
+    ? acknowledgeCompactionGuard(state, observedCompactionEpoch)
+    : false
+  const compactionGuardActive = isCompactionGuardActive(state, Date.now())
+
+  log(`[${HOOK_NAME}] Agent check`, {
+    sessionID,
+    agentName: resolvedInfo?.agent,
+    skipAgents,
+    compactionGuardActive,
+    observedCompactionEpoch,
+    currentCompactionEpoch: state.recentCompactionEpoch,
+    acknowledgedCompaction,
+  })
 
   const resolvedAgentName = resolvedInfo?.agent
-  if (resolvedAgentName && skipAgents.some(s => getAgentConfigKey(s) === getAgentConfigKey(resolvedAgentName))) {
+  if (resolvedAgentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(resolvedAgentName))) {
     log(`[${HOOK_NAME}] Skipped: agent in skipAgents list`, { sessionID, agent: resolvedAgentName })
     return
   }
-  if (hasCompactionMessage && !resolvedInfo?.agent) {
+  if ((compactionGuardActive || encounteredCompaction) && !resolvedInfo?.agent) {
     log(`[${HOOK_NAME}] Skipped: compaction occurred but no agent info resolved`, { sessionID })
+    return
+  }
+  if (compactionGuardActive) {
+    log(`[${HOOK_NAME}] Skipped: compaction guard still armed for current epoch`, {
+      sessionID,
+      observedCompactionEpoch,
+      currentCompactionEpoch: state.recentCompactionEpoch,
+    })
     return
   }
 
   if (isContinuationStopped?.(sessionID)) {
     log(`[${HOOK_NAME}] Skipped: continuation stopped for session`, { sessionID })
+    return
+  }
+
+  // Upstream only increments stagnation after a successful continuation prompt.
+  // This prevents false positives on sessions that are merely idle but not yet re-injected.
+  const progressUpdate = sessionStateStore.trackContinuationProgress(sessionID, incompleteCount, todos)
+  if (shouldStopForStagnation({ sessionID, incompleteCount, progressUpdate })) {
     return
   }
 

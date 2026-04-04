@@ -7,6 +7,7 @@ import { applyEnvironmentContext } from "./environment-context"
 import { applyOverrides } from "./agent-overrides"
 import { applyModelResolution, getFirstFallbackModel } from "./model-resolution"
 import { createSisyphusAgent } from "../sisyphus"
+import { createWaseAgent } from "../wase"
 
 export function maybeCreateSisyphusConfig(input: {
   disabledAgents: string[]
@@ -85,4 +86,83 @@ export function maybeCreateSisyphusConfig(input: {
   })
 
   return sisyphusConfig
+}
+
+export function maybeCreateWaseConfig(input: {
+  disabledAgents: string[]
+  agentOverrides: AgentOverrides
+  uiSelectedModel?: string
+  availableModels: Set<string>
+  systemDefaultModel?: string
+  isFirstRunNoCache: boolean
+  availableAgents: AvailableAgent[]
+  availableSkills: AvailableSkill[]
+  availableCategories: AvailableCategory[]
+  mergedCategories: Record<string, CategoryConfig>
+  directory?: string
+  userCategories?: CategoriesConfig
+  useTaskSystem: boolean
+  disableOmoEnv?: boolean
+}): AgentConfig | undefined {
+  const {
+    disabledAgents,
+    agentOverrides,
+    uiSelectedModel,
+    availableModels,
+    systemDefaultModel,
+    isFirstRunNoCache,
+    availableAgents,
+    availableSkills,
+    availableCategories,
+    mergedCategories,
+    directory,
+    useTaskSystem,
+    disableOmoEnv = false,
+  } = input
+
+  const waseOverride = agentOverrides["wase"]
+  const waseRequirement = AGENT_MODEL_REQUIREMENTS["wase"]
+  const hasWaseExplicitConfig = waseOverride !== undefined
+  const meetsWaseAnyModelRequirement =
+    !waseRequirement?.requiresAnyModel ||
+    hasWaseExplicitConfig ||
+    isFirstRunNoCache ||
+    isAnyFallbackModelAvailable(waseRequirement.fallbackChain, availableModels)
+
+  if (disabledAgents.includes("wase") || !meetsWaseAnyModelRequirement) return undefined
+
+  let waseResolution = applyModelResolution({
+    uiSelectedModel: waseOverride?.model ? undefined : uiSelectedModel,
+    userModel: waseOverride?.model,
+    requirement: waseRequirement,
+    availableModels,
+    systemDefaultModel,
+  })
+
+  if (isFirstRunNoCache && !waseOverride?.model && !uiSelectedModel) {
+    waseResolution = getFirstFallbackModel(waseRequirement)
+  }
+
+  if (!waseResolution) return undefined
+  const { model: waseModel, variant: waseResolvedVariant } = waseResolution
+
+  let waseConfig = createWaseAgent(
+    waseModel,
+    availableAgents,
+    undefined,
+    availableSkills,
+    availableCategories,
+    useTaskSystem
+  )
+
+  if (waseResolvedVariant) {
+    waseConfig = { ...waseConfig, variant: waseResolvedVariant }
+  }
+
+  waseConfig = applyOverrides(waseConfig, waseOverride, mergedCategories, directory)
+  waseConfig = applyEnvironmentContext(waseConfig, directory, {
+    disableOmoEnv,
+  })
+
+  return waseConfig
 }

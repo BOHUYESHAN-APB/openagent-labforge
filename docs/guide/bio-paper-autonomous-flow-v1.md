@@ -1,7 +1,6 @@
-# 生信 + 论文 多 Agent 自主流程（V1 评审稿）
+# 生信 + 论文工作流
 
-> 状态：设计草案（供评审）
-> 目标：先给出可执行基础逻辑，评审通过后进入实现。
+这份文档描述当前保留的生信工作流形态，不再保留旧的评审稿口吻。
 
 ## 1. 设计目标
 
@@ -11,9 +10,9 @@
   - full：生信 + 论文
   - paper-only：论文流程（不含生信执行）
 
-## 2. Agent 角色分工（V1）
+## 2. Agent 角色分工
 
-### 已有基础角色
+### 基础角色
 
 - `metis`：需求澄清 / 风险识别（规划前）
 - `momus`：方案评审（执行前）
@@ -22,13 +21,39 @@
 - `multimodal-looker`：PDF/图表/图像解析
 - `atlas`：执行过程协调（任务状态）
 
-### 新增科研角色（已建立代码骨架）
+### 生信角色
 
-- `bio-methodologist`：生信方法学设计（流程和统计假设）
+主入口：
+
+- `bio-orchestrator`：生信综合协调与任务路由
 - `bio-pipeline-operator`：R/Python/外部工具执行与产物追踪
+
+内部专家：
+- `bio-methodologist`：生信方法学设计（流程和统计假设）
+- `wet-lab-designer`：用户执行的湿实验验证设计
 - `paper-evidence-synthesizer`：跨论文证据整合与结论置信度分层
 
-## 3. 自主流程主干（V1）
+### 配套 Skills（本仓库内置）
+
+- `bio-methods`：研究问题拆解、分组/协变量设计、QC 门槛、统计策略、执行交接
+- `bio-pipeline`：R/Python/原生工具执行协议、产物路径、检查点和失败处理
+- `paper-evidence`：论文证据矩阵、冲突比对、置信度分级、安全结论措辞
+- `bio-tools`：常用生信工具箱索引（bwa / samtools / bedtools / scanpy / PyDESeq2 等）
+- `differential-expression`：bulk RNA-seq 差异分析
+- `scrna-preprocessing`：单细胞预处理与聚类
+- `cell-annotation`：单细胞注释
+- `pubmed-search`：PubMed 文献检索
+- `geo-query`：GEO 数据集检索
+- `sequence-analysis`：序列分析
+- `structural-biology`：结构生物学与 AlphaFold 风格置信度解读
+- `bio-visualization`：非线性色标、热图和论文级图形输出
+- `vector-design`：载体 / 质粒 / 构建设计与校验策略
+
+更完整的 skill 说明见：
+
+- [docs/guide/bio-skills.md](docs/guide/bio-skills.md)
+
+## 3. 自主流程主干
 
 ### Stage A. 任务定义与可证伪目标
 
@@ -57,16 +82,21 @@
 
 ### Stage D. 生信执行（R/Python/C 接口）
 
-1. `bio-methodologist` 给出方法学与质控清单。
-2. `bio-pipeline-operator` 执行：
+1. `bio-orchestrator` 判断任务是偏方法学、偏执行、偏证据还是偏湿实验验证。
+2. `bio-methodologist` + `bio-methods` 给出方法学与质控清单。
+3. `bio-pipeline-operator` + `bio-pipeline` 执行：
    - R 脚本
    - Python 脚本
    - C/原生工具调用（通过可审计命令封装）
-3. 产物：中间结果、最终结果、环境快照。
+4. 如涉及图形表达、热图或非线性尺度：
+   - 加载 `bio-visualization`
+5. 如涉及载体 / 构建设计：
+   - 调用 `wet-lab-designer` 并加载 `vector-design`
+6. 产物：中间结果、最终结果、环境快照。
 
 ### Stage E. 论文产出与复核
 
-1. `paper-evidence-synthesizer` 汇总证据与结论强度。
+1. `paper-evidence-synthesizer` + `paper-evidence` 汇总证据与结论强度。
 2. 文档技能（docx/pdf/pptx/xlsx）产出交付物。
 3. `momus` 做最终计划/结果一致性复核。
 
@@ -92,6 +122,12 @@
   - 命令与参数
   - 产物路径
   - 错误与重试信息
+
+统一环境偏好：
+
+- Python 优先 `uv`
+- 混合原生工具栈优先 `conda`
+- Windows 下需要 Linux-only 工具时，提前说明 WSL / Linux 依赖
 
 ## 6. 模型策略（硬约束）
 

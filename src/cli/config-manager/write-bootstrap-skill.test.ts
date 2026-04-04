@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { resetConfigContext } from "./config-context"
-import { getBootstrapSkillPath, writeBootstrapSkill } from "./write-bootstrap-skill"
+import { cleanupManagedBootstrapSkill, getBootstrapSkillPath, writeBootstrapSkill } from "./write-bootstrap-skill"
 
 describe("writeBootstrapSkill", () => {
   let testConfigDir = ""
@@ -40,5 +40,15 @@ describe("writeBootstrapSkill", () => {
     expect(result.success).toBe(true)
     expect(result.action).toBe("kept")
     expect(readFileSync(skillPath, "utf-8")).toContain("user custom skill")
+  })
+
+  it("removes installer-managed bootstrap skill during cleanup", () => {
+    writeBootstrapSkill()
+
+    const result = cleanupManagedBootstrapSkill()
+
+    expect(result.success).toBe(true)
+    expect(result.removed).toBe(true)
+    expect(existsSync(getBootstrapSkillPath())).toBe(false)
   })
 })

@@ -159,7 +159,7 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 		expect(dispatchCalls.length).toBe(1)
 	})
 
-	it("both maps pruned on every event", async () => {
+  it("both maps pruned on every event", async () => {
 		//#given
 		const eventHandler = createEventHandler({
 			ctx: {} as any,
@@ -237,13 +237,14 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 			},
 		})
 
-		//#when - wait for dedup window to expire (600ms > 500ms)
-		await new Promise((resolve) => setTimeout(resolve, 600))
+    //#when - wait for dedup window to expire (1700ms > 1500ms)
+    await new Promise((resolve) => setTimeout(resolve, 1700))
 
 		// Trigger any event to trigger pruning
-		await eventHandler({
+		await (eventHandler as any)({
 			event: {
 				type: "message.updated",
+				properties: { info: { id: "msg_prune", sessionID: "ses_stale_1", role: "assistant" } },
 			},
 		})
 
@@ -258,6 +259,7 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 				clear: () => {},
 			},
 			managers: {
+				skillMcpManager: { disconnectSession: async () => {} },
 				tmuxSessionManager: {
 					onSessionCreated: async () => {},
 					onSessionDeleted: async () => {},
@@ -265,30 +267,30 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 			} as any,
 			hooks: {
 				autoUpdateChecker: {
-					event: async (input: EventInput) => {
+					event: async (input: any) => {
 						dispatchCalls.push(input)
 					},
-				},
-				claudeCodeHooks: { event: async () => {} },
-				backgroundNotificationHook: { event: async () => {} },
-				sessionNotification: async () => {},
-				todoContinuationEnforcer: { handler: async () => {} },
-				unstableAgentBabysitter: { event: async () => {} },
-				contextWindowMonitor: { event: async () => {} },
-				directoryAgentsInjector: { event: async () => {} },
-				directoryReadmeInjector: { event: async () => {} },
-				rulesInjector: { event: async () => {} },
-				thinkMode: { event: async () => {} },
-				anthropicContextWindowLimitRecovery: { event: async () => {} },
-				agentUsageReminder: { event: async () => {} },
-				categorySkillReminder: { event: async () => {} },
-				interactiveBashSession: { event: async () => {} },
-				ralphLoop: { event: async () => {} },
-				stopContinuationGuard: { event: async () => {} },
-				compactionTodoPreserver: { event: async () => {} },
-				atlasHook: { handler: async () => {} },
-			},
-		})
+				} as any,
+				claudeCodeHooks: { event: async () => {} } as any,
+				backgroundNotificationHook: { event: async () => {} } as any,
+				sessionNotification: (async () => {}) as any,
+				todoContinuationEnforcer: { handler: async () => {} } as any,
+				unstableAgentBabysitter: { event: async () => {} } as any,
+				contextWindowMonitor: { event: async () => {} } as any,
+				directoryAgentsInjector: { event: async () => {} } as any,
+				directoryReadmeInjector: { event: async () => {} } as any,
+				rulesInjector: { event: async () => {} } as any,
+				thinkMode: { event: async () => {} } as any,
+				anthropicContextWindowLimitRecovery: { event: async () => {} } as any,
+				agentUsageReminder: { event: async () => {} } as any,
+				categorySkillReminder: { event: async () => {} } as any,
+				interactiveBashSession: { event: async () => {} } as any,
+				ralphLoop: { event: async () => {} } as any,
+				stopContinuationGuard: { event: async () => {} } as any,
+				compactionTodoPreserver: { event: async () => {} } as any,
+				atlasHook: { handler: async () => {} } as any,
+			} as any,
+		}) as any
 
 		await eventHandlerWithMock({
 			event: {
@@ -303,7 +305,7 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 		expect(dispatchCalls[0].event.type).toBe("session.idle")
 	})
 
-	it("dedup only applies within window - outside window both dispatch", async () => {
+  it("dedup only applies within window - outside window both dispatch", async () => {
 		//#given
 		const dispatchCalls: EventInput[] = []
 		const eventHandler = createEventHandler({
@@ -364,8 +366,8 @@ type EventInput = { event: { type: string; properties?: Record<string, unknown> 
 		//#then - synthetic dispatched
 		expect(dispatchCalls.length).toBe(1)
 
-		//#when - wait for dedup window to expire (600ms > 500ms)
-		await new Promise((resolve) => setTimeout(resolve, 600))
+    //#when - wait for dedup window to expire (1700ms > 1500ms)
+    await new Promise((resolve) => setTimeout(resolve, 1700))
 
 		//#when - real idle arrives outside window
 		await eventHandler({
@@ -421,7 +423,7 @@ describe("createEventHandler - event forwarding", () => {
 		const sessionID = "ses_forward_delete_event"
 
 		//#when
-		await eventHandler({
+		await (eventHandler as any)({
 			event: {
 				type: "session.deleted",
 				properties: { info: { id: sessionID } },

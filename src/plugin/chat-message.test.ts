@@ -1,7 +1,17 @@
-import { describe, test, expect } from "bun:test"
+import { beforeEach, describe, test, expect } from "bun:test"
 
 import { createChatMessageHandler } from "./chat-message"
+import type { ChatMessageInput } from "./chat-message"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
+import { isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
+import {
+  clearSessionAutoModelRouting,
+  clearSessionForcedModel,
+  clearSessionModel,
+  clearSessionModelLock,
+  setSessionAutoModelRouting,
+  setSessionModel,
+} from "../shared/session-model-state"
 
 type ChatMessagePart = { type: string; text?: string; [key: string]: unknown }
 type ChatMessageHandlerOutput = { message: Record<string, unknown>; parts: ChatMessagePart[] }
@@ -11,8 +21,18 @@ function createMockHandlerArgs(overrides?: {
   shouldOverride?: boolean
 }) {
   const appliedSessions: string[] = []
+  const toastCalls: Array<{ title: string; message: string }> = []
   return {
-    ctx: { directory: ".", client: { tui: { showToast: async () => {} } } } as any,
+    ctx: {
+      directory: ".",
+      client: {
+        tui: {
+          showToast: async ({ body }: { body: { title: string; message: string } }) => {
+            toastCalls.push({ title: body.title, message: body.message })
+          },
+        },
+      },
+    } as any,
     pluginConfig: (overrides?.pluginConfig ?? {}) as any,
     firstMessageVariantGate: {
       shouldOverride: () => overrides?.shouldOverride ?? false,
@@ -28,6 +48,7 @@ function createMockHandlerArgs(overrides?: {
       ralphLoop: null,
     } as any,
     _appliedSessions: appliedSessions,
+    _toastCalls: toastCalls,
   }
 }
 
@@ -48,6 +69,14 @@ function createMockOutput(variant?: string): ChatMessageHandlerOutput {
 }
 
 describe("createChatMessageHandler - TUI variant passthrough", () => {
+  beforeEach(() => {
+    clearSessionAutoModelRouting("test-session")
+    clearSessionForcedModel("test-session")
+    clearSessionModelLock("test-session")
+    clearSessionModel("test-session")
+    _resetForTesting()
+  })
+
   test("first message: does not override TUI variant when user has no selection", async () => {
     //#given - first message, no user-selected variant
     const args = createMockHandlerArgs({ shouldOverride: true })
@@ -118,6 +147,20 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(args._appliedSessions).toContain("test-session")
   })
 
+  test("marks session autonomous when agent is wase", async () => {
+    //#given
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(isUltraworkAutonomousSession(input.sessionID)).toBe(true)
+  })
+
   test("injects queued background notifications through chat.message hook", async () => {
     //#given
     const args = createMockHandlerArgs()
@@ -169,7 +212,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(output.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
-  test("does not lock output model when selected model is auto sentinel", async () => {
+  test("keeps locked model when selected model is auto sentinel", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -184,6 +227,11 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
       },
     }
     const handler = createChatMessageHandler(args)
+    await handler(
+      createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
     const input = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
     const output = createMockOutput()
 
@@ -191,7 +239,37 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(input, output)
 
     //#then
-    expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(output.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(args._toastCalls[0]?.title).toBe("Model lock restored")
+  })
+
+  test("shows recovery toast only once per session until explicit model change", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    await handler(
+      createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
+    //#when
+    await handler(createMockInput("hephaestus", { providerID: "auto", modelID: "deep" }), createMockOutput())
+    await handler(createMockInput("hephaestus", { providerID: "auto", modelID: "deep" }), createMockOutput())
+
+    //#then
+    expect(args._toastCalls.filter((t) => t.title === "Model lock restored")).toHaveLength(1)
   })
 
   test("keeps user-selected model on continue turns without reselecting", async () => {
@@ -259,7 +337,52 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(switchedBackOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
-  test("clears sticky lock when user explicitly switches to auto", async () => {
+  test("does not restore sticky model onto agent with explicit configured model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+        agents: {
+          sisyphus: {
+            model: "github-copilot/claude-opus-4.6",
+          },
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (input: ChatMessageInput, output: ChatMessageHandlerOutput): Promise<void> => {
+        if (input.agent === "sisyphus") {
+          output.message.model = { providerID: "github-copilot", modelID: "claude-opus-4.6" }
+          return
+        }
+
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    await handler(
+      createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
+    const switchedAgentInput = createMockInput("sisyphus", undefined)
+    const switchedAgentOutput = createMockOutput()
+
+    //#when
+    await handler(switchedAgentInput, switchedAgentOutput)
+
+    //#then
+    expect(switchedAgentOutput.message.model).toEqual({
+      providerID: "github-copilot",
+      modelID: "claude-opus-4.6",
+    })
+    expect(args._toastCalls.filter((t) => t.title === "Model lock restored")).toHaveLength(0)
+  })
+
+  test("does not clear sticky lock when user explicitly switches to auto", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -289,11 +412,11 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(continueInput, continueOutput)
 
     //#then
-    expect(autoOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
-    expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(autoOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
-  test("restores locked model when input reflects prior forced auto-switch", async () => {
+  test("keeps explicit model when replayed input matches prior forced model", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -319,7 +442,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(continueInput, continueOutput)
 
     //#then
-    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
   })
 
   test("allows explicit user switch to a new model", async () => {
@@ -374,6 +497,9 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     const firstOutput = createMockOutput()
     await handler(firstInput, firstOutput)
 
+    // Simulate host replay carrying forward the previously forced model.
+    setSessionModel("test-session", { providerID: "openai", modelID: "gpt-5.4" })
+
     const internalAutoInput = createMockInput("hephaestus", { providerID: "auto", modelID: "deep" })
     const internalAutoOutput: ChatMessageHandlerOutput = {
       message: {},
@@ -390,6 +516,36 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     //#then
     expect(internalAutoOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
     expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+  })
+
+  test("allows explicit user switch even when selection matches prior forced model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    await handler(
+      createMockInput("hephaestus", { providerID: "gmn", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
+    //#when
+    const explicitSwitchInput = createMockInput("hephaestus", { providerID: "openai", modelID: "gpt-5.4" })
+    const explicitSwitchOutput = createMockOutput()
+    await handler(explicitSwitchInput, explicitSwitchOutput)
+
+    //#then
+    expect(explicitSwitchOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
   })
 
   test("keeps locked model when internal ultrawork continuation is injected", async () => {
@@ -433,5 +589,106 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(internalUlwOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
     expect(internalUlwOutput.message["variant"]).toBeUndefined()
     expect(internalUlwOutput.message["thinking"]).toBeUndefined()
+  })
+
+  test("does not apply plugin ultrawork model override when user explicitly selected non-auto model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: false,
+        },
+        agents: {
+          sisyphus: {
+            ultrawork: {
+              model: "openai/gpt-5.4",
+              variant: "max",
+            },
+          },
+        },
+      },
+    })
+    const handler = createChatMessageHandler(args)
+
+    const explicitInput = createMockInput("sisyphus", { providerID: "github-copilot", modelID: "gpt-5.3-codex" })
+    const explicitOutput: ChatMessageHandlerOutput = {
+      message: {},
+      parts: [{ type: "text", text: "ultrawork do the full implementation" }],
+    }
+
+    //#when
+    await handler(explicitInput, explicitOutput)
+
+    //#then
+    expect(explicitOutput.message.model).toBeUndefined()
+    expect(explicitOutput.message["variant"]).toBeUndefined()
+  })
+
+  test("does not apply plugin ultrawork model override when explicit model is selected even if session auto routing is on", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: false,
+        },
+        agents: {
+          sisyphus: {
+            ultrawork: {
+              model: "openai/gpt-5.3-codex",
+              variant: "max",
+            },
+          },
+        },
+      },
+    })
+    const handler = createChatMessageHandler(args)
+    setSessionAutoModelRouting("test-session", true)
+
+    const explicitInput = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.4" })
+    const explicitOutput: ChatMessageHandlerOutput = {
+      message: { model: { providerID: "openai", modelID: "gpt-5.4" } },
+      parts: [{ type: "text", text: "ultrawork continue implementation" }],
+    }
+
+    //#when
+    await handler(explicitInput, explicitOutput)
+
+    //#then
+    expect(explicitOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(explicitOutput.message["variant"]).toBeUndefined()
+  })
+
+  test("applies plugin ultrawork model override when model input is auto", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: false,
+        },
+        agents: {
+          sisyphus: {
+            ultrawork: {
+              model: "openai/gpt-5.4",
+              variant: "max",
+            },
+          },
+        },
+      },
+    })
+    const handler = createChatMessageHandler(args)
+
+    const autoInput = createMockInput("sisyphus", { providerID: "auto", modelID: "deep" })
+    const autoOutput: ChatMessageHandlerOutput = {
+      message: {},
+      parts: [{ type: "text", text: "ultrawork do the full implementation" }],
+    }
+
+    await handler(createMockInput("sisyphus", undefined), createMockOutput())
+
+    //#when
+    await handler(autoInput, autoOutput)
+
+    //#then
+    expect(autoOutput.message["variant"]).toBe("max")
   })
 })

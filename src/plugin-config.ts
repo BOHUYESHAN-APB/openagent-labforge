@@ -7,9 +7,21 @@ import {
   getOpenCodeConfigDir,
   addConfigLoadError,
   parseJsonc,
-  detectConfigFile,
+  detectPluginConfigFile,
   migrateConfigFile,
+  migrateLegacyConfigFile,
 } from "./shared";
+import { LEGACY_CONFIG_BASENAME } from "./shared/plugin-identity";
+
+const PARTIAL_STRING_ARRAY_KEYS = new Set([
+  "disabled_mcps",
+  "disabled_agents",
+  "disabled_skills",
+  "disabled_hooks",
+  "disabled_commands",
+  "disabled_tools",
+  "mcp_env_allowlist",
+]);
 
 export function parseConfigPartially(
   rawConfig: Record<string, unknown>
@@ -23,6 +35,14 @@ export function parseConfigPartially(
   const invalidSections: string[] = [];
 
   for (const key of Object.keys(rawConfig)) {
+    if (PARTIAL_STRING_ARRAY_KEYS.has(key)) {
+      const sectionValue = rawConfig[key];
+      if (Array.isArray(sectionValue) && sectionValue.every((value) => typeof value === "string")) {
+        partialConfig[key] = sectionValue;
+      }
+      continue;
+    }
+
     const sectionResult = OhMyOpenCodeConfigSchema.safeParse({ [key]: rawConfig[key] });
     if (sectionResult.success) {
       const parsed = sectionResult.data as Record<string, unknown>;
@@ -129,6 +149,18 @@ export function mergeConfigs(
         ...(override.disabled_skills ?? []),
       ]),
     ],
+    disabled_tools: [
+      ...new Set([
+        ...(base.disabled_tools ?? []),
+        ...(override.disabled_tools ?? []),
+      ]),
+    ],
+    mcp_env_allowlist: [
+      ...new Set([
+        ...(base.mcp_env_allowlist ?? []),
+        ...(override.mcp_env_allowlist ?? []),
+      ]),
+    ],
     claude_code: deepMerge(base.claude_code, override.claude_code),
   };
 }
@@ -139,32 +171,31 @@ export function loadPluginConfig(
 ): OhMyOpenCodeConfig {
   // User-level config path - prefer .jsonc over .json
   const configDir = getOpenCodeConfigDir({ binary: "opencode" });
-  const userBasePath = path.join(configDir, "openagent-labforge");
-  const legacyUserBasePath = path.join(configDir, "oh-my-opencode");
-  const userDetected = detectConfigFile(userBasePath);
-  const legacyUserDetected = detectConfigFile(legacyUserBasePath);
+  const userDetected = detectPluginConfigFile(configDir);
   const userConfigPath =
     userDetected.format !== "none"
       ? userDetected.path
-      : legacyUserDetected.format !== "none"
-        ? legacyUserDetected.path
-        : userBasePath + ".json";
+      : path.join(configDir, "openagent-labforge.json");
+
+  if (userDetected.format !== "none" && path.basename(userDetected.path).startsWith(LEGACY_CONFIG_BASENAME)) {
+    migrateLegacyConfigFile(userDetected.path);
+  }
 
   // Project-level config path - prefer .jsonc over .json
-  const projectBasePath = path.join(directory, ".opencode", "openagent-labforge");
-  const legacyProjectBasePath = path.join(directory, ".opencode", "oh-my-opencode");
-  const projectDetected = detectConfigFile(projectBasePath);
-  const legacyProjectDetected = detectConfigFile(legacyProjectBasePath);
+  const projectBasePath = path.join(directory, ".opencode");
+  const projectDetected = detectPluginConfigFile(projectBasePath);
   const projectConfigPath =
     projectDetected.format !== "none"
       ? projectDetected.path
-      : legacyProjectDetected.format !== "none"
-        ? legacyProjectDetected.path
-        : projectBasePath + ".json";
+      : path.join(projectBasePath, "openagent-labforge.json");
+
+  if (projectDetected.format !== "none" && path.basename(projectDetected.path).startsWith(LEGACY_CONFIG_BASENAME)) {
+    migrateLegacyConfigFile(projectDetected.path);
+  }
 
   // Load user config first (base)
   let config: OhMyOpenCodeConfig =
-    loadConfigFromPath(userConfigPath, ctx) ?? {};
+    loadConfigFromPath(userConfigPath, ctx) ?? OhMyOpenCodeConfigSchema.parse({});
 
   // Override with project config
   const projectConfig = loadConfigFromPath(projectConfigPath, ctx);

@@ -1,6 +1,6 @@
 {
   "name": "openagent-labforge-linux-x64-baseline",
-  "version": "3.12.0",
+  "version": "3.13.0",
   "description": "Platform-specific binary for openagent-labforge (linux-x64-baseline, no AVX2)",
   "license": "MIT",
   "repository": {

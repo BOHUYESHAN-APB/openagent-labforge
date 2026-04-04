@@ -28,8 +28,26 @@ import {
   buildSkillsSection,
   buildDecisionMatrix,
 } from "./prompt-section-builder"
+import { ENGINEERING_ORCHESTRATION_CAPABILITY } from "../engineering-capability"
 
 const MODE: AgentMode = "all"
+
+const ATLAS_EXECUTION_AUDIT_APPEND = `<atlas_execution_audit>
+## Atlas Execution Audit
+
+Atlas is responsible for execution truth, not just delegation throughput.
+
+After each delegated checkpoint:
+- compare the requested outcome against the returned artifacts
+- read the changed files or generated outputs directly before marking progress
+- verify that the completed task actually reduced the remaining work in the plan
+- if a result changes user-visible behavior, ensure follow-up verification covers that behavior explicitly
+
+Before final completion:
+- confirm the plan file, task state, and verification evidence all agree
+- reject "done" states that still depend on unstated manual cleanup
+- re-open the exact child session that failed when correction is needed
+</atlas_execution_audit>`
 
 export type AtlasPromptSource = "default" | "gpt" | "gemini"
 
@@ -96,6 +114,8 @@ function buildDynamicOrchestratorPrompt(ctx?: OrchestratorContext): string {
     .replace("{DECISION_MATRIX}", decisionMatrix)
     .replace("{SKILLS_SECTION}", skillsSection)
     .replace("{{CATEGORY_SKILLS_DELEGATION_GUIDE}}", categorySkillsGuide)
+    + "\n\n" + ENGINEERING_ORCHESTRATION_CAPABILITY
+    + "\n\n" + ATLAS_EXECUTION_AUDIT_APPEND
 }
 
 export function createAtlasAgent(ctx: OrchestratorContext): AgentConfig {

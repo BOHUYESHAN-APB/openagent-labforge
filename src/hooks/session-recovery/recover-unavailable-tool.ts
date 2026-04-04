@@ -4,6 +4,8 @@ import { readParts } from "./storage"
 import type { MessageData } from "./types"
 import { normalizeSDKResponse } from "../../shared"
 import { isSqliteBackend } from "../../shared/opencode-storage-detection"
+import { collectMissingToolUses } from "./tool-pairing"
+import { log } from "../../shared/logger"
 
 type Client = ReturnType<typeof createOpencodeClient>
 
@@ -18,23 +20,11 @@ interface PromptWithToolResultInput {
   body: { parts: ToolResultPart[] }
 }
 
-interface ToolUsePart {
-  type: "tool_use"
-  id: string
-  name: string
-}
-
 interface MessagePart {
   type: string
   id?: string
   name?: string
-}
-
-function extractToolUseParts(parts: MessagePart[]): ToolUsePart[] {
-  return parts.filter(
-    (part): part is ToolUsePart =>
-      part.type === "tool_use" && typeof part.id === "string" && typeof part.name === "string"
-  )
+  tool_use_id?: string
 }
 
 async function readPartsFromSDKFallback(
@@ -77,14 +67,18 @@ export async function recoverUnavailableTool(
     }
   }
 
-  const toolUseParts = extractToolUseParts(parts)
+  const toolUseParts = collectMissingToolUses(parts)
   if (toolUseParts.length === 0) {
+    log("[session-recovery] unavailable_tool detected but no unpaired tool_use parts found", {
+      sessionID,
+      failedMessageID: failedAssistantMsg.info?.id,
+    })
     return false
   }
 
   const unavailableToolName = extractUnavailableToolName(failedAssistantMsg.info?.error)
   const matchingToolUses = unavailableToolName
-    ? toolUseParts.filter((part) => part.name.toLowerCase() === unavailableToolName)
+    ? toolUseParts.filter((part) => part.name?.toLowerCase() === unavailableToolName)
     : []
   const targetToolUses = matchingToolUses.length > 0 ? matchingToolUses : toolUseParts
 
@@ -95,6 +89,12 @@ export async function recoverUnavailableTool(
   }))
 
   try {
+    log("[session-recovery] injecting unavailable-tool synthetic tool_result parts", {
+      sessionID,
+      failedMessageID: failedAssistantMsg.info?.id,
+      unavailableToolName,
+      recoveredToolUseIds: targetToolUses.map((part) => part.id),
+    })
     const promptInput: PromptWithToolResultInput = {
       path: { id: sessionID },
       body: { parts: toolResultParts },

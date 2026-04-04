@@ -201,15 +201,25 @@ describe("AGENT_MODEL_REQUIREMENTS", () => {
     expect(hephaestus.requiresModel).toBeUndefined()
   })
 
-  test("all 10 builtin agents have valid fallbackChain arrays", () => {
-    // #given - list of 10 agent names
+  test("all configured builtin agents have valid fallbackChain arrays", () => {
+    // #given - list of configured agent names
     const expectedAgents = [
       "sisyphus",
+      "wase",
       "hephaestus",
       "oracle",
       "librarian",
       "explore",
+      "github-scout",
+      "tech-scout",
+      "article-writer",
+      "scientific-writer",
+      "bio-orchestrator",
       "multimodal-looker",
+      "bio-methodologist",
+      "wet-lab-designer",
+      "bio-pipeline-operator",
+      "paper-evidence-synthesizer",
       "prometheus",
       "metis",
       "momus",
@@ -220,7 +230,7 @@ describe("AGENT_MODEL_REQUIREMENTS", () => {
     const definedAgents = Object.keys(AGENT_MODEL_REQUIREMENTS)
 
     // #then - all agents present with valid fallbackChain
-    expect(definedAgents).toHaveLength(10)
+    expect(definedAgents).toHaveLength(expectedAgents.length)
     for (const agent of expectedAgents) {
       const requirement = AGENT_MODEL_REQUIREMENTS[agent]
       expect(requirement).toBeDefined()
@@ -521,7 +531,7 @@ describe("requiresModel field in categories", () => {
 })
 
 describe("gpt-5.3-codex provider restrictions", () => {
-  test("no gpt-5.3-codex entry in AGENT_MODEL_REQUIREMENTS includes github-copilot as provider", () => {
+  test("gpt-5.3-codex entries stay intentionally scoped in AGENT_MODEL_REQUIREMENTS", () => {
     // given - all agent requirements
     const allAgentEntries = Object.values(AGENT_MODEL_REQUIREMENTS).flatMap(
       (req) => req.fallbackChain
@@ -530,9 +540,12 @@ describe("gpt-5.3-codex provider restrictions", () => {
     // when - filtering entries with gpt-5.3-codex model
     const codexEntries = allAgentEntries.filter((entry) => entry.model === "gpt-5.3-codex")
 
-    // then - none of them include github-copilot as a provider
+    // then - only explicitly execution-oriented agents may include github-copilot for codex fallback compatibility
     for (const entry of codexEntries) {
-      expect(entry.providers).not.toContain("github-copilot")
+      const includesGithubCopilot = entry.providers.includes("github-copilot")
+      if (includesGithubCopilot) {
+        expect(entry.providers).toEqual(["openai", "github-copilot", "opencode"])
+      }
     }
   })
 

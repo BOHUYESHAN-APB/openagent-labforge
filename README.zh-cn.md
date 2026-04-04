@@ -1,93 +1,192 @@
 # OpenAgent Labforge
 
-> [!NOTE]
-> **衍生项目说明**
->
-> OpenAgent Labforge 是 `code-yeongyu/oh-my-openagent`
-> （原 `oh-my-opencode`）的衍生版本。本分支保留上游许可边界与来源说明，
-> 但产品方向已经明显转向：更强调 OpenCode 原生委派、科研/检索工作流、
-> MCP 使用体验，以及本地优先的运行方式。
->
-> 许可与来源请见：`LICENSE.md`、`NOTICE`、`THIRD_PARTY_NOTICES.md`、
-> `docs/licensing.md`。
+OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件事：
 
-## 这个分支现在真正改了什么
+- 更强的工程化编排能力
+- 更明确、可检查的子会话委派
+- 以生物信息学为核心的专用工作流
 
-这份 README 重点展示**当前实际能力与动态变化**，而不是重复上游故事。
+它衍生自 `code-yeongyu/oh-my-openagent`，并保留上游的许可与来源边界。
+详见 [LICENSE.md](LICENSE.md)、[NOTICE](NOTICE)、
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 与
+[docs/licensing.md](docs/licensing.md)。
 
-### 1）Agent 体系更清晰，也更可检查
+## 这个分支现在是什么
 
-- 主调度与专长 agent 的分工被明确拉开
-- `task(subagent_type=...)` 成为可检查 child session 的规范路径
-- 以下角色边界被明显强化：
-  - `librarian`：单一库 / 框架 / SDK / 上游实现问题
-  - `github-scout`：仓库横向比较、选型和学习清单
-  - `tech-scout`：生态、benchmark、发布与趋势分析
-  - `article-writer`：公众/工作场景技术写作
-  - `scientific-writer`：科研/同行向技术写作
-- 后台子任务的 fallback-chain 现在会被正确注册和清理，模型回退行为更稳定
+这份 README 只描述当前实际行为，不再保留旧路线图式的叙述。
 
-### 2）搜索流被拆成“精准”和“广覆盖”两类
+当前插件的核心定位是：
 
-- `websearch`：高质量、偏精准的搜索
-- `open_websearch_mcp`：多引擎、偏广覆盖的搜索
-- `paper_search_mcp`：学术检索
-- `context7`：官方文档/框架参考
-- `grep_app`：GitHub 代码示例
+- 以 `task(subagent_type=...)` 为规范委派路径
+- 面向新版 OpenCode 的稳定 plugin / agent / MCP 注入
+- 将搜索、文档、代码、论文检索明确拆层
+- 建设第一方生信 agent 与 skills 体系
+- 继续坚持本地优先安装与开发
 
-插件现在不再强推那种“无脑多代理全开”的重注入提示，而是改成更轻量的
-检索策略提示，避免显式选中 specialist agent 时被二次路由干扰。
+## 当前核心能力
 
-### 3）MCP 运行更稳定了
+### 工程编排层
 
-- 已把 `bing_cn_mcp` 替换为 `open_websearch_mcp`
-- `open_websearch_mcp` 修正了本地 MCP 的 `environment`、stdio 模式、
-  prompt-probe 兼容、版本固定与启动超时
-- `paper_search_mcp` 已回退到当前这个 Windows/OpenCode 环境里真正可用的
-  启动方式
-- MCP policy 现在更符合真实产品定位：精准搜索、广覆盖搜索、学术检索三者分工清楚
-
-### 4）Skill 发现更接近 OpenCode 规范
-
-- 项目级 skill 会向上查找直到 git 根目录
-- `SKILL.md` 元数据校验更严格
-- 安装器会自动生成 `openagent-labforge` skill 目录，提升插件能力被识别的稳定性
-
-### 5）发布/安装表面已经开始去上游残留
-
-- 顶层 README 已不再是上游营销文案的镜像
-- 安装器文案、包元数据、schema 元数据已经对齐当前 fork 身份
-- 当前正式支持路径仍然是：**本地构建 + 本地安装**
-
-## 当前 agent 结构
-
-### 核心调度层
-
-- `sisyphus`：默认总调度器
+- `sisyphus`：主调度器
+- `wase`：全自动调度器
 - `hephaestus`：深度编码执行者
 - `prometheus`：规划器
 - `atlas`：执行协调器
-- `sisyphus-junior`：按类别执行的委派器
+- `metis`：规划前分析
+- `momus`：计划审查
 
-### 专长层
+这些核心 agent 正在统一接入更强的工程能力：
 
-- `explore`：本地代码库探索
-- `librarian`：聚焦单一上游依赖研究
-- `github-scout`：GitHub 仓库侦察与选型
-- `tech-scout`：生态/发布/benchmark 分析
+- 更严格的范围控制
+- 更强的验证要求
+- 更清晰的规划和审查标准
+- 更可执行的委派契约
+
+当前工程能力接入分层：
+
+- 强执行 + 强编排：`sisyphus`、`wase`
+- 强执行：`hephaestus`
+- 强编排：`atlas`
+- 强规划：`prometheus`、`metis`
+- 强审查：`momus`
+
+这样分层是刻意的，后面如果 OpenCode 官方补上同类能力，我们更容易按块去重。
+
+### 专长 agent
+
+- `explore`：本地代码发现
+- `librarian`：单一库 / SDK / 框架研究
+- `github-scout`：仓库侦察与选型
+- `tech-scout`：生态、benchmark、发布分析
 - `article-writer`：公众技术写作
-- `scientific-writer`：科研/同行技术写作
-- 生信与多模态专长 agent 按配置继续保留
+- `scientific-writer`：科研 / 同行向技术写作
+- `multimodal-looker`：PDF / 图片 / 图表理解
+
+### 生物信息学体系
+
+当前已经形成明确的生信层级：
+
+- 主入口：
+  `bio-orchestrator` 负责综合协调
+  `bio-pipeline-operator` 负责执行型任务
+- 内部专家：
+  `bio-methodologist` 负责计算设计、QC、统计规划
+  `wet-lab-designer` 负责用户执行的湿实验验证设计
+  `paper-evidence-synthesizer` 负责跨论文证据矩阵与置信度分层
+
+这套体系不只是“泛泛做分析”，还包括：
+
+- 文献检索
+- 公共数据集发现
+- 计算分析
+- 为用户设计湿实验验证方案
+- 证据整合
+- 专业报告输出
+
+## 内置 Skills 方向
+
+当前内置 skill 已经覆盖通用工程和生信两条线。
+
+通用方向：
+
+- `playwright`
+- `frontend-ui-ux`
+- `git-master`
+- `docx-workbench`
+- `pdf-toolkit`
+- `xlsx-analyst`
+
+生信方向：
+
+- `bio-tools`
+- `bio-methods`
+- `wet-lab-design`
+- `bio-pipeline`
+- `paper-evidence`
+- `differential-expression`
+- `scrna-preprocessing`
+- `cell-annotation`
+- `pubmed-search`
+- `geo-query`
+- `sequence-analysis`
+- `structural-biology`
+- `bio-visualization`
+- `vector-design`
+
+这些生信 skill 都不是泛泛提示词，而是面向执行的技能说明，写明了：
+
+- 推荐工具
+- 常见命令或代码路径
+- 预期产物
+- 适用边界
+
+现在生信 agent 也带了明确的数据交互与环境安全能力：
+
+- 缺关键数据时会主动向用户索要“决定性输入”，而不是泛泛说“请提供数据”
+- 会区分必需输入和可选补充材料
+- Python 环境优先 `uv`
+- 混合原生工具栈优先 `conda`
+- 在 Windows 下会明确指出哪些场景实际上需要 WSL / Linux
+
+## 当前 MCP 集合
+
+内置 MCP 已经主动收口。
+
+保留并可见的内置 MCP：
+
+- `websearch`
+- `context7`
+- `grep_app`
+- `browser_puppeteer`
+- `chrome-devtools-mcp`
+- `deepwiki_mcp`（默认关闭）
+- `open_websearch_mcp`
+- `paper_search_mcp`
+- `semantic_scholar_fastmcp`
+
+已移除出内置可见集合：
+
+- `arxiv_mcp`
+- `fetch_browser`
+
+原因很简单：
+
+- 避免重复能力
+- 缩小 MCP 表面面积
+- `deepwiki_mcp` 改为用户按需开启，而不是默认打开
+
+## OpenCode 兼容迁移
+
+近期迁移重点是跟上新版 OpenCode 的行为。
+
+已对齐或强化的部分包括：
+
+- canonical + legacy 插件配置发现
+- builtin agent 保护与运行时注册
+- command 发现链：
+  - `.opencode/command`
+  - `.opencode/commands`
+  - 向上发现直到 worktree 根
+  - slash 风格嵌套命令名
+- `.agents/skills` 注入链
+- MCP 合并顺序与用户覆盖行为
+- todo continuation / compaction / stagnation 保护链
+
+上游迁移审计清单见：
+
+- [docs/release/upstream-oh-my-openagent-3.11-plus-audit.md](docs/release/upstream-oh-my-openagent-3.11-plus-audit.md)
 
 ## 当前安装现实
 
-当前项目主要面向：
+这个项目仍以本地优先为主，但 `Windows x64` 现在已经有可用的
+npm 发布路径。
 
-1. 本地构建
-2. 本地打包 tgz
-3. 替换 OpenCode 配置目录中的本地插件包
+当前安装现实：
 
-常用命令：
+- `Windows x64`：可以走已发布 npm 包
+- 其他平台：仍以本地构建 + 本地安装为准
+
+推荐流程：
 
 ```bash
 bun run build:skills-catalog
@@ -95,35 +194,41 @@ bun run build
 bun pm pack
 ```
 
-然后按照 `docs/guide/installation.md` 完成替换安装。
+然后参考：
+
+- [docs/guide/installation.md](docs/guide/installation.md)
+
+## 本地参考仓
+
+迁移和设计所需的参考仓统一放在 `Future/` 下。
+
+当前包括：
+
+- 上游 `oh-my-openagent`
+- `BioClaw`
+- `Geneclaw`
+- `codex-main`
+
+这些只是本地参考目录，不属于最终分发物。
+
+## 当前优先级
+
+当前工作顺序是：
+
+1. 收完上游 OpenCode 兼容特性迁移
+2. 强化核心 agent 的工程能力
+3. 继续优化生物信息学 agent 与 skills
 
 ## 文档入口
 
-- `docs/guide/installation.md`：当前安装/替换流程
-- `docs/guide/overview.md`：产品形态与工作流分层
-- `docs/guide/orchestration.md`：规划、执行、委派关系
-- `docs/reference/configuration.md`：配置参考
-- `docs/reference/features.md`：能力总览
-- `examples/README.md`：配置样例与 bundle 示例
+- [docs/guide/installation.md](docs/guide/installation.md)
+- [docs/guide/orchestration.md](docs/guide/orchestration.md)
+- [docs/guide/bio-skills.md](docs/guide/bio-skills.md)
+- [docs/guide/bio-paper-autonomous-flow-v1.md](docs/guide/bio-paper-autonomous-flow-v1.md)
+- [docs/reference/configuration.md](docs/reference/configuration.md)
+- [docs/reference/features.md](docs/reference/features.md)
 
-## 当前已知限制
-
-- 目前仍然是本地优先，不是完整公开 npm 发布流
-- 仍有部分二级文档需要继续清理旧上游术语
-- 浏览器类 MCP 的环境敏感性仍高于核心搜索/文档/代码类 MCP
-
-## 来源与归属
-
-我们保留上游来源和许可边界，但当前 fork 的产品形态、运行方式和很多行为
-已经明显不同。
-
-- 上游：`https://github.com/code-yeongyu/oh-my-openagent`
-- 当前 fork：`https://github.com/BOHUYESHAN-APB/openagent-labforge`
-
-如果某个底层文档与当前运行表现不一致，请优先以本 README 和
-`docs/guide/installation.md` 为准。
-
-## 其他语言版本
+## 其他语言
 
 - [English](README.md)
 - [简体中文](README.zh-cn.md)

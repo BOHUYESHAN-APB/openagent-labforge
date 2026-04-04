@@ -100,46 +100,40 @@ describe("opencode-server-auth", () => {
     })
   })
 
-  test("#given server password #when injecting wraps internal fetch #then wrapped fetch adds Authorization header", async () => {
-    //#given
+  test("#given setConfig succeeds #when injecting #then does not probe fallback paths", () => {
     process.env.OPENCODE_SERVER_PASSWORD = "secret"
     delete process.env.OPENCODE_SERVER_USERNAME
 
-    let receivedAuthorization: string | null = null
-    const baseFetch = async (request: Request): Promise<Response> => {
-      receivedAuthorization = request.headers.get("Authorization")
-      return new Response("ok")
-    }
-
-    type InternalConfig = {
-      fetch?: (request: Request) => Promise<Response>
-      headers?: Record<string, string>
-    }
-
-    let currentConfig: InternalConfig = {
-      fetch: baseFetch,
-      headers: {},
-    }
+    let setConfigCalled = 0
+    let interceptorTouched = false
+    let getConfigTouched = false
 
     const client = {
       _client: {
-        getConfig: (): InternalConfig => ({ ...currentConfig }),
-        setConfig: (config: InternalConfig): InternalConfig => {
-          currentConfig = { ...currentConfig, ...config }
-          return { ...currentConfig }
+        setConfig: (_config: { headers?: Record<string, string> }) => {
+          setConfigCalled += 1
+          return undefined
+        },
+        interceptors: {
+          request: {
+            use: () => {
+              interceptorTouched = true
+              return 0
+            },
+          },
+        },
+        getConfig: () => {
+          getConfigTouched = true
+          return {}
         },
       },
     }
 
-    //#when
     injectServerAuthIntoClient(client)
-    if (!currentConfig.fetch) {
-      throw new Error("expected fetch to be set")
-    }
-    await currentConfig.fetch(new Request("http://example.com"))
 
-    //#then
-    expect(receivedAuthorization ?? "").toBe("Basic b3BlbmNvZGU6c2VjcmV0")
+    expect(setConfigCalled).toBe(1)
+    expect(interceptorTouched).toBe(false)
+    expect(getConfigTouched).toBe(false)
   })
 
   test("#given server password #when internal has _config.fetch but no setConfig #then fetch is wrapped and injects Authorization", async () => {

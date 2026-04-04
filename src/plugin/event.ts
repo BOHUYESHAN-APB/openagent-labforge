@@ -18,7 +18,13 @@ import {
 import { resetMessageCursor } from "../shared";
 import { log } from "../shared/logger";
 import { shouldRetryError } from "../shared/model-error-classifier";
-import { clearSessionModel, clearSessionModelLock, setSessionModel } from "../shared/session-model-state";
+import {
+  clearSessionModel,
+  clearSessionModelLock,
+  getSessionModel,
+  getSessionModelLock,
+  setSessionModel,
+} from "../shared/session-model-state";
 import { deleteSessionTools } from "../shared/session-tools-store";
 import { lspManager } from "../tools";
 
@@ -132,7 +138,9 @@ export function createEventHandler(args: {
       : (args.pluginConfig.runtime_fallback?.enabled ?? false));
 
   const isModelFallbackEnabled =
-    hooks.modelFallback !== null && hooks.modelFallback !== undefined;
+    hooks.modelFallback !== null &&
+    hooks.modelFallback !== undefined &&
+    (args.pluginConfig.model_fallback ?? true);
 
   // Avoid triggering multiple abort+continue cycles for the same failing assistant message.
   const lastHandledModelErrorMessageID = new Map<string, string>();
@@ -165,15 +173,12 @@ export function createEventHandler(args: {
 
   const recentSyntheticIdles = new Map<string, number>();
   const recentRealIdles = new Map<string, number>();
-  const DEDUP_WINDOW_MS = 500;
+  const DEDUP_WINDOW_MS = 1500;
 
   const shouldAutoRetrySession = (sessionID: string): boolean => {
     if (syncSubagentSessions.has(sessionID)) return true;
     const mainSessionID = getMainSessionID();
-    if (mainSessionID) return sessionID === mainSessionID;
-    // Headless runs (or resumed sessions) may not emit session.created, so mainSessionID can be unset.
-    // In that case, treat any non-subagent session as the "main" interactive session.
-    return !subagentSessions.has(sessionID);
+    return mainSessionID !== undefined && sessionID === mainSessionID;
   };
 
   return async (input): Promise<void> => {
@@ -267,6 +272,9 @@ export function createEventHandler(args: {
       const agent = info?.agent as string | undefined;
       const role = info?.role as string | undefined;
       if (sessionID && role === "user") {
+        if (!getMainSessionID() && !subagentSessions.has(sessionID)) {
+          setMainSession(sessionID);
+        }
         if (agent && !isCompactionAgent(agent)) {
           updateSessionAgent(sessionID, agent);
         }
@@ -296,30 +304,41 @@ export function createEventHandler(args: {
 
             if (shouldRetryError(errorInfo)) {
               // Prefer the agent/model/provider from the assistant message payload.
-              let agentName = agent ?? getSessionAgent(sessionID);
-              if (!agentName && sessionID === getMainSessionID()) {
-                if (errorMessage.includes("claude-opus") || errorMessage.includes("opus")) {
-                  agentName = "sisyphus";
-                } else if (errorMessage.includes("gpt-5")) {
-                  agentName = "hephaestus";
-                } else {
-                  agentName = "sisyphus";
-                }
-              }
+              const agentName = agent ?? getSessionAgent(sessionID);
 
               if (agentName) {
-                const currentProvider = (info?.providerID as string | undefined) ?? "opencode";
-                const rawModel = (info?.modelID as string | undefined) ?? "claude-opus-4-6";
+                if (getSessionModelLock(sessionID)) {
+                  log("[event] skip model-fallback: session model lock active", { sessionID });
+                  return;
+                }
+
+                const sessionModel = getSessionModel(sessionID) ?? lastKnownModelBySession.get(sessionID);
+                const currentProvider =
+                  (info?.providerID as string | undefined) ?? sessionModel?.providerID;
+                const rawModel =
+                  (info?.modelID as string | undefined) ?? sessionModel?.modelID;
+
+                if (!currentProvider || !rawModel) {
+                  log("[event] skip model-fallback: missing current model/provider context", { sessionID, agentName });
+                  return;
+                }
+
                 const currentModel = normalizeFallbackModelID(rawModel);
 
                 const setFallback = setPendingModelFallback(sessionID, agentName, currentProvider, currentModel);
 
-                if (
-                  setFallback &&
-                  shouldAutoRetrySession(sessionID) &&
-                  !hooks.stopContinuationGuard?.isStopped(sessionID)
-                ) {
-                  lastHandledModelErrorMessageID.set(sessionID, assistantMessageID);
+              if (
+                setFallback &&
+                shouldAutoRetrySession(sessionID) &&
+                !hooks.stopContinuationGuard?.isStopped(sessionID)
+              ) {
+                log("[event] applying event-driven model fallback retry (message.updated)", {
+                  sessionID,
+                  agentName,
+                  currentProvider,
+                  currentModel,
+                });
+                lastHandledModelErrorMessageID.set(sessionID, assistantMessageID);
 
                   await pluginContext.client.session.abort({ path: { id: sessionID } }).catch(() => {});
                   await pluginContext.client.session
@@ -330,6 +349,8 @@ export function createEventHandler(args: {
                     })
                     .catch(() => {});
                 }
+              } else {
+                log("[event] skip model-fallback: unresolved session agent", { sessionID });
               }
             }
           }
@@ -354,22 +375,27 @@ export function createEventHandler(args: {
 
           const errorInfo = { name: undefined as string | undefined, message: retryMessage };
           if (shouldRetryError(errorInfo)) {
-            let agentName = getSessionAgent(sessionID);
-            if (!agentName && sessionID === getMainSessionID()) {
-              if (retryMessage.includes("claude-opus") || retryMessage.includes("opus")) {
-                agentName = "sisyphus";
-              } else if (retryMessage.includes("gpt-5")) {
-                agentName = "hephaestus";
-              } else {
-                agentName = "sisyphus";
-              }
-            }
+            const agentName = getSessionAgent(sessionID);
 
             if (agentName) {
+              if (getSessionModelLock(sessionID)) {
+                log("[event] skip model-fallback on session.status: session model lock active", { sessionID });
+                return;
+              }
+
               const parsed = extractProviderModelFromErrorMessage(retryMessage);
-              const lastKnown = lastKnownModelBySession.get(sessionID);
-              const currentProvider = parsed.providerID ?? lastKnown?.providerID ?? "opencode";
-              let currentModel = parsed.modelID ?? lastKnown?.modelID ?? "claude-opus-4-6";
+              const lastKnown = getSessionModel(sessionID) ?? lastKnownModelBySession.get(sessionID);
+              const currentProvider = parsed.providerID ?? lastKnown?.providerID;
+              let currentModel = parsed.modelID ?? lastKnown?.modelID;
+
+              if (!currentProvider || !currentModel) {
+                log("[event] skip model-fallback on session.status: missing current model/provider context", {
+                  sessionID,
+                  agentName,
+                });
+                return;
+              }
+
               currentModel = normalizeFallbackModelID(currentModel);
 
               const setFallback = setPendingModelFallback(sessionID, agentName, currentProvider, currentModel);
@@ -379,6 +405,12 @@ export function createEventHandler(args: {
                 shouldAutoRetrySession(sessionID) &&
                 !hooks.stopContinuationGuard?.isStopped(sessionID)
               ) {
+                log("[event] applying event-driven model fallback retry (session.status)", {
+                  sessionID,
+                  agentName,
+                  currentProvider,
+                  currentModel,
+                });
                 await pluginContext.client.session.abort({ path: { id: sessionID } }).catch(() => {});
                 await pluginContext.client.session
                   .prompt({
@@ -388,6 +420,8 @@ export function createEventHandler(args: {
                   })
                   .catch(() => {});
               }
+            } else {
+              log("[event] skip model-fallback on session.status: unresolved session agent", { sessionID });
             }
           }
         } catch (err) {
@@ -432,22 +466,27 @@ export function createEventHandler(args: {
         }
         // Second, try model fallback for model errors (rate limit, quota, provider issues, etc.)
         else if (sessionID && shouldRetryError(errorInfo) && !isRuntimeFallbackEnabled && isModelFallbackEnabled) {
-          let agentName = getSessionAgent(sessionID);
-
-          if (!agentName && sessionID === getMainSessionID()) {
-            if (errorMessage.includes("claude-opus") || errorMessage.includes("opus")) {
-              agentName = "sisyphus";
-            } else if (errorMessage.includes("gpt-5")) {
-              agentName = "hephaestus";
-            } else {
-              agentName = "sisyphus";
-            }
-          }
+          const agentName = getSessionAgent(sessionID);
 
           if (agentName) {
+            if (getSessionModelLock(sessionID)) {
+              log("[event] skip model-fallback on session.error: session model lock active", { sessionID });
+              return;
+            }
+
             const parsed = extractProviderModelFromErrorMessage(errorMessage);
-            const currentProvider = (props?.providerID as string) || parsed.providerID || "opencode";
-            let currentModel = (props?.modelID as string) || parsed.modelID || "claude-opus-4-6";
+            const lastKnown = getSessionModel(sessionID) ?? lastKnownModelBySession.get(sessionID);
+            const currentProvider = (props?.providerID as string) || parsed.providerID || lastKnown?.providerID;
+            let currentModel = (props?.modelID as string) || parsed.modelID || lastKnown?.modelID;
+
+            if (!currentProvider || !currentModel) {
+              log("[event] skip model-fallback on session.error: missing current model/provider context", {
+                sessionID,
+                agentName,
+              });
+              return;
+            }
+
             currentModel = normalizeFallbackModelID(currentModel);
 
             const setFallback = setPendingModelFallback(sessionID, agentName, currentProvider, currentModel);
@@ -457,6 +496,12 @@ export function createEventHandler(args: {
               shouldAutoRetrySession(sessionID) &&
               !hooks.stopContinuationGuard?.isStopped(sessionID)
             ) {
+              log("[event] applying event-driven model fallback retry (session.error)", {
+                sessionID,
+                agentName,
+                currentProvider,
+                currentModel,
+              });
               await pluginContext.client.session.abort({ path: { id: sessionID } }).catch(() => {});
 
               await pluginContext.client.session
@@ -467,6 +512,8 @@ export function createEventHandler(args: {
                 })
                 .catch(() => {});
             }
+          } else {
+            log("[event] skip model-fallback on session.error: unresolved session agent", { sessionID });
           }
         }
       } catch (err) {

@@ -63,5 +63,9 @@ export function createRuntimeFallbackHook(
   return {
     event: eventHandler,
     "chat.message": chatMessageHandler,
+    dispose: () => {
+      clearInterval(cleanupInterval)
+      helpers.cleanupStaleSessions()
+    },
   } as RuntimeFallbackHook
 }

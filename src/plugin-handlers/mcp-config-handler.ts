@@ -1,6 +1,7 @@
 import type { OhMyOpenCodeConfig } from "../config";
 import { loadMcpConfigs } from "../features/claude-code-mcp-loader";
 import { createBuiltinMcps } from "../mcp";
+import { log } from "../shared";
 import type { PluginComponents } from "./plugin-components-loader";
 
 type McpEntry = Record<string, unknown>;
@@ -79,6 +80,22 @@ function withPromptProbeCompatibility(merged: Record<string, McpEntry>): Record<
         if (operation === "prompts" && isPromptNotSupportedError(error)) {
           return { handled: true, level: "debug" }
         }
+
+        if (name === "paper_search_mcp") {
+          const message =
+            typeof error === "object" &&
+            error !== null &&
+            "message" in error &&
+            typeof (error as { message?: unknown }).message === "string"
+              ? (error as { message: string }).message
+              : String(error)
+
+          log("[mcp-config-handler] paper_search_mcp call error", {
+            operation: operation ?? "unknown",
+            message,
+          })
+        }
+
         return undefined
       }
     }
@@ -122,10 +139,18 @@ export async function applyMcpConfig(params: {
     ? await loadMcpConfigs(disabledMcps)
     : { servers: {} };
 
+  if (userMcp) {
+    for (const name of Object.keys(userMcp)) {
+      if (name in mcpResult.servers) {
+        log(`warning: MCP server "${name}" from user config overrides Claude Code .mcp.json`)
+      }
+    }
+  }
+
   const merged = {
     ...createBuiltinMcps(disabledMcps, params.pluginConfig),
-    ...(userMcp ?? {}),
     ...mcpResult.servers,
+    ...(userMcp ?? {}),
     ...params.pluginComponents.mcpServers,
   } as Record<string, McpEntry>;
 

@@ -22,9 +22,12 @@ For provenance and license boundaries, see:
 ### Core orchestrators
 
 - `sisyphus` - default orchestrator
-- `hephaestus` - deep coding / GPT-style execution path
+- `wase` - fully autonomous orchestrator
+- `hephaestus` - deep coding / execution path
 - `prometheus` - planning
 - `atlas` - execution coordination
+- `metis` - pre-planning consultant
+- `momus` - plan reviewer
 - `sisyphus-junior` - category-based delegated executor
 
 ### Specialist agents
@@ -35,6 +38,17 @@ For provenance and license boundaries, see:
 - `tech-scout` - ecosystem / benchmark / launch synthesis
 - `article-writer` - public-facing technical writing
 - `scientific-writer` - peer-facing scientific or technical writing
+- `multimodal-looker` - PDF / image / figure understanding
+
+### Bioinformatics hierarchy
+
+- main entrypoints:
+  - `bio-orchestrator`
+  - `bio-pipeline-operator`
+- internal specialists:
+  - `bio-methodologist`
+  - `wet-lab-designer`
+  - `paper-evidence-synthesizer`
 
 ---
 
@@ -71,7 +85,7 @@ This is the canonical route for:
 
 ### 3. Planning-heavy work
 
-Use Prometheus planning first when the task is large, ambiguous, or spans multiple sessions. Then hand execution to Atlas / delegated tasks.
+Use Prometheus planning first when the task is large, ambiguous, or spans multiple sessions. Metis hardens the plan before it is finalized, Momus reviews it when a stricter gate is needed, and Atlas / delegated tasks take over execution.
 
 ---
 

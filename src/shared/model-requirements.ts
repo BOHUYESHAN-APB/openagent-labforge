@@ -86,6 +86,31 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       { providers: ["opencode"], model: "gpt-5-nano" },
     ],
   },
+  wase: {
+    fallbackChain: [
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-opus-4-6",
+        variant: "max",
+      },
+      { providers: ["kimi-for-coding"], model: "k2p5" },
+      {
+        providers: [
+          "opencode",
+          "moonshotai",
+          "moonshotai-cn",
+          "firmware",
+          "ollama-cloud",
+          "aihubmix",
+        ],
+        model: "kimi-k2.5",
+      },
+      { providers: ["openai", "github-copilot", "opencode"], model: "gpt-5.4", variant: "medium" },
+      { providers: ["zai-coding-plan", "opencode"], model: "glm-5" },
+      { providers: ["opencode"], model: "big-pickle" },
+    ],
+    requiresAnyModel: true,
+  },
   "github-scout": {
     fallbackChain: [
       {
@@ -154,6 +179,25 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       },
     ],
   },
+  "bio-orchestrator": {
+    fallbackChain: [
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-opus-4-6",
+        variant: "max",
+      },
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "high",
+      },
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3.1-pro",
+        variant: "high",
+      },
+    ],
+  },
   "multimodal-looker": {
     fallbackChain: [
       {
@@ -174,6 +218,25 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
     ],
   },
   "bio-methodologist": {
+    fallbackChain: [
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-opus-4-6",
+        variant: "max",
+      },
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "high",
+      },
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3.1-pro",
+        variant: "high",
+      },
+    ],
+  },
+  "wet-lab-designer": {
     fallbackChain: [
       {
         providers: ["anthropic", "github-copilot", "opencode"],

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test"
 
 const mockFindOpenCodeBinary = mock(async () => ({ path: "/usr/local/bin/opencode" }))
 const mockGetOpenCodeVersion = mock(async () => "1.0.200")
-const mockCompareVersions = mock(() => true)
+const mockCompareVersions = mock((..._args: string[]) => true)
 const mockGetPluginInfo = mock(() => ({
   registered: true,
   entry: "oh-my-opencode",
@@ -18,7 +18,7 @@ const mockGetLoadedPluginVersion = mock(() => ({
   expectedVersion: "3.0.0",
   loadedVersion: "3.1.0",
 }))
-const mockGetLatestPluginVersion = mock(async () => null)
+const mockGetLatestPluginVersion = mock(async (_currentVersion: string | null) => null as string | null)
 
 mock.module("./system-binary", () => ({
   findOpenCodeBinary: mockFindOpenCodeBinary,
@@ -33,9 +33,10 @@ mock.module("./system-plugin", () => ({
 mock.module("./system-loaded-version", () => ({
   getLoadedPluginVersion: mockGetLoadedPluginVersion,
   getLatestPluginVersion: mockGetLatestPluginVersion,
+  getSuggestedInstallTag: mock(() => "canary"),
 }))
 
-const { checkSystem } = await import("./system?test")
+const { checkSystem } = await import("./system")
 
 describe("system check", () => {
   beforeEach(() => {
@@ -97,7 +98,7 @@ describe("system check", () => {
       //#then
       const outdatedIssue = result.issues.find((issue) => issue.title === "Loaded plugin is outdated")
       expect(outdatedIssue?.fix).toBe(
-        'Update: cd "/Users/test/Library/Caches/opencode with spaces" && bun add oh-my-opencode@canary'
+        'Update: cd "/Users/test/Library/Caches/opencode with spaces" && bun add @bohuyeshan/openagent-labforge-core@canary'
       )
     })
   })

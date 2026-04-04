@@ -1,6 +1,7 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import type { OhMyOpenCodeConfig } from "../../config"
 import { detectKeywordsWithType, extractPromptText } from "./detector"
-import { isPlannerAgent } from "./constants"
+import { getUltraworkMessage, isPlannerAgent } from "./constants"
 import { log } from "../../shared"
 import {
   isSystemDirective,
@@ -8,12 +9,20 @@ import {
 } from "../../shared/system-directive"
 import {
   getMainSessionID,
+  isUltraworkAutonomousSession,
+  setUltraworkAutonomousSession,
   getSessionAgent,
   subagentSessions,
 } from "../../features/claude-code-session-state"
 import type { ContextCollector } from "../../features/context-injector"
+import { getAutonomousUltraworkMessage } from "./ultrawork/autonomous"
+import { buildSemanticHintMessage, detectSemanticHintType } from "./semantic-hint"
 
-export function createKeywordDetectorHook(ctx: PluginInput, _collector?: ContextCollector) {
+export function createKeywordDetectorHook(
+  ctx: PluginInput,
+  _collector?: ContextCollector,
+  pluginConfig?: OhMyOpenCodeConfig,
+) {
   return {
     "chat.message": async (
       input: {
@@ -41,8 +50,25 @@ export function createKeywordDetectorHook(ctx: PluginInput, _collector?: Context
       const modelID = input.model?.modelID
       let detectedKeywords = detectKeywordsWithType(cleanText, currentAgent, modelID)
 
+      const semanticModeHint = pluginConfig?.experimental?.semantic_mode_hint ?? "suggest"
+
+      if (detectedKeywords.length === 0 && semanticModeHint !== "off") {
+        const semanticType = detectSemanticHintType(cleanText)
+        if (semanticType) {
+          const semanticMessage = buildSemanticHintMessage(semanticType)
+          detectedKeywords = [
+            {
+              type: semanticType === "analyze" ? "analyze" : "search",
+              message: semanticMessage,
+            },
+          ]
+        }
+      }
+
       if (isPlannerAgent(currentAgent)) {
-        detectedKeywords = detectedKeywords.filter((k) => k.type !== "ultrawork")
+        detectedKeywords = detectedKeywords.filter(
+          (k) => k.type !== "ultrawork" && k.type !== "ultrawork-autonomous"
+        )
       }
 
       if (detectedKeywords.length === 0) {
@@ -60,7 +86,9 @@ export function createKeywordDetectorHook(ctx: PluginInput, _collector?: Context
       const isNonMainSession = mainSessionID && input.sessionID !== mainSessionID
 
       if (isNonMainSession) {
-        detectedKeywords = detectedKeywords.filter((k) => k.type === "ultrawork")
+        detectedKeywords = detectedKeywords.filter(
+          (k) => k.type === "ultrawork" || k.type === "ultrawork-autonomous"
+        )
         if (detectedKeywords.length === 0) {
           log(`[keyword-detector] Skipping non-ultrawork keywords in non-main session`, {
             sessionID: input.sessionID,
@@ -71,7 +99,47 @@ export function createKeywordDetectorHook(ctx: PluginInput, _collector?: Context
       }
 
       const hasUltrawork = detectedKeywords.some((k) => k.type === "ultrawork")
-      if (hasUltrawork) {
+      const hasAutonomousUltrawork = detectedKeywords.some(
+        (k) => k.type === "ultrawork-autonomous"
+      )
+
+      if (hasAutonomousUltrawork) {
+        setUltraworkAutonomousSession(input.sessionID, true)
+      } else if (hasUltrawork) {
+        // preserve autonomous state once explicitly enabled in the session
+        if (!isUltraworkAutonomousSession(input.sessionID)) {
+          setUltraworkAutonomousSession(input.sessionID, false)
+        }
+      }
+
+      if (hasAutonomousUltrawork) {
+        detectedKeywords = detectedKeywords.filter(
+          (k) => k.type !== "ultrawork-autonomous"
+        )
+        if (!hasUltrawork) {
+          detectedKeywords.unshift({
+            type: "ultrawork",
+            message: getUltraworkMessage(currentAgent, modelID),
+          })
+        }
+      }
+
+      // Rebuild ultrawork message stack so autonomous mode can append extra directive
+      if (hasAutonomousUltrawork) {
+        const ultraworkIndex = detectedKeywords.findIndex((k) => k.type === "ultrawork")
+        if (ultraworkIndex !== -1) {
+          const currentUltrawork = detectedKeywords[ultraworkIndex]
+          const baseMessage = currentUltrawork.message || ""
+          detectedKeywords[ultraworkIndex] = {
+            ...currentUltrawork,
+            message: `${baseMessage}\n\n${getAutonomousUltraworkMessage()}`,
+          }
+        }
+      }
+
+      const hasEffectiveUltrawork = hasUltrawork || hasAutonomousUltrawork
+
+      if (hasEffectiveUltrawork) {
         log(`[keyword-detector] Ultrawork mode activated`, { sessionID: input.sessionID })
 
         output.message.variant = "max"

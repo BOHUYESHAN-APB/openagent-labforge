@@ -3,12 +3,12 @@ import color from "picocolors"
 import type { InstallArgs } from "./types"
 import {
   addPluginToOpenCodeConfig,
+  cleanupManagedBootstrapSkill,
+  cleanupManagedMcpFromOpenCodeConfig,
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
-  syncStaticAgentToOpenCodeConfig,
-  syncStaticMcpToOpenCodeConfig,
-  writeBootstrapSkill,
+  cleanupStaleManagedAgentsFromOpenCodeConfig,
   writeOmoConfig,
 } from "./config-manager"
 import { detectedToInitialValues, formatConfigSummary, SYMBOLS } from "./install-validators"
@@ -46,7 +46,7 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
   const config = await promptInstallConfig(detected)
   if (!config) return 1
 
-  spinner.start("Adding oh-my-opencode to OpenCode config")
+  spinner.start("Adding openagent-labforge to OpenCode config")
   const pluginResult = await addPluginToOpenCodeConfig(version)
   if (!pluginResult.success) {
     spinner.stop(`Failed to add plugin: ${pluginResult.error}`)
@@ -55,7 +55,7 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
   }
   spinner.stop(`Plugin added to ${color.cyan(pluginResult.configPath)}`)
 
-  spinner.start("Writing oh-my-opencode configuration")
+  spinner.start("Writing openagent-labforge configuration")
   const omoResult = writeOmoConfig(config)
   if (!omoResult.success) {
     spinner.stop(`Failed to write config: ${omoResult.error}`)
@@ -64,32 +64,32 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
   }
   spinner.stop(`Config written to ${color.cyan(omoResult.configPath)}`)
 
-  spinner.start("Syncing static MCP configuration")
-  const staticMcpResult = syncStaticMcpToOpenCodeConfig()
-  if (!staticMcpResult.success) {
-    spinner.stop(`Failed to sync static MCP config: ${staticMcpResult.error}`)
+  spinner.start("Cleaning managed MCPs from OpenCode config")
+  const cleanupMcpResult = cleanupManagedMcpFromOpenCodeConfig()
+  if (!cleanupMcpResult.success) {
+    spinner.stop(`Failed to clean managed MCP config: ${cleanupMcpResult.error}`)
     p.outro(color.red("Installation failed."))
     return 1
   }
-  spinner.stop(`Static MCP config synced to ${color.cyan(staticMcpResult.configPath)}`)
+  spinner.stop(`Managed MCP cleanup complete at ${color.cyan(cleanupMcpResult.configPath)}`)
 
-  spinner.start("Syncing static agent configuration")
-  const staticAgentResult = await syncStaticAgentToOpenCodeConfig(process.cwd())
-  if (!staticAgentResult.success) {
-    spinner.stop(`Failed to sync static agent config: ${staticAgentResult.error}`)
+  spinner.start("Cleaning stale managed agents from OpenCode config")
+  const cleanupAgentResult = cleanupStaleManagedAgentsFromOpenCodeConfig()
+  if (!cleanupAgentResult.success) {
+    spinner.stop(`Failed to clean stale managed agents: ${cleanupAgentResult.error}`)
     p.outro(color.red("Installation failed."))
     return 1
   }
-  spinner.stop(`Static agent config synced to ${color.cyan(staticAgentResult.configPath)}`)
+  spinner.stop(`Managed agent cleanup complete at ${color.cyan(cleanupAgentResult.configPath)}`)
 
-  spinner.start("Bootstrapping openagent-labforge skill")
-  const bootstrapSkillResult = writeBootstrapSkill()
-  if (!bootstrapSkillResult.success) {
-    spinner.stop(`Failed to write bootstrap skill: ${bootstrapSkillResult.error}`)
+  spinner.start("Cleaning managed bootstrap skill")
+  const bootstrapSkillCleanupResult = cleanupManagedBootstrapSkill()
+  if (!bootstrapSkillCleanupResult.success) {
+    spinner.stop(`Failed to clean managed bootstrap skill: ${bootstrapSkillCleanupResult.error}`)
     p.outro(color.red("Installation failed."))
     return 1
   }
-  spinner.stop(`Skill ${bootstrapSkillResult.action} at ${color.cyan(bootstrapSkillResult.skillPath)}`)
+  spinner.stop(`Managed skill cleanup complete at ${color.cyan(bootstrapSkillCleanupResult.skillPath)}`)
 
   if (!config.hasClaude) {
     console.log()
@@ -123,7 +123,7 @@ export async function runTuiInstaller(args: InstallArgs, version: string): Promi
 
   p.log.message(`${color.yellow("★")} If you found this helpful, consider starring the repo!`)
   p.log.message(
-    `  ${color.dim("gh api --silent --method PUT /user/starred/code-yeongyu/oh-my-opencode >/dev/null 2>&1 || true")}`,
+    `  ${color.dim("gh api --silent --method PUT /user/starred/BOHUYESHAN-APB/openagent-labforge >/dev/null 2>&1 || true")}`,
   )
 
   p.outro(color.green("oMoMoMoMo... Enjoy!"))

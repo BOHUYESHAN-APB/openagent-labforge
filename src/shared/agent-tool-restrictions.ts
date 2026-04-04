@@ -29,6 +29,18 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
 
   "scientific-writer": WRITING_AGENT_DENYLIST,
 
+  "bio-orchestrator": {
+    call_omo_agent: false,
+  },
+
+  "bio-methodologist": EXPLORATION_AGENT_DENYLIST,
+
+  "wet-lab-designer": EXPLORATION_AGENT_DENYLIST,
+
+  "bio-pipeline-operator": WRITING_AGENT_DENYLIST,
+
+  "paper-evidence-synthesizer": EXPLORATION_AGENT_DENYLIST,
+
   oracle: {
     write: false,
     edit: false,
@@ -54,6 +66,10 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
 
   "sisyphus-junior": {
     task: false,
+  },
+
+  wase: {
+    call_omo_agent: false,
   },
 }
 

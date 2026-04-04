@@ -1,99 +1,190 @@
 # OpenAgent Labforge
 
-> [!NOTE]
-> **Derivative Notice**
->
-> OpenAgent Labforge is a derivative of `code-yeongyu/oh-my-openagent`
-> (formerly `oh-my-opencode`). This fork keeps the upstream license boundary
-> and provenance while changing product direction toward OpenCode-native
-> delegation, research workflows, MCP ergonomics, and local-first operation.
->
-> See `LICENSE.md`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and
-> `docs/licensing.md` for attribution and license context.
+OpenAgent Labforge is an OpenCode plugin fork focused on three things:
 
-## What changed in this fork
+- stronger engineering-oriented orchestration
+- explicit, inspectable child-session delegation
+- bioinformatics-first specialist workflows
 
-This README is intentionally focused on **current runtime behavior**, not on
-upstream history or manifesto copy.
+It is a derivative of `code-yeongyu/oh-my-openagent` and keeps upstream
+license/provenance boundaries intact. See [LICENSE.md](LICENSE.md),
+[NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
+[docs/licensing.md](docs/licensing.md).
 
-### 1. Agent system is now more explicit and inspectable
+## What This Fork Is Now
 
-- Clearer separation between orchestration agents and specialist agents
-- Native child-session delegation through the `task(subagent_type=...)` path
-- Better boundaries between:
-  - `librarian` -> one library / framework / SDK question
-  - `github-scout` -> repo landscape and study shortlist
-  - `tech-scout` -> ecosystem / benchmark / launch synthesis
-  - `article-writer` -> public-facing technical writing
-  - `scientific-writer` -> peer-facing scientific / technical writing
-- Background session fallback handling is hardened so delegated work keeps a
-  consistent model-fallback policy
+This README describes current runtime behavior only.
 
-### 2. Search flow is now split by retrieval quality
+The plugin is now centered on:
 
-- `websearch` -> higher-quality precision search
-- `open_websearch_mcp` -> broader multi-engine recall
-- `paper_search_mcp` -> academic retrieval
-- `context7` -> official library / framework documentation
-- `grep_app` -> GitHub code examples
+- OpenCode-native delegation through `task(subagent_type=...)`
+- stable plugin/agent/MCP injection for newer OpenCode behavior
+- explicit search/doc/code/paper retrieval separation
+- a growing first-party bioinformatics agent and skill stack
+- local-first development and installation
 
-The plugin now prefers lightweight search policy hints rather than aggressive
-prompt injection that overrode explicitly chosen specialist agents.
+## Current Core Capabilities
 
-### 3. MCP runtime behavior is more stable
+### Engineering orchestration
 
-- `bing_cn_mcp` was replaced by `open_websearch_mcp`
-- `open_websearch_mcp` now uses the correct local MCP `environment` handling,
-  stdio mode, prompt-probe compatibility, pinned package version, and a longer
-  startup timeout
-- `paper_search_mcp` was moved back to the launcher path that actually works in
-  this Windows/OpenCode environment
-- MCP policy now matches the intended product split: precision search first,
-  broad recall when needed, academic retrieval when required
+- `sisyphus`: main orchestrator
+- `wase`: fully autonomous orchestrator
+- `hephaestus`: deep coding executor
+- `prometheus`: planner
+- `atlas`: execution coordinator
+- `metis`: pre-planning consultant
+- `momus`: plan reviewer
 
-### 4. Skill discovery is closer to OpenCode behavior
+These core agents are being upgraded with stronger engineering behavior:
 
-- Project-local skill discovery walks upward toward git root
-- `SKILL.md` metadata is validated more strictly
-- Installer bootstraps an `openagent-labforge` skill directory automatically
-  for more reliable plugin-aware routing
+- better scope discipline
+- stronger verification expectations
+- more explicit planning and review standards
+- cleaner delegation contracts
 
-### 5. Release/install surfaces are being de-upstreamed
+Current engineering-capability layering:
 
-- Root README surfaces are fork-owned instead of inherited upstream marketing
-- Installer branding and package metadata now match the current fork identity
-- Current supported path is still **local build + local install**, not a fully
-  polished npm release workflow yet
+- strong execution + orchestration: `sisyphus`, `wase`
+- strong execution: `hephaestus`
+- strong orchestration: `atlas`
+- strong planning: `prometheus`, `metis`
+- strong review: `momus`
 
-## Current agent layout
-
-### Core orchestrators
-
-- `sisyphus` - default orchestrator
-- `hephaestus` - deep coding worker
-- `prometheus` - planner
-- `atlas` - execution coordinator
-- `sisyphus-junior` - category-based delegated executor
+This layering is intentional so future de-duplication stays easy if OpenCode
+itself absorbs parts of the same capability set.
 
 ### Specialist agents
 
-- `explore` - local codebase discovery
-- `librarian` - focused upstream dependency research
-- `github-scout` - repository scouting and comparative study
-- `tech-scout` - ecosystem / benchmark / launch analysis
-- `article-writer` - broad public technical writing
-- `scientific-writer` - scientific / specialist writing
-- bio and multimodal specialists remain available where configured
+- `explore`: local codebase discovery
+- `librarian`: focused upstream docs / SDK / library research
+- `github-scout`: repository and implementation scouting
+- `tech-scout`: ecosystem / benchmark / launch analysis
+- `article-writer`: public technical writing
+- `scientific-writer`: research-facing technical writing
+- `multimodal-looker`: PDF / image / figure understanding
 
-## Current installation reality
+### Bioinformatics stack
 
-This project is currently optimized for:
+The fork now has an explicit bioinformatics hierarchy:
 
-1. local build
-2. local tarball packaging
-3. local replacement in the OpenCode config directory
+- main bio entrypoints:
+  `bio-orchestrator` for integrated coordination
+  `bio-pipeline-operator` for execution-focused work
+- internal specialists used through child-session delegation:
+  `bio-methodologist` for computational design / QC / statistics planning
+  `wet-lab-designer` for user-executed wet-lab validation planning
+  `paper-evidence-synthesizer` for cross-paper evidence matrix and confidence grading
 
-Use:
+This is not limited to generic "analysis". The intended workflow includes:
+
+- literature retrieval
+- public dataset discovery
+- computational analysis
+- wet-lab validation design for the user to execute
+- evidence integration
+- specialist reporting
+
+## Built-in Skill Direction
+
+The built-in skill set now covers both general and bio workflows.
+
+Examples:
+
+- browser / UI / git:
+  - `playwright`
+  - `frontend-ui-ux`
+  - `git-master`
+- document / report:
+  - `docx-workbench`
+  - `pdf-toolkit`
+  - `xlsx-analyst`
+- bioinformatics:
+  - `bio-tools`
+  - `bio-methods`
+  - `wet-lab-design`
+  - `bio-pipeline`
+- `paper-evidence`
+- `differential-expression`
+- `scrna-preprocessing`
+- `cell-annotation`
+- `pubmed-search`
+- `geo-query`
+- `sequence-analysis`
+- `structural-biology`
+- `bio-visualization`
+- `vector-design`
+
+The bio skills are written as execution-oriented references: they specify
+preferred tools, typical commands/code paths, expected artifacts, and boundary
+conditions rather than acting as vague prompt decoration.
+
+Bio agents now also carry explicit data-interaction and environment-safety behavior:
+
+- they ask users for the minimum decisive data when company or sequencing data is missing
+- they separate required inputs from optional context
+- they prefer `uv` for Python environments
+- they prefer `conda` for mixed native stacks
+- they call out when Windows users realistically need WSL/Linux
+
+## Current MCP Set
+
+The built-in MCP surface is intentionally tighter now.
+
+Default built-ins kept visible:
+
+- `websearch`
+- `context7`
+- `grep_app`
+- `browser_puppeteer`
+- `chrome-devtools-mcp`
+- `deepwiki_mcp` (default off)
+- `open_websearch_mcp`
+- `paper_search_mcp`
+- `semantic_scholar_fastmcp`
+
+Removed from the built-in visible set:
+
+- `arxiv_mcp`
+- `fetch_browser`
+
+Rationale:
+
+- avoid duplicate capability surfaces
+- keep the MCP list focused
+- leave `deepwiki_mcp` opt-in instead of always-on
+
+## OpenCode Compatibility Work
+
+Recent migration work has focused on keeping pace with newer OpenCode behavior.
+
+Already aligned or hardened:
+
+- runtime plugin config discovery with canonical + legacy config compatibility
+- agent registration and protected builtin-agent override handling
+- command discovery:
+  - `.opencode/command`
+  - `.opencode/commands`
+  - ancestor discovery up to worktree root
+  - slash-style nested command names
+- `.agents/skills` participation in injection chains
+- MCP merge order and user override behavior
+- todo continuation / compaction / stagnation guard regressions
+
+The migration audit reference lives at:
+
+- [docs/release/upstream-oh-my-openagent-3.11-plus-audit.md](docs/release/upstream-oh-my-openagent-3.11-plus-audit.md)
+
+## Installation Reality
+
+This project is still optimized for local-first use, but there is now a real
+published path for `Windows x64`.
+
+Current install reality:
+
+- `Windows x64`: published npm package path is available
+- other platforms: local build + local install remains the reliable path
+
+Recommended workflow:
 
 ```bash
 bun run build:skills-catalog
@@ -101,39 +192,41 @@ bun run build
 bun pm pack
 ```
 
-Then follow `docs/guide/installation.md`.
+Then follow:
 
-## Docs map
+- [docs/guide/installation.md](docs/guide/installation.md)
 
-- `docs/guide/installation.md` - current install and replacement flow
-- `docs/guide/overview.md` - product shape and workflow split
-- `docs/guide/orchestration.md` - planning / execution / delegation model
-- `docs/reference/configuration.md` - config reference
-- `docs/reference/features.md` - capability reference
-- `examples/README.md` - config examples and bundle examples
+## Reference Repos
 
-## Known limits
+Local comparison material is kept under `Future/` for migration and design work.
 
-- The project is still local-first; polished public npm release flow is not the
-  main supported path yet
-- Some secondary docs still need cleanup to fully remove stale upstream
-  terminology
-- Browser-oriented MCP runtime remains more environment-sensitive than the core
-  search/doc/code MCP set
+Current references include:
 
-## Provenance
+- upstream `oh-my-openagent`
+- `BioClaw`
+- `Geneclaw`
+- `codex-main`
 
-We preserve upstream attribution and license boundaries while changing product
-direction and runtime behavior in this fork.
+These are local reference trees, not part of the shipped plugin.
 
-- Upstream: `https://github.com/code-yeongyu/oh-my-openagent`
-- Current fork: `https://github.com/BOHUYESHAN-APB/openagent-labforge`
+## Current Priorities
 
-If a lower-level document conflicts with this README and the current runtime,
-prefer this README plus `docs/guide/installation.md` as the more authoritative
-surface.
+The near-term order is:
 
-## Language versions
+1. finish upstream OpenCode compatibility migration
+2. strengthen engineering execution/orchestration capability in core agents
+3. continue refining the bioinformatics agent + skill stack
+
+## Docs
+
+- [docs/guide/installation.md](docs/guide/installation.md)
+- [docs/guide/orchestration.md](docs/guide/orchestration.md)
+- [docs/guide/bio-skills.md](docs/guide/bio-skills.md)
+- [docs/guide/bio-paper-autonomous-flow-v1.md](docs/guide/bio-paper-autonomous-flow-v1.md)
+- [docs/reference/configuration.md](docs/reference/configuration.md)
+- [docs/reference/features.md](docs/reference/features.md)
+
+## Language Versions
 
 - [English](README.md)
 - [简体中文](README.zh-cn.md)

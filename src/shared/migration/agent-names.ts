@@ -4,6 +4,8 @@ export const AGENT_NAME_MAP: Record<string, string> = {
   OmO: "sisyphus",
   Sisyphus: "sisyphus",
   sisyphus: "sisyphus",
+  WASE: "wase",
+  wase: "wase",
 
   // Prometheus variants → "prometheus"
   "OmO-Plan": "prometheus",
@@ -41,6 +43,7 @@ export const AGENT_NAME_MAP: Record<string, string> = {
 
 export const BUILTIN_AGENT_NAMES = new Set([
   "sisyphus", // was "Sisyphus"
+  "wase",
   "oracle",
   "librarian",
   "explore",

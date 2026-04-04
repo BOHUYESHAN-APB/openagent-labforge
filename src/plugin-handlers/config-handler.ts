@@ -7,6 +7,7 @@ import { applyMcpConfig } from "./mcp-config-handler";
 import { applyProviderConfig } from "./provider-config-handler";
 import { loadPluginComponents } from "./plugin-components-loader";
 import { applyToolConfig } from "./tool-config-handler";
+import { setAdditionalAllowedMcpEnvVars } from "../features/claude-code-mcp-loader";
 
 export { resolveCategoryConfig } from "./category-config-resolver";
 
@@ -21,6 +22,8 @@ export function createConfigHandler(deps: ConfigHandlerDeps) {
 
   return async (config: Record<string, unknown>) => {
     const formatterConfig = config.formatter;
+
+    setAdditionalAllowedMcpEnvVars(pluginConfig.mcp_env_allowlist ?? []);
 
     applyProviderConfig({ config, modelCacheState });
 

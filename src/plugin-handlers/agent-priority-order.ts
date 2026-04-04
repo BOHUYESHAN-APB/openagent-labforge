@@ -2,6 +2,7 @@ import { getAgentConfigKey } from "../shared/agent-display-names"
 
 const AGENT_PRIORITY_ORDER = [
   "sisyphus",
+  "wase",
   "hephaestus",
   "prometheus",
   "atlas",
@@ -10,7 +11,9 @@ const AGENT_PRIORITY_ORDER = [
   "explore",
   "github-scout",
   "tech-scout",
+  "bio-orchestrator",
   "bio-methodologist",
+  "wet-lab-designer",
   "bio-pipeline-operator",
   "paper-evidence-synthesizer",
   "multimodal-looker",

@@ -16,12 +16,12 @@ type NoHephaestusNonGptHookOptions = {
   allowNonGptModel?: boolean
 }
 
-function showToast(ctx: PluginInput, sessionID: string, variant: "error" | "warning"): void {
+function showToast(ctx: PluginInput, sessionID: string): void {
   ctx.client.tui.showToast({
     body: {
       title: TOAST_TITLE,
       message: TOAST_MESSAGE,
-      variant,
+      variant: "warning",
       duration: 10000,
     },
   }).catch((error) => {
@@ -51,7 +51,7 @@ export function createNoHephaestusNonGptHook(
       const allowNonGptModel = options?.allowNonGptModel === true
 
       if (agentKey === "hephaestus" && modelID && !isGptModel(modelID)) {
-        showToast(ctx, input.sessionID, allowNonGptModel ? "warning" : "error")
+        showToast(ctx, input.sessionID)
         if (allowNonGptModel || !input.forceAgentModelRouting) {
           return
         }

@@ -2662,7 +2662,47 @@ describe("BackgroundManager.checkAndInterruptStaleTasks", () => {
     //#when — session is running despite no progress
     await manager["checkAndInterruptStaleTasks"]({ "session-rnp": { type: "running" } })
 
-    //#then — running sessions are NEVER killed
+    //#then — very stale running sessions are now force-interrupted as safety net
+    expect(task.status).toBe("cancelled")
+    expect(task.error).toContain("running session stale timeout")
+  })
+
+  test("should keep running session alive when progress is recent", async () => {
+    //#given
+    const client = {
+      session: {
+        prompt: async () => ({}),
+        promptAsync: async () => ({}),
+        abort: async () => ({}),
+      },
+    }
+    const manager = new BackgroundManager(
+      { client, directory: tmpdir() } as unknown as PluginInput,
+      { staleTimeoutMs: 180_000 },
+    )
+
+    const task: BackgroundTask = {
+      id: "task-running-recent",
+      sessionID: "session-running-recent",
+      parentSessionID: "parent-rr",
+      parentMessageID: "msg-rr",
+      description: "Running task with recent progress",
+      prompt: "Test",
+      agent: "test-agent",
+      status: "running",
+      startedAt: new Date(Date.now() - 10 * 60 * 1000),
+      progress: {
+        toolCalls: 3,
+        lastUpdate: new Date(Date.now() - 60_000),
+      },
+    }
+
+    getTaskMap(manager).set(task.id, task)
+
+    //#when
+    await manager["checkAndInterruptStaleTasks"]({ "session-running-recent": { type: "running" } })
+
+    //#then
     expect(task.status).toBe("running")
   })
 
@@ -3198,7 +3238,7 @@ describe("BackgroundManager.handleEvent - session.error", () => {
       concurrencyKey,
       fallbackChain: [
         { providers: ["anthropic"], model: "claude-opus-4-6", variant: "max" },
-        { providers: ["anthropic"], model: "claude-opus-4-5" },
+        { providers: ["anthropic"], model: "claude-opus-4-5", variant: "medium" },
       ],
     })
 
@@ -3283,9 +3323,9 @@ describe("BackgroundManager.handleEvent - session.error", () => {
     manager.handleEvent({
       type: "message.updated",
       properties: {
+        sessionID,
         info: {
           id: "msg_errored",
-          sessionID,
           role: "assistant",
           error: {
             name: "UnknownError",
@@ -3296,7 +3336,7 @@ describe("BackgroundManager.handleEvent - session.error", () => {
           },
         },
       },
-    })
+    } as any)
 
     //#then
     expect(task.status).toBe("pending")

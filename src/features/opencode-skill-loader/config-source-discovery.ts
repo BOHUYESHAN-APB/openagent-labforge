@@ -31,7 +31,8 @@ function getPackageRootDir(): string {
         if (
           parsed.name === "@bohuyeshan/openagent-labforge-core" ||
           parsed.name === "@labforge/openagent-labforge-core" ||
-          parsed.name === "oh-my-opencode"
+          parsed.name === "oh-my-opencode" ||
+          parsed.name === "oh-my-openagent"
         ) {
           packageRootDirCache = currentDir
           return currentDir

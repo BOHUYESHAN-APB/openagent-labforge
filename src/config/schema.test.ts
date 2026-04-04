@@ -815,6 +815,31 @@ describe("ExperimentalConfigSchema feature flags", () => {
     expect(result.success).toBe(false)
   })
 
+  test("accepts semantic_mode_hint enum", () => {
+    //#given
+    const config = { semantic_mode_hint: "suggest" as const }
+
+    //#when
+    const result = ExperimentalConfigSchema.safeParse(config)
+
+    //#then
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.semantic_mode_hint).toBe("suggest")
+    }
+  })
+
+  test("rejects invalid semantic_mode_hint values", () => {
+    //#given
+    const config = { semantic_mode_hint: "smart" }
+
+    //#when
+    const result = ExperimentalConfigSchema.safeParse(config)
+
+    //#then
+    expect(result.success).toBe(false)
+  })
+
 })
 
 describe("GitMasterConfigSchema", () => {

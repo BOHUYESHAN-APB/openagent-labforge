@@ -5,7 +5,7 @@ import {
 } from "./constants"
 
 export interface DetectedKeyword {
-  type: "ultrawork" | "search" | "analyze"
+  type: "ultrawork" | "ultrawork-autonomous" | "search" | "analyze"
   message: string
 }
 
@@ -33,12 +33,23 @@ export function detectKeywords(text: string, agentName?: string, modelID?: strin
 
 export function detectKeywordsWithType(text: string, agentName?: string, modelID?: string): DetectedKeyword[] {
   const textWithoutCode = removeCodeBlocks(text)
-  const types: Array<"ultrawork" | "search" | "analyze"> = ["ultrawork", "search", "analyze"]
-  return KEYWORD_DETECTORS.map(({ pattern, message }, index) => ({
-    matches: pattern.test(textWithoutCode),
-    type: types[index],
-    message: resolveMessage(message, agentName, modelID),
-  }))
+  return KEYWORD_DETECTORS.map(({ pattern, message }) => {
+    const resolvedMessage = resolveMessage(message, agentName, modelID)
+    let type: DetectedKeyword["type"] = "search"
+    if (resolvedMessage === "[ultrawork-autonomous-trigger]") {
+      type = "ultrawork-autonomous"
+    } else if (resolvedMessage.includes("<ultrawork-mode>")) {
+      type = "ultrawork"
+    } else if (resolvedMessage.includes("[analyze-mode]")) {
+      type = "analyze"
+    }
+
+    return {
+      matches: pattern.test(textWithoutCode),
+      type,
+      message: resolvedMessage,
+    }
+  })
     .filter((result) => result.matches)
     .map(({ type, message }) => ({ type, message }))
 }

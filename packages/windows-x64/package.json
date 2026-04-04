@@ -1,11 +1,11 @@
 {
   "name": "openagent-labforge-windows-x64",
-  "version": "3.12.0",
+  "version": "3.13.2",
   "description": "Platform-specific binary for openagent-labforge (windows-x64)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/code-yeongyu/oh-my-openagent"
+    "url": "https://github.com/BOHUYESHAN-APB/openagent-labforge"
   },
   "os": [
     "win32"

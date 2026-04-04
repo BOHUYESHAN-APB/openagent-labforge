@@ -16,9 +16,16 @@ import {
   setSessionForcedModel,
   setSessionModel,
   setSessionModelLock,
+  isSessionAutoModelRoutingEnabled,
 } from "../shared/session-model-state"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
-import { setSessionAgent } from "../features/claude-code-session-state"
+import { log } from "../shared/logger"
+import {
+  getSessionAgent,
+  setSessionAgent,
+  setUltraworkAutonomousSession,
+} from "../features/claude-code-session-state"
+import { getAgentConfigKey } from "../shared/agent-display-names"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
@@ -39,6 +46,7 @@ export type ChatMessageInput = {
   forceAgentModelRouting?: boolean
 }
 type StartWorkHookOutput = { parts: Array<{ type: string; text?: string }> }
+const recoveryModelToastSessions = new Set<string>()
 
 function isStartWorkHookOutput(value: unknown): value is StartWorkHookOutput {
   if (typeof value !== "object" || value === null) return false
@@ -50,6 +58,21 @@ function isStartWorkHookOutput(value: unknown): value is StartWorkHookOutput {
     const partRecord = part as Record<string, unknown>
     return typeof partRecord["type"] === "string"
   })
+}
+
+function hasExplicitAgentModelOverride(
+  agent: string | undefined,
+  pluginConfig: OhMyOpenCodeConfig,
+): boolean {
+  const configuredAgents = pluginConfig.agents
+  if (!agent || !configuredAgents) {
+    return false
+  }
+
+  const agentKey = getAgentConfigKey(agent)
+  const configuredAgent = configuredAgents[agentKey as keyof typeof configuredAgents]
+  const configuredModel = configuredAgent?.model
+  return typeof configuredModel === "string" && configuredModel.trim().length > 0
 }
 
 export function createChatMessageHandler(args: {
@@ -83,6 +106,10 @@ export function createChatMessageHandler(args: {
     (typeof pluginConfig.runtime_fallback === "boolean"
       ? pluginConfig.runtime_fallback
       : (pluginConfig.runtime_fallback?.enabled ?? false))
+  const isModelFallbackEnabled =
+    hooks.modelFallback !== null &&
+    hooks.modelFallback !== undefined &&
+    (pluginConfig.model_fallback ?? true)
 
   return async (
     input: ChatMessageInput,
@@ -112,20 +139,22 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
+    const activeAgent = input.agent ?? getSessionAgent(input.sessionID)
+    const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
+    const shouldBypassStickyLockForAgent =
+      agentHasExplicitModelOverride &&
+      (rawInputModel === undefined || isAutoModelSelection(rawInputModelId))
+    let shouldShowRecoveryModelToast = false
 
-    if (strictUserModelPriority && lockedModel) {
+    if (strictUserModelPriority && lockedModel && !shouldBypassStickyLockForAgent) {
+      shouldShowRecoveryModelToast = !rawInputModel || isAutoModelSelection(rawInputModelId)
       if (!rawInputModel) {
         input.model = lockedModel
       } else if (isAutoModelSelection(rawInputModelId)) {
-        if (internalInitiatedPromptDetected) {
-          input.model = lockedModel
-        } else {
-          clearSessionModelLock(input.sessionID)
-          clearSessionForcedModel(input.sessionID)
-          setSessionAutoModelRouting(input.sessionID, true)
-        }
+        input.model = lockedModel
+        clearSessionAutoModelRouting(input.sessionID)
       } else if (!sameModel(rawInputModel, lockedModel)) {
-        if (forcedModel && sameModel(rawInputModel, forcedModel)) {
+        if (forcedModel && sameModel(rawInputModel, forcedModel) && !manualModelChangeDetected) {
           input.model = lockedModel
         }
       }
@@ -168,13 +197,35 @@ export function createChatMessageHandler(args: {
 
     if (input.agent) {
       setSessionAgent(input.sessionID, input.agent)
+      if (getAgentConfigKey(input.agent) === "wase") {
+        setUltraworkAutonomousSession(input.sessionID, true)
+      }
+    }
+
+    if (shouldShowRecoveryModelToast && lockedModel && !recoveryModelToastSessions.has(input.sessionID)) {
+      recoveryModelToastSessions.add(input.sessionID)
+      log("[chat-message] Restored locked model after auto/empty input", {
+        sessionID: input.sessionID,
+        lockedModel: `${lockedModel.providerID}/${lockedModel.modelID}`,
+        rawInputModel: rawInputModel ? `${rawInputModel.providerID}/${rawInputModel.modelID}` : "(none)",
+      })
+      pluginContext.client.tui
+        .showToast({
+          body: {
+            title: "Model lock restored",
+            message: `Using locked model ${lockedModel.providerID}/${lockedModel.modelID}`,
+            variant: "warning" as const,
+            duration: 2600,
+          },
+        })
+        .catch(() => {})
     }
 
     if (firstMessageVariantGate.shouldOverride(input.sessionID)) {
       firstMessageVariantGate.markApplied(input.sessionID)
     }
 
-    if (!isRuntimeFallbackEnabled) {
+    if (!isRuntimeFallbackEnabled && isModelFallbackEnabled) {
       await hooks.modelFallback?.["chat.message"]?.(input, output)
     }
     await hooks.stopContinuationGuard?.["chat.message"]?.(input)
@@ -242,23 +293,44 @@ export function createChatMessageHandler(args: {
       }
     }
 
-    applyUltraworkModelOverrideOnMessage(
-      pluginConfig,
-      input.agent,
-      output,
-      pluginContext.client.tui,
-      input.sessionID,
-      manualModelChangeDetected,
-      internalInitiatedPromptDetected,
-      Boolean(getSessionModelLock(input.sessionID)),
-    )
+    const currentRequestedModel = input.model
+    const currentRequestedModelId = modelToString(currentRequestedModel)
+    const explicitNonAutoModelRequested =
+      currentRequestedModel !== undefined &&
+      !isAutoModelSelection(currentRequestedModelId)
+    const canApplyPluginAutoOverride =
+      !explicitNonAutoModelRequested && (
+        currentRequestedModel === undefined ||
+        isAutoModelSelection(currentRequestedModelId) ||
+        isSessionAutoModelRoutingEnabled(input.sessionID)
+      )
+
+    if (canApplyPluginAutoOverride) {
+      applyUltraworkModelOverrideOnMessage(
+        pluginConfig,
+        input.agent,
+        output,
+        pluginContext.client.tui,
+        input.sessionID,
+        manualModelChangeDetected,
+        internalInitiatedPromptDetected,
+        Boolean(getSessionModelLock(input.sessionID)),
+      )
+    }
 
     const requestedModel = input.model
     const requestedModelId = modelToString(requestedModel)
-    const shouldLockToRequestedModel =
+    const userRequestedModel = rawInputModel
+    const userRequestedModelId = rawInputModelId
+    const shouldRefreshLockFromUserSelection =
+      strictUserModelPriority &&
+      userRequestedModel !== undefined &&
+      !isAutoModelSelection(userRequestedModelId)
+    const shouldEnforceLockedOutput =
       strictUserModelPriority &&
       requestedModel !== undefined &&
-      !isAutoModelSelection(requestedModelId)
+      !isAutoModelSelection(requestedModelId) &&
+      (!shouldBypassStickyLockForAgent || shouldRefreshLockFromUserSelection)
 
     const modelBeforeUserLock =
       output.message["model"] &&
@@ -272,25 +344,26 @@ export function createChatMessageHandler(args: {
         : undefined
 
     if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
-      if (internalInitiatedPromptDetected) {
-        if (lockedModel) {
-          input.model = lockedModel
-          output.message["model"] = lockedModel
-          clearSessionAutoModelRouting(input.sessionID)
-        }
-      } else {
-        clearSessionModelLock(input.sessionID)
-        clearSessionForcedModel(input.sessionID)
+      if (lockedModel) {
+        input.model = lockedModel
+        output.message["model"] = lockedModel
+        clearSessionAutoModelRouting(input.sessionID)
+      } else if (!internalInitiatedPromptDetected) {
         setSessionAutoModelRouting(input.sessionID, true)
       }
-    } else if (shouldLockToRequestedModel) {
+    } else if (shouldRefreshLockFromUserSelection) {
+      recoveryModelToastSessions.delete(input.sessionID)
+      log("[chat-message] Refreshed session model lock from explicit user selection", {
+        sessionID: input.sessionID,
+        selectedModel: `${userRequestedModel.providerID}/${userRequestedModel.modelID}`,
+      })
       clearSessionAutoModelRouting(input.sessionID)
-      setSessionModelLock(input.sessionID, requestedModel)
+      setSessionModelLock(input.sessionID, userRequestedModel)
       if (
         modelBeforeUserLock &&
         modelBeforeUserLock.providerID.length > 0 &&
         modelBeforeUserLock.modelID.length > 0 &&
-        !sameModel(modelBeforeUserLock, requestedModel)
+        !sameModel(modelBeforeUserLock, userRequestedModel)
       ) {
         setSessionForcedModel(input.sessionID, modelBeforeUserLock)
       } else {
@@ -298,7 +371,7 @@ export function createChatMessageHandler(args: {
       }
     }
 
-    if (shouldLockToRequestedModel) {
+    if (shouldEnforceLockedOutput) {
       output.message["model"] = requestedModel
     }
 

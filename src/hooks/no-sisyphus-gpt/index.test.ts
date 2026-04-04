@@ -44,7 +44,7 @@ describe("no-sisyphus-gpt hook", () => {
       body: {
         title: "NEVER Use Sisyphus with GPT",
         message: expect.stringContaining("consider Hephaestus"),
-        variant: "error",
+        variant: "warning",
       },
     })
   })

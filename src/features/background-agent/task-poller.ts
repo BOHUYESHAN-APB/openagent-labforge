@@ -9,6 +9,7 @@ import {
   DEFAULT_MESSAGE_STALENESS_TIMEOUT_MS,
   DEFAULT_STALE_TIMEOUT_MS,
   MIN_RUNTIME_BEFORE_STALE_MS,
+  RUNNING_SESSION_STALENESS_TIMEOUT_MS,
   TASK_TTL_MS,
 } from "./constants"
 
@@ -83,6 +84,34 @@ export async function checkAndInterruptStaleTasks(args: {
     const sessionStatus = sessionStatuses?.[sessionID]?.type
     const sessionIsRunning = sessionStatus !== undefined && sessionStatus !== "idle"
     const runtime = now - startedAt.getTime()
+
+    if (sessionIsRunning && runtime > RUNNING_SESSION_STALENESS_TIMEOUT_MS) {
+      const lastProgressAt = task.progress?.lastUpdate?.getTime() ?? startedAt.getTime()
+      const stagnantMs = now - lastProgressAt
+      if (stagnantMs > RUNNING_SESSION_STALENESS_TIMEOUT_MS) {
+        task.status = "cancelled"
+        task.error = `Running session stale timeout (no progress for ${Math.round(stagnantMs / 60000)}min)`
+        task.completedAt = new Date()
+
+        if (task.concurrencyKey) {
+          concurrencyManager.release(task.concurrencyKey)
+          task.concurrencyKey = undefined
+        }
+
+        client.session.abort({ path: { id: sessionID } }).catch(() => {})
+        log(`[background-agent] Task ${task.id} interrupted: running session stale timeout`)
+
+        try {
+          await notifyParentSession(task)
+        } catch (err) {
+          log("[background-agent] Error in notifyParentSession for running-stale task:", {
+            taskId: task.id,
+            error: err,
+          })
+        }
+        continue
+      }
+    }
 
     if (!task.progress?.lastUpdate) {
       if (sessionIsRunning) continue

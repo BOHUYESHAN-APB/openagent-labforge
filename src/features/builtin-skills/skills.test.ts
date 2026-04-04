@@ -83,12 +83,40 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// then
-		expect(defaultSkills).toHaveLength(10)
-		expect(agentBrowserSkills).toHaveLength(10)
+		expect(defaultSkills).toHaveLength(24)
+		expect(agentBrowserSkills).toHaveLength(24)
 		expect(defaultSkills.map((s) => s.name)).toContain("docx-workbench")
 		expect(defaultSkills.map((s) => s.name)).toContain("pdf-toolkit")
 		expect(defaultSkills.map((s) => s.name)).toContain("web-research")
 		expect(defaultSkills.map((s) => s.name)).toContain("data-analysis")
+		expect(defaultSkills.map((s) => s.name)).toContain("bio-tools")
+		expect(defaultSkills.map((s) => s.name)).toContain("bio-methods")
+		expect(defaultSkills.map((s) => s.name)).toContain("bio-visualization")
+		expect(defaultSkills.map((s) => s.name)).toContain("wet-lab-design")
+		expect(defaultSkills.map((s) => s.name)).toContain("bio-pipeline")
+		expect(defaultSkills.map((s) => s.name)).toContain("paper-evidence")
+		expect(defaultSkills.map((s) => s.name)).toContain("differential-expression")
+		expect(defaultSkills.map((s) => s.name)).toContain("scrna-preprocessing")
+		expect(defaultSkills.map((s) => s.name)).toContain("cell-annotation")
+		expect(defaultSkills.map((s) => s.name)).toContain("pubmed-search")
+		expect(defaultSkills.map((s) => s.name)).toContain("geo-query")
+		expect(defaultSkills.map((s) => s.name)).toContain("sequence-analysis")
+		expect(defaultSkills.map((s) => s.name)).toContain("structural-biology")
+		expect(defaultSkills.map((s) => s.name)).toContain("vector-design")
+	})
+
+	test("keeps bio skill to agent ownership aligned with the bio agent hierarchy", () => {
+		// given
+		const skills = createBuiltinSkills()
+		const byName = new Map(skills.map((skill) => [skill.name, skill]))
+
+		// then
+		expect(byName.get("bio-methods")?.agent).toBe("bio-methodologist")
+		expect(byName.get("wet-lab-design")?.agent).toBe("wet-lab-designer")
+		expect(byName.get("paper-evidence")?.agent).toBe("paper-evidence-synthesizer")
+		expect(byName.get("bio-pipeline")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("bio-visualization")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("vector-design")?.agent).toBe("wet-lab-designer")
 	})
 
 	test("should exclude playwright when it is in disabledSkills", () => {
@@ -103,7 +131,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(9)
+		expect(skills.length).toBe(23)
 	})
 
 	test("should exclude multiple skills when they are in disabledSkills", () => {
@@ -118,7 +146,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).not.toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(8)
+		expect(skills.length).toBe(22)
 	})
 
 	test("should return an empty array when all skills are disabled", () => {
@@ -131,7 +159,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(6)
+		expect(skills.length).toBe(20)
 	})
 
 	test("should return all skills when disabledSkills set is empty", () => {
@@ -142,7 +170,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(10)
+		expect(skills.length).toBe(24)
 	})
 
 	test("returns playwright-cli skill when browserProvider is 'playwright-cli'", () => {

@@ -26,7 +26,7 @@ export async function buildPrometheusAgentConfig(params: {
   configAgentPlan: Record<string, unknown> | undefined;
   pluginPrometheusOverride: PrometheusOverride | undefined;
   userCategories: Record<string, CategoryConfig> | undefined;
-  currentModel: string | undefined;
+  configuredSystemModel: string | undefined;
 }): Promise<Record<string, unknown>> {
   const categoryConfig = params.pluginPrometheusOverride?.category
     ? resolveCategoryConfig(params.pluginPrometheusOverride.category, params.userCategories)
@@ -40,13 +40,12 @@ export async function buildPrometheusAgentConfig(params: {
 
   const modelResolution = resolveModelPipeline({
     intent: {
-      uiSelectedModel: params.currentModel,
       userModel: params.pluginPrometheusOverride?.model ?? categoryConfig?.model,
     },
     constraints: { availableModels },
     policy: {
       fallbackChain: requirement?.fallbackChain,
-      systemDefaultModel: undefined,
+      systemDefaultModel: params.configuredSystemModel,
     },
   });
 

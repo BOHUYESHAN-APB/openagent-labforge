@@ -77,6 +77,55 @@ describe("keyword-detector message transform", () => {
     expect(textPart!.text).toContain("[search-mode]")
   })
 
+  test("should inject semantic hint in suggest mode when no explicit keyword exists", async () => {
+    // given
+    const collector = new ContextCollector()
+    const sessionID = "semantic-suggest-session"
+    getMainSessionSpy = spyOn(sessionState, "getMainSessionID").mockReturnValue(sessionID)
+    const hook = createKeywordDetectorHook(
+      createMockPluginInput(),
+      collector,
+      { experimental: { semantic_mode_hint: "suggest" } } as any,
+    )
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{ type: "text", text: "Please draft a concise architecture update for this module" }],
+    }
+
+    // when
+    await hook["chat.message"]({ sessionID }, output)
+
+    // then
+    const textPart = output.parts.find((p) => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect(textPart!.text).toContain("[semantic-mode-hint]")
+    expect(textPart!.text).toContain("Detected likely WRITING intent")
+  })
+
+  test("should not inject semantic hint when semantic_mode_hint is off", async () => {
+    // given
+    const collector = new ContextCollector()
+    const sessionID = "semantic-off-session"
+    getMainSessionSpy = spyOn(sessionState, "getMainSessionID").mockReturnValue(sessionID)
+    const hook = createKeywordDetectorHook(
+      createMockPluginInput(),
+      collector,
+      { experimental: { semantic_mode_hint: "off" } } as any,
+    )
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{ type: "text", text: "Please draft a concise architecture update for this module" }],
+    }
+
+    // when
+    await hook["chat.message"]({ sessionID }, output)
+
+    // then
+    const textPart = output.parts.find((p) => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect(textPart!.text).toBe("Please draft a concise architecture update for this module")
+  })
+
   test("should NOT transform when no keywords detected", async () => {
     // given - no keywords in message
     const collector = new ContextCollector()
@@ -314,6 +363,33 @@ describe("keyword-detector word boundary", () => {
     // then - ultrawork should be triggered
     expect(output.message.variant).toBe("max")
     expect(toastCalls).toContain("Ultrawork Mode Activated")
+  })
+
+  test("should trigger autonomous ultrawork via 'ultrawork auto'", async () => {
+    // given - message enables autonomous ultrawork
+    setMainSession(undefined)
+
+    const toastCalls: string[] = []
+    const hook = createKeywordDetectorHook(createMockPluginInput({ toastCalls }))
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{ type: "text", text: "ultrawork auto finish this end-to-end" }],
+    }
+
+    // when
+    await hook["chat.message"](
+      { sessionID: "autonomous-session" },
+      output
+    )
+
+    // then - ultrawork activated and autonomous directive injected
+    expect(output.message.variant).toBe("max")
+    expect(toastCalls).toContain("Ultrawork Mode Activated")
+
+    const textPart = output.parts.find(p => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect(textPart!.text).toContain("AUTONOMOUS EXECUTION ENABLED")
+    expect(textPart!.text).toContain("finish this end-to-end")
   })
 
   test("should NOT trigger ultrawork on file references containing 'ulw' substring", async () => {

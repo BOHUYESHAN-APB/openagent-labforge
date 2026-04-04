@@ -35,6 +35,7 @@ describe("remapAgentKeysToDisplayNames", () => {
     // given all core agents
     const agents = {
       sisyphus: {},
+      wase: {},
       hephaestus: {},
       prometheus: {},
       atlas: {},
@@ -49,6 +50,8 @@ describe("remapAgentKeysToDisplayNames", () => {
     // then all get display name keys without lowercase duplicates
     expect(result["Sisyphus (Ultraworker)"]).toBeDefined()
     expect(result["sisyphus"]).toBeUndefined()
+    expect(result["WASE (Autonomous Ultrawork)"]).toBeDefined()
+    expect(result["wase"]).toBeUndefined()
     expect(result["Hephaestus (Deep Agent)"]).toBeDefined()
     expect(result["hephaestus"]).toBeUndefined()
     expect(result["Prometheus (Plan Builder)"]).toBeDefined()
@@ -61,5 +64,21 @@ describe("remapAgentKeysToDisplayNames", () => {
     expect(result["momus"]).toBeUndefined()
     expect(result["Sisyphus-Junior"]).toBeDefined()
     expect(result["sisyphus-junior"]).toBeUndefined()
+  })
+
+  it("preserves colliding original key when remapped display-name collision occurs", () => {
+    // given a second key that remaps to the same display name
+    const agents = {
+      sisyphus: { prompt: "builtin" },
+      Sisyphus: { prompt: "custom" },
+    }
+
+    // when remapping
+    const result = remapAgentKeysToDisplayNames(agents)
+
+    // then both entries are preserved instead of one silently disappearing
+    expect(result["Sisyphus (Ultraworker)"]).toEqual({ prompt: "builtin" })
+    expect(result["sisyphus"]).toBeUndefined()
+    expect(result["Sisyphus"]).toEqual({ prompt: "custom" })
   })
 })

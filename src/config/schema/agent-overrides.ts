@@ -59,6 +59,7 @@ export const AgentOverridesSchema = z.object({
   build: AgentOverrideConfigSchema.optional(),
   plan: AgentOverrideConfigSchema.optional(),
   sisyphus: AgentOverrideConfigSchema.optional(),
+  wase: AgentOverrideConfigSchema.optional(),
   hephaestus: AgentOverrideConfigSchema.extend({
     allow_non_gpt_model: z.boolean().optional(),
   }).optional(),
@@ -70,7 +71,12 @@ export const AgentOverridesSchema = z.object({
   oracle: AgentOverrideConfigSchema.optional(),
   librarian: AgentOverrideConfigSchema.optional(),
   explore: AgentOverrideConfigSchema.optional(),
+  "bio-orchestrator": AgentOverrideConfigSchema.optional(),
   "multimodal-looker": AgentOverrideConfigSchema.optional(),
+  "bio-methodologist": AgentOverrideConfigSchema.optional(),
+  "wet-lab-designer": AgentOverrideConfigSchema.optional(),
+  "bio-pipeline-operator": AgentOverrideConfigSchema.optional(),
+  "paper-evidence-synthesizer": AgentOverrideConfigSchema.optional(),
   atlas: AgentOverrideConfigSchema.optional(),
 })
 

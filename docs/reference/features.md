@@ -9,9 +9,12 @@ This is the current feature summary for OpenAgent Labforge after the MCP, delega
 ### Core execution agents
 
 - `sisyphus` - main orchestrator
-- `hephaestus` - deep coding / GPT-style execution path
-- `prometheus` - planning
-- `atlas` - execution coordinator
+- `wase` - fully autonomous orchestrator
+- `hephaestus` - deep coding / execution path
+- `prometheus` - planner
+- `atlas` - execution coordinator and task-state auditor
+- `metis` - pre-planning consultant
+- `momus` - plan reviewer
 - `sisyphus-junior` - category-based delegated executor
 
 ### Specialist agents
@@ -23,7 +26,16 @@ This is the current feature summary for OpenAgent Labforge after the MCP, delega
 - `article-writer` - public-facing technical writing
 - `scientific-writer` - peer-facing scientific writing
 - `multimodal-looker` - screenshot / PDF / image analysis
-- bio-oriented specialists remain available where configured
+
+### Bioinformatics hierarchy
+
+- main entrypoints:
+  - `bio-orchestrator` - integrated bioinformatics coordination
+  - `bio-pipeline-operator` - execution-focused bioinformatics delivery
+- internal specialists:
+  - `bio-methodologist` - study framing, QC, and statistics planning
+  - `wet-lab-designer` - user-executed wet-lab validation design
+  - `paper-evidence-synthesizer` - literature evidence matrix and confidence grading
 
 ### Important current delegation rule
 
@@ -73,6 +85,22 @@ Current notable skill behavior:
 - metadata validation is stricter
 - project-local skill discovery walks upward toward git root
 - installer bootstraps `skills/openagent-labforge/SKILL.md`
+- first-party bio skills now describe tools, workflows, expected artifacts, and boundary rules
+
+Engineering-oriented skill stack examples:
+
+- `playwright`
+- `frontend-ui-ux`
+- `git-master`
+
+Bio skill stack examples:
+
+- `bio-tools`
+- `bio-methods`
+- `bio-pipeline`
+- `paper-evidence`
+- `bio-visualization`
+- `vector-design`
 
 ---
 
@@ -93,27 +121,19 @@ This is the practical stable path while broader release preparation continues.
 
 Notable engineering stabilizations already landed:
 
-- `open_websearch_mcp` replaced the old Bing-specific MCP path
-- `paper_search_mcp` was reverted to the launcher path that actually works in this environment
-- background-session fallback-chain registration now matches sync-session behavior
-- retry handling was hardened against stale provider-cache filtering
-- MCP OAuth callback server bind logic is more robust
-- bash null-byte stripping now prevents malformed command payloads
-- writable data/cache fallback exists for bad environment paths
+- canonical + legacy config discovery for `openagent-labforge.*` and `oh-my-opencode.*`
+- protected builtin-agent registration and upstream-style config handling
+- `.opencode/command(s)` ancestor discovery with nested slash command names
+- `.agents/skills` participation in command and agent awareness chains
+- trimmed MCP surface with redundant built-ins removed
+- todo continuation regression hardening for compaction, stagnation, and disposal
 
 ---
 
-## Release-Surface Cleanup Status
+## Current Engineering Direction
 
-Already cleaned:
+The current core engineering direction is:
 
-- root README variants
-- installation guide
-- package/repository metadata
-- CLI/TUI installer visible branding
-- schema metadata
-
-Still a later-phase concern:
-
-- broader non-critical doc harmonization
-- final public release/publish workflow polish
+- keep child-session delegation inspectable through `task(subagent_type=...)`
+- strengthen execution / planning / review contracts in the 7 core engineering agents
+- keep Claude/Codex-inspired engineering behaviors modular so future OpenCode overlap can be deduplicated cleanly

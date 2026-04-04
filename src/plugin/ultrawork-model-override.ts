@@ -3,7 +3,6 @@ import type { AgentOverrides } from "../config/schema/agent-overrides"
 import { getSessionAgent } from "../features/claude-code-session-state"
 import { log } from "../shared"
 import { getAgentConfigKey } from "../shared/agent-display-names"
-import { scheduleDeferredModelOverride } from "./ultrawork-db-model-override"
 
 const CODE_BLOCK = /```[\s\S]*?```/g
 const INLINE_CODE = /`[^`]+`/g
@@ -92,14 +91,10 @@ export function resolveUltraworkOverride(
 }
 
 /**
- * Applies ultrawork model override using a deferred DB update strategy.
+ * Applies ultrawork model override directly on the outgoing message.
  *
- * Instead of directly mutating output.message.model (which would cause the TUI
- * bottom bar to show the override model), this schedules a queueMicrotask that
- * updates the message model directly in SQLite AFTER Session.updateMessage()
- * saves the original model, but BEFORE loop() reads it for the API call.
- *
- * Result: API call uses opus, TUI bottom bar stays on sonnet.
+ * This keeps the UI model label and the actual request model consistent,
+ * avoiding deferred DB writes that can create cross-window state drift.
  */
 export function applyUltraworkModelOverrideOnMessage(
   pluginConfig: OhMyOpenCodeConfig,
@@ -147,27 +142,15 @@ export function applyUltraworkModelOverrideOnMessage(
     return
   }
 
-  const messageId = output.message["id"] as string | undefined
-  if (!messageId) {
-    log("[ultrawork-model-override] No message ID found, falling back to direct mutation")
-    output.message.model = targetModel
-    return
-
-  }
-
   const fromModel = (output.message.model as { modelID?: string } | undefined)?.modelID ?? "unknown"
   const agentConfigKey = getAgentConfigKey(
     inputAgentName ??
     (typeof output.message["agent"] === "string" ? (output.message["agent"] as string) : "unknown"),
   )
 
-  scheduleDeferredModelOverride(
-    messageId,
-    targetModel,
-    override.variant,
-  )
+  output.message.model = targetModel
 
-  log(`[ultrawork-model-override] ${fromModel} -> ${override.modelID} (deferred DB)`, {
+  log(`[ultrawork-model-override] ${fromModel} -> ${override.modelID} (direct message)`, {
     agent: agentConfigKey,
   })
 

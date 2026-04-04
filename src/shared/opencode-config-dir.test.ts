@@ -45,7 +45,7 @@ describe("opencode-config-dir", () => {
       const result = getOpenCodeConfigDir({ binary: "opencode", version: "1.0.200" })
 
       // then returns the custom path
-      expect(result).toBe("/custom/opencode/path")
+      expect(result).toBe(resolve("/custom/opencode/path"))
     })
 
     test("falls back to default when env var is not set", () => {
@@ -109,7 +109,7 @@ describe("opencode-config-dir", () => {
       const result = getOpenCodeConfigDir({ binary: "opencode", version: "1.0.200" })
 
       // then OPENCODE_CONFIG_DIR takes priority
-      expect(result).toBe("/custom/opencode/path")
+      expect(result).toBe(resolve("/custom/opencode/path"))
     })
   })
 
@@ -153,7 +153,7 @@ describe("opencode-config-dir", () => {
         expect(result).toBe(join(homedir(), ".config", "opencode"))
       })
 
-      test("returns $XDG_CONFIG_HOME/opencode on Linux when XDG_CONFIG_HOME is set", () => {
+    test("returns $XDG_CONFIG_HOME/opencode on Linux when XDG_CONFIG_HOME is set", () => {
         // given opencode CLI binary detected, platform is Linux with XDG_CONFIG_HOME set
         Object.defineProperty(process, "platform", { value: "linux" })
         process.env.XDG_CONFIG_HOME = "/custom/config"
@@ -163,7 +163,7 @@ describe("opencode-config-dir", () => {
         const result = getOpenCodeConfigDir({ binary: "opencode", version: "1.0.200" })
 
         // then returns $XDG_CONFIG_HOME/opencode
-        expect(result).toBe("/custom/config/opencode")
+        expect(result).toBe(join("/custom/config", "opencode"))
       })
 
       test("returns ~/.config/opencode on macOS", () => {
@@ -272,7 +272,7 @@ describe("opencode-config-dir", () => {
       expect(paths.configJson).toBe(join(expectedDir, "opencode.json"))
       expect(paths.configJsonc).toBe(join(expectedDir, "opencode.jsonc"))
       expect(paths.packageJson).toBe(join(expectedDir, "package.json"))
-      expect(paths.omoConfig).toBe(join(expectedDir, "oh-my-opencode.json"))
+      expect(paths.pluginConfig).toBe(join(expectedDir, "openagent-labforge.jsonc"))
     })
 
     test("returns all config paths for desktop binary", () => {
@@ -288,7 +288,7 @@ describe("opencode-config-dir", () => {
       expect(paths.configJson).toBe(join(expectedDir, "opencode.json"))
       expect(paths.configJsonc).toBe(join(expectedDir, "opencode.jsonc"))
       expect(paths.packageJson).toBe(join(expectedDir, "package.json"))
-      expect(paths.omoConfig).toBe(join(expectedDir, "oh-my-opencode.json"))
+      expect(paths.pluginConfig).toBe(join(expectedDir, "openagent-labforge.jsonc"))
     })
   })
 

@@ -12,8 +12,22 @@ import { categorizeTools } from "../dynamic-agent-prompt-builder";
 import { buildHephaestusPrompt as buildGptPrompt } from "./gpt";
 import { buildHephaestusPrompt as buildGpt53CodexPrompt } from "./gpt-5-3-codex";
 import { buildHephaestusPrompt as buildGpt54Prompt } from "./gpt-5-4";
+import { ENGINEERING_EXECUTION_CAPABILITY } from "../engineering-capability";
 
 const MODE: AgentMode = "all";
+
+const HEPHAESTUS_EXECUTION_APPEND = `<hephaestus_execution_contract>
+## Hephaestus Execution Contract
+
+Hephaestus is responsible for implementation quality, not just raw throughput.
+
+Required habits:
+- keep the write surface as small as possible for the task at hand
+- prefer existing local patterns over fresh abstractions
+- when output artifacts or generated files change, inspect the actual artifact, not just the command exit code
+- if the task changes config, CLI behavior, schemas, or user-facing flows, update the matching docs or examples in the same pass
+- if a central module starts absorbing unrelated logic, stop and consider extraction before continuing
+</hephaestus_execution_contract>`;
 
 export type HephaestusPromptSource = "gpt-5-4" | "gpt-5-3-codex" | "gpt";
 
@@ -107,7 +121,7 @@ export function createHephaestusAgent(
     availableSkills,
     availableCategories,
     useTaskSystem,
-  });
+  }) + "\n\n" + ENGINEERING_EXECUTION_CAPABILITY + "\n\n" + HEPHAESTUS_EXECUTION_APPEND;
 
   return {
     description:

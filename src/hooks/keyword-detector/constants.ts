@@ -21,6 +21,10 @@ export const KEYWORD_DETECTORS: KeywordDetector[] = [
     message: getUltraworkMessage,
   },
   {
+    pattern: /\b(ultrawork\s+auto|ultrawork\s+autonomous|ultra\s+auto|ultra\s+autonomous|ulw\s+auto|ulw\s+autonomous)\b/i,
+    message: "[ultrawork-autonomous-trigger]",
+  },
+  {
     pattern: SEARCH_PATTERN,
     message: SEARCH_MESSAGE,
   },

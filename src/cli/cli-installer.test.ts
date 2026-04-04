@@ -45,18 +45,18 @@ describe("runCliInstaller", () => {
         success: true,
         configPath: "/tmp/oh-my-opencode.jsonc",
       }),
-      spyOn(configManager, "syncStaticMcpToOpenCodeConfig").mockReturnValue({
+      spyOn(configManager, "cleanupManagedMcpFromOpenCodeConfig").mockReturnValue({
         success: true,
         configPath: "/tmp/opencode.jsonc",
       }),
-      spyOn(configManager, "syncStaticAgentToOpenCodeConfig").mockResolvedValue({
+      spyOn(configManager, "cleanupStaleManagedAgentsFromOpenCodeConfig").mockReturnValue({
         success: true,
         configPath: "/tmp/opencode.jsonc",
       }),
-      spyOn(configManager, "writeBootstrapSkill").mockReturnValue({
+      spyOn(configManager, "cleanupManagedBootstrapSkill").mockReturnValue({
         success: true,
         skillPath: "/tmp/skills/openagent-labforge/SKILL.md",
-        action: "created",
+        removed: true,
       }),
     ]
 

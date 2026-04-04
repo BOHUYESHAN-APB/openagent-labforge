@@ -14,6 +14,20 @@ import {
   xlsxSkill,
   webResearchSkill,
   dataAnalysisSkill,
+  bioToolsSkill,
+  bioMethodsSkill,
+  bioVisualizationSkill,
+  wetLabDesignSkill,
+  bioPipelineSkill,
+  paperEvidenceSkill,
+  differentialExpressionSkill,
+  scrnaPreprocessingSkill,
+  cellAnnotationSkill,
+  pubmedSearchSkill,
+  geoQuerySkill,
+  sequenceAnalysisSkill,
+  structuralBiologySkill,
+  vectorDesignSkill,
 } from "./skills/index"
 
 export interface CreateBuiltinSkillsOptions {
@@ -44,6 +58,20 @@ export function createBuiltinSkills(options: CreateBuiltinSkillsOptions = {}): B
     xlsxSkill,
     webResearchSkill,
     dataAnalysisSkill,
+    bioToolsSkill,
+    bioMethodsSkill,
+    bioVisualizationSkill,
+    wetLabDesignSkill,
+    bioPipelineSkill,
+    paperEvidenceSkill,
+    differentialExpressionSkill,
+    scrnaPreprocessingSkill,
+    cellAnnotationSkill,
+    pubmedSearchSkill,
+    geoQuerySkill,
+    sequenceAnalysisSkill,
+    structuralBiologySkill,
+    vectorDesignSkill,
   ]
 
   if (!disabledSkills) {

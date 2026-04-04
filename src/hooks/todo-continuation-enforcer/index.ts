@@ -49,10 +49,16 @@ export function createTodoContinuationEnforcer(
     log(`[${HOOK_NAME}] All countdowns cancelled`)
   }
 
+  const dispose = (): void => {
+    sessionStateStore.shutdown()
+    log(`[${HOOK_NAME}] Session state store shutdown`)
+  }
+
   return {
     handler,
     markRecovering,
     markRecoveryComplete,
     cancelAllCountdowns,
+    dispose,
   }
 }

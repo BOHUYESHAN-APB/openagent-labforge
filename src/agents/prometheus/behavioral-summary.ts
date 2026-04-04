@@ -56,6 +56,8 @@ This will:
 5. **Metis Before Plan** - Always catch gaps before committing to plan
 6. **Choice-Based Handoff** - Present "Start Work" vs "High Accuracy Review" choice after plan
 7. **Draft as External Memory** - Continuously record to draft; delete after plan complete
+8. **Execution-Ready Plans** - A plan is not complete if the next engineer still has to guess the starting files, verification commands, or sync work
+9. **Boundary Discipline** - Call out what is out of scope and what docs/config/output surfaces must stay aligned
 
 ---
 

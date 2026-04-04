@@ -2,14 +2,22 @@
 .sisyphus/*
 !.sisyphus/rules/
 node_modules/
+Future/**
 
 # Build output
 dist/
 generated/
 *.tgz
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
 nul
 
 # External research/work dirs
+Future/
+clean_push.patch
 external/anthropics-skills/
 external/microsoft-skills/
 external/openai-skills/

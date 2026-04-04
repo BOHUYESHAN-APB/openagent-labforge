@@ -4,6 +4,11 @@ import { PACKAGE_NAME } from "../constants"
 import { getConfigPaths } from "./config-paths"
 import { stripJsonComments } from "./jsonc-strip"
 
+const LEGACY_PACKAGE_NAMES = [
+  "oh-my-opencode",
+  "@labforge/openagent-labforge-core",
+] as const
+
 export interface PluginEntryInfo {
   entry: string
   isPinned: boolean
@@ -24,11 +29,15 @@ export function findPluginEntry(directory: string): PluginEntryInfo | null {
       const plugins = config.plugin ?? []
 
       for (const entry of plugins) {
-        if (entry === PACKAGE_NAME) {
+        if (entry === PACKAGE_NAME || LEGACY_PACKAGE_NAMES.some((name) => entry === name)) {
           return { entry, isPinned: false, pinnedVersion: null, configPath }
         }
-        if (entry.startsWith(`${PACKAGE_NAME}@`)) {
-          const pinnedVersion = entry.slice(PACKAGE_NAME.length + 1)
+        const matchedName = [PACKAGE_NAME, ...LEGACY_PACKAGE_NAMES].find((name) =>
+          entry.startsWith(`${name}@`)
+        )
+
+        if (matchedName) {
+          const pinnedVersion = entry.slice(matchedName.length + 1)
           const isPinned = isExplicitVersionPin(pinnedVersion)
           return { entry, isPinned, pinnedVersion, configPath }
         }

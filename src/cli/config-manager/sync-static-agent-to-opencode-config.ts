@@ -12,9 +12,10 @@ import {
 import { loadProjectAgents, loadUserAgents } from "../../features/claude-code-agent-loader"
 import { loadPluginConfig } from "../../plugin-config"
 import { reorderAgentsByPriority } from "../../plugin-handlers/agent-priority-order"
-import { remapAgentKeysToDisplayNames } from "../../plugin-handlers/agent-key-remapper"
+import { buildPrometheusAgentConfig } from "../../plugin-handlers/prometheus-agent-config-builder"
 import {
   getAgentConfigKey,
+  getAgentDisplayName,
   resolveAgentDisplayLanguage,
   setAgentDisplayLanguage,
 } from "../../shared/agent-display-names"
@@ -52,6 +53,18 @@ function filterVisibleAgents(agents: Record<string, unknown>, disabledAgents: st
   ) as Record<string, StaticAgentConfig>
 }
 
+function applyLocalizedAgentNames(agents: Record<string, StaticAgentConfig>): Record<string, StaticAgentConfig> {
+  return Object.fromEntries(
+    Object.entries(agents).map(([key, value]) => [
+      key,
+      {
+        ...value,
+        name: getAgentDisplayName(key),
+      },
+    ]),
+  ) as Record<string, StaticAgentConfig>
+}
+
 async function buildManagedStaticAgentConfig(existingConfig: OpenCodeConfig, directory: string): Promise<Record<string, StaticAgentConfig>> {
   const pluginConfig = await loadPluginConfig(directory, undefined)
   setAgentDisplayLanguage(resolveAgentDisplayLanguage(pluginConfig.i18n?.language))
@@ -84,6 +97,7 @@ async function buildManagedStaticAgentConfig(existingConfig: OpenCodeConfig, dir
   const currentModel = typeof existingConfig.model === "string" ? existingConfig.model : undefined
   const disabledAgents = pluginConfig.disabled_agents ?? []
   const includeClaudeAgents = pluginConfig.claude_code?.agents ?? true
+  const plannerEnabled = pluginConfig.sisyphus_agent?.planner_enabled ?? true
 
   const builtinAgents = await createBuiltinAgents(
     disabledAgents,
@@ -104,13 +118,36 @@ async function buildManagedStaticAgentConfig(existingConfig: OpenCodeConfig, dir
   const userAgents = includeClaudeAgents ? loadUserAgents() : {}
   const projectAgents = includeClaudeAgents ? loadProjectAgents(directory) : {}
 
+  const existingAgentConfig =
+    existingConfig.agent && typeof existingConfig.agent === "object" && !Array.isArray(existingConfig.agent)
+      ? (existingConfig.agent as Record<string, unknown>)
+      : undefined
+  const configAgentPlan =
+    existingAgentConfig?.plan && typeof existingAgentConfig.plan === "object" && !Array.isArray(existingAgentConfig.plan)
+      ? (existingAgentConfig.plan as Record<string, unknown>)
+      : undefined
+  const pluginPrometheusOverride =
+    pluginConfig.agents?.prometheus && typeof pluginConfig.agents.prometheus === "object"
+      ? (pluginConfig.agents.prometheus as Record<string, unknown>)
+      : undefined
+  const prometheusAgent = plannerEnabled
+    ? await buildPrometheusAgentConfig({
+        configAgentPlan,
+        pluginPrometheusOverride,
+        userCategories: pluginConfig.categories,
+        configuredSystemModel: currentModel,
+      })
+    : undefined
+
   const managedAgents = {
     ...filterVisibleAgents(builtinAgents, disabledAgents),
+    ...(prometheusAgent ? { prometheus: prometheusAgent } : {}),
     ...filterVisibleAgents(userAgents, disabledAgents),
     ...filterVisibleAgents(projectAgents, disabledAgents),
   }
 
-  return reorderAgentsByPriority(remapAgentKeysToDisplayNames(managedAgents)) as Record<string, StaticAgentConfig>
+  const orderedAgents = reorderAgentsByPriority(managedAgents) as Record<string, StaticAgentConfig>
+  return applyLocalizedAgentNames(orderedAgents)
 }
 
 function mergeManagedAgents(existingConfig: OpenCodeConfig, managedAgents: Record<string, StaticAgentConfig>): OpenCodeConfig {
@@ -128,9 +165,25 @@ function mergeManagedAgents(existingConfig: OpenCodeConfig, managedAgents: Recor
     ...managedAgents,
   })
 
+  const existingDefaultAgent =
+    typeof existingConfig.default_agent === "string"
+      ? existingConfig.default_agent.trim()
+      : ""
+  const normalizedDefaultAgent = existingDefaultAgent
+    ? getAgentConfigKey(existingDefaultAgent)
+    : undefined
+  const mergedAgentKeys = new Set(Object.keys(mergedAgent).map((name) => getAgentConfigKey(name)))
+  const nextDefaultAgent =
+    normalizedDefaultAgent && mergedAgentKeys.has(normalizedDefaultAgent)
+      ? normalizedDefaultAgent
+      : mergedAgentKeys.has("sisyphus")
+        ? "sisyphus"
+        : existingConfig.default_agent
+
   return {
     ...existingConfig,
     agent: mergedAgent,
+    default_agent: nextDefaultAgent,
   }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Detects external plugins that may conflict with oh-my-opencode features.
+ * Detects external plugins that may conflict with openagent-labforge features.
  * Used to prevent crashes from concurrent notification plugins.
  */
 
@@ -14,7 +14,7 @@ interface OpencodeConfig {
 }
 
 /**
- * Known notification plugins that conflict with oh-my-opencode's session-notification.
+ * Known notification plugins that conflict with openagent-labforge's session-notification.
  * Both plugins listen to session.idle and send notifications simultaneously,
  * which can cause crashes on Windows due to resource contention.
  */
@@ -23,6 +23,11 @@ const KNOWN_NOTIFICATION_PLUGINS = [
   "@mohak34/opencode-notifier",
   "mohak34/opencode-notifier",
 ]
+
+const KNOWN_SKILL_PLUGINS = [
+  "opencode-skills",
+  "@opencode/skills",
+] as const
 
 function getWindowsAppdataDir(): string | null {
   return process.env.APPDATA || null
@@ -88,7 +93,27 @@ function matchesNotificationPlugin(entry: string): string | null {
   return null
 }
 
+function matchesSkillPlugin(entry: string): string | null {
+  const normalized = entry.toLowerCase()
+  for (const known of KNOWN_SKILL_PLUGINS) {
+    if (normalized === known) return known
+    if (normalized.startsWith(`${known}@`)) return known
+    if (normalized === `npm:${known}` || normalized.startsWith(`npm:${known}@`)) return known
+    if (normalized.startsWith("file://") && (
+      normalized.endsWith(`/${known}`) ||
+      normalized.endsWith(`\\${known}`)
+    )) return known
+  }
+  return null
+}
+
 export interface ExternalNotifierResult {
+  detected: boolean
+  pluginName: string | null
+  allPlugins: string[]
+}
+
+export interface ExternalSkillPluginResult {
   detected: boolean
   pluginName: string | null
   allPlugins: string[]
@@ -120,18 +145,52 @@ export function detectExternalNotificationPlugin(directory: string): ExternalNot
   }
 }
 
+export function detectExternalSkillPlugin(directory: string): ExternalSkillPluginResult {
+  const plugins = loadOpencodePlugins(directory)
+
+  for (const plugin of plugins) {
+    const match = matchesSkillPlugin(plugin)
+    if (match) {
+      log(`Detected external skill plugin: ${plugin}`)
+      return {
+        detected: true,
+        pluginName: match,
+        allPlugins: plugins,
+      }
+    }
+  }
+
+  return {
+    detected: false,
+    pluginName: null,
+    allPlugins: plugins,
+  }
+}
+
 /**
  * Generate a warning message for users with conflicting notification plugins.
  */
 export function getNotificationConflictWarning(pluginName: string): string {
-  return `[oh-my-opencode] External notification plugin detected: ${pluginName}
+  return `[openagent-labforge] External notification plugin detected: ${pluginName}
 
-Both oh-my-opencode and ${pluginName} listen to session.idle events.
+Both openagent-labforge and ${pluginName} listen to session.idle events.
    Running both simultaneously can cause crashes on Windows.
 
-   oh-my-opencode's session-notification has been auto-disabled.
+   openagent-labforge's session-notification has been auto-disabled.
 
-   To use oh-my-opencode's notifications instead, either:
+   To use openagent-labforge's notifications instead, either:
    1. Remove ${pluginName} from your opencode.json plugins
-   2. Or set "notification": { "force_enable": true } in oh-my-opencode.json`
+   2. Or set "notification": { "force_enable": true } in openagent-labforge.json`
+}
+
+export function getSkillPluginConflictWarning(pluginName: string): string {
+  return `[openagent-labforge] External skill plugin detected: ${pluginName}
+
+Both openagent-labforge and ${pluginName} scan ~/.config/opencode/skills/ and register tools independently.
+   Running both simultaneously can cause duplicate skill/tool registration and HTTP 400 errors.
+
+   Consider either:
+   1. Remove ${pluginName} from your opencode.json plugins
+   2. Or disable openagent-labforge skill loading with "claude_code.skills": false
+   3. Or keep ${pluginName} as the sole skill-management plugin`
 }

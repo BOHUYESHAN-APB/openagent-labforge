@@ -11,7 +11,15 @@ import {
   clearBoulderState,
 } from "../../features/boulder-state"
 import { log } from "../../shared/logger"
-import { updateSessionAgent } from "../../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  isAgentRegistered,
+  updateSessionAgent,
+} from "../../features/claude-code-session-state"
+import {
+  getAgentConfigKey,
+  getAgentDisplayName,
+} from "../../shared/agent-display-names"
 import { detectWorktreePath } from "./worktree-detector"
 import { parseUserRequest } from "./parse-user-request"
 
@@ -78,7 +86,24 @@ export function createStartWorkHook(ctx: PluginInput) {
       if (!promptText.includes("<session-context>")) return
 
       log(`[${HOOK_NAME}] Processing start-work command`, { sessionID: input.sessionID })
-      updateSessionAgent(input.sessionID, "atlas")
+      const currentSessionAgent = getSessionAgent(input.sessionID)
+      const currentSessionAgentKey = currentSessionAgent
+        ? getAgentConfigKey(currentSessionAgent)
+        : undefined
+      const activeAgent = currentSessionAgent
+        && currentSessionAgentKey
+        && currentSessionAgentKey !== "prometheus"
+        && currentSessionAgentKey !== "atlas"
+          ? currentSessionAgent
+          : isAgentRegistered("atlas")
+            ? "atlas"
+            : "sisyphus"
+      const activeAgentDisplayName = getAgentDisplayName(activeAgent)
+      updateSessionAgent(input.sessionID, activeAgent)
+      const outputMessage = output as StartWorkHookOutput & { message?: Record<string, unknown> }
+      if (outputMessage.message) {
+        outputMessage.message.agent = activeAgentDisplayName
+      }
 
       const existingState = readBoulderState(ctx.directory)
       const sessionId = input.sessionID
@@ -106,7 +131,7 @@ The requested plan "${getPlanName(matchedPlan)}" has been completed.
 All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
           } else {
             if (existingState) clearBoulderState(ctx.directory)
-            const newState = createBoulderState(matchedPlan, sessionId, "atlas", worktreePath)
+            const newState = createBoulderState(matchedPlan, sessionId, activeAgent, worktreePath)
             writeBoulderState(ctx.directory, newState)
 
             contextInfo = `
@@ -154,18 +179,22 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
         if (!progress.isComplete) {
           const effectiveWorktree = worktreePath ?? existingState.worktree_path
 
-          if (worktreePath !== undefined) {
-            const updatedSessions = existingState.session_ids.includes(sessionId)
+            const sessionAlreadyTracked = existingState.session_ids.includes(sessionId)
+            const updatedSessions = sessionAlreadyTracked
               ? existingState.session_ids
               : [...existingState.session_ids, sessionId]
-            writeBoulderState(ctx.directory, {
-              ...existingState,
-              worktree_path: worktreePath,
-              session_ids: updatedSessions,
-            })
-          } else {
-            appendSessionId(ctx.directory, sessionId)
-          }
+            const shouldRewriteState = existingState.agent !== activeAgent || worktreePath !== undefined
+
+            if (shouldRewriteState) {
+              writeBoulderState(ctx.directory, {
+                ...existingState,
+                agent: activeAgent,
+                ...(worktreePath !== undefined ? { worktree_path: worktreePath } : {}),
+                session_ids: updatedSessions,
+              })
+            } else if (!sessionAlreadyTracked) {
+              appendSessionId(ctx.directory, sessionId)
+            }
 
           const worktreeDisplay = effectiveWorktree ? createWorktreeActiveBlock(effectiveWorktree) : worktreeBlock
 
@@ -213,7 +242,7 @@ All ${plans.length} plan(s) are complete. Create a new plan with: /plan "your ta
         } else if (incompletePlans.length === 1) {
           const planPath = incompletePlans[0]
           const progress = getPlanProgress(planPath)
-          const newState = createBoulderState(planPath, sessionId, "atlas", worktreePath)
+          const newState = createBoulderState(planPath, sessionId, activeAgent, worktreePath)
           writeBoulderState(ctx.directory, newState)
 
           contextInfo += `

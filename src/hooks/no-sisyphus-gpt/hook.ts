@@ -17,7 +17,7 @@ function showToast(ctx: PluginInput, sessionID: string): void {
     body: {
       title: TOAST_TITLE,
       message: TOAST_MESSAGE,
-      variant: "error",
+      variant: "warning",
       duration: 10000,
     },
   }).catch((error) => {

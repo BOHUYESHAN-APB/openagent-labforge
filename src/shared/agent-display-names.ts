@@ -32,6 +32,7 @@ export function resolveAgentDisplayLanguage(configLanguage?: string): AgentDispl
 
 const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
   sisyphus: "Sisyphus (Ultraworker)",
+  wase: "WASE (Autonomous Ultrawork)",
   hephaestus: "Hephaestus (Deep Agent)",
   prometheus: "Prometheus (Plan Builder)",
   atlas: "Atlas (Plan Executor)",
@@ -45,14 +46,17 @@ const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
   "tech-scout": "Tech-Scout",
   "article-writer": "article-writer",
   "scientific-writer": "scientific-writer",
+  "bio-orchestrator": "bio-orchestrator",
   "multimodal-looker": "multimodal-looker",
   "bio-methodologist": "bio-methodologist",
+  "wet-lab-designer": "wet-lab-designer",
   "bio-pipeline-operator": "bio-pipeline-operator",
   "paper-evidence-synthesizer": "paper-evidence-synthesizer",
 }
 
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   sisyphus: "总调度器 (超脑)",
+  wase: "哇塞 (全自动超脑)",
   hephaestus: "代码工匠 (深度)",
   prometheus: "规划师 (计划构建)",
   atlas: "执行官 (计划执行)",
@@ -66,16 +70,26 @@ const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   "tech-scout": "前沿技术侦察官",
   "article-writer": "文章写作官",
   "scientific-writer": "科研写作官",
+  "bio-orchestrator": "生信总控官",
   "multimodal-looker": "多模态观察者",
   "bio-methodologist": "生信方法官",
+  "wet-lab-designer": "湿实验设计官",
   "bio-pipeline-operator": "生信执行官",
   "paper-evidence-synthesizer": "论文证据整合官",
 }
 
 export const AGENT_DISPLAY_NAMES: Record<string, string> = AGENT_DISPLAY_NAMES_EN
 
+const AGENT_LIST_SORT_PREFIXES: Record<string, string> = {
+  atlas: "\u200B",
+}
+
 function getLanguageDisplayMap(): Record<string, string> {
   return currentLanguage === "zh" ? AGENT_DISPLAY_NAMES_ZH : AGENT_DISPLAY_NAMES_EN
+}
+
+function stripAgentListSortPrefix(agentName: string): string {
+  return agentName.replace(/^\u200B+/, "")
 }
 
 /**
@@ -99,6 +113,13 @@ export function getAgentDisplayName(configKey: string): string {
   return configKey
 }
 
+export function getAgentListDisplayName(configKey: string): string {
+  const displayName = getAgentDisplayName(configKey)
+  const prefix = AGENT_LIST_SORT_PREFIXES[configKey.toLowerCase()]
+
+  return prefix ? `${prefix}${displayName}` : displayName
+}
+
 const REVERSE_DISPLAY_NAMES: Record<string, string> = Object.fromEntries(
   [...Object.entries(AGENT_DISPLAY_NAMES_EN), ...Object.entries(AGENT_DISPLAY_NAMES_ZH)].map(
     ([key, displayName]) => [displayName.toLowerCase(), key]
@@ -110,7 +131,7 @@ const REVERSE_DISPLAY_NAMES: Record<string, string> = Object.fromEntries(
  * "Atlas (Plan Executor)" → "atlas", "atlas" → "atlas", "unknown" → "unknown"
  */
 export function getAgentConfigKey(agentName: string): string {
-  const lower = agentName.toLowerCase()
+  const lower = stripAgentListSortPrefix(agentName).toLowerCase()
   const reversed = REVERSE_DISPLAY_NAMES[lower]
   if (reversed !== undefined) return reversed
   if (AGENT_DISPLAY_NAMES_EN[lower] !== undefined) return lower

@@ -17,6 +17,16 @@ export const PROMETHEUS_PLAN_GENERATION = `# PHASE 2: PLAN GENERATION (Auto-Tran
 
 **Either trigger activates plan generation immediately.**
 
+## Planning Guardrails
+
+Every plan must preserve engineering clarity:
+
+- prefer the smallest viable implementation path that satisfies the request
+- if work touches a central or high-churn module, explicitly consider whether extraction or narrower ownership would reduce churn
+- include doc/config/schema/output-sync tasks when the change affects user-visible behavior or external contracts
+- do not hide critical decisions inside vague implementation tasks
+- separate investigation checkpoints from implementation checkpoints when uncertainty is still high
+
 ## MANDATORY: Register Todo List IMMEDIATELY (NON-NEGOTIABLE)
 
 **The INSTANT you detect a plan generation trigger, you MUST register the following steps as todos using TodoWrite.**

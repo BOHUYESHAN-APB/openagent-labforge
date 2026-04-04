@@ -2,12 +2,12 @@ import color from "picocolors"
 import type { InstallArgs } from "./types"
 import {
   addPluginToOpenCodeConfig,
+  cleanupManagedBootstrapSkill,
+  cleanupManagedMcpFromOpenCodeConfig,
   detectCurrentConfig,
   getOpenCodeVersion,
   isOpenCodeInstalled,
-  syncStaticAgentToOpenCodeConfig,
-  syncStaticMcpToOpenCodeConfig,
-  writeBootstrapSkill,
+  cleanupStaleManagedAgentsFromOpenCodeConfig,
   writeOmoConfig,
 } from "./config-manager"
 import {
@@ -35,7 +35,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
     }
     console.log()
     printInfo(
-      "Usage: bunx oh-my-opencode install --no-tui --claude=<no|yes|max20> --gemini=<no|yes> --copilot=<no|yes>",
+      "Usage: bunx openagent-labforge install --no-tui --claude=<no|yes|max20> --gemini=<no|yes> --copilot=<no|yes>",
     )
     console.log()
     return 1
@@ -46,7 +46,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
 
   printHeader(isUpdate)
 
-  const totalSteps = 7
+  const totalSteps = 6
   let step = 1
 
   printStep(step++, totalSteps, "Checking OpenCode installation...")
@@ -68,7 +68,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
 
   const config = argsToConfig(args)
 
-  printStep(step++, totalSteps, "Adding oh-my-opencode plugin...")
+  printStep(step++, totalSteps, "Adding openagent-labforge plugin...")
   const pluginResult = await addPluginToOpenCodeConfig(version)
   if (!pluginResult.success) {
     printError(`Failed: ${pluginResult.error}`)
@@ -78,7 +78,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
     `Plugin ${isUpdate ? "verified" : "added"} ${SYMBOLS.arrow} ${color.dim(pluginResult.configPath)}`,
   )
 
-  printStep(step++, totalSteps, "Writing oh-my-opencode configuration...")
+  printStep(step++, totalSteps, "Writing openagent-labforge configuration...")
   const omoResult = writeOmoConfig(config)
   if (!omoResult.success) {
     printError(`Failed: ${omoResult.error}`)
@@ -86,29 +86,29 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
   }
   printSuccess(`Config written ${SYMBOLS.arrow} ${color.dim(omoResult.configPath)}`)
 
-  printStep(step++, totalSteps, "Syncing static MCP configuration...")
-  const staticMcpResult = syncStaticMcpToOpenCodeConfig()
-  if (!staticMcpResult.success) {
-    printError(`Failed: ${staticMcpResult.error}`)
+  printStep(step++, totalSteps, "Cleaning managed MCPs from OpenCode config...")
+  const cleanupMcpResult = cleanupManagedMcpFromOpenCodeConfig()
+  if (!cleanupMcpResult.success) {
+    printError(`Failed: ${cleanupMcpResult.error}`)
     return 1
   }
-  printSuccess(`Static MCP config synced ${SYMBOLS.arrow} ${color.dim(staticMcpResult.configPath)}`)
+  printSuccess(`Managed MCP cleanup complete ${SYMBOLS.arrow} ${color.dim(cleanupMcpResult.configPath)}`)
 
-  printStep(step++, totalSteps, "Syncing static agent configuration...")
-  const staticAgentResult = await syncStaticAgentToOpenCodeConfig(process.cwd())
-  if (!staticAgentResult.success) {
-    printError(`Failed: ${staticAgentResult.error}`)
+  printStep(step++, totalSteps, "Cleaning stale managed agents from OpenCode config...")
+  const cleanupAgentResult = cleanupStaleManagedAgentsFromOpenCodeConfig()
+  if (!cleanupAgentResult.success) {
+    printError(`Failed: ${cleanupAgentResult.error}`)
     return 1
   }
-  printSuccess(`Static agent config synced ${SYMBOLS.arrow} ${color.dim(staticAgentResult.configPath)}`)
+  printSuccess(`Managed agent cleanup complete ${SYMBOLS.arrow} ${color.dim(cleanupAgentResult.configPath)}`)
 
-  printStep(step++, totalSteps, "Bootstrapping openagent-labforge skill...")
-  const bootstrapSkillResult = writeBootstrapSkill()
-  if (!bootstrapSkillResult.success) {
-    printError(`Failed: ${bootstrapSkillResult.error}`)
+  printStep(step++, totalSteps, "Cleaning managed bootstrap skill...")
+  const bootstrapSkillCleanupResult = cleanupManagedBootstrapSkill()
+  if (!bootstrapSkillCleanupResult.success) {
+    printError(`Failed: ${bootstrapSkillCleanupResult.error}`)
     return 1
   }
-  printSuccess(`Skill ${bootstrapSkillResult.action} ${SYMBOLS.arrow} ${color.dim(bootstrapSkillResult.skillPath)}`)
+  printSuccess(`Managed skill cleanup complete ${SYMBOLS.arrow} ${color.dim(bootstrapSkillCleanupResult.skillPath)}`)
 
   printBox(formatConfigSummary(config), isUpdate ? "Updated Configuration" : "Installation Complete")
 
@@ -149,7 +149,7 @@ export async function runCliInstaller(args: InstallArgs, version: string): Promi
 
   console.log(`${SYMBOLS.star} ${color.yellow("If you found this helpful, consider starring the repo!")}`)
   console.log(
-    `  ${color.dim("gh api --silent --method PUT /user/starred/code-yeongyu/oh-my-opencode >/dev/null 2>&1 || true")}`,
+    `  ${color.dim("gh api --silent --method PUT /user/starred/BOHUYESHAN-APB/openagent-labforge >/dev/null 2>&1 || true")}`,
   )
   console.log()
   console.log(color.dim("oMoMoMoMo... Enjoy!"))

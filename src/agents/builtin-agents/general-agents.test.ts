@@ -71,6 +71,33 @@ describe("collectPendingBuiltinAgents", () => {
     ])
   })
 
+  test("skips wase in general agent collector (handled as dedicated core agent)", () => {
+    //#given
+    const source = createSubagentFactory("wase")
+
+    //#when
+    const result = collectPendingBuiltinAgents({
+      agentSources: {
+        wase: source,
+      } as any,
+      agentMetadata: {
+        wase: {
+          category: "utility",
+          cost: "EXPENSIVE",
+          triggers: [{ domain: "Autonomous execution", trigger: "todo enforced continuation" }],
+        },
+      } as any,
+      disabledAgents: [],
+      agentOverrides: {},
+      mergedCategories: {},
+      availableModels: new Set(["anthropic/claude-opus-4-6"]),
+    })
+
+    //#then
+    expect(result.pendingAgentConfigs.get("wase")).toBeUndefined()
+    expect(result.availableAgents).toEqual([])
+  })
+
   test("includes scientific-writer in availableAgents when metadata and model requirement are present", () => {
     //#given
     const source = createSubagentFactory("scientific-writer")

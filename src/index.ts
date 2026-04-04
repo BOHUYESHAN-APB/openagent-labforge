@@ -7,6 +7,7 @@ import { createHooks } from "./create-hooks"
 import { createManagers } from "./create-managers"
 import { createTools } from "./create-tools"
 import { createPluginInterface } from "./plugin-interface"
+import { createPluginDispose } from "./plugin-dispose"
 
 import { loadPluginConfig } from "./plugin-config"
 import { createModelCacheState } from "./plugin-state"
@@ -17,12 +18,20 @@ import {
   setAgentDisplayLanguage,
 } from "./shared/agent-display-names"
 import { applyModelGovernor } from "./features/model-governor"
-import { startTmuxCheck } from "./tools"
+import { lspManager, startTmuxCheck } from "./tools"
 
-const OhMyOpenCodePlugin: Plugin = async (ctx) => {
+type DisposeHookCarrier = {
+  dispose?: () => void | Promise<void>
+}
+
+let activePluginDispose: (() => Promise<void>) | undefined
+
+const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
+  await activePluginDispose?.()
+
   // Initialize config context for plugin runtime (prevents warnings from hooks)
   initConfigContext("opencode", null)
-  log("[OhMyOpenCodePlugin] ENTRY - plugin loading", {
+  log("[OpenAgentLabforgePlugin] ENTRY - plugin loading", {
     directory: ctx.directory,
   })
 
@@ -92,8 +101,30 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
     tools: toolsResult.filteredTools,
   })
 
+  const disposeHooks = Object.values(hooks as Record<string, unknown>).flatMap((value) => {
+    if (typeof value !== "object" || value === null) {
+      return []
+    }
+
+    const maybeDisposable = value as DisposeHookCarrier
+    return typeof maybeDisposable.dispose === "function"
+      ? [maybeDisposable.dispose.bind(maybeDisposable)]
+      : []
+  })
+
+  activePluginDispose = createPluginDispose({
+    backgroundManager: managers.backgroundManager,
+    skillMcpManager: managers.skillMcpManager,
+    lspManager,
+    disposeHooks,
+  })
+
   return {
     ...pluginInterface,
+    dispose: async () => {
+      await activePluginDispose?.()
+      activePluginDispose = undefined
+    },
 
     "experimental.session.compacting": async (
       _input: { sessionID: string },
@@ -111,7 +142,7 @@ const OhMyOpenCodePlugin: Plugin = async (ctx) => {
   }
 }
 
-export default OhMyOpenCodePlugin
+export default OpenAgentLabforgePlugin
 
 export type {
   OhMyOpenCodeConfig,

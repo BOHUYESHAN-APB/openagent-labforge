@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 
 import type { BackgroundManager } from "../../features/background-agent"
 import { setMainSession, subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
+import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
 import { createTodoContinuationEnforcer } from "."
 import {
   CONTINUATION_COOLDOWN_MS,
@@ -171,6 +172,8 @@ describe("todo-continuation-enforcer", () => {
       id: string
       role: "user" | "assistant"
       error?: { name: string; data?: { message: string } }
+      agent?: string
+      model?: { providerID: string; modelID: string }
     }
   }
 
@@ -348,17 +351,14 @@ describe("todo-continuation-enforcer", () => {
 
   test("should inject for any session with incomplete todos", async () => {
     fakeTimers.restore()
-    //#given — any session, not necessarily main session
     const otherSession = "other-session"
 
     const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
 
-    //#when — session goes idle
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID: otherSession } },
     })
 
-    //#then — continuation injected regardless of session type
     await wait(2500)
     expect(promptCalls.length).toBe(1)
     expect(promptCalls[0].sessionID).toBe(otherSession)
@@ -794,9 +794,44 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
     await fakeTimers.advanceBy(2500, true)
 
-    //#then — all 5 injections should fire (no stagnation cap)
-    expect(promptCalls).toHaveLength(5)
+    //#then — upstream stops after stagnation threshold
+    expect(promptCalls).toHaveLength(3)
   }, { timeout: 60000 })
+
+  test("autonomous ultrawork should inject on first idle and use autonomous continuation prompt", async () => {
+    //#given
+    const sessionID = "main-autonomous-ultrawork"
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+
+    //#when - first idle should be enough in autonomous mode
+    await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
+    await fakeTimers.advanceBy(2500, true)
+
+    //#then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
+  })
+
+  test("wase agent session should use autonomous continuation prompt", async () => {
+    //#given
+    const sessionID = "main-wase-session"
+    setMainSession(sessionID)
+    mockMessages = [
+      { info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "anthropic", modelID: "claude-opus-4-6" } } },
+    ]
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+
+    //#when
+    await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
+    await fakeTimers.advanceBy(2500, true)
+
+    //#then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].agent).toBe("wase")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
+  })
 
   test("should skip idle handling while injection is in flight", async () => {
     //#given
