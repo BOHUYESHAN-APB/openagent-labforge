@@ -25,6 +25,30 @@ Incomplete tasks remain in your todo list. Continue immediately.
 - If blocked, explore/delegate and keep moving
 - Do not stop until all tasks are completed or explicitly cancelled`
 
+export const CONTINUATION_REPLAN_MARKER = "[OMO_CONTINUE_TODO_EXPAND]"
+
+export const CONTINUATION_REPLAN_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+
+Your last response implied there is still obvious work remaining, but your todo list is empty or fully consumed.
+
+- If you are about to stop while work remains, emit the exact marker ${CONTINUATION_REPLAN_MARKER} on its own line before ending your response
+- Convert the promised "next steps" into NEW concrete todos immediately
+- Do not summarize future work as prose only
+- Create the next execution wave with specific actionable items
+- Then continue working instead of waiting for the user to tell you to continue`
+
+export const AUTONOMOUS_COMPLETION_AUDIT_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+
+AUTONOMOUS COMPLETION AUDIT.
+
+All current todos are completed, but autonomous execution does NOT stop here automatically.
+
+- Audit the original user request against the actual work completed
+- If any substantial work remains, immediately create a new wave of 5-15 concrete todos
+- If the task is truly complete, only then provide a final completion answer
+- Do not ask the user whether you should continue when clear unfinished work remains
+- Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`
+
 export const COUNTDOWN_SECONDS = 2
 export const TOAST_DURATION_MS = 900
 export const COUNTDOWN_GRACE_PERIOD_MS = 500

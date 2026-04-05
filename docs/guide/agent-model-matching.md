@@ -2,6 +2,26 @@
 
 > **For agents and users**: Why each agent needs a specific model — and how to customize without breaking things.
 
+## Current Project Recommendation
+
+Current manual recommendation for this fork:
+
+- strongly preferred:
+  - GPT family
+  - GLM family
+  - Kimi family
+- also recommended:
+  - Google / Gemini
+- also currently adapting well:
+  - DeepSeek family
+- supported, but not fully re-validated in the most recent local cycle:
+  - Claude family
+
+Runtime fallback support and manual recommendation are not the same thing.
+Gemini is recommended in this fork as well, but when prompts become very long
+in bilingual Chinese/English workflows it can occasionally drift away from the
+user's target language.
+
 ## The Core Insight: Models Are Developers
 
 Think of AI models as developers on a team. Each has a different brain, different personality, different strengths. **A model isn't just "smarter" or "dumber." It thinks differently.** Give the same instruction to Claude and GPT, and they'll interpret it in fundamentally different ways.
@@ -127,8 +147,8 @@ Principle-driven, explicit reasoning, deep technical capability. Best for agents
 
 | Model                | Strengths                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Gemini 3.1 Pro**   | Excels at visual/frontend tasks. Different reasoning style. Default for `visual-engineering` and `artistry`. |
-| **Gemini 3 Flash**   | Fast. Good for doc search and light tasks.                                                                   |
+| **Gemini 3.1 Pro**   | Recommended, especially for visual/frontend paths, with the caveat that very long bilingual prompts can occasionally drift from the user's target language. |
+| **Gemini 3 Flash**   | Fast and useful for retrieval and lighter paths; still a valid recommendation when latency matters.         |
 | **Grok Code Fast 1** | Blazing fast code grep. Default for Explore agent.                                                           |
 | **MiniMax M2.5**     | Fast and smart. Good for utility tasks and search/retrieval.                                                 |
 
@@ -156,6 +176,11 @@ When agents delegate work, they don't pick a model name — they pick a **catego
 | `writing`            | Text, docs, prose          | Gemini Flash → Claude Sonnet                 |
 
 See the [Orchestration System Guide](./orchestration.md) for how agents dispatch tasks to categories.
+
+If you override categories manually and want the current project recommendation
+rather than the default runtime fallback order, GPT / GLM / Kimi / Gemini /
+DeepSeek are all valid choices here; the main Gemini caveat is occasional
+target-language drift under very long bilingual prompts.
 
 ---
 

@@ -9,12 +9,6 @@ OpenAgent Labforge currently has two practical install paths:
 
 ## Windows x64 npm install
 
-Current published package:
-
-```text
-@bohuyeshan/openagent-labforge-core@3.13.0
-```
-
 On Windows x64, the matching platform binary package is available and should be
 resolved automatically through optional dependencies.
 
@@ -25,7 +19,7 @@ Recommended flow:
 3. Run:
 
 ```bash
-bun add @bohuyeshan/openagent-labforge-core@3.13.0
+bun add @bohuyeshan/openagent-labforge-core
 ```
 
 4. Run `bun install` in the same config directory if needed.
@@ -65,7 +59,7 @@ Typical OpenCode config directory:
 Current platform note:
 
 - `Windows x64` has a published prebuilt binary path
-- other platform binaries are not fully published for `3.13.0` yet
+- other platform binaries are not fully published for every release yet
 - on macOS/Linux and non-Windows-x64 targets, build locally for now
 
 ## Plugin registration
@@ -77,6 +71,15 @@ Current plugin package identity:
   "plugin": ["@bohuyeshan/openagent-labforge-core"]
 }
 ```
+
+## Recommended companion plugins
+
+Strongly recommended alongside this plugin:
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`
+
+These are not hard dependencies, but they improve the practical local workflow.
 
 ## Plugin config file
 

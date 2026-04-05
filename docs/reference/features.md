@@ -4,6 +4,19 @@ This is the current feature summary for OpenAgent Labforge after the MCP, delega
 
 ---
 
+## Protocol Compatibility
+
+Fork-specific behavior is being added on top of the upstream plugin contract,
+not by casually replacing it.
+
+Current stance:
+
+- preserve upstream-style config and injection surfaces where practical
+- preserve upstream-style agent / MCP / command / skill registration behavior
+- document intentional divergences instead of silently reshaping the protocol
+
+---
+
 ## Agent System
 
 ### Core execution agents
@@ -91,16 +104,33 @@ Engineering-oriented skill stack examples:
 
 - `playwright`
 - `frontend-ui-ux`
+- `backend-architecture`
 - `git-master`
 
 Bio skill stack examples:
 
 - `bio-tools`
+- `blast-search`
+- `functional-annotation`
 - `bio-methods`
 - `bio-pipeline`
 - `paper-evidence`
 - `bio-visualization`
 - `vector-design`
+- `differential-expression`
+- `scrna-preprocessing`
+- `cell-annotation`
+- `atac-seq`
+- `chip-seq`
+- `metagenomics`
+- `proteomics`
+
+These bio skills now behave more like execution SOPs:
+
+- preferred tools and environment expectations
+- expected artifacts and output layout
+- QC gates and anti-pattern warnings
+- R / Python / native-tool branching when needed
 
 ---
 
@@ -137,3 +167,41 @@ The current core engineering direction is:
 - keep child-session delegation inspectable through `task(subagent_type=...)`
 - strengthen execution / planning / review contracts in the 7 core engineering agents
 - keep Claude/Codex-inspired engineering behaviors modular so future OpenCode overlap can be deduplicated cleanly
+
+This now also includes:
+
+- stronger product-grade frontend expectations
+- explicit backend architecture and contract discipline
+- deeper skill-loading guidance so frontend, backend, and bio work do not fall
+  back to generic execution prompts unnecessarily
+
+---
+
+## Current Model Recommendation
+
+Current manual recommendation in this fork:
+
+- preferred:
+  - GPT family
+  - GLM family
+  - Kimi family
+- also recommended:
+  - Google / Gemini
+- also adapting well:
+  - DeepSeek family
+- supported but not fully re-validated in the latest local cycle:
+  - Claude family
+
+Gemini caveat:
+
+- when prompts become very long in bilingual Chinese/English workflows, Gemini
+  can occasionally drift away from the user's target language
+
+---
+
+## Recommended Companion Plugins
+
+Strongly recommended alongside this plugin:
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`

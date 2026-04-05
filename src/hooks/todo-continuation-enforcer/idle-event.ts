@@ -20,12 +20,15 @@ import {
 import { isLastAssistantMessageAborted } from "./abort-detection"
 import { acknowledgeCompactionGuard, isCompactionGuardActive } from "./compaction-guard"
 import { startCountdown } from "./countdown"
+import { hasContinuationIntent } from "./continuation-intent-detection"
 import { hasUnansweredQuestion } from "./pending-question-detection"
 import { resolveLatestMessageInfo } from "./resolve-message-info"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
 import { shouldStopForStagnation } from "./stagnation-detection"
 import { getIncompleteCount } from "./todo"
+import { injectContinuationReplan } from "./continuation-injection"
+import { injectAutonomousCompletionAudit } from "./continuation-injection"
 
 // Follow upstream continuation gating closely: compaction and stagnation are the
 // two main protections that keep idle sessions from being re-prompted forever.
@@ -90,6 +93,7 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: pending question awaiting user response`, { sessionID })
       return
     }
+    state.hasContinuationIntent = hasContinuationIntent(messages)
   } catch (error) {
     log(`[${HOOK_NAME}] Messages fetch failed, continuing`, { sessionID, error: String(error) })
   }
@@ -104,6 +108,17 @@ export async function handleSessionIdle(args: {
   }
 
   if (!todos || todos.length === 0) {
+    if (state.hasContinuationIntent) {
+      await injectContinuationReplan({
+        ctx,
+        sessionID,
+        backgroundManager,
+        skipAgents,
+        sessionStateStore,
+        isContinuationStopped,
+      })
+      return
+    }
     sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] No todos`, { sessionID })
     return
@@ -111,10 +126,34 @@ export async function handleSessionIdle(args: {
 
   const incompleteCount = getIncompleteCount(todos)
   if (incompleteCount === 0) {
+    if (isAutonomous && (state.completionAuditCount ?? 0) < 2) {
+      await injectAutonomousCompletionAudit({
+        ctx,
+        sessionID,
+        backgroundManager,
+        skipAgents,
+        sessionStateStore,
+        isContinuationStopped,
+      })
+      return
+    }
+    if (state.hasContinuationIntent) {
+      await injectContinuationReplan({
+        ctx,
+        sessionID,
+        backgroundManager,
+        skipAgents,
+        sessionStateStore,
+        isContinuationStopped,
+      })
+      return
+    }
     sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] All todos complete`, { sessionID, total: todos.length })
     return
   }
+
+  state.completionAuditCount = 0
 
   if (state.inFlight) {
     log(`[${HOOK_NAME}] Skipped: injection in flight`, { sessionID })

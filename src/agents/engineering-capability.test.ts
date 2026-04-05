@@ -21,6 +21,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("Delegation packet:")
     expect(agent.prompt).toContain("Completion evidence:")
+    expect(agent.prompt).toContain("default to product-grade output unless the user explicitly asks for a prototype")
+    expect(agent.prompt).toContain("for frontend work, default to visual specialists plus UI verification skills")
   })
 
   test("wase inherits engineering capability blocks through sisyphus", () => {
@@ -30,6 +32,10 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("<wase-autonomous-mode>")
     expect(agent.prompt).toContain("Autonomy quality bar:")
+    expect(agent.prompt).toContain("Default todo size for substantial work is 5-15 concrete items")
+    expect(agent.prompt).toContain("do NOT stop to ask \"should I continue\"")
+    expect(agent.prompt).toContain("When the remaining backlog drops below 3 actionable items")
+    expect(agent.prompt).toContain("Never replace real follow-through with prose like \"next I would...\"")
   })
 
   test("hephaestus includes execution capability block", () => {
@@ -38,6 +44,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("do not grow central or high-churn modules casually")
     expect(agent.prompt).toContain("update the relevant docs in the same change")
+    expect(agent.prompt).toContain("Frontend delivery standards:")
+    expect(agent.prompt).toContain("Backend and architecture standards:")
     expect(agent.prompt).toContain("<hephaestus_execution_contract>")
   })
 
@@ -55,6 +63,7 @@ describe("engineering capability layering", () => {
     expect(prompt).toContain("<engineering_planning_capability>")
     expect(prompt).toContain("Plan quality bar:")
     expect(prompt).toContain("if the change touches a central module")
+    expect(prompt).toContain("for backend tasks, plan contracts, schema changes, migrations, and operational verification")
     expect(prompt).toContain("## Planning Guardrails")
   })
 
@@ -71,6 +80,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_review_capability>")
     expect(agent.prompt).toContain("Review checklist:")
     expect(agent.prompt).toContain("was user-visible behavior changed without updating docs")
+    expect(agent.prompt).toContain("does the frontend still read like a temporary dev panel")
     expect(agent.prompt).toContain("### 5. Engineering Drift Checks")
   })
 

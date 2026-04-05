@@ -113,6 +113,20 @@ This repository benefits more from precise, falsifiable engineering notes than f
 
 ---
 
+## Maintainer Merge Note
+
+The maintainer is not especially fluent in complex multi-contributor Git merge
+workflows.
+
+As a result:
+
+- contribution merges may sometimes take extra time
+- AI-assisted review or conflict-handling may be used before merge completion
+- concise PR notes, focused diffs, and explicit validation make merge handling
+  much easier
+
+---
+
 ## Publishing
 
 Do not treat local development as equivalent to public release readiness.

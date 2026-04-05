@@ -62,6 +62,51 @@
 - インストーラ文言、パッケージメタデータ、schema メタデータも現行 fork に調整
 - 現時点での推奨経路は **ローカル build + ローカル install**
 
+## プロトコル互換の方針
+
+このフォークで追加するコードは、できる限り upstream の元プロトコルを
+引き継ぎます。
+
+- config / injection の互換性を優先
+- agent / MCP / command / skill の登録面は upstream の流れを継承
+- fork 独自拡張は、元の契約を壊す前に積み上げる
+
+目的は、不要な drift を減らし、今後の upstream 同期を保守可能にすることです。
+
+## 現在のモデル推奨
+
+現在の手動選択の推奨順は次の通りです。
+
+- 強く推奨:
+  - GPT 系
+  - GLM 系
+  - Kimi 系
+- 推奨:
+  - Google / Gemini
+- 現在かなり相性が良い:
+  - DeepSeek 系
+- 対応はしているが、直近サイクルで十分に再検証していない:
+  - Claude 系
+
+Gemini に関する注意:
+
+- Gemini も推奨対象ですが、このフォークの長い prompt 構成では、
+  prompt が長くなりすぎた時に、中国語と英語を混ぜる利用者向けの出力で、
+  まれにユーザーの目標言語から drift することがあります。
+
+## 推奨 companion plugins
+
+OpenAgent Labforge は次のプラグインと併用を強く推奨します。
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`
+
+## コントリビューション補足
+
+- 複数人 Git 協業の merge は、場合によって少し時間がかかります
+- maintainer は複雑な multi-party merge を得意としていません
+- 必要に応じて AI 補助の review / conflict 整理を挟んでから merge することがあります
+
 ## 現在の agent 構成
 
 ### 中核オーケストレーター

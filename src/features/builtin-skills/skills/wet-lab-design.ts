@@ -32,22 +32,36 @@ Use this skill when computational results need a user-run experimental validatio
 - microscopy / imaging readouts
 - co-IP / pulldown / interaction validation
 
+## Design workflow
+
+1. state the hypothesis and what exact result would support it
+2. choose the minimum practical assay that can test it
+3. define:
+- biological system
+- materials or constructs
+- controls
+- replicates
+- measurement readout
+4. define failure or falsification criteria
+5. specify what data should come back for computational follow-up
+
 ## Hard rules
 
-- This skill designs experiments; it does not claim they were performed.
-- Always define what result would support, weaken, or falsify the hypothesis.
-- Prefer practical experimental choices the user can actually execute.
-- Include biosafety, sample access, and instrumentation constraints when they materially affect feasibility.
+- this skill designs experiments; it does not claim they were performed
+- always define what result would support, weaken, or falsify the hypothesis
+- prefer practical experimental choices the user can actually execute
+- include biosafety, sample access, instrumentation, and turnaround constraints when they materially affect feasibility
+- if the design depends on constructs or primers, pair with \`vector-design\`
 
 ## Output contract
 
 - objective
+- hypothesis
 - system and materials
 - controls
 - replicates
 - execution outline
 - readouts
 - interpretation rules
-- follow-up data expected back from the lab
-`,
+- follow-up data expected back from the lab`,
 }

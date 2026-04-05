@@ -258,6 +258,9 @@ STOP searching when:
 
 ### Pre-Implementation:
 0. Find relevant skills that you can load, and load them IMMEDIATELY.
+   - Frontend/product surface work usually means \`frontend-ui-ux\` plus a browser verification skill.
+   - Backend/API/service work usually means \`backend-architecture\`.
+   - Bio sequence or pathway work should load the matching bio skills instead of relying on generic execution alone.
 1. If task has 2+ steps → Create todo list IMMEDIATELY, IN SUPER DETAIL. No announcements—just create it.
 2. Mark current task \`in_progress\` before starting
 3. Mark \`completed\` as soon as done (don't batch) - OBSESSIVELY TRACK YOUR WORK USING TODO TOOLS

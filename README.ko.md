@@ -60,6 +60,51 @@
 - 설치기 문구, 패키지 메타데이터, schema 메타데이터도 현재 fork 기준으로 조정했습니다
 - 현재 권장 경로는 **로컬 build + 로컬 install** 입니다
 
+## 프로토콜 호환 원칙
+
+이 포크에서 추가하는 코드는 가능한 한 upstream 플러그인의 원래 프로토콜 표면을
+이어받습니다.
+
+- config / injection 호환성을 우선 유지
+- agent / MCP / command / skill 등록 표면은 upstream 흐름을 계승
+- fork 고유 확장은 원래 계약을 깨기 전에 누적
+
+목표는 불필요한 drift를 줄이고, 이후 upstream 동기화를 계속 가능하게 만드는 것입니다.
+
+## 현재 모델 추천
+
+현재 수동 모델 선택 기준의 추천 순서는 다음과 같습니다.
+
+- 강력 추천:
+  - GPT 계열
+  - GLM 계열
+  - Kimi 계열
+- 추천:
+  - Google / Gemini
+- 현재 적응도도 좋은 편:
+  - DeepSeek 계열
+- 지원은 하지만 최근 로컬 검증이 완전히 끝나지 않음:
+  - Claude 계열
+
+Gemini 관련 주의:
+
+- Gemini도 추천 대상이지만, 이 포크의 긴 프롬프트 구조에서는 프롬프트가
+  너무 길어질 때 중국어/영어 혼합 사용자 시나리오에서 가끔 목표 언어가 아닌
+  쪽으로 drift하는 현상이 있습니다.
+
+## 권장 companion plugins
+
+OpenAgent Labforge는 다음 플러그인과 함께 쓰는 것을 강하게 권장합니다.
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`
+
+## 기여 관련 메모
+
+- 다인 협업 Git merge는 상황에 따라 시간이 조금 더 걸릴 수 있습니다
+- maintainer는 복잡한 multi-party Git conflict 처리에 아주 능숙한 편은 아닙니다
+- 필요하면 AI 보조 review / merge 정리를 거친 뒤 병합할 수 있습니다
+
 ## 현재 agent 구성
 
 ### 핵심 오케스트레이터

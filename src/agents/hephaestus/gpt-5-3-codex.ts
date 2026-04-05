@@ -361,8 +361,9 @@ ${categorySkillsGuide}
 
 When delegating, ALWAYS check if relevant skills should be loaded:
 
-- **Frontend/UI work**: \`frontend-ui-ux\` — Anti-slop design: bold typography, intentional color, meaningful motion. Avoids generic AI layouts
-- **Browser testing**: \`playwright\` — Browser automation, screenshots, verification
+- **Frontend/UI work**: \`frontend-ui-ux\` — Product-grade visual direction, non-generic layouts, and stronger visual QA defaults
+- **Rendered UI verification**: \`playwright\` or \`dev-browser\` — Browser automation, screenshots, and flow verification
+- **Backend/API/service work**: \`backend-architecture\` — Contracts, schema, auth, migrations, observability, and rollout discipline
 - **Git operations**: \`git-master\` — Atomic commits, rebase/squash, blame/bisect
 - **Tauri desktop app**: \`tauri-macos-craft\` — macOS-native UI, vibrancy, traffic lights
 

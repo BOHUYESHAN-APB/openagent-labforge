@@ -138,6 +138,30 @@ describe("buildCategorySkillsDelegationGuide", () => {
     expect(result).toContain("`quick`")
     expect(result).toContain("Trivial tasks")
   })
+
+  it("should include recommended skill pairings for frontend, backend, and bio domains when available", () => {
+    //#given
+    const allSkills: AvailableSkill[] = [
+      { name: "frontend-ui-ux", description: "UI polish", location: "plugin" },
+      { name: "playwright", description: "Browser automation", location: "plugin" },
+      { name: "backend-architecture", description: "Backend contracts", location: "plugin" },
+      { name: "sequence-analysis", description: "Sequence analysis", location: "plugin" },
+      { name: "blast-search", description: "Homology search", location: "plugin" },
+      { name: "functional-annotation", description: "Annotation lookup", location: "plugin" },
+      { name: "bio-visualization", description: "Bio plotting", location: "plugin" },
+    ]
+
+    //#when
+    const result = buildCategorySkillsDelegationGuide(categories, allSkills)
+
+    //#then
+    expect(result).toContain("Recommended Skill Pairings")
+    expect(result).toContain("Frontend, dashboard, page, UI, layout, or visual polish work")
+    expect(result).toContain("Backend, API, service, schema, auth, queue, persistence, or integration work")
+    expect(result).toContain("`sequence-analysis` together with `blast-search`")
+    expect(result).toContain("`functional-annotation`")
+    expect(result).toContain("`bio-visualization`")
+  })
 })
 
 describe("buildUltraworkSection", () => {

@@ -175,6 +175,40 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
     const source = s.location === "project" ? "project" : "user"
     return `${s.name} (${source})`
   }).join(", ")
+  const skillNames = new Set(skills.map((s) => s.name))
+  const frontendVerificationSkills = ["playwright", "agent-browser", "dev-browser"]
+    .filter((name) => skillNames.has(name))
+  const recommendedPairings: string[] = []
+
+  if (skillNames.has("frontend-ui-ux")) {
+    recommendedPairings.push(
+      `- Frontend, dashboard, page, UI, layout, or visual polish work → load \`frontend-ui-ux\`${frontendVerificationSkills.length > 0 ? ` plus \`${frontendVerificationSkills.join("`, `")}\` when rendered verification matters` : ""}`
+    )
+  }
+
+  if (skillNames.has("backend-architecture")) {
+    recommendedPairings.push(
+      "- Backend, API, service, schema, auth, queue, persistence, or integration work → load `backend-architecture`"
+    )
+  }
+
+  if (skillNames.has("blast-search")) {
+    recommendedPairings.push(
+      "- Sequence interpretation that depends on homology or identification → load `sequence-analysis` together with `blast-search`"
+    )
+  }
+
+  if (skillNames.has("functional-annotation")) {
+    recommendedPairings.push(
+      "- Domain, pathway, target, or protein-function questions → load `functional-annotation`"
+    )
+  }
+
+  if (skillNames.has("bio-visualization")) {
+    recommendedPairings.push(
+      "- Publication figures, heatmaps, or biological score maps → load `bio-visualization`"
+    )
+  }
 
   let skillsSection: string
 
@@ -203,6 +237,12 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
     skillsSection = ""
   }
 
+  const recommendedPairingsSection = recommendedPairings.length > 0
+    ? `#### Recommended Skill Pairings
+
+${recommendedPairings.join("\n")}`
+    : ""
+
   return `### Category + Skills Delegation System
 
 **task() combines categories and skills for optimal task execution.**
@@ -217,6 +257,8 @@ Each category is configured with a model optimized for that domain. Read the des
 ${categoryRows.join("\n")}
 
 ${skillsSection}
+
+${recommendedPairingsSection}
 
 ---
 
@@ -277,6 +319,12 @@ task(category="quick", load_skills=[], prompt="Redesign the sidebar layout with 
 | Hard logic, architecture decisions, algorithms | \`ultrabrain\` |
 | Autonomous research + end-to-end implementation | \`deep\` |
 | Single-file typo, trivial config change | \`quick\` |
+
+**Skill defaults by domain:**
+- Visual/product surface → \`frontend-ui-ux\` plus browser verification skill when available
+- Backend/API/service design → \`backend-architecture\`
+- Bio sequence/homology → \`sequence-analysis\`, \`blast-search\`
+- Bio pathway/domain/database lookup → \`functional-annotation\`
 
 **When in doubt about category, it is almost never \`quick\` or \`unspecified-*\`. Match the domain.**`
 }

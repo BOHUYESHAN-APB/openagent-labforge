@@ -48,6 +48,14 @@ Use this skill for biological figures, heatmaps, score maps, enrichment plots, p
 - include figure title, axis labels, legend title, and units
 - keep figure generation code reproducible
 
+## Figure review checklist
+
+- does the color map exaggerate or hide the real dynamic range
+- is the transformation stated explicitly
+- are units and group labels understandable without the notebook context
+- is the export vector-first when the figure may enter a paper or slide
+- are multiple panels visually aligned and consistent
+
 ## Output contract
 
 - chosen plotting stack
@@ -55,5 +63,6 @@ Use this skill for biological figures, heatmaps, score maps, enrichment plots, p
 - color strategy and why
 - output figure paths
 - follow-up editing recommendations if vector export is needed
+- figure review notes and caveats
 `,
 }

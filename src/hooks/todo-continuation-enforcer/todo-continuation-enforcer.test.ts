@@ -304,6 +304,145 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls).toHaveLength(0)
   })
 
+  test("should run autonomous completion audit when all todos are complete for ultrawork session", async () => {
+    // given
+    const sessionID = "main-autonomous-complete"
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+    expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
+  })
+
+  test("should reinject when todos are complete but assistant promises next steps in Chinese", async () => {
+    // given
+    const sessionID = "main-continue-zh"
+    setMainSession(sessionID)
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "你说了不要停，我下一步默认继续往这三件事情推进。" }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("Convert the promised \"next steps\" into NEW concrete todos immediately")
+  })
+
+  test("should reinject when assistant says there are remaining points for the next round in Chinese", async () => {
+    // given
+    const sessionID = "main-continue-zh-backlog"
+    setMainSession(sessionID)
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{
+          type: "text",
+          text: "还剩下最值得继续打磨的两个点：\n1. 把主屏再做一步真正的大屏编排\n2. 继续削前端重包\n如果你继续让我自主迭代，我下一轮就专门打这两个点。",
+        }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("Create the next execution wave with specific actionable items")
+  })
+
+  test("should reinject when todos are complete but assistant promises next steps in English", async () => {
+    // given
+    const sessionID = "main-continue-en"
+    setMainSession(sessionID)
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "You said not to stop, so next steps I will continue with these three items." }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("Convert the promised \"next steps\" into NEW concrete todos immediately")
+  })
+
+  test("should reinject when todos are complete and assistant emits the exact continuation marker", async () => {
+    // given
+    const sessionID = "main-continue-marker"
+    setMainSession(sessionID)
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "[OMO_CONTINUE_TODO_EXPAND]" }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("[OMO_CONTINUE_TODO_EXPAND]")
+  })
+
   test("should not inject when remaining todos are blocked or deleted", async () => {
     // given - session where non-completed todos are only blocked/deleted
     const sessionID = "main-blocked-deleted"

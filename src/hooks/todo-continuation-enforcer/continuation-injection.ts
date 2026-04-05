@@ -17,6 +17,8 @@ import { isSqliteBackend } from "../../shared/opencode-storage-detection"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
 
 import {
+  CONTINUATION_REPLAN_PROMPT,
+  AUTONOMOUS_COMPLETION_AUDIT_PROMPT,
   AUTONOMOUS_CONTINUATION_PROMPT,
   CONTINUATION_PROMPT,
   DEFAULT_SKIP_AGENTS,
@@ -185,6 +187,239 @@ ${todoList}`
     }
   } catch (error) {
     log(`[${HOOK_NAME}] Injection failed`, { sessionID, error: String(error) })
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+    }
+  }
+}
+
+export async function injectContinuationReplan(args: {
+  ctx: PluginInput
+  sessionID: string
+  backgroundManager?: BackgroundManager
+  skipAgents?: string[]
+  resolvedInfo?: ResolvedMessageInfo
+  sessionStateStore: SessionStateStore
+  isContinuationStopped?: (sessionID: string) => boolean
+}): Promise<void> {
+  const {
+    ctx,
+    sessionID,
+    backgroundManager,
+    skipAgents = DEFAULT_SKIP_AGENTS,
+    resolvedInfo,
+    sessionStateStore,
+    isContinuationStopped,
+  } = args
+
+  const state = sessionStateStore.getExistingState(sessionID)
+  if (state?.isRecovering) {
+    log(`[${HOOK_NAME}] Skipped replan injection: in recovery`, { sessionID })
+    return
+  }
+
+  if (isContinuationStopped?.(sessionID)) {
+    log(`[${HOOK_NAME}] Skipped replan injection: continuation stopped for session`, { sessionID })
+    return
+  }
+
+  const hasRunningBgTasks = backgroundManager
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    : false
+
+  if (hasRunningBgTasks) {
+    log(`[${HOOK_NAME}] Skipped replan injection: background tasks running`, { sessionID })
+    return
+  }
+
+  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let model = resolvedInfo?.model
+  let tools = resolvedInfo?.tools
+
+  if (!agentName || !model) {
+    let previousMessage = null
+    if (isSqliteBackend()) {
+      previousMessage = await findNearestMessageWithFieldsFromSDK(ctx.client, sessionID)
+    } else {
+      const messageDir = getMessageDir(sessionID)
+      previousMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+    }
+    agentName = agentName ?? previousMessage?.agent
+    model =
+      model ??
+      (previousMessage?.model?.providerID && previousMessage?.model?.modelID
+        ? {
+            providerID: previousMessage.model.providerID,
+            modelID: previousMessage.model.modelID,
+            ...(previousMessage.model.variant
+              ? { variant: previousMessage.model.variant }
+              : {}),
+          }
+        : undefined)
+    tools = tools ?? previousMessage?.tools
+  }
+
+  if (agentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(agentName))) {
+    log(`[${HOOK_NAME}] Skipped replan injection: agent in skipAgents list`, { sessionID, agent: agentName })
+    return
+  }
+
+  if (!hasWritePermission(tools)) {
+    log(`[${HOOK_NAME}] Skipped replan injection: agent lacks write permission`, { sessionID, agent: agentName })
+    return
+  }
+
+  const injectionState = sessionStateStore.getExistingState(sessionID)
+  if (injectionState) {
+    injectionState.inFlight = true
+  }
+
+  try {
+    log(`[${HOOK_NAME}] Injecting continuation replan`, {
+      sessionID,
+      agent: agentName,
+      model,
+    })
+
+    const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+
+    await ctx.client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        agent: agentName,
+        ...(model !== undefined ? { model } : {}),
+        ...(inheritedTools ? { tools: inheritedTools } : {}),
+        parts: [createInternalAgentTextPart(CONTINUATION_REPLAN_PROMPT)],
+      },
+      query: { directory: ctx.directory },
+    })
+
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
+      injectionState.consecutiveFailures = 0
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Replan injection failed`, { sessionID, error: String(error) })
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+    }
+  }
+}
+
+export async function injectAutonomousCompletionAudit(args: {
+  ctx: PluginInput
+  sessionID: string
+  backgroundManager?: BackgroundManager
+  skipAgents?: string[]
+  resolvedInfo?: ResolvedMessageInfo
+  sessionStateStore: SessionStateStore
+  isContinuationStopped?: (sessionID: string) => boolean
+}): Promise<void> {
+  const {
+    ctx,
+    sessionID,
+    backgroundManager,
+    skipAgents = DEFAULT_SKIP_AGENTS,
+    resolvedInfo,
+    sessionStateStore,
+    isContinuationStopped,
+  } = args
+
+  const state = sessionStateStore.getExistingState(sessionID)
+  if (state?.isRecovering) {
+    log(`[${HOOK_NAME}] Skipped completion audit: in recovery`, { sessionID })
+    return
+  }
+
+  if (isContinuationStopped?.(sessionID)) {
+    log(`[${HOOK_NAME}] Skipped completion audit: continuation stopped for session`, { sessionID })
+    return
+  }
+
+  const hasRunningBgTasks = backgroundManager
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    : false
+
+  if (hasRunningBgTasks) {
+    log(`[${HOOK_NAME}] Skipped completion audit: background tasks running`, { sessionID })
+    return
+  }
+
+  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let model = resolvedInfo?.model
+  let tools = resolvedInfo?.tools
+
+  if (!agentName || !model) {
+    let previousMessage = null
+    if (isSqliteBackend()) {
+      previousMessage = await findNearestMessageWithFieldsFromSDK(ctx.client, sessionID)
+    } else {
+      const messageDir = getMessageDir(sessionID)
+      previousMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+    }
+    agentName = agentName ?? previousMessage?.agent
+    model =
+      model ??
+      (previousMessage?.model?.providerID && previousMessage?.model?.modelID
+        ? {
+            providerID: previousMessage.model.providerID,
+            modelID: previousMessage.model.modelID,
+            ...(previousMessage.model.variant ? { variant: previousMessage.model.variant } : {}),
+          }
+        : undefined)
+    tools = tools ?? previousMessage?.tools
+  }
+
+  if (agentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(agentName))) {
+    log(`[${HOOK_NAME}] Skipped completion audit: agent in skipAgents list`, { sessionID, agent: agentName })
+    return
+  }
+
+  if (!hasWritePermission(tools)) {
+    log(`[${HOOK_NAME}] Skipped completion audit: agent lacks write permission`, { sessionID, agent: agentName })
+    return
+  }
+
+  const injectionState = sessionStateStore.getExistingState(sessionID)
+  if (injectionState) {
+    injectionState.inFlight = true
+    injectionState.completionAuditCount = (injectionState.completionAuditCount ?? 0) + 1
+  }
+
+  try {
+    log(`[${HOOK_NAME}] Injecting autonomous completion audit`, {
+      sessionID,
+      agent: agentName,
+      model,
+    })
+
+    const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+
+    await ctx.client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        agent: agentName,
+        ...(model !== undefined ? { model } : {}),
+        ...(inheritedTools ? { tools: inheritedTools } : {}),
+        parts: [createInternalAgentTextPart(AUTONOMOUS_COMPLETION_AUDIT_PROMPT)],
+      },
+      query: { directory: ctx.directory },
+    })
+
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
+      injectionState.consecutiveFailures = 0
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Autonomous completion audit failed`, { sessionID, error: String(error) })
     if (injectionState) {
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()

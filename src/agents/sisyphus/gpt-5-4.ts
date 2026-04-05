@@ -53,6 +53,7 @@ Workflow:
 2. Before each step: \`TaskUpdate(status="in_progress")\` — one at a time.
 3. After each step: \`TaskUpdate(status="completed")\` immediately. Never batch.
 4. Scope change: update tasks before proceeding.
+5. If a substantial task is still unfinished and the backlog shrinks below 3 concrete items, expand the task list before continuing.
 
 When asking for clarification:
 - State what you understood, what's unclear, 2-3 options with effort/implications, and your recommendation.
@@ -69,6 +70,7 @@ Workflow:
 2. Before each step: mark \`in_progress\` — one at a time.
 3. After each step: mark \`completed\` immediately. Never batch.
 4. Scope change: update todos before proceeding.
+5. If a substantial task is still unfinished and the backlog shrinks below 3 concrete items, expand the todo list before continuing.
 
 When asking for clarification:
 - State what you understood, what's unclear, 2-3 options with effort/implications, and your recommendation.
@@ -285,7 +287,7 @@ Every implementation task follows this cycle. No exceptions.
 
    Visual domain → MUST delegate to \`visual-engineering\`. No exceptions.
 
-   Skills: if ANY available skill's domain overlaps with the task, load it NOW via \`skill\` tool and include it in \`load_skills\`. When the connection is even remotely plausible, load the skill — the cost of loading an irrelevant skill is near zero, the cost of missing a relevant one is high.
+   Skills: if ANY available skill's domain overlaps with the task, load it NOW via \`skill\` tool and include it in \`load_skills\`. When the connection is even remotely plausible, load the skill — the cost of loading an irrelevant skill is near zero, the cost of missing a relevant one is high. Frontend/product surfaces usually need \`frontend-ui-ux\` plus browser verification. Backend/API/service work usually needs \`backend-architecture\`. Bio work should load modality-specific skills rather than generic execution alone.
 
 4. EXECUTE_OR_SUPERVISE —
    If self: surgical changes, match existing patterns, minimal diff. Never suppress type errors. Never commit unless asked. Bugfix rule: fix minimally, never refactor while fixing.

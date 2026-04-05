@@ -23,6 +23,42 @@ The plugin is now centered on:
 - a growing first-party bioinformatics agent and skill stack
 - local-first development and installation
 
+## Protocol Compatibility
+
+New code in this fork follows the upstream plugin protocol surface wherever
+possible and extends it rather than replacing it casually.
+
+The current rule is:
+
+- keep upstream-compatible config and injection behavior
+- keep upstream-style agent / MCP / command / skill registration surfaces
+- carry forward the original plugin contract before adding fork-specific behavior
+- document deliberate divergences instead of silently changing protocol shape
+
+This reduces drift and keeps future upstream sync work tractable.
+
+## Current Model Recommendation
+
+Current project recommendation for manual model choice:
+
+- strongly recommended:
+  - GPT family
+  - GLM family
+  - Kimi family
+- also recommended:
+  - Google / Gemini
+- also currently adapting well:
+  - DeepSeek family
+- supported, but not fully re-validated in the latest local test cycle:
+  - Claude family
+
+Gemini note:
+
+- in this fork's long-context prompt and tool-routing setup, Gemini is more
+  likely to drift into an unexpected language or mixed-language response when
+  prompts become very long, especially for users who switch between Chinese and
+  English
+
 ## Current Core Capabilities
 
 ### Engineering orchestration
@@ -93,6 +129,7 @@ Examples:
 - browser / UI / git:
   - `playwright`
   - `frontend-ui-ux`
+  - `backend-architecture`
   - `git-master`
 - document / report:
   - `docx-workbench`
@@ -100,19 +137,25 @@ Examples:
   - `xlsx-analyst`
 - bioinformatics:
   - `bio-tools`
+  - `blast-search`
+  - `functional-annotation`
   - `bio-methods`
   - `wet-lab-design`
   - `bio-pipeline`
-- `paper-evidence`
-- `differential-expression`
-- `scrna-preprocessing`
-- `cell-annotation`
-- `pubmed-search`
-- `geo-query`
-- `sequence-analysis`
-- `structural-biology`
-- `bio-visualization`
-- `vector-design`
+  - `paper-evidence`
+  - `differential-expression`
+  - `scrna-preprocessing`
+  - `cell-annotation`
+  - `atac-seq`
+  - `chip-seq`
+  - `metagenomics`
+  - `proteomics`
+  - `pubmed-search`
+  - `geo-query`
+  - `sequence-analysis`
+  - `structural-biology`
+  - `bio-visualization`
+  - `vector-design`
 
 The bio skills are written as execution-oriented references: they specify
 preferred tools, typical commands/code paths, expected artifacts, and boundary
@@ -174,6 +217,16 @@ The migration audit reference lives at:
 
 - [docs/release/upstream-oh-my-openagent-3.11-plus-audit.md](docs/release/upstream-oh-my-openagent-3.11-plus-audit.md)
 
+## Recommended Companion Plugins
+
+OpenAgent Labforge is strongly recommended together with:
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`
+
+These are recommendations, not hard dependencies, but they improve the
+practical local workflow substantially.
+
 ## Installation Reality
 
 This project is still optimized for local-first use, but there is now a real
@@ -216,6 +269,16 @@ The near-term order is:
 1. finish upstream OpenCode compatibility migration
 2. strengthen engineering execution/orchestration capability in core agents
 3. continue refining the bioinformatics agent + skill stack
+
+## Contribution Note
+
+Maintainer note:
+
+- multi-contributor Git merge work may sometimes take extra time
+- the maintainer is not especially fluent in complex multi-party Git conflict
+  resolution workflows
+- in some contribution windows, AI-assisted merge review or conflict handling
+  may be used before merge completion
 
 ## Docs
 

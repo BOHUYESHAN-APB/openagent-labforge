@@ -23,6 +23,38 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 - 建设第一方生信 agent 与 skills 体系
 - 继续坚持本地优先安装与开发
 
+## 协议兼容立场
+
+这个分支里的新增代码，原则上都承接上游插件的原始协议表面，而不是随意改写。
+
+当前规则是：
+
+- 优先保持与上游兼容的配置与注入行为
+- 保持上游风格的 agent / MCP / command / skill 注册表面
+- 先承接原始插件契约，再叠加 fork 自己的增强能力
+- 任何确实需要偏离上游的行为，都应该文档化，而不是静默改协议
+
+这样做的目的，是降低漂移，保住后续继续同步上游的可维护性。
+
+## 当前模型推荐
+
+当前项目对手动模型选择的建议是：
+
+- 强烈推荐：
+  - GPT 系列
+  - GLM 系列
+  - Kimi 系列
+- 推荐：
+  - Google / Gemini
+- 当前适配也不错：
+  - DeepSeek 系列
+- 仍然支持，但这一轮本地验证还没有完全覆盖：
+  - Claude 系列
+
+Gemini 说明：
+
+- 在这个分支当前的长上下文提示词和工具路由方式下，Gemini 在提示词特别长时，偶尔更容易在中英混合用户场景里输出非用户目标语言，或者出现语言漂移
+
 ## 当前核心能力
 
 ### 工程编排层
@@ -91,6 +123,7 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 
 - `playwright`
 - `frontend-ui-ux`
+- `backend-architecture`
 - `git-master`
 - `docx-workbench`
 - `pdf-toolkit`
@@ -99,6 +132,8 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 生信方向：
 
 - `bio-tools`
+- `blast-search`
+- `functional-annotation`
 - `bio-methods`
 - `wet-lab-design`
 - `bio-pipeline`
@@ -106,6 +141,10 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 - `differential-expression`
 - `scrna-preprocessing`
 - `cell-annotation`
+- `atac-seq`
+- `chip-seq`
+- `metagenomics`
+- `proteomics`
 - `pubmed-search`
 - `geo-query`
 - `sequence-analysis`
@@ -176,6 +215,15 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 
 - [docs/release/upstream-oh-my-openagent-3.11-plus-audit.md](docs/release/upstream-oh-my-openagent-3.11-plus-audit.md)
 
+## 推荐搭配插件
+
+OpenAgent Labforge 强烈建议和下面两个插件搭配使用：
+
+- `opencode-pty`
+- `@tarquinen/opencode-dcp`
+
+它们不是硬依赖，但对本地实际工作流帮助很大。
+
 ## 当前安装现实
 
 这个项目仍以本地优先为主，但 `Windows x64` 现在已经有可用的
@@ -218,6 +266,14 @@ bun pm pack
 1. 收完上游 OpenCode 兼容特性迁移
 2. 强化核心 agent 的工程能力
 3. 继续优化生物信息学 agent 与 skills
+
+## 协作说明
+
+维护者说明：
+
+- 多人协作场景下的 Git 合并有时会花更久
+- 维护者本人并不擅长复杂的多人 Git 冲突处理
+- 某些贡献合并阶段，可能会依赖 AI 先参与审阅、整理和辅助合并
 
 ## 文档入口
 

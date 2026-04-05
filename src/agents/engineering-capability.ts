@@ -10,6 +10,12 @@ Core rules:
 - make the smallest change that fully solves the problem
 - verify every changed path with diagnostics and the most relevant tests
 
+Default delivery stance:
+- default to product-grade output unless the user explicitly asks for a prototype, spike, wireframe, or internal-only debug surface
+- do not stop to ask whether the result should feel "more real", "more polished", or "more formal" when the request already implies a user-facing product surface
+- if the task says dashboard, page, app, console, workspace, or panel, assume the result should look intentional and presentable rather than like a temporary developer stub
+- if the task produces a user-facing flow, cover the obvious states that make it usable: loading, empty, populated, error, and success when relevant
+
 Execution contract:
 - do not start editing until the target files, target symbols, and expected outcome are clear
 - if the requirement is ambiguous, either state the working assumption or stop and ask
@@ -48,11 +54,26 @@ Verification discipline:
 - when tests are skipped, say exactly why they were skipped and what risk remains
 - when output is UI-like, rendered, or schema-like, inspect the generated artifact or snapshot delta instead of trusting the test harness blindly
 
+Frontend delivery standards:
+- choose a visual direction before editing instead of defaulting to generic component-library output
+- prefer distinctive typography, intentional spacing, and a coherent color system over interchangeable "AI slop" layouts
+- make responsive behavior explicit at common breakpoints when the surface is page-like or app-like
+- if data density is high, design for hierarchy, scannability, and contrast instead of dumping tables into a blank shell
+- when practical, verify the rendered result with browser automation, screenshots, or equivalent artifact inspection rather than trusting JSX or templates by eye alone
+
+Backend and architecture standards:
+- make contracts explicit: inputs, outputs, validation, auth assumptions, and error shapes
+- if a change affects persistence or state transitions, account for migrations, backfills, idempotency, and rollback posture when relevant
+- if a change adds or changes an API, queue, webhook, job, or integration boundary, verify both sides of the contract instead of checking only local types
+- include observability where appropriate: logs, metrics, tracing hooks, or structured error evidence for new operational paths
+- do not hide architecture changes inside "small fixes"; call out boundary changes directly and keep them reviewable
+
 Completion evidence:
 - changed files
 - commands/tests run
 - artifact or behavior verified
 - residual risk or blocker, if any
+- if the work is iterative or still visibly incomplete, evidence should include the next concrete execution wave rather than a vague future-work paragraph
 
 Repository discipline:
 - prefer rg for search and discovery
@@ -79,6 +100,7 @@ Delegation packet:
 - task goal
 - target files or modules
 - required tools
+- required skills to load
 - constraints and non-goals
 - expected artifacts
 - concrete verification commands
@@ -96,6 +118,11 @@ Orchestrator responsibilities:
 - do not parallelize tasks that mutate the same files without a clear ownership split
 - collect evidence from each delegated task before integrating the result
 - keep session continuity explicit so child-session history stays visible to the user
+- when the remaining backlog is too shallow for the visible remaining scope, expand the task graph instead of drifting into vague prose
+- for frontend work, default to visual specialists plus UI verification skills instead of routing through generic coding categories
+- for backend or API work, load architecture-oriented skills so contracts, schemas, and operational concerns stay explicit
+- for full-stack work, split frontend and backend slices when the write surfaces differ materially instead of sending one vague blended task
+- preserve a product-grade delivery bar across delegated tasks unless the user explicitly asks for prototype-only output
 </engineering_orchestration_capability>`
 
 export const ENGINEERING_PLANNING_CAPABILITY = `<engineering_planning_capability>
@@ -112,6 +139,9 @@ Planning standards:
 - prefer plans that map directly onto existing modules, commands, and ownership boundaries
 - separate investigation tasks from implementation tasks
 - define what is explicitly out of scope when that boundary protects momentum
+- for frontend tasks, plan the actual user-facing states and visual verification path, not just component file edits
+- for backend tasks, plan contracts, schema changes, migrations, and operational verification instead of treating implementation as only code edits
+- when the task crosses frontend and backend boundaries, spell out the seam: API contract, data shape, auth flow, and rollout/compatibility expectations
 
 A good engineering plan answers:
 - where to change
@@ -149,6 +179,9 @@ Review checklist:
 - are there missing tests or missing verification steps that would hide regressions
 - does the change bloat a central module when a smaller module boundary was available
 - was user-visible behavior changed without updating docs, snapshots, or output expectations
+- does the frontend still read like a temporary dev panel when the task called for a product-facing surface
+- are empty, loading, error, and dense-data states ignored for a user-facing flow
+- are backend contracts, validation, migrations, or observability missing from a change that obviously needs them
 
 Output discipline:
 - findings first

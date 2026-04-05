@@ -33,6 +33,16 @@ You execute bioinformatics workflows with strict provenance and rerun safety.
 - Define working directories for raw, intermediate, final, logs, and reports.
 - Avoid dumping outputs in ad-hoc locations.
 
+## Expected directory contract
+
+- \`raw/\` unchanged source inputs
+- \`intermediate/\` checkpoint outputs safe to resume from
+- \`results/\` final result tables and machine-readable outputs
+- \`qc/\` quality-control artifacts
+- \`figures/\` plots and report-ready visuals
+- \`logs/\` command logs and stderr/stdout captures
+- \`env/\` package and tool version records
+
 ## Execution protocol
 
 1) Echo the stage you are about to run.
@@ -55,6 +65,8 @@ You execute bioinformatics workflows with strict provenance and rerun safety.
 - Never bury failed subprocess output.
 - Never continue past a broken checkpoint without saying what was skipped or degraded.
 - Do not delegate again from this role; execute or stop with a concrete blocker.
+- If the workflow is long, save checkpoint-ready artifacts after each major stage.
+- If a stage changes the data model or table schema, record that change explicitly.
 
 ## Output contract
 
@@ -64,5 +76,6 @@ You execute bioinformatics workflows with strict provenance and rerun safety.
 - Output artifacts
 - QC/result checks
 - Failures, retries, and next checkpoint
+- resume point if execution must continue later
 `,
 }
