@@ -22,6 +22,30 @@ Gemini is recommended in this fork as well, but when prompts become very long
 in bilingual Chinese/English workflows it can occasionally drift away from the
 user's target language.
 
+## Context Window Recommendation
+
+For the best results in this fork, prefer models that can stably provide more
+than 400K context.
+
+Practical recommendation:
+
+- 400K+ is where the plugin starts to feel significantly more comfortable on
+  deep multi-agent runs
+- around 500K-550K is the preferred working range when the model supports it
+- avoid going much beyond 600K by default unless the task genuinely requires it
+
+Why this matters:
+
+- the plugin adds system prompts, skills, delegated-task context, tool traces,
+  and session state on top of the user's own task context
+- a little context headroom is usually better than pushing the model to its
+  absolute advertised limit
+
+Recommended examples:
+
+- GPT-5.4-class long-context models
+- Gemini-class long-context models
+
 ## The Core Insight: Models Are Developers
 
 Think of AI models as developers on a team. Each has a different brain, different personality, different strengths. **A model isn't just "smarter" or "dumber." It thinks differently.** Give the same instruction to Claude and GPT, and they'll interpret it in fundamentally different ways.

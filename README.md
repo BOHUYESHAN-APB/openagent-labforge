@@ -59,6 +59,31 @@ Gemini note:
   prompts become very long, especially for users who switch between Chinese and
   English
 
+## Context Window Recommendation
+
+For the best results, prefer models that can stably provide more than 400K
+context.
+
+Recommended examples:
+
+- GPT-5.4-class long-context models
+- Gemini-class long-context models
+
+Practical guidance:
+
+- above 400K usually works noticeably better for this plugin than short-context
+  models
+- avoid pushing the context window to the advertised maximum by default
+- keep effective working context around 500K-550K when possible
+- avoid going much past 600K unless the task truly needs it
+
+Reason:
+
+- this plugin injects agent prompts, skill content, task metadata, tool traces,
+  and child-session context
+- leaving headroom is usually more stable than running the context window at the
+  limit
+
 ## Current Core Capabilities
 
 ### Engineering orchestration
