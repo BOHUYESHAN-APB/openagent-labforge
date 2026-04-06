@@ -127,6 +127,30 @@ Gemini 说明：
 
 这些模式信息会被写入 repo-local 的 runtime workflow state。
 
+### 会话清理命令
+
+现在内置了一组用于清理旧执行残留的斜杠命令：
+
+- `/stop-continuation`
+- `/todo-clear`
+- `/workflow-reset`
+- `/focus-chat`
+
+它们的实际用途是：
+
+- `/stop-continuation`：停止当前会话的 continuation 机制
+- `/todo-clear`：清掉旧 todo 和当前 session 的执行残留
+- `/workflow-reset`：清掉当前 session / project 绑定的 workflow 状态，方便重新开始
+- `/focus-chat`：把当前会话拉回普通问答模式，压住旧执行状态继续干扰
+
+这组命令存在的原因很现实：
+
+- 旧 todo
+- 旧自动执行状态
+- 旧 workflow 记忆
+
+如果不处理，后续普通问答很容易被旧状态拖重或误导。
+
 ### 专长 agent
 
 - `explore`：本地代码发现
@@ -170,10 +194,10 @@ Gemini 说明：
 - `git-master`
 - `docx-workbench`
 - `pdf-toolkit`
- - `pptx-studio`
- - `proposal-and-roadmap`
- - `document-asset-pipeline`
- - `literature-synthesis`
+- `pptx-studio`
+- `proposal-and-roadmap`
+- `document-asset-pipeline`
+- `literature-synthesis`
 - `xlsx-analyst`
 
 生信方向：
@@ -279,6 +303,10 @@ Gemini 说明：
 - `.agents/skills` 注入链
 - MCP 合并顺序与用户覆盖行为
 - todo continuation / compaction / stagnation 保护链
+- 半自动会话收口：
+  普通主会话不会再轻易被旧 todo / workflow 状态拖回自动续跑
+- 运行时 agent 名称统一：
+  delegation / background / recovery / continuation 统一使用 OpenCode 真正可识别的显示名，而不是内部 key
 
 上游迁移审计清单见：
 
@@ -314,6 +342,39 @@ bun pm pack
 然后参考：
 
 - [docs/guide/installation.md](docs/guide/installation.md)
+
+### 可直接复制到 OpenCode 的安装提示词
+
+如果你想让 OpenCode 自己去克隆仓库、构建插件、并把本地插件路径接进配置，可以直接把下面这段提示词贴进一个新的 OpenCode 会话：
+
+```text
+请你在这台机器上完成 OpenAgent Labforge 的本地开发版安装。
+
+目标仓库：
+https://github.com/BOHUYESHAN-APB/openagent-labforge.git
+
+要求：
+1. 先把仓库克隆到本地一个合适的工作目录。
+2. 这个仓库统一使用 Bun，不要用 npm 或 yarn。
+3. 运行最少必要的安装与构建命令，确保最终成功生成 dist/index.js。
+4. 修改 %USERPROFILE%\.config\opencode\opencode.json：
+   - 把插件数组里加入本地文件插件：
+     file:///ABSOLUTE/PATH/TO/openagent-labforge/dist/index.js
+   - 如果已经有旧的 openagent-labforge 或 oh-my-opencode npm 安装项，替换为本地文件项，不要保留重复项。
+   - 不要覆盖其他无关 provider、model 或已有插件配置。
+5. 最后把下面这些结果展示出来：
+   - 仓库克隆路径
+   - 实际执行的构建命令
+   - opencode.json 最终 plugin 数组
+   - 是否需要重启 OpenCode Desktop
+
+如果系统缺少 Bun，就不要硬做，直接告诉我该先安装什么。
+```
+
+如果你只是想清掉旧会话里的残留状态，而不是重新安装插件：
+
+- 用 `/focus-chat` 把当前会话切回普通问答
+- 如果残留还比较重，再用 `/workflow-reset`
 
 ## 本地参考仓
 

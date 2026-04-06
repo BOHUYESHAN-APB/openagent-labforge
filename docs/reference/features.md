@@ -189,6 +189,20 @@ Current intended behavior:
 
 ---
 
+## Session Cleanup Commands
+
+Current built-in cleanup commands:
+
+- `/stop-continuation`
+- `/todo-clear`
+- `/workflow-reset`
+- `/focus-chat`
+
+These commands are intended to remove stale execution residue from older
+sessions so ordinary chat can continue without old todo/workflow interference.
+
+---
+
 ## Installer and Local Workflow
 
 Current project reality is still local-first:
@@ -212,6 +226,10 @@ Notable engineering stabilizations already landed:
 - `.agents/skills` participation in command and agent awareness chains
 - trimmed MCP surface with redundant built-ins removed
 - todo continuation regression hardening for compaction, stagnation, and disposal
+- semi-auto session hardening so ordinary main-session chat is not dragged back
+  into stale todo/workflow continuation
+- runtime agent-name normalization across delegation, background, recovery, and
+  continuation flows
 
 ---
 

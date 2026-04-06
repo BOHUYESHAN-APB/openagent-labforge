@@ -160,6 +160,30 @@ Current behavior:
 
 Mode selection is runtime-scoped and stored in the repo-local workflow state.
 
+### Session cleanup commands
+
+The fork now includes built-in slash commands for clearing stale execution
+residue from older sessions.
+
+Current cleanup commands:
+
+- `/stop-continuation`
+- `/todo-clear`
+- `/workflow-reset`
+- `/focus-chat`
+
+Practical intent:
+
+- `/stop-continuation` stops continuation mechanisms for the current session
+- `/todo-clear` clears stale todos and session-level execution residue
+- `/workflow-reset` clears current session workflow state before a fresh tracked
+  execution run
+- `/focus-chat` returns the current session to ordinary chat mode and suppresses
+  stale execution carry-over
+
+This matters because old todo/workflow state can otherwise leak into later
+conversations and make semi-automatic sessions feel heavy or misdirected.
+
 ### Specialist agents
 
 - `explore`: local codebase discovery
@@ -311,6 +335,11 @@ Already aligned or hardened:
 - `.agents/skills` participation in injection chains
 - MCP merge order and user override behavior
 - todo continuation / compaction / stagnation guard regressions
+- semi-auto session hardening so ordinary main-session chat is not dragged back
+  into stale todo/workflow continuation
+- runtime agent-name normalization across delegation, background, recovery, and
+  continuation flows so OpenCode receives valid display names instead of stale
+  internal keys
 
 The migration audit reference lives at:
 
@@ -347,6 +376,37 @@ bun pm pack
 Then follow:
 
 - [docs/guide/installation.md](docs/guide/installation.md)
+
+### OpenCode install prompt
+
+If you want OpenCode itself to clone this repository, build it, and wire the
+local plugin path automatically, you can paste the following prompt into a
+fresh OpenCode session:
+
+```text
+Clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git into a local working directory on this machine, then install and build it in local-development mode for OpenCode Desktop on Windows.
+
+Requirements:
+1. Use Bun, not npm or yarn, for this repository.
+2. Run the minimum required install/build steps so the plugin produces dist/index.js successfully.
+3. Update %USERPROFILE%\.config\opencode\opencode.json so the plugin array contains the local file plugin entry:
+   file:///ABSOLUTE/PATH/TO/openagent-labforge/dist/index.js
+4. Preserve any existing useful plugins already in the plugin array unless they are duplicate old entries for this same plugin.
+5. If an old npm-installed entry for openagent-labforge or oh-my-opencode exists, replace it with the local file entry instead of keeping duplicates.
+6. Do not overwrite unrelated provider or model config.
+7. At the end, show:
+   - the clone path
+   - the exact build command(s) you ran
+   - the final plugin array from opencode.json
+   - whether an OpenCode Desktop restart is required
+
+If Bun is missing, stop and tell me exactly what to install first.
+```
+
+For users who only want to clear stale session residue rather than reinstall:
+
+- run `/focus-chat` to return the current session to ordinary chat mode
+- run `/workflow-reset` if the session still carries old execution state
 
 ## Reference Repos
 
