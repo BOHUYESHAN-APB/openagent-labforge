@@ -1,6 +1,9 @@
 import { beforeEach, describe, test, expect } from "bun:test"
 import { loadBuiltinCommands } from "./commands"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
+import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
+import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
 import { _resetForTesting, registerAgentName } from "../claude-code-session-state"
 import type { BuiltinCommandName } from "./types"
 
@@ -19,6 +22,9 @@ describe("loadBuiltinCommands", () => {
     //#then
     expect(commands.handoff).toBeDefined()
     expect(commands.handoff.name).toBe("handoff")
+    expect(commands["todo-clear"]).toBeDefined()
+    expect(commands["workflow-reset"]).toBeDefined()
+    expect(commands["focus-chat"]).toBeDefined()
   })
 
   test("should exclude handoff when disabled", () => {
@@ -62,6 +68,17 @@ describe("loadBuiltinCommands", () => {
 
     //#then
     expect(commands.handoff.description).toContain("context summary")
+  })
+
+  test("should include session cleanup commands", () => {
+    const commands = loadBuiltinCommands()
+
+    expect(commands["todo-clear"]).toBeDefined()
+    expect(commands["todo-clear"].template).toContain(TODO_CLEAR_TEMPLATE)
+    expect(commands["workflow-reset"]).toBeDefined()
+    expect(commands["workflow-reset"].template).toContain(WORKFLOW_RESET_TEMPLATE)
+    expect(commands["focus-chat"]).toBeDefined()
+    expect(commands["focus-chat"].template).toContain(FOCUS_CHAT_TEMPLATE)
   })
 
   test("should route start-work to atlas when registered-agent mode is enabled and atlas exists", () => {

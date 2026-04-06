@@ -1,8 +1,17 @@
 import type { PluginContext } from "./types"
 import { randomUUID } from "node:crypto"
 
-import { getMainSessionID } from "../features/claude-code-session-state"
-import { clearBoulderState } from "../features/boulder-state"
+import {
+  clearSessionAgent,
+  clearUltraworkAutonomousSession,
+  getMainSessionID,
+} from "../features/claude-code-session-state"
+import {
+  clearBoulderState,
+  clearRuntimeWorkflowSession,
+  readBoulderState,
+} from "../features/boulder-state"
+import { clearContinuationMarker } from "../features/run-continuation-state"
 import { log } from "../shared"
 import { resolveSessionAgent } from "./session-agent-resolver"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
@@ -19,6 +28,72 @@ export function createToolExecuteBeforeHandler(args: {
   output: { args: Record<string, unknown> },
 ) => Promise<void> {
   const { ctx, hooks } = args
+
+  const resolveTodoWriter = async (): Promise<null | ((input: {
+    sessionID: string
+    todos: Array<{
+      id?: string
+      content: string
+      status: "pending" | "in_progress" | "completed" | "cancelled"
+      priority?: "low" | "medium" | "high"
+    }>
+  }) => Promise<void>)> => {
+    try {
+      const loader = "opencode/session/todo"
+      const mod = await import(loader)
+      const update = (mod as { Todo?: { update?: unknown } }).Todo?.update
+      if (typeof update === "function") {
+        return update as (input: {
+          sessionID: string
+          todos: Array<{
+            id?: string
+            content: string
+            status: "pending" | "in_progress" | "completed" | "cancelled"
+            priority?: "low" | "medium" | "high"
+          }>
+        }) => Promise<void>
+      }
+    } catch (error) {
+      log("[command-cleanup] Failed to resolve Todo.update", {
+        error: String(error),
+      })
+    }
+    return null
+  }
+
+  const clearSessionTodos = async (sessionID: string): Promise<boolean> => {
+    const todoWriter = await resolveTodoWriter()
+    if (!todoWriter) return false
+
+    try {
+      await todoWriter({ sessionID, todos: [] })
+      return true
+    } catch (error) {
+      log("[command-cleanup] Failed to clear todos", {
+        sessionID,
+        error: String(error),
+      })
+      return false
+    }
+  }
+
+  const stopContinuationForSession = (sessionID: string): void => {
+    hooks.stopContinuationGuard?.stop(sessionID)
+    hooks.todoContinuationEnforcer?.cancelAllCountdowns()
+    hooks.ralphLoop?.cancelLoop(sessionID)
+    clearContinuationMarker(ctx.directory, sessionID)
+    clearUltraworkAutonomousSession(sessionID)
+    clearSessionAgent(sessionID)
+  }
+
+  const resetWorkflowForSession = (sessionID: string): void => {
+    clearRuntimeWorkflowSession(ctx.directory, sessionID)
+
+    const boulderState = readBoulderState(ctx.directory)
+    if (boulderState?.session_ids?.includes(sessionID)) {
+      clearBoulderState(ctx.directory)
+    }
+  }
 
   return async (input, output): Promise<void> => {
     await hooks.writeExistingFileGuard?.["tool.execute.before"]?.(input, output)
@@ -124,12 +199,32 @@ export function createToolExecuteBeforeHandler(args: {
       const sessionID = input.sessionID || getMainSessionID()
 
       if (command === "stop-continuation" && sessionID) {
-        hooks.stopContinuationGuard?.stop(sessionID)
-        hooks.todoContinuationEnforcer?.cancelAllCountdowns()
-        hooks.ralphLoop?.cancelLoop(sessionID)
-        clearBoulderState(ctx.directory)
+        stopContinuationForSession(sessionID)
         log("[stop-continuation] All continuation mechanisms stopped", {
           sessionID,
+        })
+      } else if (command === "todo-clear" && sessionID) {
+        stopContinuationForSession(sessionID)
+        const cleared = await clearSessionTodos(sessionID)
+        log("[todo-clear] Cleared session todo state", {
+          sessionID,
+          cleared,
+        })
+      } else if (command === "workflow-reset" && sessionID) {
+        stopContinuationForSession(sessionID)
+        const cleared = await clearSessionTodos(sessionID)
+        resetWorkflowForSession(sessionID)
+        log("[workflow-reset] Reset workflow state", {
+          sessionID,
+          clearedTodos: cleared,
+        })
+      } else if (command === "focus-chat" && sessionID) {
+        stopContinuationForSession(sessionID)
+        const cleared = await clearSessionTodos(sessionID)
+        resetWorkflowForSession(sessionID)
+        log("[focus-chat] Switched session back to ordinary chat mode", {
+          sessionID,
+          clearedTodos: cleared,
         })
       }
     }

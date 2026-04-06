@@ -938,6 +938,19 @@ export function readRuntimeWorkflowState(directory: string, sessionId: string): 
   }
 }
 
+export function clearRuntimeWorkflowSession(directory: string, sessionId: string): boolean {
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const legacyPaths = getLegacyRuntimeWorkflowPaths(directory, sessionId)
+
+  try {
+    rmSync(paths.rootDir, { recursive: true, force: true })
+    rmSync(legacyPaths.rootDir, { recursive: true, force: true })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function updateRuntimeWorkflowStage(args: {
   directory: string
   sessionId: string

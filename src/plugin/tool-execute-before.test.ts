@@ -1,6 +1,15 @@
-const { describe, expect, test } = require("bun:test")
+const { describe, expect, test, mock } = require("bun:test")
 const { createToolExecuteBeforeHandler } = require("./tool-execute-before")
 const { createToolRegistry } = require("./tool-registry")
+const { existsSync, mkdirSync, rmSync, writeFileSync } = require("node:fs")
+const { join } = require("node:path")
+const { tmpdir } = require("node:os")
+
+mock.module("opencode/session/todo", () => ({
+  Todo: {
+    update: async () => {},
+  },
+}))
 
 describe("createToolExecuteBeforeHandler", () => {
   test("does not execute subagent question blocker hook for question tool", async () => {
@@ -141,7 +150,7 @@ describe("createToolExecuteBeforeHandler", () => {
       expect(output.args.subagent_type).toBe("sisyphus-junior")
     })
 
-    test("resolves subagent_type from session first message when session_id provided without subagent_type", async () => {
+    test("resolves subagent_type from latest effective session agent when session_id provided without subagent_type", async () => {
       //#given
       const ctx = createCtxWithSessionMessages([
         { info: { role: "user" } },
@@ -156,7 +165,7 @@ describe("createToolExecuteBeforeHandler", () => {
       await handler(input, output)
 
       //#then
-      expect(output.args.subagent_type).toBe("explore")
+      expect(output.args.subagent_type).toBe("oracle")
     })
 
     test("falls back to 'continue' when session has no agent info", async () => {
@@ -216,6 +225,90 @@ describe("createToolExecuteBeforeHandler", () => {
 
       //#then
       expect(output.args.subagent_type).toBe("oracle")
+    })
+  })
+
+  describe("session cleanup slash commands", () => {
+    test("workflow-reset clears boulder state and stops continuation", async () => {
+      const testDir = join(tmpdir(), `tool-before-workflow-reset-${Date.now()}`)
+      mkdirSync(join(testDir, ".opencode", "openagent-labforge"), { recursive: true })
+      writeFileSync(
+        join(testDir, ".opencode", "openagent-labforge", "boulder.json"),
+        JSON.stringify({ active_plan: "x", started_at: "now", session_ids: ["ses_cleanup"], plan_name: "x" }),
+      )
+
+      let stopped = false
+      let cancelled = false
+      const ctx = {
+        directory: testDir,
+        client: {
+          session: {
+            messages: async () => ({ data: [] }),
+          },
+        },
+      }
+      const hooks = {
+        stopContinuationGuard: {
+          stop: () => { stopped = true },
+        },
+        todoContinuationEnforcer: {
+          cancelAllCountdowns: () => { cancelled = true },
+        },
+        ralphLoop: {
+          cancelLoop: () => {},
+        },
+      }
+
+      const handler = createToolExecuteBeforeHandler({ ctx, hooks })
+      await handler(
+        { tool: "skill", sessionID: "ses_cleanup", callID: "call_cleanup" },
+        { args: { name: "/workflow-reset" } },
+      )
+
+      expect(stopped).toBe(true)
+      expect(cancelled).toBe(true)
+      expect(existsSync(join(testDir, ".opencode", "openagent-labforge", "boulder.json"))).toBe(false)
+
+      rmSync(testDir, { recursive: true, force: true })
+    })
+
+    test("focus-chat triggers continuation stop for current session", async () => {
+      let stopped = false
+      let cancelled = false
+      let loopCancelled = false
+      const ctx = {
+        directory: process.cwd(),
+        client: {
+          session: {
+            messages: async () => ({ data: [] }),
+          },
+        },
+      }
+      const hooks = {
+        stopContinuationGuard: {
+          stop: (sessionID) => {
+            stopped = sessionID === "ses_focus"
+          },
+        },
+        todoContinuationEnforcer: {
+          cancelAllCountdowns: () => { cancelled = true },
+        },
+        ralphLoop: {
+          cancelLoop: (sessionID) => {
+            loopCancelled = sessionID === "ses_focus"
+          },
+        },
+      }
+
+      const handler = createToolExecuteBeforeHandler({ ctx, hooks })
+      await handler(
+        { tool: "skill", sessionID: "ses_focus", callID: "call_focus" },
+        { args: { name: "/focus-chat" } },
+      )
+
+      expect(stopped).toBe(true)
+      expect(cancelled).toBe(true)
+      expect(loopCancelled).toBe(true)
     })
   })
 })

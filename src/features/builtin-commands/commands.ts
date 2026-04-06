@@ -7,6 +7,9 @@ import { STOP_CONTINUATION_TEMPLATE } from "./templates/stop-continuation"
 import { REFACTOR_TEMPLATE } from "./templates/refactor"
 import { START_WORK_TEMPLATE } from "./templates/start-work"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
+import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
+import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
 
 export interface LoadBuiltinCommandsOptions {
   useRegisteredAgents?: boolean
@@ -92,6 +95,24 @@ $ARGUMENTS
     description: "(builtin) Stop all continuation mechanisms (ralph loop, todo continuation, boulder) for this session",
     template: `<command-instruction>
 ${STOP_CONTINUATION_TEMPLATE}
+</command-instruction>`,
+  },
+  "todo-clear": {
+    description: "(builtin) Clear stale todos and session-level execution residue for the current session",
+    template: `<command-instruction>
+${TODO_CLEAR_TEMPLATE}
+</command-instruction>`,
+  },
+  "workflow-reset": {
+    description: "(builtin) Reset current session/project execution workflow state before starting fresh",
+    template: `<command-instruction>
+${WORKFLOW_RESET_TEMPLATE}
+</command-instruction>`,
+  },
+  "focus-chat": {
+    description: "(builtin) Return the current session to ordinary chat mode and suppress stale execution carry-over",
+    template: `<command-instruction>
+${FOCUS_CHAT_TEMPLATE}
 </command-instruction>`,
   },
   handoff: {
