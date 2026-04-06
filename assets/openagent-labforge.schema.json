@@ -22,6 +22,92 @@
       },
       "additionalProperties": false
     },
+    "image_bus": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "review_with_main_model": {
+          "type": "boolean"
+        },
+        "default_output_format": {
+          "type": "string",
+          "enum": [
+            "svg",
+            "png",
+            "pdf"
+          ]
+        },
+        "providers": {
+          "type": "object",
+          "properties": {
+            "google_nano_banana": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "base_url": {
+                  "type": "string"
+                },
+                "api_key_env": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "comfyui": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "base_url": {
+                  "type": "string"
+                },
+                "workflow_endpoint": {
+                  "type": "string"
+                },
+                "output_dir": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "custom": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "base_url": {
+                    "type": "string"
+                  },
+                  "api_key_env": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "model_governor": {
       "type": "object",
       "properties": {
@@ -127,6 +213,9 @@
           "pdf-toolkit",
           "pptx-studio",
           "xlsx-analyst",
+          "proposal-and-roadmap",
+          "document-asset-pipeline",
+          "literature-synthesis",
           "web-research",
           "data-analysis",
           "research-paper-pipeline",

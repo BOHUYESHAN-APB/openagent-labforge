@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test"
 import { resolveSessionAgent } from "./session-agent-resolver"
 
 describe("resolveSessionAgent", () => {
-  test("returns agent from first message with agent field", async () => {
+  test("returns most recent non-compaction agent from session history", async () => {
     //#given
     const client = {
       session: {
         messages: async () => ({
           data: [
-            { info: { role: "user" } },
             { info: { role: "assistant", agent: "explore" } },
             { info: { role: "assistant", agent: "oracle" } },
+            { info: { role: "assistant", agent: "sisyphus" } },
           ],
         }),
       },
@@ -20,7 +20,7 @@ describe("resolveSessionAgent", () => {
     const agent = await resolveSessionAgent(client, "ses_test")
 
     //#then
-    expect(agent).toBe("explore")
+    expect(agent).toBe("sisyphus")
   })
 
   test("skips messages without agent field", async () => {
@@ -42,6 +42,26 @@ describe("resolveSessionAgent", () => {
 
     //#then
     expect(agent).toBe("plan")
+  })
+
+  test("skips compaction agent entries when resolving", async () => {
+    //#given
+    const client = {
+      session: {
+        messages: async () => ({
+          data: [
+            { info: { role: "assistant", agent: "explore" } },
+            { info: { role: "assistant", agent: "compaction" } },
+          ],
+        }),
+      },
+    }
+
+    //#when
+    const agent = await resolveSessionAgent(client, "ses_test")
+
+    //#then
+    expect(agent).toBe("explore")
   })
 
   test("returns undefined when no messages have agent", async () => {

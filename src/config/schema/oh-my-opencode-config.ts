@@ -12,6 +12,7 @@ import { BuiltinCommandNameSchema } from "./commands"
 import { ExperimentalConfigSchema } from "./experimental"
 import { GitMasterConfigSchema } from "./git-master"
 import { I18nConfigSchema } from "./i18n"
+import { ImageBusConfigSchema } from "./image-bus"
 import { ModelGovernorConfigSchema } from "./model-governor"
 import { McpPolicyConfigSchema } from "./mcp-policy"
 import { NotificationConfigSchema } from "./notification"
@@ -28,6 +29,7 @@ import { WebsearchConfigSchema } from "./websearch"
 export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
   i18n: I18nConfigSchema.optional(),
+  image_bus: ImageBusConfigSchema.optional(),
   model_governor: ModelGovernorConfigSchema.optional(),
   mcp_policy: McpPolicyConfigSchema.optional(),
   /** Enable new task system (default: false) */

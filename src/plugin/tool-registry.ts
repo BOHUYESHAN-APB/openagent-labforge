@@ -130,7 +130,9 @@ export function createToolRegistry(args: {
     getSkills: skillContext.getMergedSkills,
     mcpManager: managers.skillMcpManager,
     getSessionID: getSessionIDForMcp,
+    directory: ctx.directory,
     gitMasterConfig: pluginConfig.git_master,
+    imageBusConfig: pluginConfig.image_bus,
   })
 
   const taskSystemEnabled = pluginConfig.experimental?.task_system ?? false

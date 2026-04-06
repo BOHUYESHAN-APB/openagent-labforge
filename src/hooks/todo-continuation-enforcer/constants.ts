@@ -61,6 +61,18 @@ Your current todo backlog is too shallow for autonomous execution.
 - Do not reply with "next I would..." prose while keeping the backlog short
 - Expand the backlog first, then continue execution`
 
+export const AUTONOMOUS_REVIEW_REWORK_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+
+AUTONOMOUS REVIEW REWORK.
+
+The latest acceptance review rejected the current delivery.
+
+- Convert the blocking findings into the next execution wave immediately
+- If the next stage is PLAN, rebuild the plan with the reviewer findings as constraints
+- If the next stage is BUILD, create concrete implementation/reverification todos and continue
+- Do not answer with a summary alone
+- Move directly into the next execution wave`
+
 export const COUNTDOWN_SECONDS = 2
 export const TOAST_DURATION_MS = 900
 export const COUNTDOWN_GRACE_PERIOD_MS = 500

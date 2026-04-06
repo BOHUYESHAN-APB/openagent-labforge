@@ -198,9 +198,11 @@ export function createWriteExistingFileGuardHook(ctx: PluginInput): Hooks {
         return
       }
 
-      const isSisyphusPath = canonicalPath.includes("/.sisyphus/")
-      if (isSisyphusPath) {
-        log("[write-existing-file-guard] Allowing .sisyphus/** overwrite", {
+      const isWorkflowStatePath =
+        canonicalPath.includes("/.opencode/openagent-labforge/")
+        || canonicalPath.includes("/.sisyphus/")
+      if (isWorkflowStatePath) {
+        log("[write-existing-file-guard] Allowing workflow-state overwrite", {
           sessionID: input.sessionID,
           filePath,
         })

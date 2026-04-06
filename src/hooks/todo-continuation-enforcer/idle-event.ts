@@ -1,8 +1,19 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 
 import type { BackgroundManager } from "../../features/background-agent"
-import { getSessionAgent, isUltraworkAutonomousSession } from "../../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  isAutonomousSessionAgent,
+  isUltraworkAutonomousSession,
+  setUltraworkAutonomousSession,
+  updateSessionAgent,
+} from "../../features/claude-code-session-state"
 import type { ToolPermission } from "../../features/hook-message-injector"
+import {
+  parseLatestAcceptanceReviewOutcome,
+  readRuntimeWorkflowState,
+  updateRuntimeWorkflowReviewOutcome,
+} from "../../features/boulder-state"
 import { normalizeSDKResponse } from "../../shared"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
 import { log } from "../../shared/logger"
@@ -32,6 +43,7 @@ import { getIncompleteCount } from "./todo"
 import { injectContinuationReplan } from "./continuation-injection"
 import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
+import { injectAutonomousReviewRework } from "./continuation-injection"
 
 // Follow upstream continuation gating closely: compaction and stagnation are the
 // two main protections that keep idle sessions from being re-prompted forever.
@@ -57,7 +69,10 @@ export async function handleSessionIdle(args: {
 
   const state = sessionStateStore.getState(sessionID)
   const observedCompactionEpoch = state.recentCompactionEpoch
-  const isAutonomous = isUltraworkAutonomousSession(sessionID)
+  const rememberedSessionAgent = getSessionAgent(sessionID)
+  let isAutonomous =
+    isUltraworkAutonomousSession(sessionID) ||
+    isAutonomousSessionAgent(rememberedSessionAgent)
   if (state.isRecovering) {
     log(`[${HOOK_NAME}] Skipped: in recovery`, { sessionID })
     return
@@ -97,6 +112,38 @@ export async function handleSessionIdle(args: {
       return
     }
     state.hasContinuationIntent = hasContinuationIntent(messages)
+
+    if (!isAutonomous) {
+      for (let index = messages.length - 1; index >= 0; index--) {
+        const agent = messages[index].info?.agent
+        if (typeof agent === "string" && isAutonomousSessionAgent(agent)) {
+          updateSessionAgent(sessionID, agent)
+          setUltraworkAutonomousSession(sessionID, true)
+          isAutonomous = true
+          break
+        }
+      }
+    }
+
+    const parsedReviewOutcome = parseLatestAcceptanceReviewOutcome(messages)
+    const runtimeState = readRuntimeWorkflowState(ctx.directory, sessionID)
+    if (parsedReviewOutcome && runtimeState) {
+      const alreadyRecorded = runtimeState.last_review_signature === parsedReviewOutcome.signature
+      if (!alreadyRecorded) {
+        updateRuntimeWorkflowReviewOutcome({
+          directory: ctx.directory,
+          sessionId: sessionID,
+          verdict: parsedReviewOutcome.verdict,
+          blockingFindings: parsedReviewOutcome.blockingFindings,
+          nextStage: parsedReviewOutcome.nextStage,
+          signature: parsedReviewOutcome.signature,
+          note:
+            parsedReviewOutcome.verdict === "approve"
+              ? "Acceptance review approved the current delivery."
+              : `Acceptance review rejected the current delivery. ${parsedReviewOutcome.blockingFindings.length} blocking finding(s) captured.`,
+        })
+      }
+    }
   } catch (error) {
     log(`[${HOOK_NAME}] Messages fetch failed, continuing`, { sessionID, error: String(error) })
   }
@@ -128,8 +175,43 @@ export async function handleSessionIdle(args: {
   }
 
   const incompleteCount = getIncompleteCount(todos)
+  const runtimeState = readRuntimeWorkflowState(ctx.directory, sessionID)
+  const autoModeLevel = runtimeState?.auto_mode_level ?? (isAutonomous ? "heavy" : undefined)
+  const interactionMode = runtimeState?.interaction_mode ?? (isAutonomous ? "continuous" : undefined)
+  const isHeavyAutonomous = isAutonomous && autoModeLevel !== "light"
+  const shouldAutoContinueAcrossWaves = isAutonomous && interactionMode !== "batch"
+  const completionAuditLimit = isAutonomous
+    ? (isHeavyAutonomous ? 2 : 1)
+    : 0
   if (incompleteCount === 0) {
-    if (isAutonomous && (state.completionAuditCount ?? 0) < 2) {
+    if (
+      isAutonomous &&
+      runtimeState?.last_review_verdict === "reject" &&
+      runtimeState.last_review_signature &&
+      runtimeState.last_review_signature !== runtimeState.last_review_handled_signature
+    ) {
+      const nextStage = runtimeState.next_stage === "plan" ? "plan" : "build"
+      await injectAutonomousReviewRework({
+        ctx,
+        sessionID,
+        nextStage,
+        blockingFindings: runtimeState.blocking_findings ?? [],
+        reviewSignature: runtimeState.last_review_signature,
+        backgroundManager,
+        skipAgents,
+        sessionStateStore,
+        isContinuationStopped,
+      })
+      return
+    }
+
+    if (isAutonomous && runtimeState?.last_review_verdict === "approve") {
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Autonomous review approved completion`, { sessionID })
+      return
+    }
+
+    if (isAutonomous && (state.completionAuditCount ?? 0) < completionAuditLimit) {
       await injectAutonomousCompletionAudit({
         ctx,
         sessionID,
@@ -140,7 +222,7 @@ export async function handleSessionIdle(args: {
       })
       return
     }
-    if (state.hasContinuationIntent) {
+    if (state.hasContinuationIntent && (!isAutonomous || shouldAutoContinueAcrossWaves)) {
       await injectContinuationReplan({
         ctx,
         sessionID,
@@ -214,9 +296,8 @@ export async function handleSessionIdle(args: {
     log(`[${HOOK_NAME}] Failed to fetch messages for agent check`, { sessionID, error: String(error) })
   }
 
-  const sessionAgent = getSessionAgent(sessionID)
-  if (!resolvedInfo?.agent && sessionAgent) {
-    resolvedInfo = { ...resolvedInfo, agent: sessionAgent }
+  if (!resolvedInfo?.agent && rememberedSessionAgent) {
+    resolvedInfo = { ...resolvedInfo, agent: rememberedSessionAgent }
   }
 
   const acknowledgedCompaction = resolvedInfo?.agent
@@ -235,6 +316,10 @@ export async function handleSessionIdle(args: {
   })
 
   const resolvedAgentName = resolvedInfo?.agent
+  if (!isAutonomous && isAutonomousSessionAgent(resolvedAgentName)) {
+    isAutonomous = true
+    setUltraworkAutonomousSession(sessionID, true)
+  }
   if (resolvedAgentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(resolvedAgentName))) {
     log(`[${HOOK_NAME}] Skipped: agent in skipAgents list`, { sessionID, agent: resolvedAgentName })
     return
@@ -257,7 +342,7 @@ export async function handleSessionIdle(args: {
     return
   }
 
-  if (isAutonomous) {
+  if (isHeavyAutonomous) {
     if (todos.length >= AUTONOMOUS_MIN_TODO_COUNT) {
       state.backlogExpansionCount = 0
       state.lastBacklogExpansionTodoCount = todos.length

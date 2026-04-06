@@ -9,6 +9,8 @@ interface OpenCodeSessionMessage {
 	parts?: Array<{ type: string; text?: string }>
 }
 
+const TRANSCRIPT_STARTED_AT_GRACE_MS = 5_000
+
 function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
@@ -35,7 +37,17 @@ export function detectCompletionInTranscript(
 			try {
 				const entry = JSON.parse(line) as { type?: string; timestamp?: string }
 				if (entry.type === "user") continue
-				if (startedAt && entry.timestamp && entry.timestamp < startedAt) continue
+				if (startedAt && entry.timestamp) {
+					const startedAtMs = Date.parse(startedAt)
+					const entryTimestampMs = Date.parse(entry.timestamp)
+					if (
+						Number.isFinite(startedAtMs) &&
+						Number.isFinite(entryTimestampMs) &&
+						entryTimestampMs < startedAtMs - TRANSCRIPT_STARTED_AT_GRACE_MS
+					) {
+						continue
+					}
+				}
 				if (pattern.test(line)) return true
 			} catch {
 				continue

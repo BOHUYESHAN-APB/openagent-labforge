@@ -13,9 +13,8 @@ export function getTaskDir(config: Partial<OhMyOpenCodeConfig> = {}): string {
     return isAbsolute(storagePath) ? storagePath : join(process.cwd(), storagePath)
   }
 
-  const configDir = getOpenCodeConfigDir({ binary: "opencode" })
   const listId = resolveTaskListId(config)
-  return join(configDir, "tasks", listId)
+  return join(process.cwd(), ".opencode", "openagent-labforge", "tasks", listId)
 }
 
 export function sanitizePathSegment(value: string): string {

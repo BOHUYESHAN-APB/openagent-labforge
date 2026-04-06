@@ -114,7 +114,7 @@ export function createRuleInjectionProcessor(deps: {
 
       try {
         const { metadata, body } = getCachedParsedRule(
-          candidate.path,
+          candidate.realPath,
           candidate.realPath
         );
 

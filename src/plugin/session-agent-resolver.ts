@@ -1,5 +1,6 @@
 import { log } from "../shared"
 import { normalizeSDKResponse } from "../shared"
+import { isCompactionAgent } from "../features/background-agent/compaction-aware-message-resolver"
 
 interface SessionMessage {
   info?: {
@@ -22,9 +23,10 @@ export async function resolveSessionAgent(
     const messagesResp = await client.session.messages({ path: { id: sessionId } })
     const messages = normalizeSDKResponse(messagesResp, [] as SessionMessage[])
 
-    for (const msg of messages) {
-      if (msg.info?.agent) {
-        return msg.info.agent
+    for (let index = messages.length - 1; index >= 0; index--) {
+      const agent = messages[index].info?.agent
+      if (agent && !isCompactionAgent(agent)) {
+        return agent
       }
     }
   } catch (error) {

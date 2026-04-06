@@ -83,12 +83,15 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// then
-		expect(defaultSkills).toHaveLength(32)
-		expect(agentBrowserSkills).toHaveLength(32)
+		expect(defaultSkills).toHaveLength(35)
+		expect(agentBrowserSkills).toHaveLength(35)
 		expect(defaultSkills.map((s) => s.name)).toContain("docx-workbench")
 		expect(defaultSkills.map((s) => s.name)).toContain("pdf-toolkit")
 		expect(defaultSkills.map((s) => s.name)).toContain("web-research")
 		expect(defaultSkills.map((s) => s.name)).toContain("data-analysis")
+		expect(defaultSkills.map((s) => s.name)).toContain("proposal-and-roadmap")
+		expect(defaultSkills.map((s) => s.name)).toContain("document-asset-pipeline")
+		expect(defaultSkills.map((s) => s.name)).toContain("literature-synthesis")
 		expect(defaultSkills.map((s) => s.name)).toContain("backend-architecture")
 		expect(defaultSkills.map((s) => s.name)).toContain("research-paper-pipeline")
 		expect(defaultSkills.map((s) => s.name)).toContain("bio-tools")
@@ -131,6 +134,8 @@ describe("createBuiltinSkills", () => {
 		expect(byName.get("metagenomics")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("proteomics")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("vector-design")?.agent).toBe("wet-lab-designer")
+		expect(byName.get("proposal-and-roadmap")?.agent).toBe("article-writer")
+		expect(byName.get("literature-synthesis")?.agent).toBe("scientific-writer")
 	})
 
 	test("should exclude playwright when it is in disabledSkills", () => {
@@ -145,7 +150,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(31)
+		expect(skills.length).toBe(34)
 	})
 
 	test("should exclude multiple skills when they are in disabledSkills", () => {
@@ -160,7 +165,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).not.toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(30)
+		expect(skills.length).toBe(33)
 	})
 
 	test("should return an empty array when all skills are disabled", () => {
@@ -173,7 +178,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(28)
+		expect(skills.length).toBe(31)
 	})
 
 	test("should return all skills when disabledSkills set is empty", () => {
@@ -184,7 +189,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(32)
+		expect(skills.length).toBe(35)
 	})
 
 	test("returns playwright-cli skill when browserProvider is 'playwright-cli'", () => {

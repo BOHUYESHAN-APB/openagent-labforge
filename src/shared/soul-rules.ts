@@ -20,30 +20,34 @@ export function loadSoulRules(params: {
   pluginConfig: OhMyOpenCodeConfig
 }): SoulRulesResult {
   const configuredPath = params.pluginConfig.soul?.path?.trim()
-  const projectPath = join(params.directory, ".sisyphus", "rules", "SOUL.md")
-  const candidatePath = configuredPath && configuredPath.length > 0
-    ? resolve(configuredPath)
-    : projectPath
-
-  if (!existsSync(candidatePath)) {
-    return {}
-  }
+  const primaryProjectPath = join(params.directory, ".opencode", "openagent-labforge", "rules", "SOUL.md")
+  const legacyProjectPath = join(params.directory, ".sisyphus", "rules", "SOUL.md")
+  const candidatePaths = configuredPath && configuredPath.length > 0
+    ? [resolve(configuredPath)]
+    : [primaryProjectPath, legacyProjectPath]
 
   const enabled = params.pluginConfig.soul?.enabled
   if (enabled === false) {
     return {}
   }
 
-  try {
-    const content = readFileSync(candidatePath, "utf-8")
-    return { content, source: candidatePath }
-  } catch (error) {
-    log("[soul-rules] Failed to read SOUL.md", {
-      path: candidatePath,
-      error: String(error),
-    })
-    return {}
+  for (const candidatePath of candidatePaths) {
+    if (!existsSync(candidatePath)) {
+      continue
+    }
+
+    try {
+      const content = readFileSync(candidatePath, "utf-8")
+      return { content, source: candidatePath }
+    } catch (error) {
+      log("[soul-rules] Failed to read SOUL.md", {
+        path: candidatePath,
+        error: String(error),
+      })
+    }
   }
+
+  return {}
 }
 
 export function selectSoulContent(params: {

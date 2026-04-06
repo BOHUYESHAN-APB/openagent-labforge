@@ -3,7 +3,7 @@ import { beforeEach, describe, test, expect } from "bun:test"
 import { createChatMessageHandler } from "./chat-message"
 import type { ChatMessageInput } from "./chat-message"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
-import { isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
+import { getSessionAgent, isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
 import {
   clearSessionAutoModelRouting,
   clearSessionForcedModel,
@@ -19,6 +19,7 @@ type ChatMessageHandlerOutput = { message: Record<string, unknown>; parts: ChatM
 function createMockHandlerArgs(overrides?: {
   pluginConfig?: Record<string, unknown>
   shouldOverride?: boolean
+  sessionMessages?: Array<{ info?: { agent?: string; role?: string } }>
 }) {
   const appliedSessions: string[] = []
   const toastCalls: Array<{ title: string; message: string }> = []
@@ -26,6 +27,11 @@ function createMockHandlerArgs(overrides?: {
     ctx: {
       directory: ".",
       client: {
+        session: {
+          messages: async () => ({
+            data: overrides?.sessionMessages ?? [],
+          }),
+        },
         tui: {
           showToast: async ({ body }: { body: { title: string; message: string } }) => {
             toastCalls.push({ title: body.title, message: body.message })
@@ -152,6 +158,26 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     const args = createMockHandlerArgs({ shouldOverride: false })
     const handler = createChatMessageHandler(args)
     const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(getSessionAgent(input.sessionID)).toBe("wase")
+    expect(isUltraworkAutonomousSession(input.sessionID)).toBe(true)
+  })
+
+  test("recovers latest agent from transcript when resumed session has no in-memory agent", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      sessionMessages: [
+        { info: { role: "assistant", agent: "prometheus" } },
+        { info: { role: "assistant", agent: "bio-autopilot" } },
+      ],
+    })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput(undefined, { providerID: "google", modelID: "gemini-2.5-pro" })
     const output = createMockOutput()
 
     //#when

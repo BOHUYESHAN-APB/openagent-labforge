@@ -4,6 +4,8 @@ import {
   getSessionAgent,
   clearSessionAgent,
   updateSessionAgent,
+  isAutonomousSessionAgent,
+  isUltraworkAutonomousSession,
   setMainSession,
   getMainSessionID,
   _resetForTesting,
@@ -69,6 +71,35 @@ describe("claude-code-session-state", () => {
     })
   })
 
+  describe("autonomous session agents", () => {
+    test("recognizes built-in autonomous agent keys", () => {
+      expect(isAutonomousSessionAgent("wase")).toBe(true)
+      expect(isAutonomousSessionAgent("bio-autopilot")).toBe(true)
+      expect(isAutonomousSessionAgent("sisyphus")).toBe(false)
+    })
+
+    test("marks ultrawork autonomy when autonomous agent is stored", () => {
+      const sessionID = "autonomous-session"
+
+      setSessionAgent(sessionID, "bio-autopilot")
+
+      expect(getSessionAgent(sessionID)).toBe("bio-autopilot")
+      expect(isUltraworkAutonomousSession(sessionID)).toBe(true)
+    })
+
+    test("clears ultrawork autonomy when agent is updated to non-autonomous", () => {
+      const sessionID = "switched-session"
+
+      setSessionAgent(sessionID, "wase")
+      expect(isUltraworkAutonomousSession(sessionID)).toBe(true)
+
+      updateSessionAgent(sessionID, "sisyphus")
+
+      expect(getSessionAgent(sessionID)).toBe("sisyphus")
+      expect(isUltraworkAutonomousSession(sessionID)).toBe(false)
+    })
+  })
+
   describe("clearSessionAgent", () => {
     test("should remove agent from session", () => {
       // given
@@ -81,6 +112,17 @@ describe("claude-code-session-state", () => {
 
       // then
       expect(getSessionAgent(sessionID)).toBeUndefined()
+    })
+
+    test("should also clear autonomous session state", () => {
+      const sessionID = "autonomous-clear"
+      setSessionAgent(sessionID, "wase")
+      expect(isUltraworkAutonomousSession(sessionID)).toBe(true)
+
+      clearSessionAgent(sessionID)
+
+      expect(getSessionAgent(sessionID)).toBeUndefined()
+      expect(isUltraworkAutonomousSession(sessionID)).toBe(false)
     })
   })
 

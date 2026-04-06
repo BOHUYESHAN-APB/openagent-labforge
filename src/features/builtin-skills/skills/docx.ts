@@ -61,6 +61,30 @@ Selection rule:
 - Preferred: python-docx for editing and generation.
 - For reading, you may use pandoc if installed.
 
+## Asset workflow
+
+If the document contains diagrams, SVGs, Mermaid sources, screenshots, or user-provided images:
+
+1. create or update an asset inventory first
+2. decide section placement before insertion
+3. preserve source assets
+4. generate office-friendly fallbacks when needed
+5. ensure captions and references in body text match the inserted assets
+
+Preferred document asset layout:
+
+- \`assets/\` for originals
+- \`figures/\` for rendered outputs
+- \`diagrams/\` for Mermaid or source diagrams
+- \`assets/manifest.json\` for placement and caption tracking
+
+For Mermaid / SVG:
+- keep source \`.mmd\` or \`.svg\`
+- render \`.svg\` where possible
+- prepare \`.png\` fallback for Word insertion when needed
+
+Load \`document-asset-pipeline\` when asset orchestration is non-trivial.
+
 ## Preflight checks (required)
 
 1) Check Python availability.
@@ -76,5 +100,6 @@ If missing, propose installation commands and wait for approval.
 - Tables have consistent borders and padding.
 - Paragraphs are not single-sentence unless explicitly requested.
 - Any changes are summarized with file paths and actions.
+- Figures, SVGs, Mermaid diagrams, and user images are captioned and inserted intentionally rather than pasted ad hoc.
 `,
 }

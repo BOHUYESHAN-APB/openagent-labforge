@@ -21,6 +21,7 @@ The plugin is now centered on:
 - stable plugin/agent/MCP injection for newer OpenCode behavior
 - explicit search/doc/code/paper retrieval separation
 - a growing first-party bioinformatics agent and skill stack
+- repo-local runtime workflow memory under `.opencode/openagent-labforge/`
 - local-first development and installation
 
 ## Protocol Compatibility
@@ -114,6 +115,51 @@ Current engineering-capability layering:
 This layering is intentional so future de-duplication stays easy if OpenCode
 itself absorbs parts of the same capability set.
 
+### Runtime workflow memory
+
+Long-horizon work is now anchored under:
+
+- `.opencode/openagent-labforge/`
+
+Current runtime workflow structure includes:
+
+- repo-local runtime state
+- `mission.md`
+- `roadmap.md`
+- stage memory:
+  - `plan.md`
+  - `build.md`
+  - `review.md`
+- wave memory:
+  - `wave-001-plan.md`
+  - `wave-001-build.md`
+  - `wave-001-review.md`
+- document workspaces
+- paper cache
+
+This is intended to keep long tasks inspectable and compaction-safe without
+spreading temporary state across multiple top-level directories.
+
+### Autonomous execution modes
+
+Autonomous flows now distinguish two levels and two interaction styles:
+
+- levels:
+  - `light`
+  - `heavy`
+- interaction styles:
+  - `batch`
+  - `continuous`
+
+Current behavior:
+
+- `light + batch` is for tighter reviewed batches and does not force an
+  oversized backlog
+- `heavy + continuous` is for longer multi-wave execution and pushes backlog
+  expansion, review routing, and continuation harder
+
+Mode selection is runtime-scoped and stored in the repo-local workflow state.
+
 ### Specialist agents
 
 - `explore`: local codebase discovery
@@ -159,6 +205,10 @@ Examples:
 - document / report:
   - `docx-workbench`
   - `pdf-toolkit`
+  - `pptx-studio`
+  - `proposal-and-roadmap`
+  - `document-asset-pipeline`
+  - `literature-synthesis`
   - `xlsx-analyst`
 - bioinformatics:
   - `bio-tools`
@@ -193,6 +243,30 @@ Bio agents now also carry explicit data-interaction and environment-safety behav
 - they prefer `uv` for Python environments
 - they prefer `conda` for mixed native stacks
 - they call out when Windows users realistically need WSL/Linux
+
+### Document and paper workspace behavior
+
+Document-oriented skills now provision repo-local work areas automatically under
+the runtime workflow root.
+
+Current behavior includes:
+
+- document workspace creation on relevant writing/document skills
+- paper cache creation on literature / paper-oriented skills
+- asset, output, and revision manifests
+- child git repo initialization for document source workspaces when needed
+
+This is intentionally source-first:
+
+- source material and manifests are tracked in the document workspace
+- binary outputs remain generated artifacts
+
+Current figure policy:
+
+- the document flow is currently SVG-first
+- when a figure is needed and no image-bus backend is configured, the system
+  should insert SVG placeholders or SVG-derived figures first
+- users can replace those later with final generated or manually refined figures
 
 ## Current MCP Set
 
@@ -294,6 +368,27 @@ The near-term order is:
 1. finish upstream OpenCode compatibility migration
 2. strengthen engineering execution/orchestration capability in core agents
 3. continue refining the bioinformatics agent + skill stack
+
+## Deferred Work
+
+The following are intentionally not treated as fully complete yet:
+
+- model-family-specific prompt overlays for more non-default families such as
+  GLM, Kimi, and DeepSeek
+- the full image execution bus
+
+Current image-bus stance:
+
+- it is configuration-gated
+- it is not treated as on by default
+- if no backend is configured, the current document flow should stay SVG-first
+  instead of pretending image generation is available
+
+Planned future image-bus targets include:
+
+- Google Nano Banana style backends
+- ComfyUI-compatible backends
+- optional generated-image review by the main model
 
 ## Contribution Note
 

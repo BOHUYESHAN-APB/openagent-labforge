@@ -10,6 +10,7 @@ import {
   clearBoulderState,
   readBoulderState,
 } from "../../features/boulder-state"
+import { getRuntimeWorkflowPaths } from "../../features/boulder-state"
 import type { BoulderState } from "../../features/boulder-state"
 import * as sessionState from "../../features/claude-code-session-state"
 import * as worktreeDetector from "./worktree-detector"
@@ -201,6 +202,33 @@ describe("start-work hook", () => {
       expect(output.parts[0].text).toContain("Auto-Selected Plan")
       expect(output.parts[0].text).toContain("plan-incomplete")
       expect(output.parts[0].text).not.toContain("Multiple Plans Found")
+    })
+
+    test("should create runtime workflow files and mention runtime memory block when selecting a plan", async () => {
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+
+      const planPath = join(plansDir, "runtime-backed-plan.md")
+      writeFileSync(planPath, "# Runtime Backed Plan\n- [ ] Task 1")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        parts: [{ type: "text", text: "<session-context></session-context>" }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "session-runtime-123" },
+        output
+      )
+
+      const runtimePaths = getRuntimeWorkflowPaths(testDir, "session-runtime-123")
+
+      expect(output.parts[0].text).toContain("Runtime Workflow Memory")
+      expect(output.parts[0].text).toContain(runtimePaths.stateFile)
+      expect(existsSync(runtimePaths.stateFile)).toBe(true)
+      expect(existsSync(runtimePaths.planFile)).toBe(true)
+      expect(existsSync(runtimePaths.buildFile)).toBe(true)
+      expect(existsSync(runtimePaths.reviewFile)).toBe(true)
     })
 
     test("should wrap multiple plans message in system-reminder tag", async () => {

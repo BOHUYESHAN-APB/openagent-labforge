@@ -15,6 +15,7 @@ export const PROJECT_RULE_SUBDIRS: [string, string][] = [
   [".github", "instructions"],
   [".cursor", "rules"],
   [".claude", "rules"],
+  [".opencode", "openagent-labforge/rules"],
   [".sisyphus", "rules"],
 ];
 

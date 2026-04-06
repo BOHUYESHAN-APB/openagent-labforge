@@ -5,34 +5,51 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs"
-import { dirname, join, basename } from "node:path"
+import { dirname, join, basename, resolve } from "node:path"
 import type { BoulderState, PlanProgress } from "./types"
-import { BOULDER_DIR, BOULDER_FILE, PROMETHEUS_PLANS_DIR } from "./constants"
+import {
+  BOULDER_DIR,
+  BOULDER_FILE,
+  LEGACY_BOULDER_STATE_PATH,
+  LEGACY_PROMETHEUS_PLANS_DIR,
+  PROMETHEUS_PLANS_DIR,
+} from "./constants"
 
 export function getBoulderFilePath(directory: string): string {
   return join(directory, BOULDER_DIR, BOULDER_FILE)
 }
 
+function getLegacyBoulderFilePath(directory: string): string {
+  return join(directory, LEGACY_BOULDER_STATE_PATH)
+}
+
 export function readBoulderState(directory: string): BoulderState | null {
-  const filePath = getBoulderFilePath(directory)
+  const candidates = [
+    getBoulderFilePath(directory),
+    getLegacyBoulderFilePath(directory),
+  ]
 
-  if (!existsSync(filePath)) {
-    return null
+  for (const filePath of candidates) {
+    if (!existsSync(filePath)) {
+      continue
+    }
+
+    try {
+      const content = readFileSync(filePath, "utf-8")
+      const parsed = JSON.parse(content)
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        continue
+      }
+      if (!Array.isArray(parsed.session_ids)) {
+        parsed.session_ids = []
+      }
+      return parsed as BoulderState
+    } catch {
+      continue
+    }
   }
 
-  try {
-    const content = readFileSync(filePath, "utf-8")
-    const parsed = JSON.parse(content)
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null
-    }
-    if (!Array.isArray(parsed.session_ids)) {
-      parsed.session_ids = []
-    }
-    return parsed as BoulderState
-  } catch {
-    return null
-  }
+  return null
 }
 
 export function writeBoulderState(directory: string, state: BoulderState): boolean {
@@ -69,12 +86,14 @@ export function appendSessionId(directory: string, sessionId: string): BoulderSt
 }
 
 export function clearBoulderState(directory: string): boolean {
-  const filePath = getBoulderFilePath(directory)
+  const filePaths = [getBoulderFilePath(directory), getLegacyBoulderFilePath(directory)]
 
   try {
-    if (existsSync(filePath)) {
-      const { unlinkSync } = require("node:fs")
-      unlinkSync(filePath)
+    const { unlinkSync } = require("node:fs")
+    for (const filePath of filePaths) {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath)
+      }
     }
     return true
   } catch {
@@ -84,26 +103,43 @@ export function clearBoulderState(directory: string): boolean {
 
 /**
  * Find Prometheus plan files for this project.
- * Prometheus stores plans at: {project}/.sisyphus/plans/{name}.md
+ * Primary path: {project}/.opencode/openagent-labforge/plans/{name}.md
+ * Legacy path remains readable for compatibility.
  */
 export function findPrometheusPlans(directory: string): string[] {
-  const plansDir = join(directory, PROMETHEUS_PLANS_DIR)
+  const planDirs = [
+    join(directory, PROMETHEUS_PLANS_DIR),
+    join(directory, LEGACY_PROMETHEUS_PLANS_DIR),
+  ]
 
-  if (!existsSync(plansDir)) {
-    return []
+  const seen = new Set<string>()
+  const plans: string[] = []
+
+  for (const plansDir of planDirs) {
+    if (!existsSync(plansDir)) {
+      continue
+    }
+
+    try {
+      const files = readdirSync(plansDir)
+      for (const file of files.filter((f) => f.endsWith(".md"))) {
+        const fullPath = resolve(join(plansDir, file))
+        if (!seen.has(fullPath)) {
+          seen.add(fullPath)
+          plans.push(fullPath)
+        }
+      }
+    } catch {
+      continue
+    }
   }
 
   try {
-    const files = readdirSync(plansDir)
-    return files
-      .filter((f) => f.endsWith(".md"))
-      .map((f) => join(plansDir, f))
-      .sort((a, b) => {
-        // Sort by modification time, newest first
-        const aStat = require("node:fs").statSync(a)
-        const bStat = require("node:fs").statSync(b)
-        return bStat.mtimeMs - aStat.mtimeMs
-      })
+    return plans.sort((a, b) => {
+      const aStat = require("node:fs").statSync(a)
+      const bStat = require("node:fs").statSync(b)
+      return bStat.mtimeMs - aStat.mtimeMs
+    })
   } catch {
     return []
   }

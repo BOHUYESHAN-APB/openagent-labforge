@@ -188,7 +188,7 @@ describe("prometheus-md-only", () => {
       ).rejects.toThrow("can only write/edit .md files")
     })
 
-    test("should allow Prometheus to write .md files inside .sisyphus/", async () => {
+    test("should allow Prometheus to write .md files inside .opencode/openagent-labforge/", async () => {
       // given
       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
       const input = {
@@ -197,7 +197,7 @@ describe("prometheus-md-only", () => {
         callID: "call-1",
       }
       const output = {
-        args: { filePath: "/tmp/test/.sisyphus/plans/work-plan.md" },
+        args: { filePath: "/tmp/test/.opencode/openagent-labforge/plans/work-plan.md" },
       }
 
       // when / #then
@@ -206,7 +206,7 @@ describe("prometheus-md-only", () => {
       ).resolves.toBeUndefined()
     })
 
-    test("should inject workflow reminder when Prometheus writes to .sisyphus/plans/", async () => {
+    test("should inject workflow reminder when Prometheus writes to .opencode/openagent-labforge/plans/", async () => {
       // given
       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
       const input = {
@@ -215,7 +215,7 @@ describe("prometheus-md-only", () => {
         callID: "call-1",
       }
       const output: { args: Record<string, unknown>; message?: string } = {
-        args: { filePath: "/tmp/test/.sisyphus/plans/work-plan.md" },
+        args: { filePath: "/tmp/test/.opencode/openagent-labforge/plans/work-plan.md" },
       }
 
       // when
@@ -228,7 +228,7 @@ describe("prometheus-md-only", () => {
       expect(output.message).toContain("MOMUS REVIEW")
     })
 
-    test("should NOT inject workflow reminder for .sisyphus/drafts/", async () => {
+    test("should NOT inject workflow reminder for .opencode/openagent-labforge/drafts/", async () => {
       // given
       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
       const input = {
@@ -237,7 +237,7 @@ describe("prometheus-md-only", () => {
         callID: "call-1",
       }
       const output: { args: Record<string, unknown>; message?: string } = {
-        args: { filePath: "/tmp/test/.sisyphus/drafts/notes.md" },
+        args: { filePath: "/tmp/test/.opencode/openagent-labforge/drafts/notes.md" },
       }
 
       // when
@@ -247,7 +247,7 @@ describe("prometheus-md-only", () => {
       expect(output.message).toBeUndefined()
     })
 
-    test("should block Prometheus from writing .md files outside .sisyphus/", async () => {
+    test("should block Prometheus from writing .md files outside .opencode/openagent-labforge/", async () => {
       // given
       const hook = createPrometheusMdOnlyHook(createMockPluginInput())
       const input = {
@@ -262,7 +262,7 @@ describe("prometheus-md-only", () => {
       // when / #then
       await expect(
         hook["tool.execute.before"](input, output)
-      ).rejects.toThrow("can only write/edit .md files inside .sisyphus/")
+      ).rejects.toThrow("can only write/edit .md files inside .opencode/openagent-labforge/")
     })
 
     test("should block Edit tool for non-.md files", async () => {
@@ -602,7 +602,7 @@ describe("prometheus-md-only", () => {
       setupMessageStorage(TEST_SESSION_ID, "prometheus")
     })
 
-     test("should allow Windows-style backslash paths under .sisyphus/", async () => {
+     test("should allow Windows-style backslash paths under .opencode/openagent-labforge/", async () => {
        // given
        setupMessageStorage(TEST_SESSION_ID, "prometheus")
        const hook = createPrometheusMdOnlyHook(createMockPluginInput())
@@ -621,7 +621,7 @@ describe("prometheus-md-only", () => {
        ).resolves.toBeUndefined()
      })
 
-     test("should allow mixed separator paths under .sisyphus/", async () => {
+     test("should allow mixed separator paths under .opencode/openagent-labforge/", async () => {
        // given
        setupMessageStorage(TEST_SESSION_ID, "prometheus")
        const hook = createPrometheusMdOnlyHook(createMockPluginInput())
@@ -650,7 +650,7 @@ describe("prometheus-md-only", () => {
          callID: "call-1",
        }
        const output = {
-         args: { filePath: ".sisyphus/plans/work-plan.MD" },
+         args: { filePath: ".opencode/openagent-labforge/plans/work-plan.MD" },
        }
 
        // when / #then
@@ -669,13 +669,13 @@ describe("prometheus-md-only", () => {
          callID: "call-1",
        }
        const output = {
-         args: { filePath: "/other/project/.sisyphus/plans/x.md" },
+         args: { filePath: "/other/project/.opencode/openagent-labforge/plans/x.md" },
        }
 
        // when / #then
        await expect(
          hook["tool.execute.before"](input, output)
-       ).rejects.toThrow("can only write/edit .md files inside .sisyphus/")
+       ).rejects.toThrow("can only write/edit .md files inside .opencode/openagent-labforge/")
      })
 
      test("should allow nested .sisyphus directories (ctx.directory may be parent)", async () => {
@@ -688,7 +688,7 @@ describe("prometheus-md-only", () => {
          callID: "call-1",
        }
        const output = {
-         args: { filePath: "src/.sisyphus/plans/x.md" },
+         args: { filePath: "src/.opencode/openagent-labforge/plans/x.md" },
        }
 
        // when / #then - should allow because .sisyphus is in path
@@ -707,13 +707,13 @@ describe("prometheus-md-only", () => {
          callID: "call-1",
        }
        const output = {
-         args: { filePath: ".sisyphus/../secrets.md" },
+         args: { filePath: ".opencode/openagent-labforge/../secrets.md" },
        }
 
        // when / #then
        await expect(
          hook["tool.execute.before"](input, output)
-       ).rejects.toThrow("can only write/edit .md files inside .sisyphus/")
+       ).rejects.toThrow("can only write/edit .md files inside .opencode/openagent-labforge/")
      })
 
      test("should allow case-insensitive .SISYPHUS directory", async () => {

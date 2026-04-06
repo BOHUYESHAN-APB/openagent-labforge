@@ -1,6 +1,7 @@
 import type { SkillScope, LoadedSkill } from "../../features/opencode-skill-loader/types"
 import type { SkillMcpManager } from "../../features/skill-mcp-manager"
 import type { GitMasterConfig } from "../../config/schema"
+import type { ImageBusConfig } from "../../config/schema/image-bus"
 import type { CommandInfo } from "../slashcommand/types"
 
 export interface SkillArgs {
@@ -33,8 +34,12 @@ export interface SkillLoadOptions {
   mcpManager?: SkillMcpManager
   /** Session ID getter for MCP client identification */
   getSessionID?: () => string
+  /** Current working directory for runtime workspace provisioning */
+  directory?: string
   /** Git master configuration for watermark/co-author settings */
   gitMasterConfig?: GitMasterConfig
+  /** Optional image bus configuration for figure-generation orchestration */
+  imageBusConfig?: ImageBusConfig
   disabledSkills?: Set<string>
   /** Include Claude marketplace plugin commands in discovery (default: true) */
   pluginsEnabled?: boolean

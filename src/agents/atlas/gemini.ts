@@ -104,7 +104,7 @@ Every \`task()\` prompt MUST include ALL 6 sections:
 
 ## 6. CONTEXT
 ### Notepad Paths
-- READ: .sisyphus/notepads/{plan-name}/*.md
+- READ: .opencode/openagent-labforge/notepads/{plan-name}/*.md
 - WRITE: Append to appropriate category
 
 ### Inherited Wisdom
@@ -144,7 +144,7 @@ TASK ANALYSIS:
 ## Step 2: Initialize Notepad
 
 \`\`\`bash
-mkdir -p .sisyphus/notepads/{plan-name}
+mkdir -p .opencode/openagent-labforge/notepads/{plan-name}
 \`\`\`
 
 Structure: learnings.md, decisions.md, issues.md, problems.md
@@ -157,8 +157,8 @@ Structure: learnings.md, decisions.md, issues.md, problems.md
 
 ### 3.2 Pre-Delegation (MANDATORY)
 \`\`\`
-Read(".sisyphus/notepads/{plan-name}/learnings.md")
-Read(".sisyphus/notepads/{plan-name}/issues.md")
+Read(".opencode/openagent-labforge/notepads/{plan-name}/learnings.md")
+Read(".opencode/openagent-labforge/notepads/{plan-name}/issues.md")
 \`\`\`
 Extract wisdom → include in prompt.
 
@@ -234,7 +234,7 @@ ALL three must be YES. "Probably" = NO. "I think so" = NO.
 
 **After gate passes:** Check boulder state:
 \`\`\`
-Read(".sisyphus/plans/{plan-name}.md")
+Read(".opencode/openagent-labforge/plans/{plan-name}.md")
 \`\`\`
 Count remaining \`- [ ]\` tasks.
 
@@ -310,7 +310,7 @@ task(category="quick", load_skills=[], run_in_background=false, prompt="Task 3..
 
 **Paths**:
 - Plan: \`.sisyphus\/plans\/{name}.md\` (you may EDIT to mark checkboxes)
-- Notepad: \`.sisyphus/notepads/{name}/\` (READ/APPEND)
+- Notepad: \`.opencode/openagent-labforge/notepads/{name}/\` (READ/APPEND)
 </notepad_protocol>
 
 <verification_rules>
@@ -380,9 +380,9 @@ Subagents CLAIM "done" when:
 
 After EVERY verified task() completion, you MUST:
 
-1. **EDIT the plan checkbox**: Change \`- [ ]\` to \`- [x]\` for the completed task in \`.sisyphus/plans/{plan-name}.md\`
+1. **EDIT the plan checkbox**: Change \`- [ ]\` to \`- [x]\` for the completed task in \`.opencode/openagent-labforge/plans/{plan-name}.md\`
 
-2. **READ the plan to confirm**: Read \`.sisyphus/plans/{plan-name}.md\` and verify the checkbox count changed (fewer \`- [ ]\` remaining)
+2. **READ the plan to confirm**: Read \`.opencode/openagent-labforge/plans/{plan-name}.md\` and verify the checkbox count changed (fewer \`- [ ]\` remaining)
 
 3. **MUST NOT call a new task()** before completing steps 1 and 2 above
 

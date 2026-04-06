@@ -21,6 +21,7 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 - 面向新版 OpenCode 的稳定 plugin / agent / MCP 注入
 - 将搜索、文档、代码、论文检索明确拆层
 - 建设第一方生信 agent 与 skills 体系
+- 将长期任务运行时记忆统一沉淀到 `.opencode/openagent-labforge/`
 - 继续坚持本地优先安装与开发
 
 ## 协议兼容立场
@@ -84,6 +85,48 @@ Gemini 说明：
 
 这样分层是刻意的，后面如果 OpenCode 官方补上同类能力，我们更容易按块去重。
 
+### 运行时工作流记忆
+
+长期任务现在统一锚定在：
+
+- `.opencode/openagent-labforge/`
+
+当前运行时工作流结构包括：
+
+- repo-local runtime state
+- `mission.md`
+- `roadmap.md`
+- 阶段文件：
+  - `plan.md`
+  - `build.md`
+  - `review.md`
+- 波次文件：
+  - `wave-001-plan.md`
+  - `wave-001-build.md`
+  - `wave-001-review.md`
+- 文档工作区
+- 论文缓存
+
+这样做的目的，是让长任务在 compaction 后仍然可持续推进，同时避免把临时状态散落到多个顶层目录里。
+
+### 自动执行模式
+
+自动模式现在区分两个层级和两种交互风格：
+
+- 层级：
+  - `light`
+  - `heavy`
+- 交互风格：
+  - `batch`
+  - `continuous`
+
+当前行为大致是：
+
+- `light + batch`：适合较紧凑的一批一批执行，不强行扩成过大的 backlog
+- `heavy + continuous`：适合更长时间、多波次的持续推进，会更积极地触发 backlog 扩展、审查打回和继续执行
+
+这些模式信息会被写入 repo-local 的 runtime workflow state。
+
 ### 专长 agent
 
 - `explore`：本地代码发现
@@ -127,6 +170,10 @@ Gemini 说明：
 - `git-master`
 - `docx-workbench`
 - `pdf-toolkit`
+ - `pptx-studio`
+ - `proposal-and-roadmap`
+ - `document-asset-pipeline`
+ - `literature-synthesis`
 - `xlsx-analyst`
 
 生信方向：
@@ -166,6 +213,28 @@ Gemini 说明：
 - Python 环境优先 `uv`
 - 混合原生工具栈优先 `conda`
 - 在 Windows 下会明确指出哪些场景实际上需要 WSL / Linux
+
+### 文档与论文工作区行为
+
+现在，文档类 skills 在加载时会自动在 runtime workflow 根目录下创建 repo-local 工作区。
+
+当前行为包括：
+
+- 文档类 writing / document skills 会创建 document workspace
+- 文献 / 论文类 skills 会创建 paper cache
+- 记录 asset / output / revision manifest
+- 必要时为文档源工作区初始化子 git 仓库
+
+这套机制是 source-first 的：
+
+- 真正持续维护的是源文档和 manifest
+- 二进制输出仍然视为生成产物
+
+当前配图策略：
+
+- 现阶段优先走 SVG
+- 当任务需要插图、但图像总线后端没有配置时，先插入 SVG 占位图或 SVG 派生图
+- 后续用户可以自行替换为正式生成图或手工优化后的图
 
 ## 当前 MCP 集合
 
@@ -266,6 +335,25 @@ bun pm pack
 1. 收完上游 OpenCode 兼容特性迁移
 2. 强化核心 agent 的工程能力
 3. 继续优化生物信息学 agent 与 skills
+
+## 暂列后续项
+
+下面两块目前明确还是后续项，不把它们伪装成已经彻底完成：
+
+- GLM / Kimi / DeepSeek 等更多模型家族的专用 prompt 适配
+- 完整图像执行总线
+
+当前图像总线立场：
+
+- 只在配置存在并启用时才参与工作流
+- 默认不开启
+- 如果没有配置任何后端，当前文档工作流就保持 SVG-first，而不是假装图像生成已经可用
+
+后续准备适配的图像总线目标包括：
+
+- Google Nano Banana 一类后端
+- ComfyUI 兼容后端
+- 生成图片后再交给主模型复审的可选链路
 
 ## 协作说明
 

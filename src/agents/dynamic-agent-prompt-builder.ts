@@ -192,6 +192,24 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
     )
   }
 
+  if (skillNames.has("proposal-and-roadmap")) {
+    recommendedPairings.push(
+      `- Business plans, project plans, proposals, stakeholder memos, or long-range roadmaps → load \`proposal-and-roadmap\`${skillNames.has("document-asset-pipeline") ? " plus `document-asset-pipeline` when diagrams, SVG, Mermaid, or user images are involved" : ""}`
+    )
+  }
+
+  if (skillNames.has("document-asset-pipeline")) {
+    recommendedPairings.push(
+      "- DOCX, PPTX, PDF, Markdown, or report tasks with SVG, Mermaid, screenshots, or user-provided images → load `document-asset-pipeline`"
+    )
+  }
+
+  if (skillNames.has("literature-synthesis")) {
+    recommendedPairings.push(
+      "- Review papers, survey writing, abstract synthesis, or large paper-reading tasks → load `literature-synthesis`"
+    )
+  }
+
   if (skillNames.has("blast-search")) {
     recommendedPairings.push(
       "- Sequence interpretation that depends on homology or identification → load `sequence-analysis` together with `blast-search`"
@@ -323,6 +341,9 @@ task(category="quick", load_skills=[], prompt="Redesign the sidebar layout with 
 **Skill defaults by domain:**
 - Visual/product surface → \`frontend-ui-ux\` plus browser verification skill when available
 - Backend/API/service design → \`backend-architecture\`
+- Business plans / project plans / roadmaps → \`proposal-and-roadmap\`, \`document-asset-pipeline\`
+- Review papers / survey writing / large paper corpora → \`literature-synthesis\`
+- Docx / pptx / pdf with figures or diagrams → \`document-asset-pipeline\`
 - Bio sequence/homology → \`sequence-analysis\`, \`blast-search\`
 - Bio pathway/domain/database lookup → \`functional-annotation\`
 

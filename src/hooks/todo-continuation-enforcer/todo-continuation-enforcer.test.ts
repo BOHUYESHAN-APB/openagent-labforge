@@ -1,9 +1,13 @@
 /// <reference types="bun-types" />
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 
 import type { BackgroundManager } from "../../features/background-agent"
 import { setMainSession, subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
 import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
+import { ensureRuntimeWorkflowSession } from "../../features/boulder-state"
 import { createTodoContinuationEnforcer } from "."
 import {
   CONTINUATION_COOLDOWN_MS,
@@ -188,7 +192,7 @@ describe("todo-continuation-enforcer", () => {
 
   let mockMessages: MockMessage[] = []
 
-  function createMockPluginInput() {
+  function createMockPluginInput(directory: string = "/tmp/test") {
     return {
       client: {
         session: {
@@ -226,7 +230,7 @@ describe("todo-continuation-enforcer", () => {
           },
         },
       },
-      directory: "/tmp/test",
+      directory,
     } as any
   }
 
@@ -354,7 +358,55 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
   })
 
-  test("should reinject when todos are complete but assistant promises next steps in Chinese", async () => {
+  test("light autonomous mode should continue the current batch instead of forcing backlog expansion", async () => {
+    const sessionID = "main-autonomous-light-batch"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-light-mode-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "small-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(
+      planPath,
+      `# Small Plan
+
+- [ ] Tight task one
+- [ ] Tight task two
+`,
+      "utf-8",
+    )
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+    })
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
+      { id: "2", content: "Task 2", status: "pending", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(2500, true)
+
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
+    expect(promptCalls[0].text).toContain("[Auto mode: light]")
+    expect(promptCalls[0].text).toContain("[Interaction mode: batch]")
+    expect(promptCalls[0].text).not.toContain("AUTONOMOUS BACKLOG EXPANSION")
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test("should trigger autonomous completion audit when resumed wase session promises next steps in Chinese", async () => {
     // given
     const sessionID = "main-continue-zh"
     setMainSession(sessionID)
@@ -379,10 +431,11 @@ describe("todo-continuation-enforcer", () => {
 
     // then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].text).toContain("Convert the promised \"next steps\" into NEW concrete todos immediately")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+    expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
 
-  test("should reinject when assistant says there are remaining points for the next round in Chinese", async () => {
+  test("should trigger autonomous completion audit when resumed wase session says there are remaining points for the next round in Chinese", async () => {
     // given
     const sessionID = "main-continue-zh-backlog"
     setMainSession(sessionID)
@@ -410,10 +463,11 @@ describe("todo-continuation-enforcer", () => {
 
     // then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].text).toContain("Create the next execution wave with specific actionable items")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+    expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
 
-  test("should reinject when todos are complete but assistant promises next steps in English", async () => {
+  test("should trigger autonomous completion audit when resumed wase session promises next steps in English", async () => {
     // given
     const sessionID = "main-continue-en"
     setMainSession(sessionID)
@@ -438,10 +492,11 @@ describe("todo-continuation-enforcer", () => {
 
     // then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].text).toContain("Convert the promised \"next steps\" into NEW concrete todos immediately")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+    expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
 
-  test("should reinject when todos are complete and assistant emits the exact continuation marker", async () => {
+  test("should trigger autonomous completion audit when resumed wase session emits the exact continuation marker", async () => {
     // given
     const sessionID = "main-continue-marker"
     setMainSession(sessionID)
@@ -466,7 +521,63 @@ describe("todo-continuation-enforcer", () => {
 
     // then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].text).toContain("[OMO_CONTINUE_TODO_EXPAND]")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+    expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
+  })
+
+  test("batch interaction mode should not auto-replan into another wave after the audit pass", async () => {
+    const sessionID = "main-autonomous-batch-stop"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-batch-stop-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "small-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(
+      planPath,
+      `# Small Plan
+
+- [ ] Tight task one
+- [ ] Tight task two
+`,
+      "utf-8",
+    )
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "Next I would continue with a couple more cleanup points." }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+      { id: "2", content: "Task 2", status: "completed", priority: "medium" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(1)
+
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("should not inject when remaining todos are blocked or deleted", async () => {
@@ -987,7 +1098,7 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
   })
 
-  test("wase agent session should use autonomous continuation prompt", async () => {
+  test("wase agent session should use autonomous backlog expansion for shallow backlogs", async () => {
     //#given
     const sessionID = "main-wase-session"
     setMainSession(sessionID)
@@ -1003,7 +1114,28 @@ describe("todo-continuation-enforcer", () => {
     //#then
     expect(promptCalls).toHaveLength(1)
     expect(promptCalls[0].agent).toBe("wase")
-    expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
+    expect(promptCalls[0].text).toContain("[Current todo count: 2]")
+  })
+
+  test("bio-autopilot session restored from transcript should use autonomous backlog expansion for shallow backlogs", async () => {
+    //#given
+    const sessionID = "main-bio-autopilot-session"
+    setMainSession(sessionID)
+    mockMessages = [
+      { info: { id: "msg-1", role: "assistant", agent: "bio-autopilot", model: { providerID: "google", modelID: "gemini-2.5-pro" } } },
+    ]
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+
+    //#when
+    await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
+    await fakeTimers.advanceBy(2500, true)
+
+    //#then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].agent).toBe("bio-autopilot")
+    expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
+    expect(promptCalls[0].text).toContain("[Current todo count: 2]")
   })
 
   test("should skip idle handling while injection is in flight", async () => {

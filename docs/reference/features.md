@@ -99,6 +99,7 @@ Current notable skill behavior:
 - project-local skill discovery walks upward toward git root
 - installer bootstraps `skills/openagent-labforge/SKILL.md`
 - first-party bio skills now describe tools, workflows, expected artifacts, and boundary rules
+- document and literature skills now provision repo-local document workspace and paper cache paths on load
 
 Engineering-oriented skill stack examples:
 
@@ -131,6 +132,60 @@ These bio skills now behave more like execution SOPs:
 - expected artifacts and output layout
 - QC gates and anti-pattern warnings
 - R / Python / native-tool branching when needed
+
+Document / writing additions now include:
+
+- `proposal-and-roadmap`
+- `document-asset-pipeline`
+- `literature-synthesis`
+- `pptx-studio`
+
+Current document asset policy is SVG-first:
+
+- if no image-bus backend is configured, document flows should insert SVG-first
+  assets or placeholders
+- image-bus backends are opt-in rather than default-on
+
+---
+
+## Runtime Workflow Memory
+
+Long-horizon execution now uses repo-local runtime memory under:
+
+- `.opencode/openagent-labforge/`
+
+Current runtime workflow surface includes:
+
+- `mission.md`
+- `roadmap.md`
+- `plan.md`
+- `build.md`
+- `review.md`
+- wave files such as `wave-001-plan.md`
+- document workspaces
+- paper cache
+
+This is the main current direction for compaction-safe long tasks.
+
+---
+
+## Autonomous Mode Levels
+
+Autonomous flows now distinguish:
+
+- level:
+  - `light`
+  - `heavy`
+- interaction style:
+  - `batch`
+  - `continuous`
+
+Current intended behavior:
+
+- `light + batch` keeps a tighter execution batch and avoids forcing a large
+  backlog
+- `heavy + continuous` supports longer multi-wave execution with stronger
+  backlog expansion and review-driven continuation
 
 ---
 

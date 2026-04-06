@@ -46,19 +46,38 @@ export function _resetForTesting(): void {
 
 const sessionAgentMap = new Map<string, string>()
 const ultraworkAutonomousSessionMap = new Map<string, boolean>()
+const AUTONOMOUS_SESSION_AGENT_KEYS = new Set(["wase", "bio-autopilot"])
 
 function normalizeSessionAgentName(agent: string): string {
   return getAgentConfigKey(agent)
 }
 
+function syncAutonomousSessionState(sessionID: string, normalizedAgent: string): void {
+  if (AUTONOMOUS_SESSION_AGENT_KEYS.has(normalizedAgent)) {
+    ultraworkAutonomousSessionMap.set(sessionID, true)
+    return
+  }
+
+  ultraworkAutonomousSessionMap.delete(sessionID)
+}
+
+export function isAutonomousSessionAgent(agent: string | undefined): boolean {
+  if (!agent) return false
+  return AUTONOMOUS_SESSION_AGENT_KEYS.has(normalizeSessionAgentName(agent))
+}
+
 export function setSessionAgent(sessionID: string, agent: string): void {
   if (!sessionAgentMap.has(sessionID)) {
-    sessionAgentMap.set(sessionID, normalizeSessionAgentName(agent))
+    const normalizedAgent = normalizeSessionAgentName(agent)
+    sessionAgentMap.set(sessionID, normalizedAgent)
+    syncAutonomousSessionState(sessionID, normalizedAgent)
   }
 }
 
 export function updateSessionAgent(sessionID: string, agent: string): void {
-  sessionAgentMap.set(sessionID, normalizeSessionAgentName(agent))
+  const normalizedAgent = normalizeSessionAgentName(agent)
+  sessionAgentMap.set(sessionID, normalizedAgent)
+  syncAutonomousSessionState(sessionID, normalizedAgent)
 }
 
 export function getSessionAgent(sessionID: string): string | undefined {
@@ -67,6 +86,7 @@ export function getSessionAgent(sessionID: string): string | undefined {
 
 export function clearSessionAgent(sessionID: string): void {
   sessionAgentMap.delete(sessionID)
+  ultraworkAutonomousSessionMap.delete(sessionID)
 }
 
 export function setUltraworkAutonomousSession(

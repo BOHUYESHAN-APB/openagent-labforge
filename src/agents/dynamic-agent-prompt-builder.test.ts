@@ -145,6 +145,9 @@ describe("buildCategorySkillsDelegationGuide", () => {
       { name: "frontend-ui-ux", description: "UI polish", location: "plugin" },
       { name: "playwright", description: "Browser automation", location: "plugin" },
       { name: "backend-architecture", description: "Backend contracts", location: "plugin" },
+      { name: "proposal-and-roadmap", description: "Plans and roadmaps", location: "plugin" },
+      { name: "document-asset-pipeline", description: "Document assets", location: "plugin" },
+      { name: "literature-synthesis", description: "Large literature synthesis", location: "plugin" },
       { name: "sequence-analysis", description: "Sequence analysis", location: "plugin" },
       { name: "blast-search", description: "Homology search", location: "plugin" },
       { name: "functional-annotation", description: "Annotation lookup", location: "plugin" },
@@ -158,6 +161,9 @@ describe("buildCategorySkillsDelegationGuide", () => {
     expect(result).toContain("Recommended Skill Pairings")
     expect(result).toContain("Frontend, dashboard, page, UI, layout, or visual polish work")
     expect(result).toContain("Backend, API, service, schema, auth, queue, persistence, or integration work")
+    expect(result).toContain("Business plans, project plans, proposals, stakeholder memos, or long-range roadmaps")
+    expect(result).toContain("Review papers, survey writing, abstract synthesis, or large paper-reading tasks")
+    expect(result).toContain("DOCX, PPTX, PDF, Markdown, or report tasks with SVG, Mermaid, screenshots, or user-provided images")
     expect(result).toContain("`sequence-analysis` together with `blast-search`")
     expect(result).toContain("`functional-annotation`")
     expect(result).toContain("`bio-visualization`")

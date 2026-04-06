@@ -10,6 +10,7 @@ import type { Tool, Resource, Prompt } from "@modelcontextprotocol/sdk/types.js"
 import { discoverCommandsSync } from "../slashcommand/command-discovery"
 import type { CommandInfo } from "../slashcommand/types"
 import { formatLoadedCommand } from "../slashcommand/command-output-formatter"
+import { provisionSkillWorkspaceContext } from "./workspace-context"
 // Priority: project > user > opencode/opencode-project > builtin/config
 const scopePriority: Record<string, number> = {
   project: 4,
@@ -268,6 +269,18 @@ export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition 
           "",
           body,
         ]
+
+        const workspaceContext = provisionSkillWorkspaceContext({
+          directory: options.directory,
+          sessionID: options.getSessionID?.(),
+          skill: matchedSkill,
+          userMessage: args.user_message,
+          imageBusConfig: options.imageBusConfig,
+        })
+        if (workspaceContext) {
+          output.push("")
+          output.push(workspaceContext.markdown)
+        }
 
         if (options.mcpManager && options.getSessionID && matchedSkill.mcpConfig) {
           const mcpInfo = await formatMcpCapabilities(

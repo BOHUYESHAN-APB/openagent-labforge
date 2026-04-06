@@ -1,6 +1,7 @@
 import { statSync } from "node:fs"
 import type { PluginInput } from "@opencode-ai/plugin"
 import {
+  appendRuntimeWorkflowNote,
   readBoulderState,
   writeBoulderState,
   appendSessionId,
@@ -9,6 +10,7 @@ import {
   createBoulderState,
   getPlanName,
   clearBoulderState,
+  ensureRuntimeWorkflowSession,
 } from "../../features/boulder-state"
 import { log } from "../../shared/logger"
 import {
@@ -52,6 +54,58 @@ function createWorktreeActiveBlock(worktreePath: string): string {
 - Every file read, write, edit, and git operation MUST target paths under: \`${worktreePath}\`
 - When delegating tasks to subagents, you MUST include the worktree path in your delegation prompt so they also operate exclusively within the worktree
 - NEVER operate on the main repository directory — always use the worktree path above`
+}
+
+function createRuntimeWorkflowBlock(args: {
+  rootDir: string
+  stateFile: string
+  missionFile: string
+  roadmapFile: string
+  planFile: string
+  buildFile: string
+  reviewFile: string
+  autoModeLevel?: string
+  interactionMode?: string
+  currentWave?: number
+}): string {
+  const {
+    rootDir,
+    stateFile,
+    missionFile,
+    roadmapFile,
+    planFile,
+    buildFile,
+    reviewFile,
+    autoModeLevel,
+    interactionMode,
+    currentWave,
+  } = args
+
+  return `
+## Runtime Workflow Memory
+
+**Runtime Dir**: \`${rootDir}\`
+**State**: \`${stateFile}\`
+**Mission**: \`${missionFile}\`
+**Roadmap**: \`${roadmapFile}\`
+**Auto Mode**: \`${autoModeLevel ?? "light"}\`
+**Interaction Mode**: \`${interactionMode ?? "batch"}\`
+**Current Wave**: \`${String(currentWave ?? 1).padStart(3, "0")}\`
+**Stage Files**:
+- plan: \`${planFile}\`
+- build: \`${buildFile}\`
+- review: \`${reviewFile}\`
+**Current Wave Files**:
+- wave plan: \`${rootDir}/wave-${String(currentWave ?? 1).padStart(3, "0")}-plan.md\`
+- wave build: \`${rootDir}/wave-${String(currentWave ?? 1).padStart(3, "0")}-build.md\`
+- wave review: \`${rootDir}/wave-${String(currentWave ?? 1).padStart(3, "0")}-review.md\`
+
+Use these files as the current repository's temporary execution memory.
+- Read and update only the stage files relevant to the current phase
+- Keep long-horizon intent in mission/roadmap, and wave-local execution detail in the stage files
+- Do not duplicate the whole conversation into them
+- Treat them as compaction-safe runtime memory
+- They are repo-local temporary files and should not be committed`
 }
 
 function resolveWorktreeContext(
@@ -113,6 +167,7 @@ export function createStartWorkHook(ctx: PluginInput) {
       const { worktreePath, block: worktreeBlock } = resolveWorktreeContext(explicitWorktreePath)
 
       let contextInfo = ""
+      let runtimeWorkflowBlock = ""
 
       if (explicitPlanName) {
         log(`[${HOOK_NAME}] Explicit plan name requested: ${explicitPlanName}`, { sessionID: input.sessionID })
@@ -133,6 +188,26 @@ All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
             if (existingState) clearBoulderState(ctx.directory)
             const newState = createBoulderState(matchedPlan, sessionId, activeAgent, worktreePath)
             writeBoulderState(ctx.directory, newState)
+            const runtimeWorkflow = ensureRuntimeWorkflowSession({
+              directory: ctx.directory,
+              sessionId,
+              activePlan: matchedPlan,
+              activeAgent,
+              worktreePath,
+              currentStage: "plan",
+            })
+            appendRuntimeWorkflowNote({
+              directory: ctx.directory,
+              sessionId,
+              stage: "plan",
+              content: "Execution session started from /start-work. Read the active plan and prepare the first implementation wave.",
+            })
+            runtimeWorkflowBlock = createRuntimeWorkflowBlock({
+              ...runtimeWorkflow.paths,
+              autoModeLevel: runtimeWorkflow.state.auto_mode_level,
+              interactionMode: runtimeWorkflow.state.interaction_mode,
+              currentWave: runtimeWorkflow.state.current_wave,
+            })
 
             contextInfo = `
 ## Auto-Selected Plan
@@ -143,6 +218,7 @@ All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
 **Session ID**: ${sessionId}
 **Started**: ${timestamp}
 ${worktreeBlock}
+${runtimeWorkflowBlock}
 
 boulder.json has been created. Read the plan and begin execution.`
           }
@@ -196,6 +272,27 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
               appendSessionId(ctx.directory, sessionId)
             }
 
+          const runtimeWorkflow = ensureRuntimeWorkflowSession({
+            directory: ctx.directory,
+            sessionId,
+            activePlan: existingState.active_plan,
+            activeAgent,
+            worktreePath: effectiveWorktree,
+            currentStage: "plan",
+          })
+          appendRuntimeWorkflowNote({
+            directory: ctx.directory,
+            sessionId,
+            stage: "plan",
+            content: "Execution session resumed from /start-work. Re-read the active plan and continue from the next unfinished item.",
+          })
+          runtimeWorkflowBlock = createRuntimeWorkflowBlock({
+            ...runtimeWorkflow.paths,
+            autoModeLevel: runtimeWorkflow.state.auto_mode_level,
+            interactionMode: runtimeWorkflow.state.interaction_mode,
+            currentWave: runtimeWorkflow.state.current_wave,
+          })
+
           const worktreeDisplay = effectiveWorktree ? createWorktreeActiveBlock(effectiveWorktree) : worktreeBlock
 
           contextInfo = `
@@ -208,6 +305,7 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
 **Sessions**: ${existingState.session_ids.length + 1} (current session appended)
 **Started**: ${existingState.started_at}
 ${worktreeDisplay}
+${runtimeWorkflowBlock}
 
 The current session (${sessionId}) has been added to session_ids.
 Read the plan file and continue from the first unchecked task.`
@@ -231,7 +329,7 @@ Looking for new plans...`
           contextInfo += `
 ## No Plans Found
 
-No Prometheus plan files found at .sisyphus/plans/
+No Prometheus plan files found at .opencode/openagent-labforge/plans/
 Use Prometheus to create a work plan first: /plan "your task"`
         } else if (incompletePlans.length === 0) {
           contextInfo += `
@@ -244,6 +342,26 @@ All ${plans.length} plan(s) are complete. Create a new plan with: /plan "your ta
           const progress = getPlanProgress(planPath)
           const newState = createBoulderState(planPath, sessionId, activeAgent, worktreePath)
           writeBoulderState(ctx.directory, newState)
+          const runtimeWorkflow = ensureRuntimeWorkflowSession({
+            directory: ctx.directory,
+            sessionId,
+            activePlan: planPath,
+            activeAgent,
+            worktreePath,
+            currentStage: "plan",
+          })
+          appendRuntimeWorkflowNote({
+            directory: ctx.directory,
+            sessionId,
+            stage: "plan",
+            content: "A single incomplete plan was auto-selected. Re-read the plan and start the next execution wave.",
+          })
+          runtimeWorkflowBlock = createRuntimeWorkflowBlock({
+            ...runtimeWorkflow.paths,
+            autoModeLevel: runtimeWorkflow.state.auto_mode_level,
+            interactionMode: runtimeWorkflow.state.interaction_mode,
+            currentWave: runtimeWorkflow.state.current_wave,
+          })
 
           contextInfo += `
 
@@ -255,6 +373,7 @@ All ${plans.length} plan(s) are complete. Create a new plan with: /plan "your ta
 **Session ID**: ${sessionId}
 **Started**: ${timestamp}
 ${worktreeBlock}
+${runtimeWorkflowBlock}
 
 boulder.json has been created. Read the plan and begin execution.`
         } else {

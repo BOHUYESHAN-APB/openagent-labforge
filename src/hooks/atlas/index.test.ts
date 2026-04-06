@@ -542,7 +542,7 @@ describe("atlas hook", () => {
         cleanupMessageStorage(ORCHESTRATOR_SESSION)
       })
 
-      test("should append delegation reminder when orchestrator writes outside .sisyphus/", async () => {
+      test("should append delegation reminder when orchestrator writes outside workflow state dir", async () => {
         // given
         const hook = createAtlasHook(createMockPluginInput())
         const output = {
@@ -563,7 +563,7 @@ describe("atlas hook", () => {
         expect(output.output).toContain("task")
       })
 
-      test("should append delegation reminder when orchestrator edits outside .sisyphus/", async () => {
+      test("should append delegation reminder when orchestrator edits outside workflow state dir", async () => {
         // given
         const hook = createAtlasHook(createMockPluginInput())
         const output = {
@@ -582,14 +582,14 @@ describe("atlas hook", () => {
         expect(output.output).toContain("ORCHESTRATOR, not an IMPLEMENTER")
       })
 
-      test("should NOT append reminder when orchestrator writes inside .sisyphus/", async () => {
+      test("should NOT append reminder when orchestrator writes inside workflow state dir", async () => {
         // given
         const hook = createAtlasHook(createMockPluginInput())
         const originalOutput = "File written successfully"
         const output = {
           title: "Write",
           output: originalOutput,
-          metadata: { filePath: "/project/.sisyphus/plans/work-plan.md" },
+          metadata: { filePath: "/project/.opencode/openagent-labforge/plans/work-plan.md" },
         }
 
         // when
@@ -603,7 +603,7 @@ describe("atlas hook", () => {
         expect(output.output).not.toContain("ORCHESTRATOR, not an IMPLEMENTER")
       })
 
-      test("should NOT append reminder when non-orchestrator writes outside .sisyphus/", async () => {
+      test("should NOT append reminder when non-orchestrator writes outside workflow state dir", async () => {
         // given
         const nonOrchestratorSession = "non-orchestrator-session"
         setupMessageStorage(nonOrchestratorSession, "sisyphus-junior")

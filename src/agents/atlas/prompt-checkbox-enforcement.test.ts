@@ -22,13 +22,13 @@ describe("ATLAS prompt checkbox enforcement", () => {
       expect(lowerPrompt).toMatch(/edit.*checkbox|checkbox.*edit/)
     })
 
-    test("boundaries should include exception for editing .sisyphus/plans/*.md checkboxes", () => {
+    test("boundaries should include exception for editing .opencode/openagent-labforge/plans/*.md checkboxes", () => {
       // given
       const prompt = ATLAS_SYSTEM_PROMPT
       const lowerPrompt = prompt.toLowerCase()
 
       // when / then
-      expect(lowerPrompt).toMatch(/\.sisyphus\/plans\/\*\.md/)
+      expect(lowerPrompt).toMatch(/\.opencode\/openagent-labforge\/plans\/\*\.md/)
       expect(lowerPrompt).toMatch(/checkbox/)
     })
 
@@ -77,13 +77,13 @@ describe("ATLAS prompt checkbox enforcement", () => {
       expect(lowerPrompt).toMatch(/edit.*checkbox|checkbox.*edit/)
     })
 
-    test("boundaries should include exception for editing .sisyphus/plans/*.md checkboxes", () => {
+    test("boundaries should include exception for editing .opencode/openagent-labforge/plans/*.md checkboxes", () => {
       // given
       const prompt = ATLAS_GPT_SYSTEM_PROMPT
       const lowerPrompt = prompt.toLowerCase()
 
       // when / then
-      expect(lowerPrompt).toMatch(/\.sisyphus\/plans\/\*\.md/)
+      expect(lowerPrompt).toMatch(/\.opencode\/openagent-labforge\/plans\/\*\.md/)
       expect(lowerPrompt).toMatch(/checkbox/)
     })
 
@@ -124,13 +124,13 @@ describe("ATLAS prompt checkbox enforcement", () => {
       expect(lowerPrompt).toMatch(/edit.*checkbox|checkbox.*edit/)
     })
 
-    test("boundaries should include exception for editing .sisyphus/plans/*.md checkboxes", () => {
+    test("boundaries should include exception for editing .opencode/openagent-labforge/plans/*.md checkboxes", () => {
       // given
       const prompt = ATLAS_GEMINI_SYSTEM_PROMPT
       const lowerPrompt = prompt.toLowerCase()
 
       // when / then
-      expect(lowerPrompt).toMatch(/\.sisyphus\/plans\/\*\.md/)
+      expect(lowerPrompt).toMatch(/\.opencode\/openagent-labforge\/plans\/\*\.md/)
       expect(lowerPrompt).toMatch(/checkbox/)
     })
 

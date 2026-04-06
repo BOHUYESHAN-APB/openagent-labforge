@@ -21,6 +21,25 @@ You work with PDF files using reliable libraries and strict layout rules.
 - pypdf (merge, split, metadata)
 - pdfplumber (extract text and tables)
 
+## Asset workflow
+
+If the PDF includes SVGs, Mermaid diagrams, charts, screenshots, or user-provided images:
+
+1. inventory the assets first
+2. decide section placement before rendering
+3. keep vector-first sources where possible
+4. create raster fallbacks only when required by the rendering path
+5. maintain captions and references in the document text
+
+Suggested layout:
+
+- \`assets/\`
+- \`figures/\`
+- \`diagrams/\`
+- \`assets/manifest.json\`
+
+Load \`document-asset-pipeline\` when figure placement and conversion are part of the task.
+
 ## Design palettes
 
 Choose ONE palette and apply consistently.
@@ -76,5 +95,6 @@ If missing, propose installation commands and wait for approval.
 
 - Confirm output file paths.
 - Include a short summary of transformations.
+- Confirm how diagrams, SVGs, and images were converted and placed.
 `,
 }

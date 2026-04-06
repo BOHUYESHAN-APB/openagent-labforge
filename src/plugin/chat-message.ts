@@ -22,13 +22,16 @@ import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-mark
 import { log } from "../shared/logger"
 import {
   getSessionAgent,
+  isAutonomousSessionAgent,
   setSessionAgent,
   setUltraworkAutonomousSession,
+  updateSessionAgent,
 } from "../features/claude-code-session-state"
 import { getAgentConfigKey } from "../shared/agent-display-names"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
+import { resolveSessionAgent } from "./session-agent-resolver"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -115,6 +118,20 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const rememberedSessionAgent = getSessionAgent(input.sessionID)
+    let recoveredSessionAgent: string | undefined
+
+    if (!input.agent && !rememberedSessionAgent) {
+      recoveredSessionAgent = await resolveSessionAgent(ctx.client, input.sessionID)
+      if (recoveredSessionAgent) {
+        updateSessionAgent(input.sessionID, recoveredSessionAgent)
+        log("[chat-message] Recovered session agent from transcript", {
+          sessionID: input.sessionID,
+          recoveredAgent: recoveredSessionAgent,
+        })
+      }
+    }
+
     const outputText = output.parts
       .filter((part) => part.type === "text" && typeof part.text === "string")
       .map((part) => part.text ?? "")
@@ -139,7 +156,7 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
-    const activeAgent = input.agent ?? getSessionAgent(input.sessionID)
+    const activeAgent = input.agent ?? rememberedSessionAgent ?? recoveredSessionAgent
     const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
@@ -196,10 +213,16 @@ export function createChatMessageHandler(args: {
     }
 
     if (input.agent) {
-      setSessionAgent(input.sessionID, input.agent)
-      if (getAgentConfigKey(input.agent) === "wase") {
+      if (rememberedSessionAgent === undefined) {
+        setSessionAgent(input.sessionID, input.agent)
+      } else {
+        updateSessionAgent(input.sessionID, input.agent)
+      }
+      if (isAutonomousSessionAgent(input.agent) || getAgentConfigKey(input.agent) === "wase") {
         setUltraworkAutonomousSession(input.sessionID, true)
       }
+    } else if (activeAgent && isAutonomousSessionAgent(activeAgent)) {
+      setUltraworkAutonomousSession(input.sessionID, true)
     }
 
     if (shouldShowRecoveryModelToast && lockedModel && !recoveryModelToastSessions.has(input.sessionID)) {

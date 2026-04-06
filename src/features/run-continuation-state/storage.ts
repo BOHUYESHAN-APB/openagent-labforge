@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { CONTINUATION_MARKER_DIR } from "./constants"
+import { CONTINUATION_MARKER_DIR, LEGACY_CONTINUATION_MARKER_DIR } from "./constants"
 import type {
   ContinuationMarker,
   ContinuationMarkerSource,
@@ -11,21 +11,28 @@ function getMarkerPath(directory: string, sessionID: string): string {
   return join(directory, CONTINUATION_MARKER_DIR, `${sessionID}.json`)
 }
 
+function getLegacyMarkerPath(directory: string, sessionID: string): string {
+  return join(directory, LEGACY_CONTINUATION_MARKER_DIR, `${sessionID}.json`)
+}
+
 export function readContinuationMarker(
   directory: string,
   sessionID: string,
 ): ContinuationMarker | null {
-  const markerPath = getMarkerPath(directory, sessionID)
-  if (!existsSync(markerPath)) return null
+  for (const markerPath of [getMarkerPath(directory, sessionID), getLegacyMarkerPath(directory, sessionID)]) {
+    if (!existsSync(markerPath)) continue
 
-  try {
-    const raw = readFileSync(markerPath, "utf-8")
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null
-    return parsed as ContinuationMarker
-  } catch {
-    return null
+    try {
+      const raw = readFileSync(markerPath, "utf-8")
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue
+      return parsed as ContinuationMarker
+    } catch {
+      continue
+    }
   }
+
+  return null
 }
 
 export function setContinuationMarkerSource(
@@ -57,12 +64,13 @@ export function setContinuationMarkerSource(
 }
 
 export function clearContinuationMarker(directory: string, sessionID: string): void {
-  const markerPath = getMarkerPath(directory, sessionID)
-  if (!existsSync(markerPath)) return
+  for (const markerPath of [getMarkerPath(directory, sessionID), getLegacyMarkerPath(directory, sessionID)]) {
+    if (!existsSync(markerPath)) continue
 
-  try {
-    rmSync(markerPath)
-  } catch {
+    try {
+      rmSync(markerPath)
+    } catch {
+    }
   }
 }
 

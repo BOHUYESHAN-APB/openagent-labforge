@@ -8,6 +8,10 @@ import {
 import type { RuleFileCandidate } from "./types";
 import { findRuleFilesRecursive, safeRealpathSync } from "./rule-file-scanner";
 
+function normalizeDisplayPath(filePath: string): string {
+  return filePath.replace(/\\/g, "/");
+}
+
 /**
  * Find all rule files for a given context.
  * Searches from currentFile upward to projectRoot for rule directories,
@@ -46,7 +50,7 @@ export function findRuleFiles(
         seenRealPaths.add(realPath);
 
         candidates.push({
-          path: filePath,
+          path: normalizeDisplayPath(filePath),
           realPath,
           isGlobal: false,
           distance,
@@ -74,7 +78,7 @@ export function findRuleFiles(
             if (!seenRealPaths.has(realPath)) {
               seenRealPaths.add(realPath);
               candidates.push({
-                path: filePath,
+                path: normalizeDisplayPath(filePath),
                 realPath,
                 isGlobal: false,
                 distance: 0,
@@ -100,7 +104,7 @@ export function findRuleFiles(
     seenRealPaths.add(realPath);
 
     candidates.push({
-      path: filePath,
+      path: normalizeDisplayPath(filePath),
       realPath,
       isGlobal: true,
       distance: 9999, // Global rules always have max distance

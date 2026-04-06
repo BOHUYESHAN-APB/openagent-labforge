@@ -1,6 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
 import type { ToolContext } from "@opencode-ai/plugin/tool"
 import * as fs from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 import { createSkillTool } from "./tools"
 import { SkillMcpManager } from "../../features/skill-mcp-manager"
 import type { LoadedSkill } from "../../features/opencode-skill-loader/types"
@@ -158,6 +160,76 @@ describe("skill tool - agent restriction", () => {
     )
   })
 
+})
+
+describe("skill tool - runtime workspace provisioning", () => {
+  it("provisions a document workspace for document-oriented skills", async () => {
+    const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-doc-"))
+    const loadedSkills = [createMockSkill("proposal-and-roadmap")]
+    const tool = createSkillTool({
+      skills: loadedSkills,
+      directory: tempDir,
+      getSessionID: () => "ses_doc_workspace",
+    })
+
+    const result = await tool.execute(
+      {
+        name: "proposal-and-roadmap",
+        user_message: 'document_id=board-plan title="Board Plan"',
+      },
+      mockContext,
+    )
+
+    expect(result).toContain("## Document Workspace")
+    expect(result).toContain("board-plan")
+    expect(
+      fs.existsSync(
+        join(tempDir, ".opencode", "openagent-labforge", "runtime", "ses_doc_workspace", "documents", "board-plan", "manifest.json"),
+      ),
+    ).toBe(true)
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it("provisions paper cache and shows configured image bus backends when enabled", async () => {
+    const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-paper-"))
+    const loadedSkills = [createMockSkill("literature-synthesis")]
+    const tool = createSkillTool({
+      skills: loadedSkills,
+      directory: tempDir,
+      getSessionID: () => "ses_paper_workspace",
+      imageBusConfig: {
+        enabled: true,
+        review_with_main_model: true,
+        providers: {
+          google_nano_banana: {
+            enabled: true,
+            model: "nano-banana-2",
+            base_url: "https://example.invalid/google",
+          },
+        },
+      },
+    })
+
+    const result = await tool.execute(
+      {
+        name: "literature-synthesis",
+        user_message: 'paper_id=survey-2026 title="Survey 2026"',
+      },
+      mockContext,
+    )
+
+    expect(result).toContain("## Paper Cache")
+    expect(result).toContain("## Image Bus")
+    expect(result).toContain("nano-banana-2")
+    expect(
+      fs.existsSync(
+        join(tempDir, ".opencode", "openagent-labforge", "runtime", "ses_paper_workspace", "papers", "manifest.json"),
+      ),
+    ).toBe(true)
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
 })
 
 describe("skill tool - MCP schema display", () => {

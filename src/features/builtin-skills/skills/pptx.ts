@@ -62,6 +62,24 @@ Selection rule:
 
 - python-pptx for generation and edits.
 
+## Asset workflow
+
+If the deck contains diagrams, SVGs, screenshots, user images, or Mermaid content:
+
+1. define slide placement before asset insertion
+2. keep source assets and rendered outputs separate
+3. maintain a simple asset manifest for captions, slide destinations, and fallback formats
+4. use PNG fallback when PowerPoint embedding of SVG/Mermaid output is unreliable
+
+Preferred layout:
+
+- \`assets/\`
+- \`figures/\`
+- \`diagrams/\`
+- \`assets/manifest.json\`
+
+Load \`document-asset-pipeline\` when the deck includes multiple diagrams or user-provided images.
+
 ## Preflight checks (required)
 
 1) Check Python availability.
@@ -74,5 +92,6 @@ If missing, propose installation commands and wait for approval.
 
 - Slide count and outline confirmed.
 - Output file path provided.
+- Every inserted visual has a deliberate slide location, caption/title context, and readable fallback format.
 `,
 }

@@ -1,7 +1,16 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 
 import type { BackgroundManager } from "../../features/background-agent"
-import { getSessionAgent, isUltraworkAutonomousSession } from "../../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  isAutonomousSessionAgent,
+  isUltraworkAutonomousSession,
+} from "../../features/claude-code-session-state"
+import {
+  markRuntimeWorkflowReviewHandled,
+  readRuntimeWorkflowState,
+  updateRuntimeWorkflowStage,
+} from "../../features/boulder-state"
 import {
   createInternalAgentTextPart,
   normalizeSDKResponse,
@@ -18,6 +27,7 @@ import { getAgentConfigKey } from "../../shared/agent-display-names"
 
 import {
   AUTONOMOUS_BACKLOG_EXPANSION_PROMPT,
+  AUTONOMOUS_REVIEW_REWORK_PROMPT,
   CONTINUATION_REPLAN_PROMPT,
   AUTONOMOUS_COMPLETION_AUDIT_PROMPT,
   AUTONOMOUS_CONTINUATION_PROMPT,
@@ -38,6 +48,30 @@ function hasWritePermission(tools: Record<string, ToolPermission> | undefined): 
     !tools ||
     (editPermission !== false && editPermission !== "deny" && writePermission !== false && writePermission !== "deny")
   )
+}
+
+function buildWorkflowModeContext(directory: string, sessionID: string): string {
+  const runtimeState = readRuntimeWorkflowState(directory, sessionID)
+  if (!runtimeState) return ""
+
+  const lines = [
+    `[Auto mode: ${runtimeState.auto_mode_level ?? "light"}]`,
+    `[Interaction mode: ${runtimeState.interaction_mode ?? "batch"}]`,
+  ]
+
+  if (runtimeState.interaction_mode === "batch") {
+    lines.push("- This session is operating in batch mode: finish the current reviewed wave cleanly before inventing a brand-new wave.")
+  } else {
+    lines.push("- This session is operating in continuous mode: if obvious work remains after the current wave, continue into the next wave instead of pausing.")
+  }
+
+  if (runtimeState.auto_mode_level === "light") {
+    lines.push("- This session is in light autonomous mode: do not inflate the backlog unnecessarily; keep the current batch tight and reviewable.")
+  } else if (runtimeState.auto_mode_level === "heavy") {
+    lines.push("- This session is in heavy autonomous mode: maintain a durable backlog and keep the multi-wave execution graph explicit.")
+  }
+
+  return lines.join("\n")
 }
 
 export async function injectContinuation(args: {
@@ -143,10 +177,15 @@ export async function injectContinuation(args: {
   const todoList = incompleteTodos.map((todo) => `- [${todo.status}] ${todo.content}`).join("\n")
   const isAutonomous =
     isUltraworkAutonomousSession(sessionID) ||
-    getAgentConfigKey(agentName ?? "") === "wase"
+    isAutonomousSessionAgent(agentName)
+  const workflowModeContext = isAutonomous
+    ? buildWorkflowModeContext(ctx.directory, sessionID)
+    : ""
   const basePrompt = isAutonomous ? AUTONOMOUS_CONTINUATION_PROMPT : CONTINUATION_PROMPT
 
   const prompt = `${basePrompt}
+
+${workflowModeContext ? `${workflowModeContext}\n` : ""}
 
 [Status: ${todos.length - freshIncompleteCount}/${todos.length} completed, ${freshIncompleteCount} remaining]
 
@@ -164,6 +203,12 @@ ${todoList}`
       agent: agentName,
       model,
       incompleteCount: freshIncompleteCount,
+    })
+    updateRuntimeWorkflowStage({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      currentStage: "build",
+      note: `Continuation injected with ${freshIncompleteCount} incomplete todo item(s) still remaining.`,
     })
 
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
@@ -283,8 +328,17 @@ export async function injectContinuationReplan(args: {
       agent: agentName,
       model,
     })
+    updateRuntimeWorkflowStage({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      currentStage: "plan",
+      note: "Continuation replan injected because the session signaled remaining work without a sufficient backlog.",
+    })
 
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+    const prompt = `${CONTINUATION_REPLAN_PROMPT}
+
+${buildWorkflowModeContext(ctx.directory, sessionID)}`
 
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
@@ -292,7 +346,7 @@ export async function injectContinuationReplan(args: {
         agent: agentName,
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
-        parts: [createInternalAgentTextPart(CONTINUATION_REPLAN_PROMPT)],
+        parts: [createInternalAgentTextPart(prompt.trim())],
       },
       query: { directory: ctx.directory },
     })
@@ -399,8 +453,17 @@ export async function injectAutonomousCompletionAudit(args: {
       agent: agentName,
       model,
     })
+    updateRuntimeWorkflowStage({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      currentStage: "review",
+      note: "Autonomous completion audit started. Final claims and verification evidence must now be reviewed before completion.",
+    })
 
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+    const prompt = `${AUTONOMOUS_COMPLETION_AUDIT_PROMPT}
+
+${buildWorkflowModeContext(ctx.directory, sessionID)}`
 
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
@@ -408,7 +471,7 @@ export async function injectAutonomousCompletionAudit(args: {
         agent: agentName,
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
-        parts: [createInternalAgentTextPart(AUTONOMOUS_COMPLETION_AUDIT_PROMPT)],
+        parts: [createInternalAgentTextPart(prompt.trim())],
       },
       query: { directory: ctx.directory },
     })
@@ -522,9 +585,17 @@ export async function injectAutonomousBacklogExpansion(args: {
       currentTodoCount,
       incompleteCount,
     })
+    updateRuntimeWorkflowStage({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      currentStage: "plan",
+      note: `Backlog expansion injected because the autonomous todo graph was too shallow (${currentTodoCount} total / ${incompleteCount} incomplete).`,
+    })
 
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
     const prompt = `${AUTONOMOUS_BACKLOG_EXPANSION_PROMPT}
+
+${buildWorkflowModeContext(ctx.directory, sessionID)}
 
 [Current todo count: ${currentTodoCount}]
 [Current incomplete count: ${incompleteCount}]`
@@ -548,6 +619,123 @@ export async function injectAutonomousBacklogExpansion(args: {
     }
   } catch (error) {
     log(`[${HOOK_NAME}] Autonomous backlog expansion failed`, { sessionID, error: String(error) })
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+    }
+  }
+}
+
+export async function injectAutonomousReviewRework(args: {
+  ctx: PluginInput
+  sessionID: string
+  nextStage: "plan" | "build"
+  blockingFindings: string[]
+  reviewSignature: string
+  backgroundManager?: BackgroundManager
+  skipAgents?: string[]
+  resolvedInfo?: ResolvedMessageInfo
+  sessionStateStore: SessionStateStore
+  isContinuationStopped?: (sessionID: string) => boolean
+}): Promise<void> {
+  const {
+    ctx,
+    sessionID,
+    nextStage,
+    blockingFindings,
+    reviewSignature,
+    backgroundManager,
+    skipAgents = DEFAULT_SKIP_AGENTS,
+    resolvedInfo,
+    sessionStateStore,
+    isContinuationStopped,
+  } = args
+
+  const state = sessionStateStore.getExistingState(sessionID)
+  if (state?.isRecovering) return
+  if (isContinuationStopped?.(sessionID)) return
+
+  const hasRunningBgTasks = backgroundManager
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    : false
+  if (hasRunningBgTasks) return
+
+  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let model = resolvedInfo?.model
+  let tools = resolvedInfo?.tools
+
+  if (!agentName || !model) {
+    let previousMessage = null
+    if (isSqliteBackend()) {
+      previousMessage = await findNearestMessageWithFieldsFromSDK(ctx.client, sessionID)
+    } else {
+      const messageDir = getMessageDir(sessionID)
+      previousMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+    }
+    agentName = agentName ?? previousMessage?.agent
+    model =
+      model ??
+      (previousMessage?.model?.providerID && previousMessage?.model?.modelID
+        ? {
+            providerID: previousMessage.model.providerID,
+            modelID: previousMessage.model.modelID,
+            ...(previousMessage.model.variant ? { variant: previousMessage.model.variant } : {}),
+          }
+        : undefined)
+    tools = tools ?? previousMessage?.tools
+  }
+
+  if (agentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(agentName))) return
+  if (!hasWritePermission(tools)) return
+
+  const injectionState = sessionStateStore.getExistingState(sessionID)
+  if (injectionState) {
+    injectionState.inFlight = true
+  }
+
+  try {
+    const findingsBlock = blockingFindings.length > 0
+      ? blockingFindings.map((finding) => `- ${finding}`).join("\n")
+      : "- reviewer rejected the work but did not provide structured blocking findings"
+
+    const prompt = `${AUTONOMOUS_REVIEW_REWORK_PROMPT}
+
+${buildWorkflowModeContext(ctx.directory, sessionID)}
+
+[Next stage: ${nextStage.toUpperCase()}]
+[Blocking findings]
+${findingsBlock}`
+
+    const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+
+    await ctx.client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        agent: agentName,
+        ...(model !== undefined ? { model } : {}),
+        ...(inheritedTools ? { tools: inheritedTools } : {}),
+        parts: [createInternalAgentTextPart(prompt)],
+      },
+      query: { directory: ctx.directory },
+    })
+
+    markRuntimeWorkflowReviewHandled({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      signature: reviewSignature,
+      nextStage,
+      note: `Acceptance review rejected the prior result. Routed automatically to ${nextStage.toUpperCase()} with ${blockingFindings.length} blocking finding(s).`,
+    })
+
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
+      injectionState.consecutiveFailures = 0
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Autonomous review rework failed`, { sessionID, error: String(error) })
     if (injectionState) {
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()

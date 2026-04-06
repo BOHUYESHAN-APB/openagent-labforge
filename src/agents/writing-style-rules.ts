@@ -5,6 +5,11 @@ export const SHARED_WRITING_STYLE_RULES = `Shared style baseline:
 - Reorganize structure when rewriting so the result is not a sentence-by-sentence paraphrase.
 - Keep claims tied to verifiable facts; mark uncertainty clearly when evidence is incomplete.
 - Prefer concise, direct, semi-formal writing over inflated rhetoric or promotional phrasing.
+- Classify the document type before drafting: article, stakeholder memo, business plan, project plan, roadmap, review paper, survey, abstract, or report.
+- Build the section outline and decision structure before writing long documents.
+- Treat SVG, Mermaid, tables, screenshots, and user-provided images as first-class document assets that must be intentionally placed, captioned, and referenced.
+- For long-horizon synthesis tasks, maintain a source ledger, intermediate checkpoints, and a final review pass instead of drafting everything in one burst.
+- Before finalizing, run a self-review for tone drift, unsupported claims, repeated transitions, missing decisions, and missing figure placement.
 
 Required style instructions:
 

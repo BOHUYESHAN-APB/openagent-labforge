@@ -5,11 +5,11 @@ import { ALLOWED_EXTENSIONS } from "./constants"
 /**
  * Cross-platform path validator for Prometheus file writes.
  * Uses path.resolve/relative instead of string matching to handle:
- * - Windows backslashes (e.g., .sisyphus\\plans\\x.md)
- * - Mixed separators (e.g., .sisyphus\\plans/x.md)
+ * - Windows backslashes (e.g., .opencode\\openagent-labforge\\plans\\x.md)
+ * - Mixed separators (e.g., .opencode\\openagent-labforge\\plans/x.md)
  * - Case-insensitive directory/extension matching
  * - Workspace confinement (blocks paths outside root or via traversal)
- * - Nested project paths (e.g., parent/.sisyphus/... when ctx.directory is parent)
+ * - Nested project paths (e.g., parent/.opencode/openagent-labforge/... when ctx.directory is parent)
  */
 export function isAllowedFile(filePath: string, workspaceRoot: string): boolean {
   // 1. Resolve to absolute path
@@ -23,9 +23,9 @@ export function isAllowedFile(filePath: string, workspaceRoot: string): boolean 
     return false
   }
 
-  // 4. Check if .sisyphus/ or .sisyphus\ exists anywhere in the path (case-insensitive)
-  // This handles both direct paths (.sisyphus/x.md) and nested paths (project/.sisyphus/x.md)
-  if (!/\.sisyphus[/\\]/i.test(rel)) {
+  // 4. Check if .opencode/openagent-labforge/ exists anywhere in the path (case-insensitive)
+  // Legacy .sisyphus/ paths remain allowed for compatibility.
+  if (!/\.opencode[/\\]openagent-labforge[/\\]/i.test(rel) && !/\.sisyphus[/\\]/i.test(rel)) {
     return false
   }
 

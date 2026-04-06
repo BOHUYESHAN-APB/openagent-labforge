@@ -2,7 +2,12 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "
 import { dirname, join } from "node:path"
 import { parseFrontmatter } from "../../shared/frontmatter"
 import type { RalphLoopState } from "./types"
-import { DEFAULT_STATE_FILE, DEFAULT_COMPLETION_PROMISE, DEFAULT_MAX_ITERATIONS } from "./constants"
+import {
+  DEFAULT_STATE_FILE,
+  LEGACY_STATE_FILE,
+  DEFAULT_COMPLETION_PROMISE,
+  DEFAULT_MAX_ITERATIONS,
+} from "./constants"
 
 export function getStateFilePath(directory: string, customPath?: string): string {
   return customPath
@@ -10,77 +15,87 @@ export function getStateFilePath(directory: string, customPath?: string): string
     : join(directory, DEFAULT_STATE_FILE)
 }
 
+function getLegacyStateFilePath(directory: string): string {
+  return join(directory, LEGACY_STATE_FILE)
+}
+
 export function readState(directory: string, customPath?: string): RalphLoopState | null {
-  const filePath = getStateFilePath(directory, customPath)
+  const candidatePaths = customPath
+    ? [getStateFilePath(directory, customPath)]
+    : [getStateFilePath(directory), getLegacyStateFilePath(directory)]
 
-  if (!existsSync(filePath)) {
-    return null
-  }
+  for (const filePath of candidatePaths) {
+    if (!existsSync(filePath)) {
+      continue
+    }
 
-  try {
-    const content = readFileSync(filePath, "utf-8")
-    const { data, body } = parseFrontmatter<Record<string, unknown>>(content)
+    try {
+      const content = readFileSync(filePath, "utf-8")
+      const { data, body } = parseFrontmatter<Record<string, unknown>>(content)
 
-    const active = data.active
-    const iteration = data.iteration
+      const active = data.active
+      const iteration = data.iteration
     
-    if (active === undefined || iteration === undefined) {
-      return null
-    }
+      if (active === undefined || iteration === undefined) {
+        continue
+      }
 
-    const isActive = active === true || active === "true"
-    const iterationNum = typeof iteration === "number" ? iteration : Number(iteration)
+      const isActive = active === true || active === "true"
+      const iterationNum = typeof iteration === "number" ? iteration : Number(iteration)
     
-    if (isNaN(iterationNum)) {
-      return null
-    }
+      if (isNaN(iterationNum)) {
+        continue
+      }
 
-    const stripQuotes = (val: unknown): string => {
-      const str = String(val ?? "")
-      return str.replace(/^["']|["']$/g, "")
-    }
+      const stripQuotes = (val: unknown): string => {
+        const str = String(val ?? "")
+        return str.replace(/^["']|["']$/g, "")
+      }
 
-    const ultrawork = data.ultrawork === true || data.ultrawork === "true" ? true : undefined
-    const maxIterations =
-      data.max_iterations === undefined || data.max_iterations === ""
-        ? ultrawork
-          ? undefined
-          : DEFAULT_MAX_ITERATIONS
-        : Number(data.max_iterations) || DEFAULT_MAX_ITERATIONS
+      const ultrawork = data.ultrawork === true || data.ultrawork === "true" ? true : undefined
+      const maxIterations =
+        data.max_iterations === undefined || data.max_iterations === ""
+          ? ultrawork
+            ? undefined
+            : DEFAULT_MAX_ITERATIONS
+          : Number(data.max_iterations) || DEFAULT_MAX_ITERATIONS
 
-    return {
-      active: isActive,
-      iteration: iterationNum,
-      max_iterations: maxIterations,
-      message_count_at_start:
-        typeof data.message_count_at_start === "number"
-          ? data.message_count_at_start
-          : typeof data.message_count_at_start === "string" && data.message_count_at_start.trim() !== ""
-            ? Number(data.message_count_at_start)
-            : undefined,
-      completion_promise: stripQuotes(data.completion_promise) || DEFAULT_COMPLETION_PROMISE,
-      initial_completion_promise: data.initial_completion_promise
-        ? stripQuotes(data.initial_completion_promise)
-        : undefined,
-      verification_attempt_id: data.verification_attempt_id
-        ? stripQuotes(data.verification_attempt_id)
-        : undefined,
-      verification_session_id: data.verification_session_id
-        ? stripQuotes(data.verification_session_id)
-        : undefined,
-      started_at: stripQuotes(data.started_at) || new Date().toISOString(),
-      prompt: body.trim(),
-      session_id: data.session_id ? stripQuotes(data.session_id) : undefined,
-      ultrawork,
-      verification_pending:
-        data.verification_pending === true || data.verification_pending === "true"
-          ? true
+      return {
+        active: isActive,
+        iteration: iterationNum,
+        max_iterations: maxIterations,
+        message_count_at_start:
+          typeof data.message_count_at_start === "number"
+            ? data.message_count_at_start
+            : typeof data.message_count_at_start === "string" && data.message_count_at_start.trim() !== ""
+              ? Number(data.message_count_at_start)
+              : undefined,
+        completion_promise: stripQuotes(data.completion_promise) || DEFAULT_COMPLETION_PROMISE,
+        initial_completion_promise: data.initial_completion_promise
+          ? stripQuotes(data.initial_completion_promise)
           : undefined,
-      strategy: data.strategy === "reset" || data.strategy === "continue" ? data.strategy : undefined,
+        verification_attempt_id: data.verification_attempt_id
+          ? stripQuotes(data.verification_attempt_id)
+          : undefined,
+        verification_session_id: data.verification_session_id
+          ? stripQuotes(data.verification_session_id)
+          : undefined,
+        started_at: stripQuotes(data.started_at) || new Date().toISOString(),
+        prompt: body.trim(),
+        session_id: data.session_id ? stripQuotes(data.session_id) : undefined,
+        ultrawork,
+        verification_pending:
+          data.verification_pending === true || data.verification_pending === "true"
+            ? true
+            : undefined,
+        strategy: data.strategy === "reset" || data.strategy === "continue" ? data.strategy : undefined,
+      }
+    } catch {
+      continue
     }
-  } catch {
-    return null
   }
+
+  return null
 }
 
 export function writeState(
@@ -137,11 +152,15 @@ ${state.prompt}
 }
 
 export function clearState(directory: string, customPath?: string): boolean {
-  const filePath = getStateFilePath(directory, customPath)
+  const filePaths = customPath
+    ? [getStateFilePath(directory, customPath)]
+    : [getStateFilePath(directory), getLegacyStateFilePath(directory)]
 
   try {
-    if (existsSync(filePath)) {
-      unlinkSync(filePath)
+    for (const filePath of filePaths) {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath)
+      }
     }
     return true
   } catch {
