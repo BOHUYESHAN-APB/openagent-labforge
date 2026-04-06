@@ -2,6 +2,8 @@ import type { PluginInput } from "@opencode-ai/plugin"
 
 import type { BackgroundManager } from "../../features/background-agent"
 import {
+  clearUltraworkAutonomousSession,
+  getMainSessionID,
   getSessionAgent,
   isAutonomousSessionAgent,
   isUltraworkAutonomousSession,
@@ -10,12 +12,14 @@ import {
 } from "../../features/claude-code-session-state"
 import type { ToolPermission } from "../../features/hook-message-injector"
 import {
+  readBoulderState,
   parseLatestAcceptanceReviewOutcome,
   readRuntimeWorkflowState,
   updateRuntimeWorkflowReviewOutcome,
 } from "../../features/boulder-state"
 import { normalizeSDKResponse } from "../../shared"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
+import { OMO_INTERNAL_INITIATOR_MARKER } from "../../shared/internal-initiator-marker"
 import { log } from "../../shared/logger"
 
 import {
@@ -45,6 +49,26 @@ import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
 import { injectAutonomousReviewRework } from "./continuation-injection"
 
+function extractLastRealUserAgent(messages: Array<{ info?: MessageInfo; parts?: Array<{ type?: string; text?: string }> }>): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]
+    if (message.info?.role !== "user") continue
+
+    const combinedText = (message.parts ?? [])
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => part.text ?? "")
+      .join("\n")
+
+    if (combinedText.includes(OMO_INTERNAL_INITIATOR_MARKER)) {
+      continue
+    }
+
+    return message.info?.agent
+  }
+
+  return undefined
+}
+
 // Follow upstream continuation gating closely: compaction and stagnation are the
 // two main protections that keep idle sessions from being re-prompted forever.
 // We retain our autonomous cooldown/failure tuning on top of that base flow.
@@ -73,6 +97,11 @@ export async function handleSessionIdle(args: {
   let isAutonomous =
     isUltraworkAutonomousSession(sessionID) ||
     isAutonomousSessionAgent(rememberedSessionAgent)
+  const mainSessionID = getMainSessionID()
+  const isMainSession = mainSessionID === sessionID
+  const activeBoulderState = readBoulderState(ctx.directory)
+  const isTrackedBoulderSession =
+    activeBoulderState?.session_ids?.includes(sessionID) === true
   if (state.isRecovering) {
     log(`[${HOOK_NAME}] Skipped: in recovery`, { sessionID })
     return
@@ -123,6 +152,29 @@ export async function handleSessionIdle(args: {
           break
         }
       }
+    }
+
+    const lastRealUserAgent = extractLastRealUserAgent(messages)
+    if (lastRealUserAgent && !isAutonomousSessionAgent(lastRealUserAgent)) {
+      if (isUltraworkAutonomousSession(sessionID)) {
+        clearUltraworkAutonomousSession(sessionID)
+      }
+      updateSessionAgent(sessionID, lastRealUserAgent)
+      isAutonomous = false
+    }
+
+    if (
+      isMainSession &&
+      lastRealUserAgent &&
+      !isAutonomous &&
+      !isTrackedBoulderSession &&
+      !state.hasContinuationIntent
+    ) {
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Skipped: ordinary main-session chat without active execution workflow`, {
+        sessionID,
+      })
+      return
     }
 
     const parsedReviewOutcome = parseLatestAcceptanceReviewOutcome(messages)

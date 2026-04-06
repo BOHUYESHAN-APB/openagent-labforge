@@ -184,7 +184,29 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(input, output)
 
     //#then
-    expect(isUltraworkAutonomousSession(input.sessionID)).toBe(true)
+    expect(getSessionAgent(input.sessionID)).toBeUndefined()
+    expect(isUltraworkAutonomousSession(input.sessionID)).toBe(false)
+  })
+
+  test("does not query session messages inside chat.message when agent is missing", async () => {
+    //#given
+    let messageFetchCount = 0
+    const args = createMockHandlerArgs()
+    args.ctx.client.session = {
+      messages: async () => {
+        messageFetchCount += 1
+        return { data: [] }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput(undefined, { providerID: "google", modelID: "gemini-2.5-pro" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(messageFetchCount).toBe(0)
   })
 
   test("injects queued background notifications through chat.message hook", async () => {
@@ -211,6 +233,69 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     //#then
     expect(output.parts).toHaveLength(1)
     expect(output.parts[0].text).toContain("[BACKGROUND TASK COMPLETED]")
+  })
+
+  test("skips heavy prompt injections for native plan agent", async () => {
+    //#given
+    const calledHooks: string[] = []
+    const args = createMockHandlerArgs()
+    args.hooks.keywordDetector = {
+      "chat.message": async () => { calledHooks.push("keywordDetector") },
+    }
+    args.hooks.thinkMode = {
+      "chat.message": async () => { calledHooks.push("thinkMode") },
+    }
+    args.hooks.claudeCodeHooks = {
+      "chat.message": async () => { calledHooks.push("claudeCodeHooks") },
+    }
+    args.hooks.noSisyphusGpt = {
+      "chat.message": async () => { calledHooks.push("noSisyphusGpt") },
+    }
+    args.hooks.noHephaestusNonGpt = {
+      "chat.message": async () => { calledHooks.push("noHephaestusNonGpt") },
+    }
+    args.hooks.startWork = {
+      "chat.message": async () => { calledHooks.push("startWork") },
+    }
+    args.hooks.autoSlashCommand = {
+      "chat.message": async () => { calledHooks.push("autoSlashCommand") },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("plan", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(calledHooks).toEqual(["autoSlashCommand"])
+  })
+
+  test("skips heavy prompt injections for native build agent", async () => {
+    //#given
+    const calledHooks: string[] = []
+    const args = createMockHandlerArgs()
+    args.hooks.keywordDetector = {
+      "chat.message": async () => { calledHooks.push("keywordDetector") },
+    }
+    args.hooks.thinkMode = {
+      "chat.message": async () => { calledHooks.push("thinkMode") },
+    }
+    args.hooks.claudeCodeHooks = {
+      "chat.message": async () => { calledHooks.push("claudeCodeHooks") },
+    }
+    args.hooks.autoSlashCommand = {
+      "chat.message": async () => { calledHooks.push("autoSlashCommand") },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("build", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(calledHooks).toEqual(["autoSlashCommand"])
   })
 
   test("locks output model to user-selected model when strict_user_model_priority is enabled", async () => {

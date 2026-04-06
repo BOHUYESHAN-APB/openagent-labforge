@@ -8,6 +8,7 @@ import type { BackgroundManager } from "../../features/background-agent"
 import { setMainSession, subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
 import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
 import { ensureRuntimeWorkflowSession } from "../../features/boulder-state"
+import { getAgentDisplayName } from "../../shared/agent-display-names"
 import { createTodoContinuationEnforcer } from "."
 import {
   CONTINUATION_COOLDOWN_MS,
@@ -259,9 +260,21 @@ describe("todo-continuation-enforcer", () => {
     fakeTimers.restore()
     // given - main session with incomplete todos
     const sessionID = "main-123"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-boulder-main-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "tracked-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Tracked Plan\n\n- [ ] Task 1\n", "utf-8")
     setMainSession(sessionID)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "atlas",
+      currentStage: "build",
+    })
 
-    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(tempDir), {
       backgroundManager: createMockBackgroundManager(false),
     })
 
@@ -283,7 +296,82 @@ describe("todo-continuation-enforcer", () => {
     await wait(2500)
     expect(promptCalls.length).toBe(1)
     expect(promptCalls[0].text).toContain("TODO CONTINUATION")
+    rmSync(tempDir, { recursive: true, force: true })
   }, { timeout: 15000 })
+
+  test("should not auto-continue an ordinary main-session chat with stale todos but no active workflow", async () => {
+    const sessionID = "main-ordinary-chat"
+    setMainSession(sessionID)
+
+    mockMessages = [
+      {
+        info: { id: "msg-0", role: "user", agent: "总调度器 (超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "接下来我逐个问你问卷问题，你直接给我成稿。" }],
+      } as any,
+      {
+        info: { id: "msg-1", role: "assistant", agent: "总调度器 (超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "你可以开始发第一个问题了。" }],
+      } as any,
+    ]
+
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(3000, true)
+
+    expect(promptCalls).toHaveLength(0)
+  })
+
+  test("should clear stale autonomous mode when latest real user message uses ordinary orchestrator", async () => {
+    const sessionID = "main-stale-autonomous-overridden"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-stale-auto-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "tracked-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Tracked Plan\n\n- [x] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "哇塞 (全自动超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "旧的自动执行回复。" }],
+      } as any,
+      {
+        info: { id: "msg-2", role: "user", agent: "总调度器 (超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "接下来我逐个问你问卷问题，你直接给我成稿。" }],
+      } as any,
+      {
+        info: { id: "msg-3", role: "assistant", agent: "总调度器 (超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "可以，你继续发问题。" }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(3000, true)
+
+    expect(promptCalls).toHaveLength(0)
+    rmSync(tempDir, { recursive: true, force: true })
+  })
 
   test("should not inject when all todos are complete", async () => {
     // given - session with all todos complete
@@ -1113,7 +1201,7 @@ describe("todo-continuation-enforcer", () => {
 
     //#then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].agent).toBe("wase")
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("wase"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
   })
@@ -1133,7 +1221,7 @@ describe("todo-continuation-enforcer", () => {
 
     //#then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].agent).toBe("bio-autopilot")
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("bio-autopilot"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
   })
@@ -1703,7 +1791,7 @@ describe("todo-continuation-enforcer", () => {
   test("should extract model from assistant message with flat modelID/providerID", async () => {
     // given - session with assistant message that has flat modelID/providerID (OpenCode API format)
     const sessionID = "main-assistant-model"
-    setMainSession(sessionID)
+    setMainSession("different-main-session")
 
     // OpenCode returns assistant messages with flat modelID/providerID, not nested model object
     const mockMessagesWithAssistant = [
@@ -1764,7 +1852,7 @@ describe("todo-continuation-enforcer", () => {
   test("should skip compaction agent messages when resolving agent info", async () => {
     // given - session where last message is from compaction agent but previous was Sisyphus
     const sessionID = "main-compaction-filter"
-    setMainSession(sessionID)
+    setMainSession("different-main-session")
 
     const mockMessagesWithCompaction = [
       { info: { id: "msg-1", role: "user", agent: "sisyphus", model: { providerID: "anthropic", modelID: "claude-sonnet-4-6" } } },
@@ -1813,7 +1901,7 @@ describe("todo-continuation-enforcer", () => {
 
      // then - continuation uses Sisyphus (skipped compaction agent)
      expect(promptCalls.length).toBe(1)
-    expect(promptCalls[0].agent).toBe("sisyphus")
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("sisyphus"))
   })
 
   test("should skip injection when only compaction agent messages exist", async () => {

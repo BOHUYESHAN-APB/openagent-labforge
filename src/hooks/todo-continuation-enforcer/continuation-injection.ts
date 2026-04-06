@@ -23,7 +23,7 @@ import {
 } from "../../features/hook-message-injector"
 import { log } from "../../shared/logger"
 import { isSqliteBackend } from "../../shared/opencode-storage-detection"
-import { getAgentConfigKey } from "../../shared/agent-display-names"
+import { getAgentConfigKey, getAgentDisplayName } from "../../shared/agent-display-names"
 
 import {
   AUTONOMOUS_BACKLOG_EXPANSION_PROMPT,
@@ -72,6 +72,11 @@ function buildWorkflowModeContext(directory: string, sessionID: string): string 
   }
 
   return lines.join("\n")
+}
+
+function toRuntimeAgentName(agentName: string | undefined): string | undefined {
+  if (!agentName) return undefined
+  return getAgentDisplayName(getAgentConfigKey(agentName))
 }
 
 export async function injectContinuation(args: {
@@ -196,6 +201,7 @@ ${todoList}`
   if (injectionState) {
     injectionState.inFlight = true
   }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
     log(`[${HOOK_NAME}] Injecting continuation`, {
@@ -216,7 +222,7 @@ ${todoList}`
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
       body: {
-        agent: agentName,
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
         parts: [createInternalAgentTextPart(prompt)],
@@ -321,6 +327,7 @@ export async function injectContinuationReplan(args: {
   if (injectionState) {
     injectionState.inFlight = true
   }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
     log(`[${HOOK_NAME}] Injecting continuation replan`, {
@@ -343,7 +350,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}`
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
       body: {
-        agent: agentName,
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
         parts: [createInternalAgentTextPart(prompt.trim())],
@@ -446,6 +453,7 @@ export async function injectAutonomousCompletionAudit(args: {
     injectionState.inFlight = true
     injectionState.completionAuditCount = (injectionState.completionAuditCount ?? 0) + 1
   }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
     log(`[${HOOK_NAME}] Injecting autonomous completion audit`, {
@@ -468,7 +476,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}`
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
       body: {
-        agent: agentName,
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
         parts: [createInternalAgentTextPart(prompt.trim())],
@@ -576,6 +584,7 @@ export async function injectAutonomousBacklogExpansion(args: {
     injectionState.backlogExpansionCount = (injectionState.backlogExpansionCount ?? 0) + 1
     injectionState.lastBacklogExpansionTodoCount = currentTodoCount
   }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
     log(`[${HOOK_NAME}] Injecting autonomous backlog expansion`, {
@@ -603,7 +612,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
       body: {
-        agent: agentName,
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
         parts: [createInternalAgentTextPart(prompt)],
@@ -693,6 +702,7 @@ export async function injectAutonomousReviewRework(args: {
   if (injectionState) {
     injectionState.inFlight = true
   }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
     const findingsBlock = blockingFindings.length > 0
@@ -712,7 +722,7 @@ ${findingsBlock}`
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
       body: {
-        agent: agentName,
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(inheritedTools ? { tools: inheritedTools } : {}),
         parts: [createInternalAgentTextPart(prompt)],

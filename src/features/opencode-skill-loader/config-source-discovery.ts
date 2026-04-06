@@ -12,7 +12,7 @@ import { inferSkillNameFromFileName, loadSkillFromPath } from "./loaded-skill-fr
 import type { LoadedSkill } from "./types"
 
 const MAX_RECURSIVE_DEPTH = 10
-const CONFIG_SOURCE_CACHE_TTL_MS = 5000
+const CONFIG_SOURCE_CACHE_TTL_MS = 60_000
 
 const configSourceSkillsCache = new Map<string, { expiresAt: number; skills: LoadedSkill[] }>()
 const configSourceSkillsInFlight = new Map<string, Promise<LoadedSkill[]>>()
@@ -53,14 +53,20 @@ function getPackageRootDir(): string {
 }
 
 function buildConfigSourceCacheKey(options: {
-  configDir: string
   bundle?: "full" | "paper"
   sources: Array<string | { path: string; recursive?: boolean; glob?: string }>
 }): string {
   return JSON.stringify({
-    configDir: normalizePathForGlob(options.configDir),
     bundle: options.bundle ?? null,
-    sources: options.sources,
+    sources: options.sources.map((source) => {
+      if (typeof source === "string") {
+        return normalizePathForGlob(source)
+      }
+      return {
+        ...source,
+        path: normalizePathForGlob(source.path),
+      }
+    }),
   })
 }
 
@@ -165,7 +171,6 @@ export async function discoverConfigSourceSkills(options: {
     : normalized.sources
 
   const cacheKey = buildConfigSourceCacheKey({
-    configDir: options.configDir,
     bundle: normalized.bundle,
     sources: effectiveSources,
   })

@@ -31,7 +31,6 @@ import { getAgentConfigKey } from "../shared/agent-display-names"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
-import { resolveSessionAgent } from "./session-agent-resolver"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -78,6 +77,11 @@ function hasExplicitAgentModelOverride(
   return typeof configuredModel === "string" && configuredModel.trim().length > 0
 }
 
+function isOpenCodeNativeLightweightAgent(agent: string | undefined): boolean {
+  const agentKey = getAgentConfigKey(agent ?? "")
+  return agentKey === "plan" || agentKey === "build"
+}
+
 export function createChatMessageHandler(args: {
   ctx: PluginContext
   pluginConfig: OhMyOpenCodeConfig
@@ -119,18 +123,6 @@ export function createChatMessageHandler(args: {
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
     const rememberedSessionAgent = getSessionAgent(input.sessionID)
-    let recoveredSessionAgent: string | undefined
-
-    if (!input.agent && !rememberedSessionAgent) {
-      recoveredSessionAgent = await resolveSessionAgent(ctx.client, input.sessionID)
-      if (recoveredSessionAgent) {
-        updateSessionAgent(input.sessionID, recoveredSessionAgent)
-        log("[chat-message] Recovered session agent from transcript", {
-          sessionID: input.sessionID,
-          recoveredAgent: recoveredSessionAgent,
-        })
-      }
-    }
 
     const outputText = output.parts
       .filter((part) => part.type === "text" && typeof part.text === "string")
@@ -156,7 +148,8 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
-    const activeAgent = input.agent ?? rememberedSessionAgent ?? recoveredSessionAgent
+    const activeAgent = input.agent ?? rememberedSessionAgent
+    const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
     const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
@@ -254,16 +247,25 @@ export function createChatMessageHandler(args: {
     await hooks.stopContinuationGuard?.["chat.message"]?.(input)
     await hooks.backgroundNotificationHook?.["chat.message"]?.(input, output)
     await hooks.runtimeFallback?.["chat.message"]?.(input, output)
-    await hooks.keywordDetector?.["chat.message"]?.(input, output)
-    await hooks.thinkMode?.["chat.message"]?.(input, output)
-    await hooks.claudeCodeHooks?.["chat.message"]?.(input, output)
+    if (!isNativeLightweightAgent) {
+      await hooks.keywordDetector?.["chat.message"]?.(input, output)
+      await hooks.thinkMode?.["chat.message"]?.(input, output)
+      await hooks.claudeCodeHooks?.["chat.message"]?.(input, output)
+    } else {
+      log("[chat-message] Skipping heavy prompt injections for native lightweight agent", {
+        sessionID: input.sessionID,
+        agent: activeAgent,
+      })
+    }
     await hooks.autoSlashCommand?.["chat.message"]?.(input, output)
     const forceAgentModelRouting =
       pluginConfig.sisyphus_agent?.force_agent_model_routing ?? false
     input.forceAgentModelRouting = forceAgentModelRouting
-    await hooks.noSisyphusGpt?.["chat.message"]?.(input, output)
-    await hooks.noHephaestusNonGpt?.["chat.message"]?.(input, output)
-    if (hooks.startWork && isStartWorkHookOutput(output)) {
+    if (!isNativeLightweightAgent) {
+      await hooks.noSisyphusGpt?.["chat.message"]?.(input, output)
+      await hooks.noHephaestusNonGpt?.["chat.message"]?.(input, output)
+    }
+    if (!isNativeLightweightAgent && hooks.startWork && isStartWorkHookOutput(output)) {
       await hooks.startWork["chat.message"]?.(input, output)
     }
 
