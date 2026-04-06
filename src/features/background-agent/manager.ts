@@ -48,6 +48,7 @@ import { join } from "node:path"
 import { pruneStaleTasksAndNotifications } from "./task-poller"
 import { checkAndInterruptStaleTasks } from "./task-poller"
 import { clearSessionFallbackChain, setSessionFallbackChain } from "../../hooks/model-fallback/hook"
+import { getRuntimeAgentName } from "../../shared/agent-display-names"
 
 type OpencodeClient = PluginInput["client"]
 
@@ -349,11 +350,12 @@ export class BackgroundManager {
       ? { providerID: input.model.providerID, modelID: input.model.modelID }
       : undefined
     const launchVariant = input.model?.variant
+    const runtimeAgentName = getRuntimeAgentName(input.agent)
 
     promptWithModelSuggestionRetry(this.client, {
       path: { id: sessionID },
       body: {
-        agent: input.agent,
+        agent: runtimeAgentName,
         ...(launchModel ? { model: launchModel } : {}),
         ...(launchVariant ? { variant: launchVariant } : {}),
         system: input.skillContent,
@@ -624,11 +626,12 @@ export class BackgroundManager {
       ? { providerID: existingTask.model.providerID, modelID: existingTask.model.modelID }
       : undefined
     const resumeVariant = existingTask.model?.variant
+    const runtimeAgentName = getRuntimeAgentName(existingTask.agent)
 
     this.client.session.promptAsync({
       path: { id: existingTask.sessionID },
       body: {
-        agent: existingTask.agent,
+        agent: runtimeAgentName,
         ...(resumeModel ? { model: resumeModel } : {}),
         ...(resumeVariant ? { variant: resumeVariant } : {}),
         tools: (() => {
@@ -1365,11 +1368,12 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
         })
 
         try {
+          const runtimeAgent = agent ? getRuntimeAgentName(agent) : undefined
           await this.client.session.promptAsync({
             path: { id: task.parentSessionID },
             body: {
               noReply: !allComplete,
-              ...(agent !== undefined ? { agent } : {}),
+              ...(runtimeAgent !== undefined ? { agent: runtimeAgent } : {}),
               ...(model !== undefined ? { model } : {}),
               ...(resolvedTools ? { tools: resolvedTools } : {}),
               parts: [createInternalAgentTextPart(notification)],

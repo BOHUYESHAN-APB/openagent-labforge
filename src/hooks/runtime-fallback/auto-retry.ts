@@ -3,6 +3,7 @@ import { HOOK_NAME } from "./constants"
 import { log } from "../../shared/logger"
 import { normalizeAgentName, resolveAgentForSession } from "./agent-resolver"
 import { getSessionAgent } from "../../features/claude-code-session-state"
+import { getRuntimeAgentName } from "../../shared/agent-display-names"
 import { getFallbackModelsForSession } from "./fallback-models"
 import { prepareFallback } from "./fallback-state"
 import { SessionCategoryRegistry } from "../../shared/session-category-registry"
@@ -134,11 +135,12 @@ export function createAutoRetryHelpers(deps: HookDeps) {
           const retryAgent = resolvedAgent ?? getSessionAgent(sessionID)
           sessionAwaitingFallbackResult.add(sessionID)
           scheduleSessionFallbackTimeout(sessionID, retryAgent)
+          const runtimeRetryAgent = retryAgent ? getRuntimeAgentName(retryAgent) : undefined
 
           await ctx.client.session.promptAsync({
             path: { id: sessionID },
             body: {
-              ...(retryAgent ? { agent: retryAgent } : {}),
+              ...(runtimeRetryAgent ? { agent: runtimeRetryAgent } : {}),
               model: fallbackModelObj,
               parts: retryParts,
             },

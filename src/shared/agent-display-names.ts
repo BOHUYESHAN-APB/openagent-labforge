@@ -138,3 +138,7 @@ export function getAgentConfigKey(agentName: string): string {
   if (AGENT_DISPLAY_NAMES_ZH[lower] !== undefined) return lower
   return lower
 }
+
+export function getRuntimeAgentName(agentName: string): string {
+  return getAgentDisplayName(getAgentConfigKey(agentName))
+}

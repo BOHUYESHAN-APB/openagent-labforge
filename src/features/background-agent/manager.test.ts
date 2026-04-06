@@ -8,6 +8,7 @@ import { BackgroundManager } from "./manager"
 import { ConcurrencyManager } from "./concurrency"
 import { initTaskToastManager, _resetTaskToastManagerForTesting } from "../task-toast-manager/manager"
 import { _resetForTesting as resetProcessCleanupForTesting } from "./process-cleanup"
+import { getAgentDisplayName } from "../../shared/agent-display-names"
 
 
 const TASK_TTL_MS = 30 * 60 * 1000
@@ -860,7 +861,7 @@ describe("BackgroundManager.notifyParentSession - dynamic message lookup", () =>
       .notifyParentSession(task)
 
     //#then
-    expect(capturedBody?.agent).toBe("sisyphus")
+    expect(capturedBody?.agent).toBe(getAgentDisplayName("sisyphus"))
     expect(capturedBody?.model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4-6" })
 
     manager.shutdown()

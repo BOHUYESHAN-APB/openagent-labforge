@@ -2,6 +2,7 @@ import type { BackgroundTask, LaunchInput, ResumeInput } from "./types"
 import type { OpencodeClient, OnSubagentSessionCreated, QueueItem } from "./constants"
 import { TMUX_CALLBACK_DELAY_MS } from "./constants"
 import { log, getAgentToolRestrictions, promptWithModelSuggestionRetry, createInternalAgentTextPart } from "../../shared"
+import { getRuntimeAgentName } from "../../shared/agent-display-names"
 import { subagentSessions } from "../claude-code-session-state"
 import { getTaskToastManager } from "../task-toast-manager"
 import { isInsideTmux } from "../../shared/tmux"
@@ -130,11 +131,12 @@ export async function startTask(
     ? { providerID: input.model.providerID, modelID: input.model.modelID }
     : undefined
   const launchVariant = input.model?.variant
+  const runtimeAgentName = getRuntimeAgentName(input.agent)
 
   promptWithModelSuggestionRetry(client, {
     path: { id: sessionID },
     body: {
-      agent: input.agent,
+      agent: runtimeAgentName,
       ...(launchModel ? { model: launchModel } : {}),
       ...(launchVariant ? { variant: launchVariant } : {}),
       system: input.skillContent,
@@ -215,11 +217,12 @@ export async function resumeTask(
     ? { providerID: task.model.providerID, modelID: task.model.modelID }
     : undefined
   const resumeVariant = task.model?.variant
+  const runtimeAgentName = getRuntimeAgentName(task.agent)
 
   client.session.promptAsync({
     path: { id: task.sessionID },
     body: {
-      agent: task.agent,
+      agent: runtimeAgentName,
       ...(resumeModel ? { model: resumeModel } : {}),
       ...(resumeVariant ? { variant: resumeVariant } : {}),
       tools: {
