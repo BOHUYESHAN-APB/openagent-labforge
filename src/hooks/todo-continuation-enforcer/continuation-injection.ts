@@ -17,6 +17,7 @@ import { isSqliteBackend } from "../../shared/opencode-storage-detection"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
 
 import {
+  AUTONOMOUS_BACKLOG_EXPANSION_PROMPT,
   CONTINUATION_REPLAN_PROMPT,
   AUTONOMOUS_COMPLETION_AUDIT_PROMPT,
   AUTONOMOUS_CONTINUATION_PROMPT,
@@ -420,6 +421,133 @@ export async function injectAutonomousCompletionAudit(args: {
     }
   } catch (error) {
     log(`[${HOOK_NAME}] Autonomous completion audit failed`, { sessionID, error: String(error) })
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+    }
+  }
+}
+
+export async function injectAutonomousBacklogExpansion(args: {
+  ctx: PluginInput
+  sessionID: string
+  currentTodoCount: number
+  incompleteCount: number
+  backgroundManager?: BackgroundManager
+  skipAgents?: string[]
+  resolvedInfo?: ResolvedMessageInfo
+  sessionStateStore: SessionStateStore
+  isContinuationStopped?: (sessionID: string) => boolean
+}): Promise<void> {
+  const {
+    ctx,
+    sessionID,
+    currentTodoCount,
+    incompleteCount,
+    backgroundManager,
+    skipAgents = DEFAULT_SKIP_AGENTS,
+    resolvedInfo,
+    sessionStateStore,
+    isContinuationStopped,
+  } = args
+
+  const state = sessionStateStore.getExistingState(sessionID)
+  if (state?.isRecovering) {
+    log(`[${HOOK_NAME}] Skipped backlog expansion: in recovery`, { sessionID })
+    return
+  }
+
+  if (isContinuationStopped?.(sessionID)) {
+    log(`[${HOOK_NAME}] Skipped backlog expansion: continuation stopped for session`, { sessionID })
+    return
+  }
+
+  const hasRunningBgTasks = backgroundManager
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    : false
+
+  if (hasRunningBgTasks) {
+    log(`[${HOOK_NAME}] Skipped backlog expansion: background tasks running`, { sessionID })
+    return
+  }
+
+  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let model = resolvedInfo?.model
+  let tools = resolvedInfo?.tools
+
+  if (!agentName || !model) {
+    let previousMessage = null
+    if (isSqliteBackend()) {
+      previousMessage = await findNearestMessageWithFieldsFromSDK(ctx.client, sessionID)
+    } else {
+      const messageDir = getMessageDir(sessionID)
+      previousMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+    }
+    agentName = agentName ?? previousMessage?.agent
+    model =
+      model ??
+      (previousMessage?.model?.providerID && previousMessage?.model?.modelID
+        ? {
+            providerID: previousMessage.model.providerID,
+            modelID: previousMessage.model.modelID,
+            ...(previousMessage.model.variant ? { variant: previousMessage.model.variant } : {}),
+          }
+        : undefined)
+    tools = tools ?? previousMessage?.tools
+  }
+
+  if (agentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(agentName))) {
+    log(`[${HOOK_NAME}] Skipped backlog expansion: agent in skipAgents list`, { sessionID, agent: agentName })
+    return
+  }
+
+  if (!hasWritePermission(tools)) {
+    log(`[${HOOK_NAME}] Skipped backlog expansion: agent lacks write permission`, { sessionID, agent: agentName })
+    return
+  }
+
+  const injectionState = sessionStateStore.getExistingState(sessionID)
+  if (injectionState) {
+    injectionState.inFlight = true
+    injectionState.backlogExpansionCount = (injectionState.backlogExpansionCount ?? 0) + 1
+    injectionState.lastBacklogExpansionTodoCount = currentTodoCount
+  }
+
+  try {
+    log(`[${HOOK_NAME}] Injecting autonomous backlog expansion`, {
+      sessionID,
+      agent: agentName,
+      model,
+      currentTodoCount,
+      incompleteCount,
+    })
+
+    const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+    const prompt = `${AUTONOMOUS_BACKLOG_EXPANSION_PROMPT}
+
+[Current todo count: ${currentTodoCount}]
+[Current incomplete count: ${incompleteCount}]`
+
+    await ctx.client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        agent: agentName,
+        ...(model !== undefined ? { model } : {}),
+        ...(inheritedTools ? { tools: inheritedTools } : {}),
+        parts: [createInternalAgentTextPart(prompt)],
+      },
+      query: { directory: ctx.directory },
+    })
+
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.awaitingPostInjectionProgressCheck = true
+      injectionState.consecutiveFailures = 0
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Autonomous backlog expansion failed`, { sessionID, error: String(error) })
     if (injectionState) {
       injectionState.inFlight = false
       injectionState.lastInjectedAt = Date.now()

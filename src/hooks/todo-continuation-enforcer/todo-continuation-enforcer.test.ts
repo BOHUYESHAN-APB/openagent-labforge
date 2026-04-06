@@ -328,6 +328,32 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
 
+  test("should force autonomous backlog expansion when todo count is below five", async () => {
+    // given
+    const sessionID = "main-autonomous-shallow-backlog"
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
+      { id: "2", content: "Task 2", status: "pending", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    // when
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    // then
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
+    expect(promptCalls[0].text).toContain("expand it to 5-15 concrete todos")
+    expect(promptCalls[0].text).toContain("[Current todo count: 2]")
+  })
+
   test("should reinject when todos are complete but assistant promises next steps in Chinese", async () => {
     // given
     const sessionID = "main-continue-zh"
@@ -942,7 +968,15 @@ describe("todo-continuation-enforcer", () => {
     const sessionID = "main-autonomous-ultrawork"
     setMainSession(sessionID)
     setUltraworkAutonomousSession(sessionID, true)
-    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
+      { id: "2", content: "Task 2", status: "pending", priority: "high" },
+      { id: "3", content: "Task 3", status: "pending", priority: "medium" },
+      { id: "4", content: "Task 4", status: "pending", priority: "medium" },
+      { id: "5", content: "Task 5", status: "pending", priority: "low" },
+    ]})
+    const hook = createTodoContinuationEnforcer(mockInput, {})
 
     //#when - first idle should be enough in autonomous mode
     await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })

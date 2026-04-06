@@ -39,6 +39,8 @@ export interface SessionState {
   acknowledgedCompactionEpoch?: number
   hasContinuationIntent?: boolean
   completionAuditCount?: number
+  backlogExpansionCount?: number
+  lastBacklogExpansionTodoCount?: number
 }
 
 export interface MessageInfo {

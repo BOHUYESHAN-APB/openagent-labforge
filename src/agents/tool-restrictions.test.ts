@@ -2,10 +2,12 @@ import { describe, test, expect } from "bun:test"
 import { createOracleAgent } from "./oracle"
 import { createLibrarianAgent } from "./librarian"
 import { createExploreAgent } from "./explore"
+import { createAcceptanceReviewerAgent } from "./acceptance-reviewer"
 import { createMomusAgent } from "./momus"
 import { createMetisAgent } from "./metis"
 import { createAtlasAgent } from "./atlas"
 import { createArticleWriterAgent } from "./article-writer"
+import { createBioAutopilotAgent } from "./bio-autopilot"
 import { createBioOrchestratorAgent } from "./bio-orchestrator"
 import { createBioMethodologistAgent } from "./bio-methodologist"
 import { createWetLabDesignerAgent } from "./wet-lab-designer"
@@ -75,6 +77,23 @@ describe("read-only agent tool restrictions", () => {
     })
   })
 
+  describe("Acceptance Reviewer", () => {
+    test("denies all file-writing and delegation tools", () => {
+      // given
+      const agent = createAcceptanceReviewerAgent(TEST_MODEL)
+
+      // when
+      const permission = agent.permission as Record<string, string>
+
+      // then
+      for (const tool of FILE_WRITE_TOOLS) {
+        expect(permission[tool]).toBe("deny")
+      }
+      expect(permission["task"]).toBe("deny")
+      expect(permission["call_omo_agent"]).toBe("deny")
+    })
+  })
+
   describe("Momus", () => {
     test("denies all file-writing tools", () => {
       // given
@@ -137,6 +156,21 @@ describe("read-only agent tool restrictions", () => {
     test("keeps task available but blocks compatibility delegation wrapper", () => {
       // given
       const agent = createBioOrchestratorAgent(TEST_MODEL)
+
+      // when
+      const permission = (agent.permission ?? {}) as Record<string, string>
+
+      // then
+      expect(permission["question"]).toBe("allow")
+      expect(permission["task"]).toBeUndefined()
+      expect(permission["call_omo_agent"]).toBe("deny")
+    })
+  })
+
+  describe("Bio Autopilot", () => {
+    test("keeps task available but blocks compatibility delegation wrapper", () => {
+      // given
+      const agent = createBioAutopilotAgent(TEST_MODEL)
 
       // when
       const permission = (agent.permission ?? {}) as Record<string, string>

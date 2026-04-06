@@ -12,7 +12,10 @@ import { categorizeTools } from "../dynamic-agent-prompt-builder";
 import { buildHephaestusPrompt as buildGptPrompt } from "./gpt";
 import { buildHephaestusPrompt as buildGpt53CodexPrompt } from "./gpt-5-3-codex";
 import { buildHephaestusPrompt as buildGpt54Prompt } from "./gpt-5-4";
-import { ENGINEERING_EXECUTION_CAPABILITY } from "../engineering-capability";
+import {
+  AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  ENGINEERING_EXECUTION_CAPABILITY,
+} from "../engineering-capability";
 
 const MODE: AgentMode = "all";
 
@@ -121,7 +124,7 @@ export function createHephaestusAgent(
     availableSkills,
     availableCategories,
     useTaskSystem,
-  }) + "\n\n" + ENGINEERING_EXECUTION_CAPABILITY + "\n\n" + HEPHAESTUS_EXECUTION_APPEND;
+  }) + "\n\n" + ENGINEERING_EXECUTION_CAPABILITY + "\n\n" + AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY + "\n\n" + HEPHAESTUS_EXECUTION_APPEND;
 
   return {
     description:

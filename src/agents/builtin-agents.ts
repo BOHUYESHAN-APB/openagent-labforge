@@ -10,8 +10,10 @@ import { createLibrarianAgent, LIBRARIAN_PROMPT_METADATA } from "./librarian"
 import { createExploreAgent, EXPLORE_PROMPT_METADATA } from "./explore"
 import { createGitHubScoutAgent, GITHUB_SCOUT_PROMPT_METADATA } from "./github-scout"
 import { createTechScoutAgent, TECH_SCOUT_PROMPT_METADATA } from "./tech-scout"
+import { createAcceptanceReviewerAgent, ACCEPTANCE_REVIEWER_PROMPT_METADATA } from "./acceptance-reviewer"
 import { createArticleWriterAgent, ARTICLE_WRITER_PROMPT_METADATA } from "./article-writer"
 import { createScientificWriterAgent, SCIENTIFIC_WRITER_PROMPT_METADATA } from "./scientific-writer"
+import { createBioAutopilotAgent, BIO_AUTOPILOT_PROMPT_METADATA } from "./bio-autopilot"
 import { createBioOrchestratorAgent, BIO_ORCHESTRATOR_PROMPT_METADATA } from "./bio-orchestrator"
 import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
 import {
@@ -60,8 +62,10 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   explore: createExploreAgent,
   "github-scout": createGitHubScoutAgent,
   "tech-scout": createTechScoutAgent,
+  "acceptance-reviewer": createAcceptanceReviewerAgent,
   "article-writer": createArticleWriterAgent,
   "scientific-writer": createScientificWriterAgent,
+  "bio-autopilot": createBioAutopilotAgent,
   "bio-orchestrator": createBioOrchestratorAgent,
   "multimodal-looker": createMultimodalLookerAgent,
   "bio-methodologist": createBioMethodologistAgent,
@@ -85,8 +89,10 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   explore: EXPLORE_PROMPT_METADATA,
   "github-scout": GITHUB_SCOUT_PROMPT_METADATA,
   "tech-scout": TECH_SCOUT_PROMPT_METADATA,
+  "acceptance-reviewer": ACCEPTANCE_REVIEWER_PROMPT_METADATA,
   "article-writer": ARTICLE_WRITER_PROMPT_METADATA,
   "scientific-writer": SCIENTIFIC_WRITER_PROMPT_METADATA,
+  "bio-autopilot": BIO_AUTOPILOT_PROMPT_METADATA,
   "bio-orchestrator": BIO_ORCHESTRATOR_PROMPT_METADATA,
   "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
   "bio-methodologist": BIO_METHODOLOGIST_PROMPT_METADATA,

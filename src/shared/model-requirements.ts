@@ -179,6 +179,39 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       },
     ],
   },
+  "bio-autopilot": {
+    fallbackChain: [
+      {
+        providers: ["openai", "github-copilot", "opencode"],
+        model: "gpt-5.4",
+        variant: "high",
+      },
+      { providers: ["zai-coding-plan", "opencode"], model: "glm-5" },
+      { providers: ["kimi-for-coding"], model: "k2p5" },
+      {
+        providers: [
+          "opencode",
+          "moonshotai",
+          "moonshotai-cn",
+          "firmware",
+          "ollama-cloud",
+          "aihubmix",
+        ],
+        model: "kimi-k2.5",
+      },
+      {
+        providers: ["google", "github-copilot", "opencode"],
+        model: "gemini-3.1-pro",
+        variant: "high",
+      },
+      {
+        providers: ["anthropic", "github-copilot", "opencode"],
+        model: "claude-opus-4-6",
+        variant: "max",
+      },
+    ],
+    requiresAnyModel: true,
+  },
   "bio-orchestrator": {
     fallbackChain: [
       {

@@ -8,6 +8,8 @@ import { getAgentConfigKey } from "../../shared/agent-display-names"
 import { log } from "../../shared/logger"
 
 import {
+  AUTONOMOUS_MAX_BACKLOG_EXPANSIONS_PER_COUNT,
+  AUTONOMOUS_MIN_TODO_COUNT,
   ABORT_WINDOW_MS,
   AUTONOMOUS_CONTINUATION_COOLDOWN_MS,
   AUTONOMOUS_MAX_CONSECUTIVE_FAILURES,
@@ -28,6 +30,7 @@ import type { SessionStateStore } from "./session-state"
 import { shouldStopForStagnation } from "./stagnation-detection"
 import { getIncompleteCount } from "./todo"
 import { injectContinuationReplan } from "./continuation-injection"
+import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
 
 // Follow upstream continuation gating closely: compaction and stagnation are the
@@ -252,6 +255,33 @@ export async function handleSessionIdle(args: {
   if (isContinuationStopped?.(sessionID)) {
     log(`[${HOOK_NAME}] Skipped: continuation stopped for session`, { sessionID })
     return
+  }
+
+  if (isAutonomous) {
+    if (todos.length >= AUTONOMOUS_MIN_TODO_COUNT) {
+      state.backlogExpansionCount = 0
+      state.lastBacklogExpansionTodoCount = todos.length
+    } else {
+      if (state.lastBacklogExpansionTodoCount !== todos.length) {
+        state.backlogExpansionCount = 0
+        state.lastBacklogExpansionTodoCount = todos.length
+      }
+
+      if ((state.backlogExpansionCount ?? 0) < AUTONOMOUS_MAX_BACKLOG_EXPANSIONS_PER_COUNT) {
+        await injectAutonomousBacklogExpansion({
+          ctx,
+          sessionID,
+          currentTodoCount: todos.length,
+          incompleteCount,
+          backgroundManager,
+          skipAgents,
+          resolvedInfo,
+          sessionStateStore,
+          isContinuationStopped,
+        })
+        return
+      }
+    }
   }
 
   // Upstream only increments stagnation after a successful continuation prompt.

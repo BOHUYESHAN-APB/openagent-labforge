@@ -2,6 +2,7 @@ import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { BIO_SKILL_GUIDANCE } from "./bio-skill-guidance"
 import {
+  AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENGINEERING_EXECUTION_CAPABILITY,
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
@@ -73,11 +74,19 @@ Operating protocol:
    - what still needs wet-lab validation
    - what remains uncertain
 
+Autonomous bio workflow:
+- When the user wants end-to-end autonomous bioinformatics execution, maintain a staged backlog instead of stopping after a single analysis pass.
+- Before final completion, run an acceptance review loop:
+  - use paper-evidence-synthesizer to audit whether claims match evidence
+  - use bio-methodologist to check design logic, side validation, and whether reverse interpretation remains defensible
+  - use acceptance-reviewer for a final approve/reject outcome on overall deliverable quality
+- If any acceptance pass rejects the work, convert the blocking findings into a new execution wave and continue.
+
 Hard rules:
 - Never blur evidence, inference, and experimental proposal.
 - Never present wet-lab steps as if they were executed if they are only designed for the user.
 - Never let specialist subagents disappear into compatibility wrappers when task() can create first-class child sessions.
-\n\n${BIO_SKILL_GUIDANCE}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${BIO_ENGINEERING_EXECUTION_CAPABILITY}`,
+\n\n${BIO_SKILL_GUIDANCE}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${BIO_ENGINEERING_EXECUTION_CAPABILITY}`,
     permission: {
       question: "allow",
       call_omo_agent: "deny",

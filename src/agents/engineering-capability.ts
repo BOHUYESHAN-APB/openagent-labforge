@@ -190,6 +190,34 @@ Output discipline:
 - keep optional improvements separate from blockers
 </engineering_review_capability>`
 
+export const AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY = `<autonomous_acceptance_workflow_capability>
+## Autonomous Acceptance Workflow
+
+Autonomous execution does not end at "implementation complete". It ends only after acceptance review.
+
+Required workflow for substantial work:
+- before final completion, invoke a dedicated reviewer agent
+- reviewer inputs should include:
+  - original goal
+  - changed files or produced artifacts
+  - verification commands already run
+  - unresolved risks or assumptions
+- the reviewer must return an approval or rejection-style outcome
+- if the reviewer rejects, convert each blocking finding into new todo items and continue execution
+- do not self-certify with a narrative summary alone when the task is large enough to deserve an acceptance pass
+
+Engineering acceptance expectations:
+- verify deliverables against the user request, not just against the implementation plan
+- treat missing QA, missing user-visible verification, and contract drift as rejection-worthy findings
+- if user-facing behavior changed, acceptance must consider real behavior evidence, not only static checks
+
+Bioinformatics acceptance expectations:
+- separate evidence from inference
+- perform side validation where possible: metadata checks, orthogonal sanity checks, or alternative interpretation checks
+- ensure conclusions can be traced back to concrete evidence and, when relevant, support reverse reasoning from result to cause with stated uncertainty
+- if wet-lab work was only designed, acceptance must verify that it is clearly labeled as proposed rather than executed
+</autonomous_acceptance_workflow_capability>`
+
 export const BIO_DATA_INTERACTION_CAPABILITY = `<bio_data_interaction_capability>
 ## Bio Data Interaction Capability
 

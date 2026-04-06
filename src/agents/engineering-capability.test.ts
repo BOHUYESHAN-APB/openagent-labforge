@@ -7,6 +7,8 @@ import { createAtlasAgent } from "./atlas"
 import { getPrometheusPrompt } from "./prometheus"
 import { createMetisAgent } from "./metis"
 import { createMomusAgent } from "./momus"
+import { createAcceptanceReviewerAgent } from "./acceptance-reviewer"
+import { createBioAutopilotAgent } from "./bio-autopilot"
 import { createBioOrchestratorAgent } from "./bio-orchestrator"
 import { createBioMethodologistAgent } from "./bio-methodologist"
 import { createBioPipelineOperatorAgent } from "./bio-pipeline-operator"
@@ -23,6 +25,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("Completion evidence:")
     expect(agent.prompt).toContain("default to product-grade output unless the user explicitly asks for a prototype")
     expect(agent.prompt).toContain("for frontend work, default to visual specialists plus UI verification skills")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
   })
 
   test("wase inherits engineering capability blocks through sisyphus", () => {
@@ -36,6 +39,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("do NOT stop to ask \"should I continue\"")
     expect(agent.prompt).toContain("When the remaining backlog drops below 3 actionable items")
     expect(agent.prompt).toContain("Never replace real follow-through with prose like \"next I would...\"")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("delegate to `acceptance-reviewer`")
   })
 
   test("hephaestus includes execution capability block", () => {
@@ -46,6 +51,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("update the relevant docs in the same change")
     expect(agent.prompt).toContain("Frontend delivery standards:")
     expect(agent.prompt).toContain("Backend and architecture standards:")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
     expect(agent.prompt).toContain("<hephaestus_execution_contract>")
   })
 
@@ -87,11 +93,31 @@ describe("engineering capability layering", () => {
   test("bio-orchestrator includes bio data and environment capability blocks", () => {
     const agent = createBioOrchestratorAgent("openai/gpt-5.4")
 
-    expect(agent.prompt).toContain("main bio entrypoints: `bio-orchestrator`, `bio-pipeline-operator`")
+    expect(agent.prompt).toContain("main bio entrypoints: `bio-orchestrator`, `bio-autopilot`, `bio-pipeline-operator`")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("<bio_engineering_execution_capability>")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("use acceptance-reviewer for a final approve/reject outcome")
     expect(agent.prompt).toContain("private sequencing data")
+  })
+
+  test("bio-autopilot includes autonomous bio workflow and acceptance-review loop", () => {
+    const agent = createBioAutopilotAgent("openai/gpt-5.4")
+
+    expect(agent.prompt).toContain("<bio-autopilot-mode>")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("use acceptance-reviewer for the final approve/reject decision")
+    expect(agent.prompt).toContain("side validation")
+  })
+
+  test("acceptance-reviewer includes review and autonomous acceptance workflow capability blocks", () => {
+    const agent = createAcceptanceReviewerAgent("openai/gpt-5.4")
+
+    expect(agent.mode).toBe("subagent")
+    expect(agent.prompt).toContain("<engineering_review_capability>")
+    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("[APPROVE] or [REJECT]")
   })
 
   test("bio-methodologist includes planning, data request, and environment safety capability blocks", () => {

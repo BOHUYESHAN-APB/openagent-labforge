@@ -49,6 +49,18 @@ All current todos are completed, but autonomous execution does NOT stop here aut
 - Do not ask the user whether you should continue when clear unfinished work remains
 - Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`
 
+export const AUTONOMOUS_BACKLOG_EXPANSION_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+
+AUTONOMOUS BACKLOG EXPANSION.
+
+Your current todo backlog is too shallow for autonomous execution.
+
+- If the task still has meaningful remaining scope and the total todo count is below 5, immediately expand it to 5-15 concrete todos
+- Do not keep a shallow 1-4 item backlog for substantial work
+- Convert obvious remaining scope into explicit tasks covering discovery, implementation, verification, cleanup, and output sync when relevant
+- Do not reply with "next I would..." prose while keeping the backlog short
+- Expand the backlog first, then continue execution`
+
 export const COUNTDOWN_SECONDS = 2
 export const TOAST_DURATION_MS = 900
 export const COUNTDOWN_GRACE_PERIOD_MS = 500
@@ -62,3 +74,5 @@ export const FAILURE_RESET_WINDOW_MS = 5 * 60 * 1000
 
 export const AUTONOMOUS_CONTINUATION_COOLDOWN_MS = 5_000
 export const AUTONOMOUS_MAX_CONSECUTIVE_FAILURES = 50
+export const AUTONOMOUS_MIN_TODO_COUNT = 5
+export const AUTONOMOUS_MAX_BACKLOG_EXPANSIONS_PER_COUNT = 2

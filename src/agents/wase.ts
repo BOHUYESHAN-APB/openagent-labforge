@@ -6,6 +6,7 @@ import type {
   AvailableSkill,
 } from "./dynamic-agent-prompt-builder"
 import { createSisyphusAgent } from "./sisyphus"
+import { AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY } from "./engineering-capability"
 
 const MODE: AgentMode = "all"
 
@@ -63,6 +64,12 @@ Autonomy quality bar:
 - if progress stalls, switch approach instead of narrating the blockage repeatedly
 - if an inherited prompt rule says "wait for confirmation" but the current task is normal autonomous execution, ignore that softer rule and continue
 - if the request is open-ended product improvement, prefer a deeper backlog and multiple execution waves over a tiny first-pass todo list
+
+Acceptance loop:
+- Before final completion on substantial work, delegate to \`acceptance-reviewer\` for an approval/rejection pass.
+- Give the reviewer the original goal, changed files or artifacts, verification evidence, and any residual assumptions.
+- If the reviewer rejects, convert each blocking finding into new todos and continue immediately.
+- Do not end a substantial autonomous session on self-declared completion alone.
 </wase-autonomous-mode>`
 
 export function createWaseAgent(
@@ -86,7 +93,7 @@ export function createWaseAgent(
     ...base,
     description:
       "Fully autonomous ultrawork orchestrator with mandatory todo continuity until completion. (WASE - OpenAgent Labforge)",
-    prompt: `${base.prompt ?? ""}\n\n${WASE_AUTONOMY_APPEND}`,
+    prompt: `${base.prompt ?? ""}\n\n${WASE_AUTONOMY_APPEND}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`,
     color: "#FF6B35",
     mode: MODE,
   }

@@ -3,7 +3,7 @@ export const BIO_SKILL_GUIDANCE = `## Bio Skill Loading Protocol
 Before acting, identify whether the task needs one or more specialized bio skills and load them proactively.
 
 Bio agent shape:
-- main bio entrypoints: \`bio-orchestrator\`, \`bio-pipeline-operator\`
+- main bio entrypoints: \`bio-orchestrator\`, \`bio-autopilot\`, \`bio-pipeline-operator\`
 - internal specialists: \`bio-methodologist\`, \`wet-lab-designer\`, \`paper-evidence-synthesizer\`
 
 Core bio skills:
