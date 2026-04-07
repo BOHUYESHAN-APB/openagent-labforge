@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { tmpdir, homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createStartWorkHook } from "./index"
+import { START_WORK_TEMPLATE } from "../../features/builtin-commands/templates/start-work"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 import {
   writeBoulderState,
@@ -96,6 +97,50 @@ describe("start-work hook", () => {
       )
 
       // then - output should be modified with context info
+      expect(output.parts[0].text).toContain("---")
+    })
+
+    test("should ignore non-start-work command payloads that include session-context", async () => {
+      const hook = createStartWorkHook(createMockPluginInput())
+      const original = `<command-instruction>
+# Checkpoint Resume Command
+</command-instruction>
+
+<session-context>Session: abc</session-context>
+
+<user-request>latest</user-request>`
+      const output = {
+        parts: [{ type: "text", text: original }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "session-123" },
+        output,
+      )
+
+      expect(output.parts[0].text).toBe(original)
+    })
+
+    test("should still detect explicit start-work command payloads with command-instruction wrapper", async () => {
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        parts: [
+          {
+            type: "text",
+            text: `<command-instruction>
+${START_WORK_TEMPLATE}
+</command-instruction>
+
+<session-context>Some context here</session-context>`,
+          },
+        ],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "session-123" },
+        output,
+      )
+
       expect(output.parts[0].text).toContain("---")
     })
 

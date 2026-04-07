@@ -22,6 +22,7 @@ import {
   getAgentConfigKey,
   getAgentDisplayName,
 } from "../../shared/agent-display-names"
+import { START_WORK_TEMPLATE } from "../../features/builtin-commands/templates/start-work"
 import { detectWorktreePath } from "./worktree-detector"
 import { parseUserRequest } from "./parse-user-request"
 
@@ -34,6 +35,20 @@ interface StartWorkHookInput {
 
 interface StartWorkHookOutput {
   parts: Array<{ type: string; text?: string }>
+}
+
+const START_WORK_MARKER = START_WORK_TEMPLATE.split("\n")[0]?.trim() ?? ""
+
+function isStartWorkCommandPrompt(promptText: string): boolean {
+  if (!promptText.includes("<session-context>")) {
+    return false
+  }
+
+  if (!promptText.includes("<command-instruction>")) {
+    return true
+  }
+
+  return START_WORK_MARKER.length > 0 && promptText.includes(START_WORK_MARKER)
 }
 
 function findPlanByName(plans: string[], requestedName: string): string | null {
@@ -137,7 +152,7 @@ export function createStartWorkHook(ctx: PluginInput) {
           .join("\n")
           .trim() || ""
 
-      if (!promptText.includes("<session-context>")) return
+      if (!isStartWorkCommandPrompt(promptText)) return
 
       log(`[${HOOK_NAME}] Processing start-work command`, { sessionID: input.sessionID })
       const currentSessionAgent = getSessionAgent(input.sessionID)
