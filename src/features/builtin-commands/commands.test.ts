@@ -3,6 +3,7 @@ import { loadBuiltinCommands } from "./commands"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
 import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
 import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
+import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
@@ -84,6 +85,14 @@ describe("loadBuiltinCommands", () => {
     expect(commands.checkpoint.template).toContain("$SESSION_ID")
     expect(commands.checkpoint.template).toContain("$TIMESTAMP")
     expect(commands["checkpoint-resume"].template).toContain("$ARGUMENTS")
+  })
+
+  test("should include remove-ai-slops command for upstream command compatibility", () => {
+    const commands = loadBuiltinCommands()
+
+    expect(commands["remove-ai-slops"]).toBeDefined()
+    expect(commands["remove-ai-slops"].template).toContain(REMOVE_AI_SLOPS_TEMPLATE)
+    expect(commands["remove-ai-slops"].description).toContain("AI-generated code smells")
   })
 
   test("should include session cleanup commands", () => {
@@ -214,5 +223,13 @@ describe("checkpoint command templates", () => {
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("status from `pending` to `consumed`")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("consumed_by_session_id")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("CARRIED-FORWARD MISSION")
+  })
+})
+
+describe("REMOVE_AI_SLOPS_TEMPLATE", () => {
+  test("should preserve upstream-compatible remove-ai-slops guidance", () => {
+    expect(REMOVE_AI_SLOPS_TEMPLATE).toContain("ai-slop-remover")
+    expect(REMOVE_AI_SLOPS_TEMPLATE).toContain("Critical Review")
+    expect(REMOVE_AI_SLOPS_TEMPLATE).toContain("git symbolic-ref refs/remotes/origin/HEAD")
   })
 })

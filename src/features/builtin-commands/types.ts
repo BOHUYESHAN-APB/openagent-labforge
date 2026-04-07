@@ -10,6 +10,7 @@ export type BuiltinCommandName =
   | "refactor"
   | "start-work"
   | "stop-continuation"
+  | "remove-ai-slops"
   | "todo-clear"
   | "workflow-reset"
   | "focus-chat"

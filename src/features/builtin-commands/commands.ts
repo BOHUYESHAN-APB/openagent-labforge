@@ -9,6 +9,7 @@ import { START_WORK_TEMPLATE } from "./templates/start-work"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
 import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
 import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
+import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
@@ -130,6 +131,16 @@ $ARGUMENTS
     template: `<command-instruction>
 ${STOP_CONTINUATION_TEMPLATE}
 </command-instruction>`,
+  },
+  "remove-ai-slops": {
+    description: "(builtin) Remove AI-generated code smells from branch changes and critically review the results",
+    template: `<command-instruction>
+${REMOVE_AI_SLOPS_TEMPLATE}
+</command-instruction>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
   },
   "todo-clear": {
     description: "(builtin) Clear stale todos and session-level execution residue for the current session",
