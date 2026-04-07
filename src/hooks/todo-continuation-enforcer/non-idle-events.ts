@@ -1,6 +1,10 @@
 import { log } from "../../shared/logger"
 
-import { COUNTDOWN_GRACE_PERIOD_MS, HOOK_NAME } from "./constants"
+import {
+  COUNTDOWN_GRACE_PERIOD_MS,
+  HOOK_NAME,
+  INTERNAL_PROMPT_ACTIVITY_GRACE_MS,
+} from "./constants"
 import type { SessionStateStore } from "./session-state"
 
 export function handleNonIdleEvent(args: {
@@ -25,14 +29,27 @@ export function handleNonIdleEvent(args: {
           return
         }
       }
-      if (state) state.abortDetectedAt = undefined
+      if (state?.lastInternalPromptAt) {
+        const elapsed = Date.now() - state.lastInternalPromptAt
+        if (elapsed < INTERNAL_PROMPT_ACTIVITY_GRACE_MS) {
+          log(`[${HOOK_NAME}] Ignoring internal prompt user activity`, { sessionID, elapsed })
+          return
+        }
+      }
+      if (state) {
+        state.abortDetectedAt = undefined
+        state.lastUserActivityAt = Date.now()
+      }
       sessionStateStore.cancelCountdown(sessionID)
       return
     }
 
     if (role === "assistant") {
       const state = sessionStateStore.getExistingState(sessionID)
-      if (state) state.abortDetectedAt = undefined
+      if (state) {
+        state.abortDetectedAt = undefined
+        state.lastAssistantActivityAt = Date.now()
+      }
       sessionStateStore.cancelCountdown(sessionID)
       return
     }
@@ -57,7 +74,16 @@ export function handleNonIdleEvent(args: {
     const sessionID = properties?.sessionID as string | undefined
     if (sessionID) {
       const state = sessionStateStore.getExistingState(sessionID)
-      if (state) state.abortDetectedAt = undefined
+      if (state) {
+        state.abortDetectedAt = undefined
+        const toolName = typeof properties?.tool === "string"
+          ? properties.tool.toLowerCase()
+          : undefined
+        if (toolName === "todowrite") {
+          state.lastTodoGraphTouchAt = Date.now()
+          state.suppressedTodoSnapshot = undefined
+        }
+      }
       sessionStateStore.cancelCountdown(sessionID)
     }
     return

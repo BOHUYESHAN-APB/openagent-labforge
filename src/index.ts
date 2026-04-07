@@ -8,6 +8,7 @@ import { createManagers } from "./create-managers"
 import { createTools } from "./create-tools"
 import { createPluginInterface } from "./plugin-interface"
 import { createPluginDispose } from "./plugin-dispose"
+import { createCompactingHandler } from "./plugin/compacting-handler"
 
 import { loadPluginConfig } from "./plugin-config"
 import { createModelCacheState } from "./plugin-state"
@@ -119,6 +120,12 @@ const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
     disposeHooks,
   })
 
+  const compactingHandler = createCompactingHandler({
+    compactionTodoPreserver: hooks.compactionTodoPreserver ?? undefined,
+    claudeCodeHooks: hooks.claudeCodeHooks ?? undefined,
+    compactionContextInjector: hooks.compactionContextInjector ?? undefined,
+  })
+
   return {
     ...pluginInterface,
     dispose: async () => {
@@ -130,14 +137,7 @@ const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
       _input: { sessionID: string },
       output: { context: string[] },
     ): Promise<void> => {
-      await hooks.compactionTodoPreserver?.capture(_input.sessionID)
-      await hooks.claudeCodeHooks?.["experimental.session.compacting"]?.(
-        _input,
-        output,
-      )
-      if (hooks.compactionContextInjector) {
-        output.context.push(hooks.compactionContextInjector(_input.sessionID))
-      }
+      await compactingHandler(_input, output)
     },
   }
 }

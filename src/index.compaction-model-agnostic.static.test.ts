@@ -7,6 +7,8 @@ describe("experimental.session.compacting", () => {
     const indexUrl = new URL("./index.ts", import.meta.url)
     const content = readFileSync(indexUrl, "utf-8")
     const hookIndex = content.indexOf('"experimental.session.compacting"')
+    const compactingHandlerUrl = new URL("./plugin/compacting-handler.ts", import.meta.url)
+    const compactingHandlerContent = readFileSync(compactingHandlerUrl, "utf-8")
 
     //#when
     const hookSlice = hookIndex >= 0 ? content.slice(hookIndex, hookIndex + 1200) : ""
@@ -14,7 +16,8 @@ describe("experimental.session.compacting", () => {
     //#then
     expect(hookIndex).toBeGreaterThanOrEqual(0)
     expect(content.includes('modelID: "claude-opus-4-6"')).toBe(false)
-    expect(hookSlice.includes("output.context.push")).toBe(true)
+    expect(hookSlice.includes("compactingHandler")).toBe(true)
+    expect(compactingHandlerContent.includes("output.context.push")).toBe(true)
     expect(hookSlice.includes("providerID:")).toBe(false)
     expect(hookSlice.includes("modelID:")).toBe(false)
   })

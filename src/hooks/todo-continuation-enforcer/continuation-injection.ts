@@ -50,24 +50,37 @@ function hasWritePermission(tools: Record<string, ToolPermission> | undefined): 
   )
 }
 
-function buildWorkflowModeContext(directory: string, sessionID: string): string {
+function buildWorkflowModeContext(args: {
+  directory: string
+  sessionID: string
+  fallbackAutoModeLevel?: "light" | "heavy"
+  fallbackInteractionMode?: "batch" | "continuous"
+}): string {
+  const {
+    directory,
+    sessionID,
+    fallbackAutoModeLevel,
+    fallbackInteractionMode,
+  } = args
   const runtimeState = readRuntimeWorkflowState(directory, sessionID)
-  if (!runtimeState) return ""
+  const autoModeLevel = runtimeState?.auto_mode_level ?? fallbackAutoModeLevel
+  const interactionMode = runtimeState?.interaction_mode ?? fallbackInteractionMode
+  if (!autoModeLevel || !interactionMode) return ""
 
   const lines = [
-    `[Auto mode: ${runtimeState.auto_mode_level ?? "light"}]`,
-    `[Interaction mode: ${runtimeState.interaction_mode ?? "batch"}]`,
+    `[Auto mode: ${autoModeLevel}]`,
+    `[Interaction mode: ${interactionMode}]`,
   ]
 
-  if (runtimeState.interaction_mode === "batch") {
+  if (interactionMode === "batch") {
     lines.push("- This session is operating in batch mode: finish the current reviewed wave cleanly before inventing a brand-new wave.")
   } else {
     lines.push("- This session is operating in continuous mode: if obvious work remains after the current wave, continue into the next wave instead of pausing.")
   }
 
-  if (runtimeState.auto_mode_level === "light") {
+  if (autoModeLevel === "light") {
     lines.push("- This session is in light autonomous mode: do not inflate the backlog unnecessarily; keep the current batch tight and reviewable.")
-  } else if (runtimeState.auto_mode_level === "heavy") {
+  } else if (autoModeLevel === "heavy") {
     lines.push("- This session is in heavy autonomous mode: maintain a durable backlog and keep the multi-wave execution graph explicit.")
   }
 
@@ -184,7 +197,12 @@ export async function injectContinuation(args: {
     isUltraworkAutonomousSession(sessionID) ||
     isAutonomousSessionAgent(agentName)
   const workflowModeContext = isAutonomous
-    ? buildWorkflowModeContext(ctx.directory, sessionID)
+    ? buildWorkflowModeContext({
+        directory: ctx.directory,
+        sessionID,
+        fallbackAutoModeLevel: "light",
+        fallbackInteractionMode: "batch",
+      })
     : ""
   const basePrompt = isAutonomous ? AUTONOMOUS_CONTINUATION_PROMPT : CONTINUATION_PROMPT
 
@@ -204,6 +222,10 @@ ${todoList}`
   const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
     log(`[${HOOK_NAME}] Injecting continuation`, {
       sessionID,
       agent: agentName,
@@ -233,7 +255,7 @@ ${todoList}`
     log(`[${HOOK_NAME}] Injection successful`, { sessionID })
     if (injectionState) {
       injectionState.inFlight = false
-      injectionState.lastInjectedAt = Date.now()
+      injectionState.lastInjectedAt = internalPromptAt
       injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }
@@ -330,6 +352,10 @@ export async function injectContinuationReplan(args: {
   const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
     log(`[${HOOK_NAME}] Injecting continuation replan`, {
       sessionID,
       agent: agentName,
@@ -345,7 +371,12 @@ export async function injectContinuationReplan(args: {
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
     const prompt = `${CONTINUATION_REPLAN_PROMPT}
 
-${buildWorkflowModeContext(ctx.directory, sessionID)}`
+${buildWorkflowModeContext({
+      directory: ctx.directory,
+      sessionID,
+      fallbackAutoModeLevel: "light",
+      fallbackInteractionMode: "batch",
+    })}`
 
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
@@ -360,7 +391,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}`
 
     if (injectionState) {
       injectionState.inFlight = false
-      injectionState.lastInjectedAt = Date.now()
+      injectionState.lastInjectedAt = internalPromptAt
       injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }
@@ -456,6 +487,10 @@ export async function injectAutonomousCompletionAudit(args: {
   const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
     log(`[${HOOK_NAME}] Injecting autonomous completion audit`, {
       sessionID,
       agent: agentName,
@@ -471,7 +506,12 @@ export async function injectAutonomousCompletionAudit(args: {
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
     const prompt = `${AUTONOMOUS_COMPLETION_AUDIT_PROMPT}
 
-${buildWorkflowModeContext(ctx.directory, sessionID)}`
+${buildWorkflowModeContext({
+      directory: ctx.directory,
+      sessionID,
+      fallbackAutoModeLevel: "light",
+      fallbackInteractionMode: "batch",
+    })}`
 
     await ctx.client.session.promptAsync({
       path: { id: sessionID },
@@ -486,7 +526,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}`
 
     if (injectionState) {
       injectionState.inFlight = false
-      injectionState.lastInjectedAt = Date.now()
+      injectionState.lastInjectedAt = internalPromptAt
       injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }
@@ -587,6 +627,10 @@ export async function injectAutonomousBacklogExpansion(args: {
   const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
     log(`[${HOOK_NAME}] Injecting autonomous backlog expansion`, {
       sessionID,
       agent: agentName,
@@ -604,7 +648,12 @@ export async function injectAutonomousBacklogExpansion(args: {
     const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
     const prompt = `${AUTONOMOUS_BACKLOG_EXPANSION_PROMPT}
 
-${buildWorkflowModeContext(ctx.directory, sessionID)}
+${buildWorkflowModeContext({
+      directory: ctx.directory,
+      sessionID,
+      fallbackAutoModeLevel: "light",
+      fallbackInteractionMode: "batch",
+    })}
 
 [Current todo count: ${currentTodoCount}]
 [Current incomplete count: ${incompleteCount}]`
@@ -622,7 +671,7 @@ ${buildWorkflowModeContext(ctx.directory, sessionID)}
 
     if (injectionState) {
       injectionState.inFlight = false
-      injectionState.lastInjectedAt = Date.now()
+      injectionState.lastInjectedAt = internalPromptAt
       injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }
@@ -705,13 +754,22 @@ export async function injectAutonomousReviewRework(args: {
   const runtimeAgentName = toRuntimeAgentName(agentName)
 
   try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
     const findingsBlock = blockingFindings.length > 0
       ? blockingFindings.map((finding) => `- ${finding}`).join("\n")
       : "- reviewer rejected the work but did not provide structured blocking findings"
 
     const prompt = `${AUTONOMOUS_REVIEW_REWORK_PROMPT}
 
-${buildWorkflowModeContext(ctx.directory, sessionID)}
+${buildWorkflowModeContext({
+      directory: ctx.directory,
+      sessionID,
+      fallbackAutoModeLevel: "light",
+      fallbackInteractionMode: "batch",
+    })}
 
 [Next stage: ${nextStage.toUpperCase()}]
 [Blocking findings]
@@ -740,7 +798,7 @@ ${findingsBlock}`
 
     if (injectionState) {
       injectionState.inFlight = false
-      injectionState.lastInjectedAt = Date.now()
+      injectionState.lastInjectedAt = internalPromptAt
       injectionState.awaitingPostInjectionProgressCheck = true
       injectionState.consecutiveFailures = 0
     }

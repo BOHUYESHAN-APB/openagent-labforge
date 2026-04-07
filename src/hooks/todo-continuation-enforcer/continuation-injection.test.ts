@@ -9,6 +9,7 @@ describe("injectContinuation", () => {
     // given
     let capturedTools: Record<string, boolean> | undefined
     let capturedText: string | undefined
+    let capturedSynthetic: boolean | undefined
     const ctx = {
       directory: "/tmp/test",
       client: {
@@ -17,11 +18,12 @@ describe("injectContinuation", () => {
           promptAsync: async (input: {
             body: {
               tools?: Record<string, boolean>
-              parts?: Array<{ type: string; text: string }>
+              parts?: Array<{ type: string; text: string; synthetic?: boolean }>
             }
           }) => {
             capturedTools = input.body.tools
             capturedText = input.body.parts?.[0]?.text
+            capturedSynthetic = input.body.parts?.[0]?.synthetic
             return {}
           },
         },
@@ -46,5 +48,6 @@ describe("injectContinuation", () => {
     // then
     expect(capturedTools).toEqual({ question: false, bash: true })
     expect(capturedText).toContain(OMO_INTERNAL_INITIATOR_MARKER)
+    expect(capturedSynthetic).toBe(true)
   })
 })

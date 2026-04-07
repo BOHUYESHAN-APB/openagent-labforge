@@ -19,7 +19,9 @@ import {
   isSessionAutoModelRoutingEnabled,
 } from "../shared/session-model-state"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
+import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
+import { buildStageManagedPromptContext } from "./stage-managed-prompt"
 import {
   getSessionAgent,
   isAutonomousSessionAgent,
@@ -80,6 +82,15 @@ function hasExplicitAgentModelOverride(
 function isOpenCodeNativeLightweightAgent(agent: string | undefined): boolean {
   const agentKey = getAgentConfigKey(agent ?? "")
   return agentKey === "plan" || agentKey === "build"
+}
+
+function isBioAutonomousAgent(agent: string | undefined): boolean {
+  const agentKey = getAgentConfigKey(agent ?? "")
+  return agentKey === "bio-autopilot" || agentKey === "bio-orchestrator"
+}
+
+function isStageManagedAutonomousAgent(agent: string | undefined): boolean {
+  return isAutonomousSessionAgent(agent) || isBioAutonomousAgent(agent)
 }
 
 export function createChatMessageHandler(args: {
@@ -150,6 +161,8 @@ export function createChatMessageHandler(args: {
     const rawInputModelId = modelToString(rawInputModel)
     const activeAgent = input.agent ?? rememberedSessionAgent
     const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
+    const isForkedSessionLoad = isForkedSession(input.sessionID)
+    const isStageManagedAutonomousSession = isStageManagedAutonomousAgent(activeAgent)
     const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
@@ -218,6 +231,20 @@ export function createChatMessageHandler(args: {
       setUltraworkAutonomousSession(input.sessionID, true)
     }
 
+    const stageManagedContext = buildStageManagedPromptContext({
+      directory: ctx.directory,
+      sessionID: input.sessionID,
+      agent: activeAgent,
+    })
+    if (stageManagedContext) {
+      contextCollector.register(input.sessionID, {
+        id: "stage-managed-prompt",
+        source: "custom",
+        content: stageManagedContext,
+        priority: "high",
+      })
+    }
+
     if (shouldShowRecoveryModelToast && lockedModel && !recoveryModelToastSessions.has(input.sessionID)) {
       recoveryModelToastSessions.add(input.sessionID)
       log("[chat-message] Restored locked model after auto/empty input", {
@@ -247,14 +274,17 @@ export function createChatMessageHandler(args: {
     await hooks.stopContinuationGuard?.["chat.message"]?.(input)
     await hooks.backgroundNotificationHook?.["chat.message"]?.(input, output)
     await hooks.runtimeFallback?.["chat.message"]?.(input, output)
-    if (!isNativeLightweightAgent) {
+    if (!isNativeLightweightAgent && !isForkedSessionLoad && !isStageManagedAutonomousSession) {
       await hooks.keywordDetector?.["chat.message"]?.(input, output)
       await hooks.thinkMode?.["chat.message"]?.(input, output)
       await hooks.claudeCodeHooks?.["chat.message"]?.(input, output)
     } else {
-      log("[chat-message] Skipping heavy prompt injections for native lightweight agent", {
+      log("[chat-message] Skipping heavy prompt injections", {
         sessionID: input.sessionID,
         agent: activeAgent,
+        nativeLightweight: isNativeLightweightAgent,
+        forkedSession: isForkedSessionLoad,
+        stageManagedAutonomous: isStageManagedAutonomousSession,
       })
     }
     await hooks.autoSlashCommand?.["chat.message"]?.(input, output)

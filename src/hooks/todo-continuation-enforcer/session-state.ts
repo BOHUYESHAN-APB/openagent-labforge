@@ -1,4 +1,5 @@
 import type { SessionState, Todo } from "./types"
+import { getTodoSnapshot } from "./todo"
 
 type TimerHandle = number | { unref?: () => void }
 
@@ -35,32 +36,6 @@ export interface SessionStateStore {
   cleanup: (sessionID: string) => void
   cancelAllCountdowns: () => void
   shutdown: () => void
-}
-
-function getTodoSnapshot(todos: Todo[]): string {
-  const normalizedTodos = todos
-    .map((todo) => ({
-      id: todo.id ?? null,
-      content: todo.content,
-      priority: todo.priority,
-      status: todo.status,
-    }))
-    .sort((left, right) => {
-      const leftKey = left.id ?? `${left.content}:${left.priority}:${left.status}`
-      const rightKey = right.id ?? `${right.content}:${right.priority}:${right.status}`
-      if (leftKey !== rightKey) {
-        return leftKey.localeCompare(rightKey)
-      }
-      if (left.content !== right.content) {
-        return left.content.localeCompare(right.content)
-      }
-      if (left.priority !== right.priority) {
-        return left.priority.localeCompare(right.priority)
-      }
-      return left.status.localeCompare(right.status)
-    })
-
-  return JSON.stringify(normalizedTodos)
 }
 
 export function createSessionStateStore(): SessionStateStore {
@@ -117,6 +92,7 @@ export function createSessionStateStore(): SessionStateStore {
     incompleteCount: number,
     todos?: Todo[]
   ): ContinuationProgressUpdate {
+    const now = Date.now()
     const trackedSession = getTrackedSession(sessionID)
     const state = trackedSession.state
     const previousIncompleteCount = state.lastIncompleteCount
@@ -142,6 +118,10 @@ export function createSessionStateStore(): SessionStateStore {
     }
 
     if (previousIncompleteCount === undefined) {
+      if (currentTodoSnapshot !== undefined) {
+        state.lastTodoGraphTouchAt = state.lastTodoGraphTouchAt ?? now
+        state.lastTodoBaselineSnapshot = currentTodoSnapshot
+      }
       state.stagnationCount = 0
       return {
         previousIncompleteCount,
@@ -157,6 +137,11 @@ export function createSessionStateStore(): SessionStateStore {
       : "none"
 
     if (progressSource !== "none") {
+      state.lastTodoGraphTouchAt = now
+      if (currentTodoSnapshot !== undefined) {
+        state.lastTodoBaselineSnapshot = currentTodoSnapshot
+      }
+      state.suppressedTodoSnapshot = undefined
       state.stagnationCount = 0
       state.awaitingPostInjectionProgressCheck = false
       return {

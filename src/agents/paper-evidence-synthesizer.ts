@@ -1,7 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
-import { BIO_SKILL_GUIDANCE } from "./bio-skill-guidance"
+import { BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
   ENGINEERING_REVIEW_CAPABILITY,
@@ -68,7 +68,7 @@ Required output structure:
 - Confidence grading
 - Evidence gaps
 - Safe conclusion wording
-\n\n${BIO_SKILL_GUIDANCE}\n\n${ENGINEERING_REVIEW_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}`,
+\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_REVIEW_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}`,
   }
 }
 createPaperEvidenceSynthesizerAgent.mode = MODE

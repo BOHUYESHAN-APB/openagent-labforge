@@ -21,24 +21,25 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
+    expect(agent.prompt).toContain("every delegated task must name exact files or modules")
     expect(agent.prompt).toContain("Delegation packet:")
     expect(agent.prompt).toContain("Completion evidence:")
     expect(agent.prompt).toContain("default to product-grade output unless the user explicitly asks for a prototype")
     expect(agent.prompt).toContain("for frontend work, default to visual specialists plus UI verification skills")
+    expect(agent.prompt).toContain("backend or API work, load architecture-oriented skills")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
   })
 
-  test("wase inherits engineering capability blocks through sisyphus", () => {
+  test("wase keeps autonomous engineering guardrails in compact staged form", () => {
     const agent = createWaseAgent("openai/gpt-5.4")
 
-    expect(agent.prompt).toContain("<engineering_orchestration_capability>")
-    expect(agent.prompt).toContain("<engineering_execution_capability>")
+    expect(agent.prompt).toContain("<wase-role>")
     expect(agent.prompt).toContain("<wase-autonomous-mode>")
+    expect(agent.prompt).toContain("<wase-stage-management>")
     expect(agent.prompt).toContain("Autonomy quality bar:")
     expect(agent.prompt).toContain("Default todo size for substantial work is 5-15 concrete items")
-    expect(agent.prompt).toContain("do NOT stop to ask \"should I continue\"")
-    expect(agent.prompt).toContain("When the remaining backlog drops below 3 actionable items")
-    expect(agent.prompt).toContain("Never replace real follow-through with prose like \"next I would...\"")
+    expect(agent.prompt).toContain("if the runtime workflow state says `light + batch`, do not inflate the first wave")
+    expect(agent.prompt).toContain("Use session continuity when resuming delegated work")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
     expect(agent.prompt).toContain("delegate to `acceptance-reviewer`")
   })
@@ -47,10 +48,12 @@ describe("engineering capability layering", () => {
     const agent = createHephaestusAgent("openai/gpt-5.4")
 
     expect(agent.prompt).toContain("<engineering_execution_capability>")
-    expect(agent.prompt).toContain("do not grow central or high-churn modules casually")
-    expect(agent.prompt).toContain("update the relevant docs in the same change")
-    expect(agent.prompt).toContain("Frontend delivery standards:")
-    expect(agent.prompt).toContain("Backend and architecture standards:")
+    expect(agent.prompt).toContain("identify the narrow write surface before editing")
+    expect(agent.prompt).toContain("if the task changes config, CLI behavior, schemas, or user-facing flows")
+    expect(agent.prompt).toContain("Operate like a production engineer")
+    expect(agent.prompt).toContain("if the task says dashboard, page, app, console, workspace, or panel")
+    expect(agent.prompt).toContain("if the task is backend or API-heavy")
+    expect(agent.prompt).toContain("if the task is frontend or UI-heavy")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
     expect(agent.prompt).toContain("<hephaestus_execution_contract>")
   })
@@ -60,7 +63,19 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("Orchestrator responsibilities:")
+    expect(agent.prompt).toContain("keep session continuity explicit")
+    expect(agent.prompt).toContain("preserve a product-grade delivery bar across delegated tasks")
     expect(agent.prompt).toContain("<atlas_execution_audit>")
+  })
+
+  test("large engineering prompts stay below previous static prompt sizes", () => {
+    const sisyphus = createSisyphusAgent("openai/gpt-5.4")
+    const hephaestus = createHephaestusAgent("openai/gpt-5.4")
+    const atlas = createAtlasAgent({ model: "openai/gpt-5.4" })
+
+    expect(sisyphus.prompt.length).toBeLessThan(39000)
+    expect(hephaestus.prompt.length).toBeLessThan(38000)
+    expect(atlas.prompt.length).toBeLessThan(31000)
   })
 
   test("prometheus includes planning capability block", () => {
@@ -93,12 +108,12 @@ describe("engineering capability layering", () => {
   test("bio-orchestrator includes bio data and environment capability blocks", () => {
     const agent = createBioOrchestratorAgent("openai/gpt-5.4")
 
-    expect(agent.prompt).toContain("main bio entrypoints: `bio-orchestrator`, `bio-autopilot`, `bio-pipeline-operator`")
+    expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Runtime Guidance")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
-    expect(agent.prompt).toContain("<bio_engineering_execution_capability>")
-    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
-    expect(agent.prompt).toContain("use acceptance-reviewer for a final approve/reject outcome")
+    expect(agent.prompt).toContain("prefer a small first wave over a sprawling initial backlog")
+    expect(agent.prompt).toContain("runtime workflow state explicitly marks the session as heavy/continuous")
     expect(agent.prompt).toContain("private sequencing data")
   })
 
@@ -106,7 +121,8 @@ describe("engineering capability layering", () => {
     const agent = createBioAutopilotAgent("openai/gpt-5.4")
 
     expect(agent.prompt).toContain("<bio-autopilot-mode>")
-    expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("only escalate to a heavier multi-wave backlog after real progress or explicit heavy workflow state")
+    expect(agent.prompt).toContain("after a meaningful execution wave")
     expect(agent.prompt).toContain("use acceptance-reviewer for the final approve/reject decision")
     expect(agent.prompt).toContain("side validation")
   })
@@ -127,7 +143,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_planning_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
-    expect(agent.prompt).toContain("## Bio Skill Loading Protocol")
+    expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
   })
 
   test("bio-pipeline-operator includes execution, data request, and environment safety capability blocks", () => {
@@ -137,7 +153,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<bio_engineering_execution_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
-    expect(agent.prompt).toContain("## Bio Skill Loading Protocol")
+    expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
   })
 
   test("paper-evidence-synthesizer includes review and data request capability blocks", () => {
@@ -145,7 +161,7 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_review_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
-    expect(agent.prompt).toContain("## Bio Skill Loading Protocol")
+    expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
   })
 
   test("wet-lab-designer includes planning, data request, and environment safety capability blocks", () => {
@@ -155,6 +171,6 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_planning_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
-    expect(agent.prompt).toContain("## Bio Skill Loading Protocol")
+    expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
   })
 })

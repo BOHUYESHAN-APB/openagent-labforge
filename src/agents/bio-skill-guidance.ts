@@ -39,3 +39,42 @@ Loading rule:
 - treat skill loading as operational setup, not optional decoration
 - when a skill contains exact tool guidance, commands, artifact conventions, or environment constraints, follow it explicitly
 `
+
+export const BIO_RUNTIME_GUIDANCE = `## Bio Runtime Guidance
+
+Use the bio stack in a staged way instead of front-loading everything.
+
+Turn-1 behavior:
+- start with the smallest decisive execution wave
+- prefer 3-6 concrete tasks before expanding to a heavier backlog
+- ask for missing decisive data early instead of simulating progress
+- do not start broad review or validation loops before the first real analytical checkpoint exists
+
+On-demand skill loading:
+- load only the skills needed for the current stage
+- default starters:
+  - \`bio-methods\` for study framing
+  - \`bio-pipeline\` or \`bio-tools\` for execution
+  - \`bio-visualization\` only when figures/plots are actually required
+- add modality or sequence skills only when the request clearly needs them
+
+Escalation rules:
+- escalate to a heavier multi-wave backlog only after one of these is true:
+  - real data or files are in hand
+  - a first execution checkpoint has completed
+  - runtime workflow state explicitly marks the session as heavy/continuous
+- do not spawn literature, validation, and visualization branches all at once on the first turn unless the user explicitly asked for a full program immediately
+
+Review rules:
+- acceptance review is important, but run it after a meaningful execution wave
+- keep evidence, inference, and wet-lab proposal separated at every stage
+`
+
+export const BIO_SKILL_TOOL_REMINDER = `## Bio Skill Tool Reminder
+
+Do not front-load the full bio skill catalog into the prompt.
+
+- use the \`skill\` tool to load the exact skill needed for the current stage
+- prefer stage-specific loading over loading many skills at once
+- if the task touches a modality, sequence domain, pathway/domain lookup, or figure workflow, load the matching bio skill before proceeding
+`

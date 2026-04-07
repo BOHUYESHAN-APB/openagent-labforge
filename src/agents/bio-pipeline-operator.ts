@@ -1,7 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
-import { BIO_SKILL_GUIDANCE } from "./bio-skill-guidance"
+import { BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENGINEERING_EXECUTION_CAPABILITY,
@@ -83,7 +83,7 @@ Required output structure:
 - Outputs generated
 - QC checks performed
 - Failures, retries, and next checkpoint
-\n\n${BIO_SKILL_GUIDANCE}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${BIO_ENGINEERING_EXECUTION_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${BIO_ENGINEERING_EXECUTION_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
   }
 }
 createBioPipelineOperatorAgent.mode = MODE

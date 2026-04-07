@@ -43,7 +43,9 @@ import { resolveLatestMessageInfo } from "./resolve-message-info"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
 import { shouldStopForStagnation } from "./stagnation-detection"
+import { shouldSuppressStaleTodoSnapshot } from "./stale-todo-guard"
 import { getIncompleteCount } from "./todo"
+import { getTodoSnapshot } from "./todo"
 import { injectContinuationReplan } from "./continuation-injection"
 import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
@@ -64,6 +66,22 @@ function extractLastRealUserAgent(messages: Array<{ info?: MessageInfo; parts?: 
     }
 
     return message.info?.agent
+  }
+
+  return undefined
+}
+
+function extractLatestSessionAgent(
+  messages: Array<{ info?: MessageInfo; parts?: Array<{ type?: string; text?: string }> }>
+): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const agent = messages[index].info?.agent
+    if (agent === "compaction") {
+      continue
+    }
+    if (typeof agent === "string" && agent.length > 0) {
+      return agent
+    }
   }
 
   return undefined
@@ -97,6 +115,7 @@ export async function handleSessionIdle(args: {
   let isAutonomous =
     isUltraworkAutonomousSession(sessionID) ||
     isAutonomousSessionAgent(rememberedSessionAgent)
+  let lastRealUserAgent: string | undefined
   const mainSessionID = getMainSessionID()
   const isMainSession = mainSessionID === sessionID
   const activeBoulderState = readBoulderState(ctx.directory)
@@ -141,20 +160,14 @@ export async function handleSessionIdle(args: {
       return
     }
     state.hasContinuationIntent = hasContinuationIntent(messages)
-
-    if (!isAutonomous) {
-      for (let index = messages.length - 1; index >= 0; index--) {
-        const agent = messages[index].info?.agent
-        if (typeof agent === "string" && isAutonomousSessionAgent(agent)) {
-          updateSessionAgent(sessionID, agent)
-          setUltraworkAutonomousSession(sessionID, true)
-          isAutonomous = true
-          break
-        }
-      }
+    const latestSessionAgent = extractLatestSessionAgent(messages)
+    if (!isAutonomous && latestSessionAgent && isAutonomousSessionAgent(latestSessionAgent)) {
+      updateSessionAgent(sessionID, latestSessionAgent)
+      setUltraworkAutonomousSession(sessionID, true)
+      isAutonomous = true
     }
 
-    const lastRealUserAgent = extractLastRealUserAgent(messages)
+    lastRealUserAgent = extractLastRealUserAgent(messages)
     if (lastRealUserAgent && !isAutonomousSessionAgent(lastRealUserAgent)) {
       if (isUltraworkAutonomousSession(sessionID)) {
         clearUltraworkAutonomousSession(sessionID)
@@ -227,14 +240,43 @@ export async function handleSessionIdle(args: {
   }
 
   const incompleteCount = getIncompleteCount(todos)
+  const currentTodoSnapshot = getTodoSnapshot(todos)
+  if (
+    state.suppressedTodoSnapshot &&
+    state.suppressedTodoSnapshot !== currentTodoSnapshot
+  ) {
+    state.suppressedTodoSnapshot = undefined
+  }
   const runtimeState = readRuntimeWorkflowState(ctx.directory, sessionID)
-  const autoModeLevel = runtimeState?.auto_mode_level ?? (isAutonomous ? "heavy" : undefined)
-  const interactionMode = runtimeState?.interaction_mode ?? (isAutonomous ? "continuous" : undefined)
+  const autoModeLevel = runtimeState?.auto_mode_level ?? (isAutonomous ? "light" : undefined)
+  const interactionMode = runtimeState?.interaction_mode ?? (isAutonomous ? "batch" : undefined)
   const isHeavyAutonomous = isAutonomous && autoModeLevel !== "light"
   const shouldAutoContinueAcrossWaves = isAutonomous && interactionMode !== "batch"
   const completionAuditLimit = isAutonomous
     ? (isHeavyAutonomous ? 2 : 1)
     : 0
+
+  const staleTodoGuard = shouldSuppressStaleTodoSnapshot({
+    state,
+    currentTodoSnapshot,
+    hasContinuationIntent: state.hasContinuationIntent === true,
+    hasTrackedRuntimeWorkflow: isTrackedBoulderSession || runtimeState !== null,
+    isMainSession,
+    isAutonomous,
+    lastRealUserAgent,
+  })
+  if (staleTodoGuard.suppress) {
+    state.suppressedTodoSnapshot = currentTodoSnapshot
+    sessionStateStore.resetContinuationProgress(sessionID)
+    log(`[${HOOK_NAME}] Skipped: stale todo snapshot suppressed`, {
+      sessionID,
+      reason: staleTodoGuard.reason,
+      incompleteCount,
+      totalTodos: todos.length,
+    })
+    return
+  }
+
   if (incompleteCount === 0) {
     if (
       isAutonomous &&

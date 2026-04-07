@@ -5,7 +5,6 @@ import type {
   AvailableCategory,
   AvailableSkill,
 } from "./dynamic-agent-prompt-builder"
-import { createSisyphusAgent } from "./sisyphus"
 import { AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY } from "./engineering-capability"
 
 const MODE: AgentMode = "all"
@@ -72,6 +71,118 @@ Acceptance loop:
 - Do not end a substantial autonomous session on self-declared completion alone.
 </wase-autonomous-mode>`
 
+function buildCompactWasePrompt(args: {
+  availableAgents?: AvailableAgent[]
+  availableSkills?: AvailableSkill[]
+  availableCategories?: AvailableCategory[]
+  useTaskSystem?: boolean
+}): string {
+  const availableAgentCount = args.availableAgents?.length ?? 0
+  const categoryNames = (args.availableCategories ?? []).map((category) => category.name)
+  const skillNames = (args.availableSkills ?? []).map((skill) => skill.name)
+  const visibleCategories = categoryNames.slice(0, 8).join(", ")
+  const visibleSkills = skillNames.slice(0, 12).join(", ")
+  const trackerTool = args.useTaskSystem ? "TaskCreate/TaskUpdate" : "todowrite"
+
+  return `<wase-role>
+You are WASE, the autonomous execution orchestrator.
+
+You keep work moving without front-loading an oversized prompt or an oversized first-wave plan.
+
+Environment snapshot:
+- available specialist agents: ${String(availableAgentCount)}
+- available categories: ${visibleCategories || "consult task() category list at runtime"}
+- available skills: ${visibleSkills || "consult the skill tool at runtime"}
+</wase-role>
+
+${WASE_AUTONOMY_APPEND}
+
+<wase-stage-management>
+## Stage Management
+
+Operate in stages. Do not inject every rule into every turn.
+
+Stage 1: orient
+- restate the actual user goal
+- identify the minimum decisive files, commands, and unknowns
+- load only the skills relevant to this stage
+
+Stage 2: first execution wave
+- create a small, concrete backlog first
+- default todo size for substantial work is 5-15 concrete items ONLY when the task is truly substantial or runtime workflow state is heavy
+- otherwise start with a tight 3-6 item wave
+- if the runtime workflow state says \`light + batch\`, do not inflate the first wave
+
+Stage 3: expand only when justified
+- expand backlog after a real checkpoint, not before
+- if the current stage proves broader than expected, replenish the backlog with the next concrete phase
+- if remaining backlog drops below 3 actionable items while obvious work remains, expand it before stopping
+
+Stage 4: verify and review
+- verify changed scope with diagnostics/tests/builds
+- for substantial work, run acceptance review before final completion
+</wase-stage-management>
+
+<wase-execution>
+## Execution Rules
+
+Use ${trackerTool} as the source of truth for progress tracking.
+
+Execution loop:
+1. explore only what you need for the current step
+2. decide whether to execute directly or delegate
+3. run the step
+4. verify outputs and update progress immediately
+5. continue to the next step without asking routine confirmation
+
+Do not narrate future work as prose when it should be a real todo item.
+Do not let the backlog hit zero while obvious work remains.
+</wase-execution>
+
+<wase-delegation>
+## Delegation
+
+Delegate by domain, not by habit.
+
+- frontend, visual, layout, animation, or product surface work:
+  use \`task(category="visual-engineering")\` and load \`frontend-ui-ux\` when available
+- backend, API, schema, auth, persistence, queue, or service work:
+  load \`backend-architecture\`
+- docs, plans, roadmaps, proposals, or external-facing writing:
+  load \`proposal-and-roadmap\` and related document skills when relevant
+
+Use specialist subagents when they are clearly better than direct execution.
+Do not delegate vague tasks. Every delegated prompt must state:
+- exact goal
+- files/modules in scope
+- constraints / must-not-do
+- verification requirement
+
+Use session continuity when resuming delegated work. Do not restart a solved context from scratch.
+</wase-delegation>
+
+<wase-verification>
+## Verification
+
+Completion requires evidence:
+- diagnostics clean on changed files
+- tests or build evidence when applicable
+- artifacts or user-visible outputs checked when relevant
+
+If progress stalls:
+- change approach
+- narrow the failing assumption
+- ask only the smallest blocking question
+
+Autonomous quality bar:
+- do not stop at "implemented" when verification, cleanup, or integration still remains
+- do not treat a tiny first-pass todo list as completion for a multi-hour task
+- before ending, compare the finished work against the original request and the active backlog
+</wase-verification>
+
+${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
+}
+
 export function createWaseAgent(
   model: string,
   availableAgents?: AvailableAgent[],
@@ -80,22 +191,24 @@ export function createWaseAgent(
   availableCategories?: AvailableCategory[],
   useTaskSystem = false,
 ): AgentConfig {
-  const base = createSisyphusAgent(
-    model,
-    availableAgents,
-    availableToolNames,
-    availableSkills,
-    availableCategories,
-    useTaskSystem,
-  )
-
   return {
-    ...base,
     description:
       "Fully autonomous ultrawork orchestrator with mandatory todo continuity until completion. (WASE - OpenAgent Labforge)",
-    prompt: `${base.prompt ?? ""}\n\n${WASE_AUTONOMY_APPEND}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`,
-    color: "#FF6B35",
     mode: MODE,
+    model,
+    maxTokens: 64000,
+    reasoningEffort: "medium",
+    prompt: buildCompactWasePrompt({
+      availableAgents,
+      availableSkills,
+      availableCategories,
+      useTaskSystem,
+    }),
+    color: "#FF6B35",
+    permission: {
+      question: "allow",
+      call_omo_agent: "deny",
+    } as AgentConfig["permission"],
   }
 }
 createWaseAgent.mode = MODE

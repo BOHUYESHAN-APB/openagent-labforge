@@ -214,6 +214,7 @@ describe("AGENT_MODEL_REQUIREMENTS", () => {
       "tech-scout",
       "article-writer",
       "scientific-writer",
+      "bio-autopilot",
       "bio-orchestrator",
       "multimodal-looker",
       "bio-methodologist",

@@ -423,10 +423,24 @@ describe("todo-continuation-enforcer", () => {
   test("should force autonomous backlog expansion when todo count is below five", async () => {
     // given
     const sessionID = "main-autonomous-shallow-backlog"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-heavy-mode-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "deep-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Deep Plan\n\n- [ ] Task 1\n- [ ] Task 2\n", "utf-8")
     setMainSession(sessionID)
     setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
 
-    const mockInput = createMockPluginInput()
+    const mockInput = createMockPluginInput(tempDir)
     mockInput.client.session.todo = async () => ({ data: [
       { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
       { id: "2", content: "Task 2", status: "pending", priority: "high" },
@@ -444,6 +458,7 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("expand it to 5-15 concrete todos")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("light autonomous mode should continue the current batch instead of forcing backlog expansion", async () => {
@@ -492,6 +507,31 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).not.toContain("AUTONOMOUS BACKLOG EXPANSION")
 
     rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test("autonomous sessions without runtime workflow state default to light batch behavior", async () => {
+    const sessionID = "main-autonomous-default-light"
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
+      { id: "2", content: "Task 2", status: "pending", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(2500, true)
+
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS ULTRAWORK CONTINUATION")
+    expect(promptCalls[0].text).toContain("[Auto mode: light]")
+    expect(promptCalls[0].text).toContain("[Interaction mode: batch]")
+    expect(promptCalls[0].text).not.toContain("AUTONOMOUS BACKLOG EXPANSION")
   })
 
   test("should trigger autonomous completion audit when resumed wase session promises next steps in Chinese", async () => {
@@ -1189,11 +1229,25 @@ describe("todo-continuation-enforcer", () => {
   test("wase agent session should use autonomous backlog expansion for shallow backlogs", async () => {
     //#given
     const sessionID = "main-wase-session"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-wase-heavy-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "wase-heavy.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Heavy Wase Plan\n\n- [ ] Task 1\n- [ ] Task 2\n", "utf-8")
     setMainSession(sessionID)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
     mockMessages = [
       { info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "anthropic", modelID: "claude-opus-4-6" } } },
     ]
-    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(tempDir), {})
 
     //#when
     await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
@@ -1204,16 +1258,31 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].agent).toBe(getAgentDisplayName("wase"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("bio-autopilot session restored from transcript should use autonomous backlog expansion for shallow backlogs", async () => {
     //#given
     const sessionID = "main-bio-autopilot-session"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-bio-heavy-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "bio-heavy.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Heavy Bio Plan\n\n- [ ] Task 1\n- [ ] Task 2\n", "utf-8")
     setMainSession(sessionID)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
     mockMessages = [
       { info: { id: "msg-1", role: "assistant", agent: "bio-autopilot", model: { providerID: "google", modelID: "gemini-2.5-pro" } } },
     ]
-    const hook = createTodoContinuationEnforcer(createMockPluginInput(), {})
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(tempDir), {})
 
     //#when
     await hook.handler({ event: { type: "session.idle", properties: { sessionID } } })
@@ -1224,6 +1293,7 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].agent).toBe(getAgentDisplayName("bio-autopilot"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("should skip idle handling while injection is in flight", async () => {

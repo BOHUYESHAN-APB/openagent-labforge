@@ -11,6 +11,10 @@ import {
   updateSessionAgent,
 } from "../features/claude-code-session-state";
 import {
+  clearForkedSession,
+  markForkedSession,
+} from "../shared/forked-session-state";
+import {
   clearPendingModelFallback,
   clearSessionFallbackChain,
   setPendingModelFallback,
@@ -227,6 +231,7 @@ export function createEventHandler(args: {
         setMainSession(sessionInfo?.id);
       }
 
+      markForkedSession(sessionInfo)
       firstMessageVariantGate.markSessionCreated(sessionInfo);
 
       await managers.tmuxSessionManager.onSessionCreated(
@@ -254,6 +259,7 @@ export function createEventHandler(args: {
         clearSessionFallbackChain(sessionInfo.id);
         resetMessageCursor(sessionInfo.id);
         firstMessageVariantGate.clear(sessionInfo.id);
+        clearForkedSession(sessionInfo.id);
         clearSessionModel(sessionInfo.id);
         clearSessionModelLock(sessionInfo.id);
         syncSubagentSessions.delete(sessionInfo.id);

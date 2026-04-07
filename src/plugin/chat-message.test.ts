@@ -12,6 +12,10 @@ import {
   setSessionAutoModelRouting,
   setSessionModel,
 } from "../shared/session-model-state"
+import {
+  markForkedSession,
+  resetForkedSessionsForTesting,
+} from "../shared/forked-session-state"
 
 type ChatMessagePart = { type: string; text?: string; [key: string]: unknown }
 type ChatMessageHandlerOutput = { message: Record<string, unknown>; parts: ChatMessagePart[] }
@@ -81,6 +85,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     clearSessionModelLock("test-session")
     clearSessionModel("test-session")
     _resetForTesting()
+    resetForkedSessionsForTesting()
   })
 
   test("first message: does not override TUI variant when user has no selection", async () => {
@@ -262,6 +267,89 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     }
     const handler = createChatMessageHandler(args)
     const input = createMockInput("plan", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(calledHooks).toEqual(["autoSlashCommand"])
+  })
+
+  test("skips heavy prompt injections for forked autonomous session", async () => {
+    //#given
+    const calledHooks: string[] = []
+    markForkedSession({ id: "test-session", parentID: "parent-session" })
+    const args = createMockHandlerArgs()
+    args.hooks.keywordDetector = {
+      "chat.message": async () => { calledHooks.push("keywordDetector") },
+    }
+    args.hooks.thinkMode = {
+      "chat.message": async () => { calledHooks.push("thinkMode") },
+    }
+    args.hooks.claudeCodeHooks = {
+      "chat.message": async () => { calledHooks.push("claudeCodeHooks") },
+    }
+    args.hooks.autoSlashCommand = {
+      "chat.message": async () => { calledHooks.push("autoSlashCommand") },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("bio-autopilot", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(calledHooks).toEqual(["autoSlashCommand"])
+  })
+
+  test("skips heavy prompt injections for fork-titled session even without parent id", async () => {
+    //#given
+    const calledHooks: string[] = []
+    markForkedSession({ id: "test-session", title: "My Session (fork #2)" })
+    const args = createMockHandlerArgs()
+    args.hooks.keywordDetector = {
+      "chat.message": async () => { calledHooks.push("keywordDetector") },
+    }
+    args.hooks.thinkMode = {
+      "chat.message": async () => { calledHooks.push("thinkMode") },
+    }
+    args.hooks.claudeCodeHooks = {
+      "chat.message": async () => { calledHooks.push("claudeCodeHooks") },
+    }
+    args.hooks.autoSlashCommand = {
+      "chat.message": async () => { calledHooks.push("autoSlashCommand") },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("oracle", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+
+    //#when
+    await handler(input, output)
+
+    //#then
+    expect(calledHooks).toEqual(["autoSlashCommand"])
+  })
+
+  test("skips heavy prompt injections for wase autonomous session", async () => {
+    //#given
+    const calledHooks: string[] = []
+    const args = createMockHandlerArgs()
+    args.hooks.keywordDetector = {
+      "chat.message": async () => { calledHooks.push("keywordDetector") },
+    }
+    args.hooks.thinkMode = {
+      "chat.message": async () => { calledHooks.push("thinkMode") },
+    }
+    args.hooks.claudeCodeHooks = {
+      "chat.message": async () => { calledHooks.push("claudeCodeHooks") },
+    }
+    args.hooks.autoSlashCommand = {
+      "chat.message": async () => { calledHooks.push("autoSlashCommand") },
+    }
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "openai", modelID: "gpt-5.4" })
     const output = createMockOutput()
 
     //#when

@@ -1,31 +1,7 @@
 import { describe, expect, it, mock } from "bun:test"
+import { createCompactingHandler } from "./plugin/compacting-handler"
 
 describe("experimental.session.compacting handler", () => {
-  function createCompactingHandler(hooks: {
-    compactionTodoPreserver?: { capture: (sessionID: string) => Promise<void> }
-    claudeCodeHooks?: {
-      "experimental.session.compacting"?: (
-        input: { sessionID: string },
-        output: { context: string[] },
-      ) => Promise<void>
-    }
-    compactionContextInjector?: (sessionID: string) => string
-  }) {
-    return async (
-      _input: { sessionID: string },
-      output: { context: string[] },
-    ): Promise<void> => {
-      await hooks.compactionTodoPreserver?.capture(_input.sessionID)
-      await hooks.claudeCodeHooks?.["experimental.session.compacting"]?.(
-        _input,
-        output,
-      )
-      if (hooks.compactionContextInjector) {
-        output.context.push(hooks.compactionContextInjector(_input.sessionID))
-      }
-    }
-  }
-
   //#given all three hooks are present
   //#when compacting handler is invoked
   //#then all hooks are called in order: capture → PreCompact → contextInjector
@@ -111,6 +87,39 @@ describe("experimental.session.compacting handler", () => {
 
     expect(preCompactMock).toHaveBeenCalled()
     expect(output.context).toEqual([])
+  })
+
+  it("continues when precompact hook times out", async () => {
+    const handler = createCompactingHandler(
+      {
+        claudeCodeHooks: {
+          "experimental.session.compacting": async () =>
+            await new Promise(() => {}),
+        },
+        compactionContextInjector: (sessionID: string) => `context-for-${sessionID}`,
+      },
+      { preCompactTimeoutMs: 10 },
+    )
+
+    const output = { context: [] as string[] }
+    await handler({ sessionID: "ses_timeout" }, output)
+
+    expect(output.context).toEqual(["context-for-ses_timeout"])
+  })
+
+  it("truncates oversized injected context", async () => {
+    const handler = createCompactingHandler(
+      {
+        compactionContextInjector: () => "x".repeat(20),
+      },
+      { maxInjectedContextChars: 10 },
+    )
+
+    const output = { context: [] as string[] }
+    await handler({ sessionID: "ses_truncate" }, output)
+
+    expect(output.context).toHaveLength(1)
+    expect(output.context[0]).toContain("[compaction-context truncated]")
   })
 })
 

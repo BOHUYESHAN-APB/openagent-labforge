@@ -89,12 +89,16 @@ describe("unstable-agent-babysitter hook", () => {
 
     // #then
     expect(promptCalls.length).toBe(1)
-    const payload = promptCalls[0].input as { body?: { parts?: Array<{ text?: string }> } }
-    const text = payload.body?.parts?.[0]?.text ?? ""
+    const payload = promptCalls[0].input as {
+      body?: { parts?: Array<{ text?: string; synthetic?: boolean }> }
+    }
+    const firstPart = payload.body?.parts?.[0]
+    const text = firstPart?.text ?? ""
     expect(text).toContain("background_output")
     expect(text).toContain("background_cancel")
     expect(text).toContain("deep thought")
     expect(text).toContain(OMO_INTERNAL_INITIATOR_MARKER)
+    expect(firstPart?.synthetic).toBe(true)
   })
 
   test("fires reminder for hung minimax task", async () => {
@@ -125,12 +129,16 @@ describe("unstable-agent-babysitter hook", () => {
 
     // #then
     expect(promptCalls.length).toBe(1)
-    const payload = promptCalls[0].input as { body?: { parts?: Array<{ text?: string }> } }
-    const text = payload.body?.parts?.[0]?.text ?? ""
+    const payload = promptCalls[0].input as {
+      body?: { parts?: Array<{ text?: string; synthetic?: boolean }> }
+    }
+    const firstPart = payload.body?.parts?.[0]
+    const text = firstPart?.text ?? ""
     expect(text).toContain("background_output")
     expect(text).toContain("background_cancel")
     expect(text).toContain("minimax thought")
     expect(text).toContain(OMO_INTERNAL_INITIATOR_MARKER)
+    expect(firstPart?.synthetic).toBe(true)
   })
 
   test("does not remind stable model tasks", async () => {

@@ -46,7 +46,8 @@ describe("session-recovery resume", () => {
     expect(ok).toBe(true)
     expect(promptBody?.tools).toEqual({ question: false, bash: true })
     expect(Array.isArray(promptBody?.parts)).toBe(true)
-    const firstPart = (promptBody?.parts as Array<{ text?: string }>)?.[0]
+    const firstPart = (promptBody?.parts as Array<{ text?: string; synthetic?: boolean }>)?.[0]
     expect(firstPart?.text).toContain(OMO_INTERNAL_INITIATOR_MARKER)
+    expect(firstPart?.synthetic).toBe(true)
   })
 })
