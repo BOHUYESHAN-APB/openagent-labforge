@@ -197,6 +197,9 @@ describe("checkpoint command templates", () => {
     expect(CHECKPOINT_TEMPLATE).toContain("latest.meta.json")
     expect(CHECKPOINT_TEMPLATE).toContain("by-session/$SESSION_ID.md")
     expect(CHECKPOINT_TEMPLATE).toContain("CHECKPOINT CONTEXT")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"status\": \"pending\"")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"consumed_by_session_id\": null")
+    expect(CHECKPOINT_TEMPLATE).toContain("CARRIED-FORWARD MISSION")
   })
 
   test("checkpoint template instructs user to continue from a new session", () => {
@@ -208,5 +211,8 @@ describe("checkpoint command templates", () => {
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoints/latest.md")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("by-session/<session-id>.md")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("rebuild a fresh todo/task list")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("status from `pending` to `consumed`")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("consumed_by_session_id")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("CARRIED-FORWARD MISSION")
   })
 })

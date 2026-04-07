@@ -28,6 +28,11 @@ If the user passes an argument, treat it as:
 
 If no checkpoint file exists, say that clearly and stop.
 
+After resolving the source, if latest.meta.json exists:
+- update its status from \`pending\` to \`consumed\`
+- set \`consumed_by_session_id\` to \`$SESSION_ID\`
+- do this only after you actually loaded the checkpoint successfully
+
 ---
 
 # PHASE 1: LOAD MINIMUM CONTINUATION CONTEXT
@@ -45,6 +50,7 @@ Treat the checkpoint as the primary source of truth for continuation.
 # PHASE 2: REBUILD EXECUTION STATE
 
 After reading the checkpoint:
+- restate the carried-forward mission
 - restate the carried-forward goal
 - restate the current state
 - rebuild a fresh todo/task list for this session from the checkpoint's pending tasks
@@ -66,6 +72,7 @@ Checkpoint loaded from: <path>
 \`\`\`
 
 Then provide:
+- CARRIED-FORWARD MISSION
 - GOAL CARRIED FORWARD
 - CURRENT STATE
 - NEXT EXECUTION WAVE

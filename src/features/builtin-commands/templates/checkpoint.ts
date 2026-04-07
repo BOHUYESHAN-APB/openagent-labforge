@@ -54,23 +54,29 @@ Create these repo-local files:
 Use workspace-relative paths. Create parent directories if needed.
 
 The metadata JSON MUST include:
+- handoff_mission
 - source_session_id
 - created_at
 - goal
 - cwd
 - key_files
 - resume_hint
+- status
+- consumed_by_session_id
 
 Use this exact metadata shape:
 
 \`\`\`json
 {
+  "handoff_mission": "<1-2 sentence durable mission carried across sessions>",
   "source_session_id": "$SESSION_ID",
   "created_at": "$TIMESTAMP",
   "goal": "<one-sentence goal>",
   "cwd": "<current workspace-relative or absolute cwd>",
   "key_files": ["path/one", "path/two"],
-  "resume_hint": "Continue from the checkpoint above. <next task>"
+  "resume_hint": "Continue from the checkpoint above. <next task>",
+  "status": "pending",
+  "consumed_by_session_id": null
 }
 \`\`\`
 
@@ -97,6 +103,10 @@ GOAL
 ----
 [One short paragraph describing what the next session should accomplish]
 
+CARRIED-FORWARD MISSION
+-----------------------
+[1-2 sentences describing the longer-running mission that survives this session boundary]
+
 CHECKPOINT REACHED
 ------------------
 - [What milestone was completed]
@@ -121,6 +131,8 @@ PENDING TASKS
 
 KEY FILES
 ---------
+- Put the primary business/research/product files first.
+- Put checkpoint bookkeeping files last if you include them at all.
 - [path] - [why it matters]
 - [path] - [why it matters]
 (Maximum 12 files)
