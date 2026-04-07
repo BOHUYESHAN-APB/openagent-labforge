@@ -494,6 +494,39 @@ Research the implementation details.
     expect(textPart!.text).toContain("<system-reminder>")
   })
 
+  test("should skip keyword injection for slash command templates", async () => {
+    const collector = new ContextCollector()
+    const hook = createKeywordDetectorHook(createMockPluginInput(), collector)
+    const sessionID = "command-template-session"
+    const original = `<command-instruction>
+# Checkpoint Command
+</command-instruction>
+
+Analyze:
+- original user goal
+- what was completed
+
+<session-context>
+Session ID: test
+</session-context>`
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{
+        type: "text",
+        text: original,
+      }],
+    }
+
+    await hook["chat.message"]({ sessionID }, output)
+
+    const textPart = output.parts.find(p => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect(textPart!.text).toBe(original)
+    expect(textPart!.text).not.toContain("[analyze-mode]")
+    const skipLog = logCalls.find(c => c.msg.includes("Skipping command template message"))
+    expect(skipLog).toBeDefined()
+  })
+
   test("should detect keywords in user text even when system-reminder is present", async () => {
     // given - message contains both system-reminder and user search keyword
     const collector = new ContextCollector()

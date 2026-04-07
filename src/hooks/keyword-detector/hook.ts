@@ -43,6 +43,11 @@ export function createKeywordDetectorHook(
         return
       }
 
+      if (promptText.includes("<command-instruction>")) {
+        log(`[keyword-detector] Skipping command template message`, { sessionID: input.sessionID })
+        return
+      }
+
       const currentAgent = getSessionAgent(input.sessionID) ?? input.agent
 
       // Remove system-reminder content to prevent automated system messages from triggering mode keywords
