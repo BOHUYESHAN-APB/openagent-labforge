@@ -7,6 +7,8 @@ import { STOP_CONTINUATION_TEMPLATE } from "./templates/stop-continuation"
 import { REFACTOR_TEMPLATE } from "./templates/refactor"
 import { START_WORK_TEMPLATE } from "./templates/start-work"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
+import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
@@ -27,6 +29,38 @@ function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
 ): Record<BuiltinCommandName, Omit<CommandDefinition, "name">> {
   return {
+  checkpoint: {
+    description: "(builtin) Create a repo-local checkpoint for continuing work in a fresh session",
+    template: `<command-instruction>
+${CHECKPOINT_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+    argumentHint: "[goal]",
+  },
+  "checkpoint-resume": {
+    description: "(builtin) Resume work from the latest or specified repo-local checkpoint",
+    template: `<command-instruction>
+${CHECKPOINT_RESUME_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+    argumentHint: "[latest|session-id|checkpoint-path]",
+  },
   "init-deep": {
     description: "(builtin) Initialize hierarchical AGENTS.md knowledge base",
     template: `<command-instruction>

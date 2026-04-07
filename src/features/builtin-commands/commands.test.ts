@@ -1,6 +1,8 @@
 import { beforeEach, describe, test, expect } from "bun:test"
 import { loadBuiltinCommands } from "./commands"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
+import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
@@ -20,6 +22,8 @@ describe("loadBuiltinCommands", () => {
     const commands = loadBuiltinCommands(disabledCommands)
 
     //#then
+    expect(commands.checkpoint).toBeDefined()
+    expect(commands["checkpoint-resume"]).toBeDefined()
     expect(commands.handoff).toBeDefined()
     expect(commands.handoff.name).toBe("handoff")
     expect(commands["todo-clear"]).toBeDefined()
@@ -68,6 +72,18 @@ describe("loadBuiltinCommands", () => {
 
     //#then
     expect(commands.handoff.description).toContain("context summary")
+  })
+
+  test("should include checkpoint commands with template content", () => {
+    const commands = loadBuiltinCommands()
+
+    expect(commands.checkpoint).toBeDefined()
+    expect(commands["checkpoint-resume"]).toBeDefined()
+    expect(commands.checkpoint.template).toContain(CHECKPOINT_TEMPLATE)
+    expect(commands["checkpoint-resume"].template).toContain(CHECKPOINT_RESUME_TEMPLATE)
+    expect(commands.checkpoint.template).toContain("$SESSION_ID")
+    expect(commands.checkpoint.template).toContain("$TIMESTAMP")
+    expect(commands["checkpoint-resume"].template).toContain("$ARGUMENTS")
   })
 
   test("should include session cleanup commands", () => {
@@ -172,5 +188,25 @@ describe("HANDOFF_TEMPLATE", () => {
     //#when / #then
     const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}\u{24C2}-\u{1F251}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u
     expect(emojiRegex.test(HANDOFF_TEMPLATE)).toBe(false)
+  })
+})
+
+describe("checkpoint command templates", () => {
+  test("checkpoint template writes repo-local checkpoint files", () => {
+    expect(CHECKPOINT_TEMPLATE).toContain(".opencode/openagent-labforge/checkpoints/latest.md")
+    expect(CHECKPOINT_TEMPLATE).toContain("latest.meta.json")
+    expect(CHECKPOINT_TEMPLATE).toContain("by-session/$SESSION_ID.md")
+    expect(CHECKPOINT_TEMPLATE).toContain("CHECKPOINT CONTEXT")
+  })
+
+  test("checkpoint template instructs user to continue from a new session", () => {
+    expect(CHECKPOINT_TEMPLATE).toContain("fresh session")
+    expect(CHECKPOINT_TEMPLATE).toContain("Continue from checkpoint file")
+  })
+
+  test("checkpoint resume template loads latest or session-scoped checkpoint", () => {
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoints/latest.md")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("by-session/<session-id>.md")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("rebuild a fresh todo/task list")
   })
 })

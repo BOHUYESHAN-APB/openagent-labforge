@@ -184,6 +184,32 @@ Practical intent:
 This matters because old todo/workflow state can otherwise leak into later
 conversations and make semi-automatic sessions feel heavy or misdirected.
 
+### Checkpoint handoff commands
+
+The fork now also includes repo-local checkpoint commands for long-running work
+that should continue in a fresh session instead of stretching one chat
+indefinitely.
+
+Current checkpoint commands:
+
+- `/handoff`
+- `/checkpoint`
+- `/checkpoint-resume`
+
+Practical intent:
+
+- `/handoff` creates an inline continuation summary for manual copy/paste into a
+  new session
+- `/checkpoint` writes a repo-local checkpoint under
+  `.opencode/openagent-labforge/checkpoints/` so the next session can resume
+  from file instead of old chat history
+- `/checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
+  next execution wave in the current session
+
+This is the plugin-side fallback for older or unstable OpenCode desktop builds:
+it keeps cross-session continuation usable even when the upstream UI does not
+yet provide a first-class checkpoint flow.
+
 ### Specialist agents
 
 - `explore`: local codebase discovery

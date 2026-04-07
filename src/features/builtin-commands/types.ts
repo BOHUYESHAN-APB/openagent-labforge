@@ -1,6 +1,8 @@
 import type { CommandDefinition } from "../claude-code-command-loader"
 
 export type BuiltinCommandName =
+  | "checkpoint"
+  | "checkpoint-resume"
   | "init-deep"
   | "ralph-loop"
   | "cancel-ralph"

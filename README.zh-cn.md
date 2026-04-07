@@ -151,6 +151,31 @@ Gemini 说明：
 
 如果不处理，后续普通问答很容易被旧状态拖重或误导。
 
+### Checkpoint 接力命令
+
+现在也内置了一组面向长任务接力的 checkpoint 命令，用来避免把同一个会话无限拉长。
+
+当前 checkpoint 命令：
+
+- `/handoff`
+- `/checkpoint`
+- `/checkpoint-resume`
+
+它们的用途是：
+
+- `/handoff`：生成一份可直接复制到新会话里的上下文摘要
+- `/checkpoint`：把关键接力信息写入 repo-local 文件，路径位于
+  `.opencode/openagent-labforge/checkpoints/`
+- `/checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
+
+这组命令的定位，是作为插件侧 fallback：
+
+- 对旧版 OpenCode
+- 对 UI 不稳定或长会话容易卡顿的环境
+- 对还没有原生 checkpoint 工作流的场景
+
+都可以先靠这套 repo-local checkpoint 机制完成跨会话接力。
+
 ### 专长 agent
 
 - `explore`：本地代码发现
