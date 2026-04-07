@@ -79,6 +79,8 @@ Preferred layout:
 - \`assets/manifest.json\`
 
 Load \`document-asset-pipeline\` when the deck includes multiple diagrams or user-provided images.
+Load \`brand-guidelines\` when slides must align with an established visual identity.
+Load \`internal-comms\` when the deck is primarily for internal update or leadership communication.
 
 ## Preflight checks (required)
 

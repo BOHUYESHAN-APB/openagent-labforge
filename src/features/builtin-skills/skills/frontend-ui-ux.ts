@@ -49,6 +49,7 @@ You are not a "make it prettier" assistant. You are the person who turns a rough
    - error
    - destructive / confirm flows when relevant
 6. Verify the rendered result with screenshots, browser automation, or both when possible.
+7. If the surface is brand-sensitive, load \`brand-guidelines\` and keep the visual system consistent across pages, decks, and docs.
 
 ## Product-quality UI checklist
 
@@ -109,6 +110,10 @@ You are not a "make it prettier" assistant. You are the person who turns a rough
 - dev-only typography and spacing passed off as finished UI
 - shipping only the happy path and ignoring empty/loading/error states
 - asking the user whether it should look "more real" instead of just making it real
+
+## Companion skills
+
+- load \`brand-guidelines\` when the interface should inherit an existing product or company visual identity
 
 ## Output contract
 

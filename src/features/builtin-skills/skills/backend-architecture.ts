@@ -26,6 +26,7 @@ Use this skill when the task touches APIs, services, background jobs, persistenc
 - queue, cron, workflow, or background processing
 - third-party integration or callback handling
 - backend refactor that changes ownership boundaries or data flow
+- MCP server or MCP-facing backend boundary design
 
 ## Architecture checklist
 
@@ -76,6 +77,10 @@ Use this skill when the task touches APIs, services, background jobs, persistenc
 - hiding architecture changes inside a "small fix"
 - relying on happy-path tests for jobs, retries, or integrations
 - growing a central module because it is convenient right now
+
+## Companion skills
+
+- load \`mcp-builder\` when the backend work includes MCP server design, tool schema, transport, or LLM-facing tool discoverability
 
 ## Output contract
 

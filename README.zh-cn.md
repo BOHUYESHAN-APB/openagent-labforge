@@ -217,10 +217,15 @@ Gemini 说明：
 - `frontend-ui-ux`
 - `backend-architecture`
 - `git-master`
+- `skill-creator`
+- `mcp-builder`
 - `docx-workbench`
 - `pdf-toolkit`
 - `pptx-studio`
 - `proposal-and-roadmap`
+- `doc-coauthoring`
+- `internal-comms`
+- `brand-guidelines`
 - `document-asset-pipeline`
 - `literature-synthesis`
 - `xlsx-analyst`
@@ -254,6 +259,14 @@ Gemini 说明：
 - 常见命令或代码路径
 - 预期产物
 - 适用边界
+
+新增的通用 skill 主要用于补强：
+
+- skill 设计与复用
+- MCP Server 设计与评估
+- 长文档协作
+- 内部沟通写作
+- 跨页面 / 文档 / 幻灯片的一致品牌表达
 
 现在生信 agent 也带了明确的数据交互与环境安全能力：
 

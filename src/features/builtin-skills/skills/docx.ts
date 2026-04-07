@@ -84,6 +84,8 @@ For Mermaid / SVG:
 - prepare \`.png\` fallback for Word insertion when needed
 
 Load \`document-asset-pipeline\` when asset orchestration is non-trivial.
+Load \`brand-guidelines\` when the document should follow a specific brand or house style.
+Load \`doc-coauthoring\` when the document will go through multiple structured revision waves.
 
 ## Preflight checks (required)
 

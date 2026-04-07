@@ -57,6 +57,11 @@ Use this skill when writing tasks involve:
 - assign caption, placement, and purpose first
 - explicitly reference the figure in nearby prose
 
+## Companion skills
+
+- load \`brand-guidelines\` when assets need to follow a defined visual identity
+- load \`doc-coauthoring\` when the document itself is evolving over several collaborative revision waves
+
 ## Output contract
 
 - asset inventory

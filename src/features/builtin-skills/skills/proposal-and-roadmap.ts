@@ -67,6 +67,12 @@ or:
 - review cadence
 - exit criteria
 
+## Companion skills
+
+- load \`doc-coauthoring\` when the proposal or roadmap will be revised across multiple collaborative passes
+- load \`internal-comms\` when the output is mainly for internal alignment instead of external persuasion
+- load \`brand-guidelines\` when the proposal must match a defined organizational voice or presentation system
+
 ## Anti-AI rules
 
 Reject wording that is mostly slogans, aspiration, or empty management language.

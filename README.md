@@ -252,11 +252,16 @@ Examples:
   - `frontend-ui-ux`
   - `backend-architecture`
   - `git-master`
+  - `skill-creator`
+  - `mcp-builder`
 - document / report:
   - `docx-workbench`
   - `pdf-toolkit`
   - `pptx-studio`
   - `proposal-and-roadmap`
+  - `doc-coauthoring`
+  - `internal-comms`
+  - `brand-guidelines`
   - `document-asset-pipeline`
   - `literature-synthesis`
   - `xlsx-analyst`
@@ -285,6 +290,14 @@ Examples:
 The bio skills are written as execution-oriented references: they specify
 preferred tools, typical commands/code paths, expected artifacts, and boundary
 conditions rather than acting as vague prompt decoration.
+
+The newer general-purpose additions are meant to strengthen:
+
+- reusable skill authoring
+- MCP server design and evaluation
+- long-document collaboration
+- internal communication quality
+- cross-surface brand consistency
 
 Bio agents now also carry explicit data-interaction and environment-safety behavior:
 
