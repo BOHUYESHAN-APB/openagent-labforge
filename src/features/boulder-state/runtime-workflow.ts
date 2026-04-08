@@ -10,13 +10,16 @@ import {
   RUNTIME_TOOL_DIR,
 } from "./constants"
 import type {
+  DocumentWorkspaceAudience,
   DocumentWorkspaceAssetEntry,
+  DocumentWorkspacePublishTarget,
   DocumentWorkspacePaths,
   DocumentWorkspaceManifest,
   DocumentWorkspaceOutputEntry,
   DocumentWorkspaceRevisionEntry,
   DocumentWorkspaceRegistry,
   DocumentWorkspaceRegistryEntry,
+  DocumentWorkspaceTrackingPolicy,
   PaperCacheEntry,
   PaperCacheManifest,
   PaperCachePaths,
@@ -553,11 +556,13 @@ function sanitizeDocumentId(documentId: string): string {
   return documentId.replace(/[^a-zA-Z0-9._-]/g, "_") || "document"
 }
 
-export function getDocumentWorkspacePaths(directory: string, sessionId: string, documentId: string): DocumentWorkspacePaths {
-  const runtimePaths = getRuntimeWorkflowPaths(directory, sessionId)
-  const safeDocumentId = sanitizeDocumentId(documentId)
-  const rootDir = join(runtimePaths.documentsDir, safeDocumentId)
+function getDocumentAudienceSegment(audience?: DocumentWorkspaceAudience): string | null {
+  if (audience === "public-reader") return "public-reader"
+  if (audience === "end-user") return "end-user"
+  return null
+}
 
+function createDocumentWorkspacePaths(rootDir: string): DocumentWorkspacePaths {
   return {
     rootDir,
     sourceDir: join(rootDir, "source"),
@@ -569,6 +574,22 @@ export function getDocumentWorkspacePaths(directory: string, sessionId: string, 
     outputDir: join(rootDir, "output"),
     manifestFile: join(rootDir, "manifest.json"),
   }
+}
+
+export function getDocumentWorkspacePaths(
+  directory: string,
+  sessionId: string,
+  documentId: string,
+  options?: { audience?: DocumentWorkspaceAudience },
+): DocumentWorkspacePaths {
+  const runtimePaths = getRuntimeWorkflowPaths(directory, sessionId)
+  const safeDocumentId = sanitizeDocumentId(documentId)
+  const audienceSegment = getDocumentAudienceSegment(options?.audience)
+  const rootDir = audienceSegment
+    ? join(runtimePaths.documentsDir, audienceSegment, safeDocumentId)
+    : join(runtimePaths.documentsDir, safeDocumentId)
+
+  return createDocumentWorkspacePaths(rootDir)
 }
 
 export interface RuntimeWorkflowCleanupResult {
@@ -623,10 +644,27 @@ export function ensureDocumentWorkspace(args: {
   documentId: string
   title?: string
   documentType?: string
+  audience?: DocumentWorkspaceAudience
+  trackingPolicy?: DocumentWorkspaceTrackingPolicy
+  publishTarget?: DocumentWorkspacePublishTarget
+  preferredRepoPath?: string
   initializeGit?: boolean
 }): DocumentWorkspacePaths {
-  const paths = getDocumentWorkspacePaths(args.directory, args.sessionId, args.documentId)
-  const { directory, sessionId, documentId, title, documentType, initializeGit = true } = args
+  const paths = getDocumentWorkspacePaths(args.directory, args.sessionId, args.documentId, {
+    audience: args.audience,
+  })
+  const {
+    directory,
+    sessionId,
+    documentId,
+    title,
+    documentType,
+    audience,
+    trackingPolicy = "workspace-git",
+    publishTarget,
+    preferredRepoPath,
+    initializeGit = true,
+  } = args
 
   ensureDirectory(paths.rootDir)
   ensureDirectory(paths.sourceDir)
@@ -643,6 +681,10 @@ export function ensureDocumentWorkspace(args: {
     document_id: sanitizeDocumentId(documentId),
     ...(title !== undefined ? { title } : {}),
     ...(documentType !== undefined ? { document_type: documentType } : {}),
+    ...(audience !== undefined ? { audience } : {}),
+    ...(trackingPolicy !== undefined ? { tracking_policy: trackingPolicy } : {}),
+    ...(publishTarget !== undefined ? { publish_target: publishTarget } : {}),
+    ...(preferredRepoPath !== undefined ? { preferred_repo_path: preferredRepoPath } : {}),
     assets: [],
     outputs: [],
     revisions: [],
@@ -662,6 +704,10 @@ export function ensureDocumentWorkspace(args: {
     document_id: sanitizeDocumentId(documentId),
     ...(title !== undefined ? { title } : {}),
     ...(documentType !== undefined ? { document_type: documentType } : {}),
+    ...(audience !== undefined ? { audience } : {}),
+    ...(trackingPolicy !== undefined ? { tracking_policy: trackingPolicy } : {}),
+    ...(publishTarget !== undefined ? { publish_target: publishTarget } : {}),
+    ...(preferredRepoPath !== undefined ? { preferred_repo_path: preferredRepoPath } : {}),
     root_dir: paths.rootDir,
     manifest_file: paths.manifestFile,
     initialized_at: now,
@@ -679,7 +725,7 @@ export function ensureDocumentWorkspace(args: {
   }
   writeJson(registryPath, existingRegistry)
 
-  if (initializeGit) {
+  if (initializeGit && trackingPolicy === "workspace-git") {
     ensureDocumentWorkspaceGitRepo(paths.rootDir)
   }
 
@@ -903,15 +949,32 @@ export function cleanupWorkflowCaches(args: {
       const documentsDir = join(runtimeRoot, sessionEntry.name, "documents")
       if (!existsSync(documentsDir)) continue
 
+      const documentRoots: string[] = []
       for (const docEntry of readdirSync(documentsDir, { withFileTypes: true })) {
         if (!docEntry.isDirectory()) continue
-        const paths = getDocumentWorkspacePaths(directory, sessionEntry.name, docEntry.name)
+        const candidateRoot = join(documentsDir, docEntry.name)
+        if (existsSync(join(candidateRoot, "manifest.json"))) {
+          documentRoots.push(candidateRoot)
+          continue
+        }
+
+        for (const nestedEntry of readdirSync(candidateRoot, { withFileTypes: true })) {
+          if (!nestedEntry.isDirectory()) continue
+          const nestedRoot = join(candidateRoot, nestedEntry.name)
+          if (existsSync(join(nestedRoot, "manifest.json"))) {
+            documentRoots.push(nestedRoot)
+          }
+        }
+      }
+
+      for (const rootDir of documentRoots) {
+        const paths = createDocumentWorkspacePaths(rootDir)
         const removed = cleanupDocumentWorkspaceOutputs({
           paths,
           maxOutputFiles: maxDocumentOutputs,
         })
         if (removed > 0) {
-          trimmedDocumentOutputs.push(docEntry.name)
+          trimmedDocumentOutputs.push(basename(rootDir))
         }
       }
     }

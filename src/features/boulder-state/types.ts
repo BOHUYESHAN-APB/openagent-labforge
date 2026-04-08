@@ -87,6 +87,12 @@ export interface RuntimeWorkflowState {
   updated_at: string
 }
 
+export type DocumentWorkspaceAudience = "internal" | "public-reader" | "end-user"
+
+export type DocumentWorkspaceTrackingPolicy = "workspace-git" | "ephemeral" | "repo-tracked"
+
+export type DocumentWorkspacePublishTarget = "workspace-private" | "repo-docs"
+
 export interface DocumentWorkspacePaths {
   rootDir: string
   sourceDir: string
@@ -113,6 +119,10 @@ export interface DocumentWorkspaceManifest {
   document_id: string
   title?: string
   document_type?: string
+  audience?: DocumentWorkspaceAudience
+  tracking_policy?: DocumentWorkspaceTrackingPolicy
+  publish_target?: DocumentWorkspacePublishTarget
+  preferred_repo_path?: string
   assets: DocumentWorkspaceAssetEntry[]
   outputs: DocumentWorkspaceOutputEntry[]
   revisions: DocumentWorkspaceRevisionEntry[]
@@ -122,6 +132,10 @@ export interface DocumentWorkspaceRegistryEntry {
   document_id: string
   title?: string
   document_type?: string
+  audience?: DocumentWorkspaceAudience
+  tracking_policy?: DocumentWorkspaceTrackingPolicy
+  publish_target?: DocumentWorkspacePublishTarget
+  preferred_repo_path?: string
   root_dir: string
   manifest_file: string
   initialized_at: string

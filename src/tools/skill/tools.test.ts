@@ -191,6 +191,65 @@ describe("skill tool - runtime workspace provisioning", () => {
     fs.rmSync(tempDir, { recursive: true, force: true })
   })
 
+  it("keeps end-user docs in a dedicated main-repo-ignored workspace", async () => {
+    const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-user-doc-"))
+    const loadedSkills = [createMockSkill("proposal-and-roadmap")]
+    const tool = createSkillTool({
+      skills: loadedSkills,
+      directory: tempDir,
+      getSessionID: () => "ses_user_workspace",
+    })
+
+    const result = await tool.execute(
+      {
+        name: "proposal-and-roadmap",
+        user_message: 'document_id=customer-handoff audience=end-user tracking=ephemeral title="Customer Handoff"',
+      },
+      mockContext,
+    )
+
+    expect(result).toContain("audience: `end-user`")
+    expect(result).toContain("tracking_policy: `ephemeral`")
+    expect(result).toContain("main_repo_tracking: `disabled`")
+    expect(
+      fs.existsSync(
+        join(tempDir, ".opencode", "openagent-labforge", "runtime", "ses_user_workspace", "documents", "end-user", "customer-handoff", "manifest.json"),
+      ),
+    ).toBe(true)
+    expect(
+      fs.existsSync(
+        join(tempDir, ".opencode", "openagent-labforge", "runtime", "ses_user_workspace", "documents", "end-user", "customer-handoff", ".git"),
+      ),
+    ).toBe(false)
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it("marks public open-source docs as repo-tracked with a preferred root/docs path", async () => {
+    const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-public-doc-"))
+    const loadedSkills = [createMockSkill("proposal-and-roadmap")]
+    const tool = createSkillTool({
+      skills: loadedSkills,
+      directory: tempDir,
+      getSessionID: () => "ses_public_workspace",
+    })
+
+    const result = await tool.execute(
+      {
+        name: "proposal-and-roadmap",
+        user_message: 'document_id=project-guide audience=public-reader publish_target=repo-docs target_path=README.md title="Project Guide"',
+      },
+      mockContext,
+    )
+
+    expect(result).toContain("tracking_policy: `repo-tracked`")
+    expect(result).toContain("publish_target: `repo-docs`")
+    expect(result).toContain("main_repo_tracking: `enabled`")
+    expect(result).toContain("preferred_repo_path: `README.md`")
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
   it("provisions paper cache and shows configured image bus backends when enabled", async () => {
     const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-paper-"))
     const loadedSkills = [createMockSkill("literature-synthesis")]

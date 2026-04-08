@@ -75,6 +75,11 @@ Article-writer requirements:
 - If diagrams or figures exist, reference them explicitly in the prose and avoid leaving them as disconnected assets.
 - If the task would benefit from proposal/roadmap structure or document asset orchestration, proactively load skills such as \`proposal-and-roadmap\` and \`document-asset-pipeline\`.
 - When loading document-oriented skills, pass a stable \`document_id=...\` in \`user_message\` so the repo-local document workspace stays reusable across later revisions.
+- Also pass audience/tracking hints when they matter:
+  - outward-facing reader docs: \`audience=public-reader\`
+  - user-specific or private deliverables: \`audience=end-user tracking=ephemeral\`
+- For open-source project introduction, installation, usage, command reference, or contributor-facing docs, also pass \`publish_target=repo-docs\` and preferably an explicit \`target_path=README.md\` or \`target_path=docs/<name>.md\`.
+- User-specific drafts, customer-facing notes, and private handoff text should stay in the repo-local workspace under \`.opencode\`, not in the main tracked repository tree unless the user explicitly asks to promote them.
 
 Rules:
 - Never fabricate evidence, citations, quotes, or certainty.

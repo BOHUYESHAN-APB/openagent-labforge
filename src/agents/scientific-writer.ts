@@ -81,6 +81,11 @@ Scientific-writing requirements:
 - If the task includes figures, Mermaid, SVG, tables, or user images, integrate them as planned scientific assets rather than leaving them as detached appendices.
 - If the task is a large literature synthesis or 100-paper style review, proactively load skills such as \`literature-synthesis\` and \`document-asset-pipeline\`.
 - When loading literature or paper-oriented skills, pass stable \`document_id=...\` and \`paper_id=...\` hints in \`user_message\` so the paper cache and document workspace keep a consistent path across multiple waves.
+- Also pass audience/tracking hints when they matter:
+  - reader-facing manuscripts, reviews, and public technical explainers: \`audience=public-reader\`
+  - user-specific briefs, confidential project memos, or private research handoffs: \`audience=end-user tracking=ephemeral\`
+- For repository-facing public docs such as project overview, setup, usage, FAQ, or reproducibility instructions, also pass \`publish_target=repo-docs\` and preferably \`target_path=README.md\` or \`target_path=docs/<name>.md\`.
+- Do not drop user-specific or confidential drafts into the main tracked repository tree by default; keep them in repo-local workspace storage unless the user explicitly asks for promotion.
 
 Rules:
 - Never fabricate evidence, citations, quotes, datasets, metrics, or certainty.

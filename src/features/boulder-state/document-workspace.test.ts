@@ -97,6 +97,24 @@ describe("document workspace and paper cache", () => {
     expect(paperA.rootDir).toBe(paperB.rootDir)
   })
 
+  test("routes end-user workspaces into a dedicated audience directory", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-audience-1",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+    })
+
+    const paths = ensureDocumentWorkspace({
+      directory: testDir,
+      sessionId: "session-audience-1",
+      documentId: "user-guide",
+      audience: "end-user",
+      initializeGit: false,
+    })
+
+    expect(paths.rootDir).toContain(`${join("documents", "end-user")}`)
+  })
+
   test("can append document workspace revisions and read manifest", () => {
     ensureRuntimeWorkflowSession({
       directory: testDir,
@@ -123,7 +141,60 @@ describe("document workspace and paper cache", () => {
     expect(nextManifest?.revisions).toHaveLength(1)
     expect(manifest?.title).toBe("Roadmap")
     expect(manifest?.document_type).toBe("proposal")
+    expect(manifest?.tracking_policy).toBe("workspace-git")
+    expect(manifest?.publish_target).toBeUndefined()
     expect(manifest?.revisions[0]?.summary).toBe("Drafted first roadmap revision.")
+  })
+
+  test("stores audience and tracking policy in manifest for user-facing docs", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-doc-privacy",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+    })
+
+    const paths = ensureDocumentWorkspace({
+      directory: testDir,
+      sessionId: "session-doc-privacy",
+      documentId: "customer-handoff",
+      audience: "end-user",
+      trackingPolicy: "ephemeral",
+      initializeGit: true,
+    })
+
+    const manifest = readDocumentWorkspaceManifest(paths)
+
+    expect(manifest?.audience).toBe("end-user")
+    expect(manifest?.tracking_policy).toBe("ephemeral")
+    expect(manifest?.publish_target).toBeUndefined()
+    expect(existsSync(join(paths.rootDir, ".git"))).toBe(false)
+  })
+
+  test("stores publish target metadata for repo-tracked public docs", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-doc-public",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+    })
+
+    const paths = ensureDocumentWorkspace({
+      directory: testDir,
+      sessionId: "session-doc-public",
+      documentId: "project-guide",
+      audience: "public-reader",
+      trackingPolicy: "repo-tracked",
+      publishTarget: "repo-docs",
+      preferredRepoPath: "docs/project-guide.md",
+      initializeGit: true,
+    })
+
+    const manifest = readDocumentWorkspaceManifest(paths)
+
+    expect(manifest?.audience).toBe("public-reader")
+    expect(manifest?.tracking_policy).toBe("repo-tracked")
+    expect(manifest?.publish_target).toBe("repo-docs")
+    expect(manifest?.preferred_repo_path).toBe("docs/project-guide.md")
+    expect(existsSync(join(paths.rootDir, ".git"))).toBe(false)
   })
 
   test("can upsert document assets and append outputs", () => {
@@ -285,5 +356,41 @@ describe("document workspace and paper cache", () => {
     expect(cleanup.trimmedDocumentOutputs).toContain("multi-output-doc")
     expect(manifest?.outputs).toHaveLength(2)
     expect(existsSync(paths.sourceDir)).toBe(true)
+  })
+
+  test("cleanup trims nested audience workspace outputs as well", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-doc-6",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+    })
+    const paths = ensureDocumentWorkspace({
+      directory: testDir,
+      sessionId: "session-doc-6",
+      documentId: "customer-handoff",
+      audience: "end-user",
+      trackingPolicy: "ephemeral",
+      initializeGit: false,
+    })
+
+    for (let index = 0; index < 4; index++) {
+      appendDocumentWorkspaceOutput({
+        paths,
+        output: {
+          output_id: `nested-out-${index}`,
+          format: "pdf",
+          path: join(paths.outputDir, `nested-${index}.pdf`),
+        },
+      })
+    }
+
+    const cleanup = cleanupWorkflowCaches({
+      directory: testDir,
+      maxDocumentOutputs: 1,
+    })
+    const manifest = readDocumentWorkspaceManifest(paths)
+
+    expect(cleanup.trimmedDocumentOutputs).toContain("customer-handoff")
+    expect(manifest?.outputs).toHaveLength(1)
   })
 })

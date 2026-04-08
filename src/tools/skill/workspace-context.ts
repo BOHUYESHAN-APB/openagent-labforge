@@ -5,6 +5,11 @@ import {
   ensurePaperCache,
 } from "../../features/boulder-state"
 import type { ImageBusConfig } from "../../config/schema/image-bus"
+import type {
+  DocumentWorkspaceAudience,
+  DocumentWorkspacePublishTarget,
+  DocumentWorkspaceTrackingPolicy,
+} from "../../features/boulder-state"
 
 type ProvisionedWorkspaceContext = {
   markdown: string
@@ -78,6 +83,100 @@ function deriveDocumentType(skillName: string): string {
     default:
       return "document"
   }
+}
+
+function deriveDocumentAudience(message: string | undefined): DocumentWorkspaceAudience | undefined {
+  const explicitAudience = extractNamedValue(message, ["audience", "document_audience", "doc_audience"])
+    ?.toLowerCase()
+
+  if (explicitAudience === "user" || explicitAudience === "end-user" || explicitAudience === "customer") {
+    return "end-user"
+  }
+  if (explicitAudience === "reader" || explicitAudience === "public" || explicitAudience === "public-reader") {
+    return "public-reader"
+  }
+  if (explicitAudience === "internal" || explicitAudience === "team") {
+    return "internal"
+  }
+
+  return undefined
+}
+
+function deriveDocumentTrackingPolicy(message: string | undefined): DocumentWorkspaceTrackingPolicy {
+  const explicitTracking = extractNamedValue(message, ["tracking", "tracking_policy", "doc_tracking"])
+    ?.toLowerCase()
+  if (explicitTracking === "ephemeral" || explicitTracking === "private") {
+    return "ephemeral"
+  }
+  if (
+    explicitTracking === "repo" ||
+    explicitTracking === "repo-tracked" ||
+    explicitTracking === "tracked" ||
+    explicitTracking === "main-repo"
+  ) {
+    return "repo-tracked"
+  }
+  return "workspace-git"
+}
+
+function shouldDefaultToRepoDocs(message: string | undefined): boolean {
+  const normalized = message?.toLowerCase() ?? ""
+  return [
+    "readme",
+    "getting-started",
+    "getting started",
+    "installation",
+    "install guide",
+    "usage",
+    "how to use",
+    "documentation",
+    "docs/",
+    "open-source",
+    "opensource",
+    "command reference",
+    "api guide",
+  ].some((token) => normalized.includes(token))
+}
+
+function deriveDocumentPublishTarget(
+  message: string | undefined,
+  audience: DocumentWorkspaceAudience | undefined,
+): DocumentWorkspacePublishTarget {
+  const explicitTarget = extractNamedValue(message, ["publish_target", "target", "doc_target"])
+    ?.toLowerCase()
+
+  if (
+    explicitTarget === "repo-docs" ||
+    explicitTarget === "repo" ||
+    explicitTarget === "readme" ||
+    explicitTarget === "docs"
+  ) {
+    return "repo-docs"
+  }
+
+  if (audience === "public-reader" && shouldDefaultToRepoDocs(message)) {
+    return "repo-docs"
+  }
+
+  return "workspace-private"
+}
+
+function derivePreferredRepoPath(
+  message: string | undefined,
+  documentId: string,
+  publishTarget: DocumentWorkspacePublishTarget,
+): string | undefined {
+  if (publishTarget !== "repo-docs") return undefined
+
+  const explicitPath = extractNamedValue(message, ["repo_path", "target_path", "publish_path", "doc_path"])
+  if (explicitPath) return explicitPath
+
+  const normalized = message?.toLowerCase() ?? ""
+  if (normalized.includes("readme")) {
+    return "README.md"
+  }
+
+  return `docs/${documentId}.md`
 }
 
 function shouldProvisionDocumentWorkspace(skillName: string): boolean {
@@ -155,12 +254,25 @@ export function provisionSkillWorkspaceContext(args: {
     const documentId = deriveDocumentId(skill.name, userMessage)
     const title = deriveDocumentTitle(userMessage)
     const documentType = deriveDocumentType(skill.name)
+    const audience = deriveDocumentAudience(userMessage)
+    const publishTarget = deriveDocumentPublishTarget(userMessage, audience)
+    const preferredRepoPath = derivePreferredRepoPath(userMessage, documentId, publishTarget)
+    const trackingPolicy = (() => {
+      const explicit = deriveDocumentTrackingPolicy(userMessage)
+      if (explicit !== "workspace-git") return explicit
+      if (publishTarget === "repo-docs") return "repo-tracked"
+      return explicit
+    })()
     const workspace = ensureDocumentWorkspace({
       directory,
       sessionId: sessionID,
       documentId,
       ...(title ? { title } : {}),
       documentType,
+      ...(audience ? { audience } : {}),
+      trackingPolicy,
+      publishTarget,
+      ...(preferredRepoPath ? { preferredRepoPath } : {}),
     })
     appendDocumentWorkspaceRevision({
       paths: workspace,
@@ -177,6 +289,11 @@ export function provisionSkillWorkspaceContext(args: {
         "",
         `- document_id: \`${documentId}\``,
         `- document_type: \`${documentType}\``,
+        `- audience: \`${audience ?? "internal"}\``,
+        `- tracking_policy: \`${trackingPolicy}\``,
+        `- publish_target: \`${publishTarget}\``,
+        `- main_repo_tracking: \`${trackingPolicy === "repo-tracked" ? "enabled" : "disabled"}\``,
+        `- preferred_repo_path: \`${preferredRepoPath ?? "(none)"}\``,
         `- root: \`${workspace.rootDir}\``,
         `- source: \`${workspace.sourceDir}\``,
         `- sections: \`${workspace.sectionsDir}\``,
