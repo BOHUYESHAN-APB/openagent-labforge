@@ -5,7 +5,12 @@ import type {
   AvailableCategory,
   AvailableSkill,
 } from "./dynamic-agent-prompt-builder"
-import { AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY } from "./engineering-capability"
+import {
+  AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
+  ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
+} from "./engineering-capability"
 
 const MODE: AgentMode = "all"
 
@@ -96,6 +101,12 @@ Environment snapshot:
 </wase-role>
 
 ${WASE_AUTONOMY_APPEND}
+
+${ENGINEERING_MICRO_KERNEL_CAPABILITY}
+
+${ENGINEERING_SKILL_ROUTER_CAPABILITY}
+
+${PROMPT_LAYERING_PROTOCOL_CAPABILITY}
 
 <wase-stage-management>
 ## Stage Management

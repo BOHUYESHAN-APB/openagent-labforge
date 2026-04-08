@@ -28,7 +28,12 @@ import {
   buildSkillsSection,
   buildDecisionMatrix,
 } from "./prompt-section-builder"
-import { ENGINEERING_ORCHESTRATION_CAPABILITY } from "../engineering-capability"
+import {
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
+  ENGINEERING_ORCHESTRATION_CAPABILITY,
+  ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
+} from "../engineering-capability"
 
 const MODE: AgentMode = "all"
 
@@ -114,6 +119,9 @@ function buildDynamicOrchestratorPrompt(ctx?: OrchestratorContext): string {
     .replace("{DECISION_MATRIX}", decisionMatrix)
     .replace("{SKILLS_SECTION}", skillsSection)
     .replace("{{CATEGORY_SKILLS_DELEGATION_GUIDE}}", categorySkillsGuide)
+    + "\n\n" + ENGINEERING_MICRO_KERNEL_CAPABILITY
+    + "\n\n" + ENGINEERING_SKILL_ROUTER_CAPABILITY
+    + "\n\n" + PROMPT_LAYERING_PROTOCOL_CAPABILITY
     + "\n\n" + ENGINEERING_ORCHESTRATION_CAPABILITY
     + "\n\n" + ATLAS_EXECUTION_AUDIT_APPEND
 }

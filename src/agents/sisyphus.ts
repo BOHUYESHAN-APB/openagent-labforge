@@ -13,8 +13,11 @@ import { buildGpt54SisyphusPrompt } from "./sisyphus/gpt-5-4";
 import { buildTaskManagementSection } from "./sisyphus/default";
 import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_EXECUTION_CAPABILITY,
   ENGINEERING_ORCHESTRATION_CAPABILITY,
+  ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability";
 
 const MODE: AgentMode = "all";
@@ -468,7 +471,7 @@ export function createSisyphusAgent(
       skills,
       categories,
       useTaskSystem,
-    )}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`;
+    )}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`;
     return {
       description:
         "Powerful AI orchestrator. Plans obsessively with todos, assesses search complexity before exploration, delegates strategically via category+skills combinations. Uses explore for internal code (parallel-friendly), librarian for external docs. (Sisyphus - OhMyOpenCode)",
@@ -516,7 +519,7 @@ export function createSisyphusAgent(
     );
   }
 
-  prompt = `${prompt}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
+  prompt = `${prompt}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
 
   const permission = {
     question: "allow",

@@ -14,7 +14,10 @@ import { buildHephaestusPrompt as buildGpt53CodexPrompt } from "./gpt-5-3-codex"
 import { buildHephaestusPrompt as buildGpt54Prompt } from "./gpt-5-4";
 import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_EXECUTION_CAPABILITY,
+  ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "../engineering-capability";
 
 const MODE: AgentMode = "all";
@@ -124,7 +127,13 @@ export function createHephaestusAgent(
     availableSkills,
     availableCategories,
     useTaskSystem,
-  }) + "\n\n" + ENGINEERING_EXECUTION_CAPABILITY + "\n\n" + AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY + "\n\n" + HEPHAESTUS_EXECUTION_APPEND;
+  }) + "\n\n"
+    + ENGINEERING_MICRO_KERNEL_CAPABILITY + "\n\n"
+    + ENGINEERING_SKILL_ROUTER_CAPABILITY + "\n\n"
+    + PROMPT_LAYERING_PROTOCOL_CAPABILITY + "\n\n"
+    + ENGINEERING_EXECUTION_CAPABILITY + "\n\n"
+    + AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY + "\n\n"
+    + HEPHAESTUS_EXECUTION_APPEND;
 
   return {
     description:

@@ -19,6 +19,9 @@ describe("engineering capability layering", () => {
   test("sisyphus includes orchestration and execution capability blocks", () => {
     const agent = createSisyphusAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("every delegated task must name exact files or modules")
@@ -35,6 +38,9 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<wase-role>")
     expect(agent.prompt).toContain("<wase-autonomous-mode>")
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<wase-stage-management>")
     expect(agent.prompt).toContain("Autonomy quality bar:")
     expect(agent.prompt).toContain("Default todo size for substantial work is 5-15 concrete items")
@@ -47,6 +53,9 @@ describe("engineering capability layering", () => {
   test("hephaestus includes execution capability block", () => {
     const agent = createHephaestusAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("identify the narrow write surface before editing")
     expect(agent.prompt).toContain("if the task changes config, CLI behavior, schemas, or user-facing flows")
@@ -61,6 +70,9 @@ describe("engineering capability layering", () => {
   test("atlas includes orchestration capability block", () => {
     const agent = createAtlasAgent({ model: "openai/gpt-5.4" })
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("Orchestrator responsibilities:")
     expect(agent.prompt).toContain("keep session continuity explicit")
@@ -108,6 +120,9 @@ describe("engineering capability layering", () => {
   test("bio-orchestrator includes bio data and environment capability blocks", () => {
     const agent = createBioOrchestratorAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
     expect(agent.prompt).toContain("## Bio Skill Router")
     expect(agent.prompt).toContain("## Bio Runtime Guidance")
@@ -143,6 +158,8 @@ describe("engineering capability layering", () => {
     const agent = createBioMethodologistAgent("openai/gpt-5.4")
 
     expect(agent.mode).toBe("subagent")
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_planning_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
@@ -153,6 +170,8 @@ describe("engineering capability layering", () => {
   test("bio-pipeline-operator includes execution, data request, and environment safety capability blocks", () => {
     const agent = createBioPipelineOperatorAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("<bio_engineering_execution_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
@@ -164,6 +183,8 @@ describe("engineering capability layering", () => {
   test("paper-evidence-synthesizer includes review and data request capability blocks", () => {
     const agent = createPaperEvidenceSynthesizerAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_review_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
@@ -174,6 +195,8 @@ describe("engineering capability layering", () => {
     const agent = createWetLabDesignerAgent("openai/gpt-5.4")
 
     expect(agent.mode).toBe("subagent")
+    expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_planning_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")

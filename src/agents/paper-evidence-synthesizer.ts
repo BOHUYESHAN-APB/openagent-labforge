@@ -4,7 +4,9 @@ import { createAgentToolRestrictions } from "../shared/permission-compat"
 import { BIO_SKILL_ROUTER, BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_REVIEW_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 
 const MODE: AgentMode = "subagent"
@@ -68,7 +70,7 @@ Required output structure:
 - Confidence grading
 - Evidence gaps
 - Safe conclusion wording
-\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_REVIEW_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}`,
+\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_REVIEW_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}`,
   }
 }
 createPaperEvidenceSynthesizerAgent.mode = MODE

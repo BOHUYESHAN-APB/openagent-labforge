@@ -5,7 +5,9 @@ import { BIO_SKILL_ROUTER, BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
+  ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_PLANNING_CAPABILITY,
+  PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 
 const MODE: AgentMode = "subagent"
@@ -70,7 +72,7 @@ Hard rules:
 - Distinguish gold-standard validation from lower-cost fallback validation.
 - Be explicit about sample size, controls, and what would falsify the hypothesis.
 - If a required reagent, model system, or instrument is missing, say so plainly.
-\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
   }
 }
 createWetLabDesignerAgent.mode = MODE
