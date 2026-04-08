@@ -109,12 +109,15 @@ describe("engineering capability layering", () => {
     const agent = createBioOrchestratorAgent("openai/gpt-5.4")
 
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Skill Router")
     expect(agent.prompt).toContain("## Bio Runtime Guidance")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("prefer a small first wave over a sprawling initial backlog")
     expect(agent.prompt).toContain("runtime workflow state explicitly marks the session as heavy/continuous")
     expect(agent.prompt).toContain("private sequencing data")
+    expect(agent.prompt).toContain("MUST load `bio-methods`")
+    expect(agent.prompt).toContain("blast / homolog / homology / ortholog / synteny / reciprocal best hit")
   })
 
   test("bio-autopilot includes autonomous bio workflow and acceptance-review loop", () => {
@@ -144,6 +147,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Skill Router")
   })
 
   test("bio-pipeline-operator includes execution, data request, and environment safety capability blocks", () => {
@@ -154,6 +158,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Skill Router")
   })
 
   test("paper-evidence-synthesizer includes review and data request capability blocks", () => {
@@ -162,6 +167,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_review_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Skill Router")
   })
 
   test("wet-lab-designer includes planning, data request, and environment safety capability blocks", () => {
@@ -172,5 +178,6 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
+    expect(agent.prompt).toContain("## Bio Skill Router")
   })
 })

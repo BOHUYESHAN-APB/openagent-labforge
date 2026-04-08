@@ -1,7 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
-import { BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
+import { BIO_SKILL_ROUTER, BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
@@ -83,7 +83,7 @@ Required output structure:
 - QC and statistical plan
 - Risks and failure modes
 - Execution handoff
-\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
   }
 }
 createBioMethodologistAgent.mode = MODE
