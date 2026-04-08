@@ -22,6 +22,8 @@ import type {
   PaperCachePaths,
   RuntimeWorkflowPaths,
   RuntimeWorkflowAutoModeLevel,
+  RuntimeWorkflowArtifactMode,
+  RuntimeWorkflowArtifactStrategy,
   RuntimeWorkflowInteractionMode,
   RuntimeWorkflowStage,
   RuntimeWorkflowState,
@@ -974,6 +976,54 @@ export function updateRuntimeWorkflowStage(args: {
       directory,
       sessionId,
       stage: currentStage,
+      content: note,
+    })
+  }
+
+  return nextState
+}
+
+export function updateRuntimeWorkflowArtifactPolicy(args: {
+  directory: string
+  sessionId: string
+  artifactMode?: RuntimeWorkflowArtifactMode
+  artifactRoot?: string
+  artifactStrategy?: RuntimeWorkflowArtifactStrategy
+  activeWorkItem?: string
+  artifactRationale?: string
+  note?: string
+}): RuntimeWorkflowState | null {
+  const {
+    directory,
+    sessionId,
+    artifactMode,
+    artifactRoot,
+    artifactStrategy,
+    activeWorkItem,
+    artifactRationale,
+    note,
+  } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    ...(artifactMode !== undefined ? { artifact_mode: artifactMode } : {}),
+    ...(artifactRoot !== undefined ? { artifact_root: artifactRoot } : {}),
+    ...(artifactStrategy !== undefined ? { artifact_strategy: artifactStrategy } : {}),
+    ...(activeWorkItem !== undefined ? { active_work_item: activeWorkItem } : {}),
+    ...(artifactRationale !== undefined ? { artifact_rationale: artifactRationale } : {}),
+    updated_at: new Date().toISOString(),
+  }
+
+  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+
+  if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: nextState.current_stage,
       content: note,
     })
   }

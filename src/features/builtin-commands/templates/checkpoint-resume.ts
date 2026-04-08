@@ -42,6 +42,14 @@ Read:
 - the matching latest.meta.json if available
 - repo-local runtime workflow files mentioned by the checkpoint, only if needed
 
+If the checkpoint metadata includes artifact policy fields:
+- artifact_mode
+- artifact_root
+- artifact_strategy
+- active_work_item
+
+carry them forward into this session's runtime workflow memory and treat them as the default continuation policy.
+
 Do NOT try to reconstruct the entire old session.
 Treat the checkpoint as the primary source of truth for continuation.
 
@@ -53,6 +61,7 @@ After reading the checkpoint:
 - restate the carried-forward mission
 - restate the carried-forward goal
 - restate the current state
+- restate the carried-forward artifact policy if one exists
 - rebuild a fresh todo/task list for this session from the checkpoint's pending tasks
 - continue with the user's new request in this session
 
@@ -60,6 +69,7 @@ If the checkpoint says work was mid-flight:
 - do not ask the user to repeat the old context
 - do not re-open the whole old conversation
 - do create a fresh execution wave for the remaining work
+- do not reread broad package indexes or output trees if artifact_root and active_work_item already identify the active target well enough
 
 ---
 
@@ -75,6 +85,7 @@ Then provide:
 - CARRIED-FORWARD MISSION
 - GOAL CARRIED FORWARD
 - CURRENT STATE
+- ARTIFACT POLICY
 - NEXT EXECUTION WAVE
 
 Keep it concise, actionable, and ready to continue immediately.
@@ -87,6 +98,7 @@ Keep it concise, actionable, and ready to continue immediately.
 - Do not regenerate the checkpoint from memory
 - Do not depend on access to the old session
 - Do not reopen a huge session if the checkpoint is sufficient
+- Do prefer compact artifact-policy recovery over rereading large bundle directories when the checkpoint already captured the active root and work item
 
 ---
 

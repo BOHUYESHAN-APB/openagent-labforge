@@ -1,4 +1,7 @@
-import { readRuntimeWorkflowState } from "../features/boulder-state"
+import {
+  readLatestCheckpointMetadata,
+  readRuntimeWorkflowState,
+} from "../features/boulder-state"
 import {
   buildAcceptanceRuntimeCapability,
   buildExecutionRuntimeCapability,
@@ -59,6 +62,62 @@ Agent: ${input.agent}
 Stage: ${input.stage}
 Auto mode: ${input.autoModeLevel}
 Interaction mode: ${input.interactionMode}`
+}
+
+function buildArtifactPolicyContext(input: {
+  artifactMode?: string
+  artifactRoot?: string
+  artifactStrategy?: string
+  activeWorkItem?: string
+  artifactRationale?: string
+}): string | null {
+  const {
+    artifactMode,
+    artifactRoot,
+    artifactStrategy,
+    activeWorkItem,
+    artifactRationale,
+  } = input
+
+  if (!artifactMode && !artifactRoot && !artifactStrategy && !activeWorkItem) {
+    return null
+  }
+
+  const lines = ["[artifact-policy-reload]"]
+
+  if (artifactMode) {
+    lines.push(`- Artifact mode: ${artifactMode}`)
+  }
+  if (artifactRoot) {
+    lines.push(`- Artifact root: \`${artifactRoot}\``)
+  }
+  if (activeWorkItem) {
+    lines.push(`- Active work item: ${activeWorkItem}`)
+  }
+
+  if (artifactMode === "patch-existing") {
+    lines.push("- Default behavior: patch the existing target files before creating new sibling outputs.")
+  } else if (artifactMode === "single-doc-rollup") {
+    lines.push("- Default behavior: update the main document and index first, then add only the minimum supporting side artifacts.")
+  } else if (artifactMode === "package-bundle") {
+    lines.push("- Default behavior: stay inside the current package root and active item before opening a new top-level numbered deliverable.")
+  }
+
+  if (artifactStrategy === "update-existing-first") {
+    lines.push("- Strategy: prefer rolling updates to the current package/index instead of starting a fresh top-level wave.")
+  } else if (artifactStrategy === "append-supporting-artifacts") {
+    lines.push("- Strategy: add only the scripts, tables, figures, or notes required by the active item.")
+  } else if (artifactStrategy === "spawn-new-top-level-item") {
+    lines.push("- Strategy: open a new top-level deliverable only after the current item is exhausted or the user explicitly asks for a new module.")
+  }
+
+  lines.push("- Token discipline: do not reread large package readmes or broad output trees if this compact policy already identifies the active root and work item.")
+
+  if (artifactRationale) {
+    lines.push(`- Rationale: ${artifactRationale}`)
+  }
+
+  return lines.join("\n")
 }
 
 export function buildAutonomousUserDirectiveContext(input: {
@@ -354,28 +413,51 @@ export function buildStageManagedPromptContext(
   const stage = toStageName(runtimeState?.current_stage ?? "build")
   const autoModeLevel = runtimeState?.auto_mode_level ?? "light"
   const interactionMode = runtimeState?.interaction_mode ?? "batch"
+  const checkpointMetadata =
+    runtimeState?.artifact_mode ||
+    runtimeState?.artifact_root ||
+    runtimeState?.artifact_strategy ||
+    runtimeState?.active_work_item
+      ? null
+      : readLatestCheckpointMetadata(input.directory)
+  const checkpointArtifactPolicy =
+    checkpointMetadata?.consumed_by_session_id === input.sessionID
+      ? checkpointMetadata
+      : null
+  const artifactPolicyContext = buildArtifactPolicyContext({
+    artifactMode: runtimeState?.artifact_mode ?? checkpointArtifactPolicy?.artifact_mode,
+    artifactRoot: runtimeState?.artifact_root ?? checkpointArtifactPolicy?.artifact_root,
+    artifactStrategy: runtimeState?.artifact_strategy ?? checkpointArtifactPolicy?.artifact_strategy,
+    activeWorkItem: runtimeState?.active_work_item ?? checkpointArtifactPolicy?.active_work_item,
+    artifactRationale:
+      runtimeState?.artifact_rationale ??
+      (checkpointArtifactPolicy ? "Recovered from latest checkpoint metadata for this resumed session." : undefined),
+  })
 
   if (agent === "wase") {
-    return buildWaseStageBlock({
+    const block = buildWaseStageBlock({
       stage,
       autoModeLevel,
       interactionMode,
     })
+    return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
   }
 
   if (agent === "sisyphus" || agent === "hephaestus" || agent === "atlas") {
-    return buildEngineeringStageBlock({
+    const block = buildEngineeringStageBlock({
       agent,
       stage,
       autoModeLevel,
       interactionMode,
     })
+    return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
   }
 
-  return buildBioStageBlock({
+  const block = buildBioStageBlock({
     agent,
     stage,
     autoModeLevel,
     interactionMode,
   })
+  return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
 }

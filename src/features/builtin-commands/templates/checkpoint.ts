@@ -40,6 +40,11 @@ Analyze:
 - what remains unfinished
 - what decisions or constraints matter going forward
 - what files and artifacts are most important
+- whether the session already has a stable artifact policy in runtime workflow memory:
+  - artifact_mode
+  - artifact_root
+  - artifact_strategy
+  - active_work_item
 
 ---
 
@@ -63,6 +68,10 @@ The metadata JSON MUST include:
 - resume_hint
 - status
 - consumed_by_session_id
+- artifact_mode
+- artifact_root
+- artifact_strategy
+- active_work_item
 
 Use this exact metadata shape:
 
@@ -76,7 +85,11 @@ Use this exact metadata shape:
   "key_files": ["path/one", "path/two"],
   "resume_hint": "Continue from the checkpoint above. <next task>",
   "status": "pending",
-  "consumed_by_session_id": null
+  "consumed_by_session_id": null,
+  "artifact_mode": "<patch-existing|single-doc-rollup|package-bundle|or empty>",
+  "artifact_root": "<current artifact root if one already governs the work>",
+  "artifact_strategy": "<update-existing-first|append-supporting-artifacts|spawn-new-top-level-item|or empty>",
+  "active_work_item": "<current active item if one should carry across sessions>"
 }
 \`\`\`
 
@@ -122,6 +135,13 @@ CURRENT STATE
 - [Current code / research / document state]
 - [Build/test/run status if applicable]
 - [Environment or artifact state if relevant]
+
+ARTIFACT STRATEGY
+-----------------
+- [Current artifact mode if one exists]
+- [Current artifact root if one exists]
+- [Current active work item if one exists]
+- [Whether the next session should update existing outputs first or open a new top-level deliverable]
 
 PENDING TASKS
 -------------
@@ -180,6 +200,7 @@ Continue from checkpoint file .opencode/openagent-labforge/checkpoints/latest.md
 - Do keep the checkpoint self-contained
 - Do not include secrets or credentials
 - Do not exceed 12 files in KEY FILES
+- Do preserve artifact policy in compact form when the session is continuing inside an existing package, document workspace, or output bundle
 
 ---
 

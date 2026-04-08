@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { ensureRuntimeWorkflowSession } from "../features/boulder-state"
+import {
+  ensureRuntimeWorkflowSession,
+  updateRuntimeWorkflowArtifactPolicy,
+} from "../features/boulder-state"
 import {
   buildAutonomousUserDirectiveContext,
   buildStageManagedPromptContext,
@@ -94,6 +97,72 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("## Engineering Orchestration Reload")
     expect(result).toContain("## Engineering Execution Reload")
     expect(result).toContain("## Autonomous Acceptance Reload")
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("injects compact artifact policy context from runtime workflow state", () => {
+    const testDir = join(tmpdir(), `stage-managed-prompt-artifact-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "ses_artifact",
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
+    updateRuntimeWorkflowArtifactPolicy({
+      directory: testDir,
+      sessionId: "ses_artifact",
+      artifactMode: "package-bundle",
+      artifactRoot: "output_new/contest_bundle",
+      artifactStrategy: "update-existing-first",
+      activeWorkItem: "67/68 promoter figure set",
+      artifactRationale: "Checkpoint resume should continue inside the current package.",
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_artifact",
+      agent: "bio-autopilot",
+    })
+
+    expect(result).toContain("[artifact-policy-reload]")
+    expect(result).toContain("Artifact mode: package-bundle")
+    expect(result).toContain("output_new/contest_bundle")
+    expect(result).toContain("67/68 promoter figure set")
+    expect(result).toContain("Token discipline")
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("injects compact artifact policy context from consumed checkpoint metadata when runtime state has none", () => {
+    const testDir = join(tmpdir(), `stage-managed-prompt-checkpoint-${Date.now()}`)
+    const checkpointDir = join(testDir, ".opencode", "openagent-labforge", "checkpoints")
+    mkdirSync(checkpointDir, { recursive: true })
+    writeFileSync(join(checkpointDir, "latest.meta.json"), JSON.stringify({
+      consumed_by_session_id: "ses_checkpoint",
+      artifact_mode: "package-bundle",
+      artifact_root: "output_new/contest_bundle",
+      artifact_strategy: "update-existing-first",
+      active_work_item: "67/68 promoter figure set",
+    }, null, 2), "utf-8")
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_checkpoint",
+      agent: "wase",
+    })
+
+    expect(result).toContain("[artifact-policy-reload]")
+    expect(result).toContain("output_new/contest_bundle")
+    expect(result).toContain("Recovered from latest checkpoint metadata")
 
     rmSync(testDir, { recursive: true, force: true })
   })

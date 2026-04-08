@@ -37,6 +37,16 @@ export type RuntimeWorkflowAutoModeLevel = "light" | "heavy"
 
 export type RuntimeWorkflowInteractionMode = "batch" | "continuous"
 
+export type RuntimeWorkflowArtifactMode =
+  | "patch-existing"
+  | "single-doc-rollup"
+  | "package-bundle"
+
+export type RuntimeWorkflowArtifactStrategy =
+  | "update-existing-first"
+  | "append-supporting-artifacts"
+  | "spawn-new-top-level-item"
+
 export interface RuntimeWorkflowPaths {
   rootDir: string
   artifactsDir: string
@@ -62,6 +72,11 @@ export interface RuntimeWorkflowState {
   auto_mode_level?: RuntimeWorkflowAutoModeLevel
   interaction_mode?: RuntimeWorkflowInteractionMode
   mode_rationale?: string
+  artifact_mode?: RuntimeWorkflowArtifactMode
+  artifact_root?: string
+  artifact_strategy?: RuntimeWorkflowArtifactStrategy
+  active_work_item?: string
+  artifact_rationale?: string
   next_stage?: RuntimeWorkflowStage
   last_review_verdict?: RuntimeWorkflowVerdict
   review_rejection_count?: number

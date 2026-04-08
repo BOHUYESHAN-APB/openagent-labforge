@@ -11,6 +11,7 @@ import {
   getRuntimeWorkflowPaths,
   markRuntimeWorkflowReviewHandled,
   readRuntimeWorkflowState,
+  updateRuntimeWorkflowArtifactPolicy,
   updateRuntimeWorkflowStage,
   updateRuntimeWorkflowReviewOutcome,
 } from "./runtime-workflow"
@@ -168,6 +169,36 @@ describe("runtime-workflow", () => {
     expect(updated?.last_review_signature).toBe("reject:1")
     expect(state?.blocking_findings).toEqual(["Missing acceptance evidence", "Result overstates evidence"])
     expect(reviewFile).toContain("Acceptance reviewer rejected the current delivery.")
+  })
+
+  test("updates artifact policy without rereading broad package structure each turn", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-artifact-1",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+      currentStage: "build",
+    })
+
+    const updated = updateRuntimeWorkflowArtifactPolicy({
+      directory: testDir,
+      sessionId: "session-artifact-1",
+      artifactMode: "package-bundle",
+      artifactRoot: "output_new/contest_bundle",
+      artifactStrategy: "update-existing-first",
+      activeWorkItem: "67/68 promoter figure set",
+      artifactRationale: "Resume inside the existing bundle instead of spawning a new top-level package.",
+      note: "Artifact policy restored from checkpoint handoff.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-artifact-1")
+    const buildFile = readFileSync(getRuntimeWorkflowPaths(testDir, "session-artifact-1").buildFile, "utf-8")
+
+    expect(updated?.artifact_mode).toBe("package-bundle")
+    expect(updated?.artifact_root).toBe("output_new/contest_bundle")
+    expect(updated?.artifact_strategy).toBe("update-existing-first")
+    expect(updated?.active_work_item).toBe("67/68 promoter figure set")
+    expect(state?.artifact_rationale).toContain("existing bundle")
+    expect(buildFile).toContain("Artifact policy restored from checkpoint handoff.")
   })
 
   test("preserves wave and mode state when the runtime workflow session is re-initialized", () => {

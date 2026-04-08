@@ -1,5 +1,6 @@
 export * from "./types"
 export * from "./constants"
 export * from "./storage"
+export * from "./checkpoint-metadata"
 export * from "./runtime-workflow"
 export * from "./review-outcome"
