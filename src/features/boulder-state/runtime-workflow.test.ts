@@ -11,6 +11,7 @@ import {
   getRuntimeWorkflowPaths,
   markRuntimeWorkflowReviewHandled,
   readRuntimeWorkflowState,
+  reopenRuntimeWorkflowAfterApprovedBatch,
   updateRuntimeWorkflowArtifactPolicy,
   updateRuntimeWorkflowStage,
   updateRuntimeWorkflowReviewOutcome,
@@ -296,5 +297,36 @@ Summary: Ready to ship.`)
     expect(state?.last_review_handled_signature).toBe("reject:sig")
     expect(buildFile).toContain("Review rejection routed back to build.")
     expect(existsSync(join(getRuntimeWorkflowPaths(testDir, "session-handle-1").rootDir, "wave-002-build.md"))).toBe(true)
+  })
+
+  test("reopens execution when fresh user guidance arrives after an approved batch", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-approve-1",
+      activePlan: "/repo/.sisyphus/plans/test.md",
+      currentStage: "review",
+    })
+
+    updateRuntimeWorkflowReviewOutcome({
+      directory: testDir,
+      sessionId: "session-approve-1",
+      verdict: "approve",
+      signature: "approve:sig",
+      note: "Acceptance review approved the current delivery.",
+    })
+
+    const reopened = reopenRuntimeWorkflowAfterApprovedBatch({
+      directory: testDir,
+      sessionId: "session-approve-1",
+      note: "Fresh user guidance reopened execution.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-approve-1")
+    const buildFile = readFileSync(getRuntimeWorkflowPaths(testDir, "session-approve-1").buildFile, "utf-8")
+
+    expect(reopened?.current_stage).toBe("build")
+    expect(state?.last_review_verdict).toBeUndefined()
+    expect(state?.next_stage).toBe("build")
+    expect(buildFile).toContain("Fresh user guidance reopened execution.")
   })
 })

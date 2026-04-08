@@ -7,7 +7,7 @@ import { tmpdir } from "node:os"
 import type { BackgroundManager } from "../../features/background-agent"
 import { setMainSession, subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
 import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
-import { ensureRuntimeWorkflowSession } from "../../features/boulder-state"
+import { ensureRuntimeWorkflowSession, updateRuntimeWorkflowReviewOutcome } from "../../features/boulder-state"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 import { createTodoContinuationEnforcer } from "."
 import {
@@ -704,6 +704,63 @@ describe("todo-continuation-enforcer", () => {
       event: { type: "session.idle", properties: { sessionID } },
     })
     expect(promptCalls).toHaveLength(1)
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test("batch interaction mode should pause after approved review even if stale todos remain", async () => {
+    const sessionID = "main-autonomous-approved-batch"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-approved-batch-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "small-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(
+      planPath,
+      `# Small Plan
+
+- [ ] Tight task one
+- [ ] Tight task two
+`,
+      "utf-8",
+    )
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
+    updateRuntimeWorkflowReviewOutcome({
+      directory: tempDir,
+      sessionId: sessionID,
+      verdict: "approve",
+      signature: "approve:batch-stop",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "This reviewed wave is complete." }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Old future wave todo", status: "pending", priority: "high" },
+      { id: "2", content: "Completed reviewed task", status: "completed", priority: "medium" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(2500, true)
+
+    expect(promptCalls).toHaveLength(0)
 
     rmSync(tempDir, { recursive: true, force: true })
   })

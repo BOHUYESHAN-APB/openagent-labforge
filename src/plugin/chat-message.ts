@@ -21,6 +21,7 @@ import {
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
+import { reopenRuntimeWorkflowAfterApprovedBatch } from "../features/boulder-state"
 import {
   buildAutonomousUserDirectiveContext,
   buildStageManagedPromptContext,
@@ -167,6 +168,15 @@ export function createChatMessageHandler(args: {
     const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
     const isForkedSessionLoad = isForkedSession(input.sessionID)
     const isStageManagedAutonomousSession = isStageManagedAutonomousAgent(activeAgent)
+    const reopenedApprovedBatchState =
+      !internalInitiatedPromptDetected &&
+      isStageManagedAutonomousSession &&
+      reopenRuntimeWorkflowAfterApprovedBatch({
+        directory: ctx.directory,
+        sessionId: input.sessionID,
+        note: "Fresh user guidance arrived after an approved batch. Reopen execution only for the next explicit user-driven wave.",
+      })
+    const reopenedApprovedBatch = reopenedApprovedBatchState !== null && reopenedApprovedBatchState !== false
     const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
@@ -265,6 +275,7 @@ export function createChatMessageHandler(args: {
             guidanceMode: autonomousTurnAssessment?.mode,
             promptChanged: autonomousTurnAssessment?.promptChanged,
             likelyUndoFailed: autonomousTurnAssessment?.likelyUndoFailed,
+            approvedBatchCarryover: reopenedApprovedBatch,
           })
         })()
     if (userDirectiveContext) {

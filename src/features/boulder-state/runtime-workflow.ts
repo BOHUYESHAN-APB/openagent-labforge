@@ -1191,6 +1191,42 @@ export function markRuntimeWorkflowReviewHandled(args: {
   return nextState
 }
 
+export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
+  directory: string
+  sessionId: string
+  note?: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, note } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+  if (existing.last_review_verdict !== "approve") return null
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    current_stage: "build",
+    next_stage: "build",
+    last_review_verdict: undefined,
+    blocking_findings: undefined,
+    last_review_signature: undefined,
+    last_review_handled_signature: undefined,
+    updated_at: new Date().toISOString(),
+  }
+
+  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+
+  if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: "build",
+      content: note,
+    })
+  }
+
+  return nextState
+}
+
 export function appendRuntimeWorkflowNote(args: {
   directory: string
   sessionId: string

@@ -256,6 +256,20 @@ export async function handleSessionIdle(args: {
     ? (isHeavyAutonomous ? 2 : 1)
     : 0
 
+  if (
+    isAutonomous &&
+    interactionMode === "batch" &&
+    runtimeState?.last_review_verdict === "approve"
+  ) {
+    sessionStateStore.resetContinuationProgress(sessionID)
+    log(`[${HOOK_NAME}] Batch autonomous session already approved; awaiting explicit user follow-up`, {
+      sessionID,
+      incompleteCount,
+      totalTodos: todos.length,
+    })
+    return
+  }
+
   const staleTodoGuard = shouldSuppressStaleTodoSnapshot({
     state,
     currentTodoSnapshot,

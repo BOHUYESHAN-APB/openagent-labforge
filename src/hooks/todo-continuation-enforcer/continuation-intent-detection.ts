@@ -19,7 +19,6 @@ const CONTINUATION_INTENT_PATTERNS = [
   /值得继续/u,
   /继续打磨/u,
   /下一轮/u,
-  /如果(?:你)?继续/u,
   /后面可以继续/u,
   /\bnext step(?:s)?\b[\s\S]{0,60}\b(continue|proceed|finish|tackle|address|implement|work on|keep working on)\b/i,
   /\bI(?:'ll| will)\b[\s\S]{0,60}\b(continue|proceed|finish|tackle|address|implement|work on|keep working on)\b/i,
@@ -27,11 +26,13 @@ const CONTINUATION_INTENT_PATTERNS = [
   /\bremaining (work|items|tasks|issues|points)\b/i,
   /\bworth continuing\b/i,
   /\bnext round\b/i,
-  /\bif you continue\b/i,
   /\bfurther improvements?\b/i,
 ]
 
 const LIST_SIGNAL_PATTERN = /(^|\n)\s*(?:[-*•]\s+|\d+\.\s+)/m
+const CONDITIONAL_FOLLOWUP_PATTERN = /如果(?:你)?继续想?(?:修改|迭代|调整|补充)|if you (?:want to )?continue (?:editing|modifying|refining|changing)/iu
+const COMPLETION_MARKER_PATTERN = /已完成|完成了|reviewed wave|current wave complete|batch complete|done for this wave/iu
+const STRONG_AUTONOMOUS_CONTINUE_PATTERN = /默认继续|下一轮|还剩下|自主迭代|not to stop|next step|remaining (work|items|tasks|issues|points)/iu
 
 export function hasContinuationIntent(messages: Message[]): boolean {
   if (!messages || messages.length === 0) return false
@@ -53,6 +54,15 @@ export function hasContinuationIntent(messages: Message[]): boolean {
 
       if (combinedText.includes(CONTINUATION_REPLAN_MARKER)) {
         return true
+      }
+
+      const looksLikeConditionalPostCompletion =
+        CONDITIONAL_FOLLOWUP_PATTERN.test(combinedText) &&
+        COMPLETION_MARKER_PATTERN.test(combinedText) &&
+        !LIST_SIGNAL_PATTERN.test(combinedText) &&
+        !STRONG_AUTONOMOUS_CONTINUE_PATTERN.test(combinedText)
+      if (looksLikeConditionalPostCompletion) {
+        return false
       }
 
       const hasIntentPattern = CONTINUATION_INTENT_PATTERNS.some((pattern) => pattern.test(combinedText))

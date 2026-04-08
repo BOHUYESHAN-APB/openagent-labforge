@@ -1,10 +1,14 @@
 import { beforeEach, describe, test, expect } from "bun:test"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 
 import { createChatMessageHandler } from "./chat-message"
 import type { ChatMessageInput } from "./chat-message"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { contextCollector } from "../features/context-injector"
 import { getSessionAgent, isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
+import { ensureRuntimeWorkflowSession, readRuntimeWorkflowState, updateRuntimeWorkflowReviewOutcome } from "../features/boulder-state"
 import {
   clearSessionAutoModelRouting,
   clearSessionForcedModel,
@@ -25,12 +29,13 @@ function createMockHandlerArgs(overrides?: {
   pluginConfig?: Record<string, unknown>
   shouldOverride?: boolean
   sessionMessages?: Array<{ info?: { agent?: string; role?: string } }>
+  directory?: string
 }) {
   const appliedSessions: string[] = []
   const toastCalls: Array<{ title: string; message: string }> = []
   return {
     ctx: {
-      directory: ".",
+      directory: overrides?.directory ?? ".",
       client: {
         session: {
           messages: async () => ({
@@ -210,6 +215,47 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
 
     expect(userUpdate?.content).toContain("before a stable execution wave was committed")
     contextCollector.clear(input.sessionID)
+  })
+
+  test("reopens approved autonomous batch when fresh user guidance arrives", async () => {
+    const testDir = join(tmpdir(), `chat-message-approve-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "test-session",
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
+    updateRuntimeWorkflowReviewOutcome({
+      directory: testDir,
+      sessionId: "test-session",
+      verdict: "approve",
+      signature: "approve:test",
+    })
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "Please revise the final business-plan wording." })
+
+    await handler(input, output)
+
+    const state = readRuntimeWorkflowState(testDir, "test-session")
+    const pending = contextCollector.getPending(input.sessionID)
+    const userUpdate = pending.entries.find((entry) => entry.id === "autonomous-user-update")
+
+    expect(state?.current_stage).toBe("build")
+    expect(state?.last_review_verdict).toBeUndefined()
+    expect(userUpdate?.content).toContain("still-pending todo items from that batch as stale")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
   })
 
   test("recovers latest agent from transcript when resumed session has no in-memory agent", async () => {

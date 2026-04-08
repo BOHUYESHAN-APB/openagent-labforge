@@ -46,6 +46,7 @@ export function handleNonIdleEvent(args: {
         state.lastUserActivityAt = Date.now()
         state.awaitingUserGuidanceReconcile = true
         state.lastUserGuidanceAt = state.lastUserActivityAt
+        state.suppressedTodoSnapshot = undefined
       }
       sessionStateStore.resetContinuationProgress(sessionID)
       log(`[${HOOK_NAME}] Reset continuation progress after real user update`, { sessionID })

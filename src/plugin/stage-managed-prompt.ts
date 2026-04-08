@@ -126,6 +126,7 @@ export function buildAutonomousUserDirectiveContext(input: {
   guidanceMode?: "initial" | "repeat" | "precommit-revision" | "postcommit-guidance"
   promptChanged?: boolean
   likelyUndoFailed?: boolean
+  approvedBatchCarryover?: boolean
 }): string | null {
   const agent = toSupportedAgent(input.agent)
   if (!agent || !isAlwaysStageManagedAgent(agent)) {
@@ -140,7 +141,9 @@ export function buildAutonomousUserDirectiveContext(input: {
     input.guidanceMode === "initial" ||
     input.guidanceMode === "repeat"
   ) {
-    return null
+    if (!input.approvedBatchCarryover) {
+      return null
+    }
   }
 
   const lines = [
@@ -163,7 +166,9 @@ export function buildAutonomousUserDirectiveContext(input: {
     }
   } else {
     lines.push(
-      "The user added new guidance after execution may already have started.",
+      input.approvedBatchCarryover && (input.guidanceMode === undefined || input.guidanceMode === "initial" || input.guidanceMode === "repeat")
+        ? "The user started a fresh batch after the previous reviewed wave was already accepted."
+        : "The user added new guidance after execution may already have started.",
       "",
       "Before continuing:",
       "- compare the new user guidance against the current todo list and runtime workflow memory",
@@ -177,6 +182,10 @@ export function buildAutonomousUserDirectiveContext(input: {
 
   if (input.promptChanged === false) {
     lines.push("- the new message mostly repeats the previous request, so avoid duplicating todos or restarting completed work unnecessarily")
+  }
+
+  if (input.approvedBatchCarryover) {
+    lines.push("- the prior reviewed batch already passed acceptance, so treat any still-pending todo items from that batch as stale unless the new user request explicitly carries them forward")
   }
 
   return lines.join("\n")

@@ -173,10 +173,12 @@ describe("buildStageManagedPromptContext", () => {
       promptText: "Please also adjust the current backlog to prioritize the API contract work.",
       guidanceMode: "postcommit-guidance",
       promptChanged: true,
+      approvedBatchCarryover: true,
     })
 
     expect(result).toContain("[autonomous-user-update]")
     expect(result).toContain("update, drop, or reorder stale todo items immediately")
+    expect(result).toContain("treat any still-pending todo items from that batch as stale")
   })
 
   test("builds precommit revision context for fast autonomous corrections", () => {
