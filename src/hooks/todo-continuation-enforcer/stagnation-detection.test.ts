@@ -98,4 +98,34 @@ describe("shouldStopForStagnation", () => {
       })
     })
   })
+
+  describe("#given autonomous continuation state exists and the user adds new guidance", () => {
+    describe("#when a real user message arrives outside the grace period", () => {
+      test("#then continuation progress counters are reset", () => {
+        const sessionStateStore = createSessionStateStore()
+        const sessionID = "ses-user-directive-reset"
+        const state = sessionStateStore.getState(sessionID)
+        state.countdownStartedAt = Date.now() - 10_000
+        state.stagnationCount = 2
+        state.awaitingPostInjectionProgressCheck = true
+        state.completionAuditCount = 1
+        state.backlogExpansionCount = 2
+        state.lastBacklogExpansionTodoCount = 7
+
+        handleNonIdleEvent({
+          eventType: "message.updated",
+          properties: { info: { sessionID, role: "user" } },
+          sessionStateStore,
+        })
+
+        expect(state.stagnationCount).toBe(0)
+        expect(state.awaitingPostInjectionProgressCheck).toBe(false)
+        expect(state.completionAuditCount).toBe(0)
+        expect(state.backlogExpansionCount).toBe(0)
+        expect(state.lastBacklogExpansionTodoCount).toBeUndefined()
+
+        sessionStateStore.shutdown()
+      })
+    })
+  })
 })

@@ -40,6 +40,8 @@ export function handleNonIdleEvent(args: {
         state.abortDetectedAt = undefined
         state.lastUserActivityAt = Date.now()
       }
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Reset continuation progress after real user update`, { sessionID })
       sessionStateStore.cancelCountdown(sessionID)
       return
     }

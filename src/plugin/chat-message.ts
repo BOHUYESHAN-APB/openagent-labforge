@@ -21,7 +21,10 @@ import {
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
-import { buildStageManagedPromptContext } from "./stage-managed-prompt"
+import {
+  buildAutonomousUserDirectiveContext,
+  buildStageManagedPromptContext,
+} from "./stage-managed-prompt"
 import {
   getSessionAgent,
   isAutonomousSessionAgent,
@@ -241,6 +244,21 @@ export function createChatMessageHandler(args: {
         id: "stage-managed-prompt",
         source: "custom",
         content: stageManagedContext,
+        priority: "high",
+      })
+    }
+
+    const userDirectiveContext = internalInitiatedPromptDetected
+      ? null
+      : buildAutonomousUserDirectiveContext({
+          agent: activeAgent,
+          promptText: outputText,
+        })
+    if (userDirectiveContext) {
+      contextCollector.register(input.sessionID, {
+        id: "autonomous-user-update",
+        source: "custom",
+        content: userDirectiveContext,
         priority: "high",
       })
     }

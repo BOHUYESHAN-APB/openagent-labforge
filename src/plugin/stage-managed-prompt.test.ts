@@ -3,7 +3,10 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { ensureRuntimeWorkflowSession } from "../features/boulder-state"
-import { buildStageManagedPromptContext } from "./stage-managed-prompt"
+import {
+  buildAutonomousUserDirectiveContext,
+  buildStageManagedPromptContext,
+} from "./stage-managed-prompt"
 
 describe("buildStageManagedPromptContext", () => {
   test("uses light batch defaults for wase without runtime workflow state", () => {
@@ -93,5 +96,24 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("## Autonomous Acceptance Reload")
 
     rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("builds autonomous user update context for real user guidance", () => {
+    const result = buildAutonomousUserDirectiveContext({
+      agent: "wase",
+      promptText: "Please also adjust the current backlog to prioritize the API contract work.",
+    })
+
+    expect(result).toContain("[autonomous-user-update]")
+    expect(result).toContain("update, drop, or reorder stale todo items immediately")
+  })
+
+  test("does not build autonomous user update context for command templates", () => {
+    const result = buildAutonomousUserDirectiveContext({
+      agent: "wase",
+      promptText: "<command-instruction>\n# Command\n</command-instruction>\n<user-request>x</user-request>",
+    })
+
+    expect(result).toBeNull()
   })
 })

@@ -61,6 +61,30 @@ Auto mode: ${input.autoModeLevel}
 Interaction mode: ${input.interactionMode}`
 }
 
+export function buildAutonomousUserDirectiveContext(input: {
+  agent: string | undefined
+  promptText: string
+}): string | null {
+  const agent = toSupportedAgent(input.agent)
+  if (!agent || !isAlwaysStageManagedAgent(agent)) {
+    return null
+  }
+
+  const promptText = input.promptText.trim()
+  if (!promptText) return null
+  if (promptText.includes("<command-instruction>")) return null
+
+  return `[autonomous-user-update]
+The user added new guidance in this turn.
+
+Before continuing:
+- compare the new user guidance against the current todo list and runtime workflow memory
+- update, drop, or reorder stale todo items immediately if priorities or scope changed
+- if the new input narrows scope, shrink the current wave instead of blindly continuing the old backlog
+- if the new input expands scope, create the next concrete wave before resuming execution
+- do not spend multiple turns following an outdated plan after fresh user guidance`
+}
+
 function buildWaseStageBlock(input: {
   stage: StageName
   autoModeLevel: string
