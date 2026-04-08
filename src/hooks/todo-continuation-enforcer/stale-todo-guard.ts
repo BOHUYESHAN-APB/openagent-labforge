@@ -33,6 +33,16 @@ export function shouldSuppressStaleTodoSnapshot(args: {
 
   const latestUserStayedAutonomous =
     lastRealUserAgent !== undefined && isAutonomousSessionAgent(lastRealUserAgent)
+  const hasPendingUserGuidanceReconcile =
+    state.awaitingUserGuidanceReconcile === true &&
+    state.lastUserGuidanceAt !== undefined &&
+    state.lastAssistantActivityAt !== undefined &&
+    state.lastAssistantActivityAt > state.lastUserGuidanceAt &&
+    (
+      state.lastTodoGraphTouchAt === undefined ||
+      state.lastTodoGraphTouchAt < state.lastUserGuidanceAt
+    ) &&
+    state.lastTodoBaselineSnapshot === currentTodoSnapshot
 
   if (
     isMainSession &&
@@ -44,6 +54,13 @@ export function shouldSuppressStaleTodoSnapshot(args: {
     return {
       suppress: true,
       reason: "ordinary-main-session-with-stale-todos",
+    }
+  }
+
+  if (hasPendingUserGuidanceReconcile) {
+    return {
+      suppress: true,
+      reason: "fresh-user-guidance-left-todo-graph-unchanged",
     }
   }
 

@@ -102,16 +102,44 @@ describe("buildStageManagedPromptContext", () => {
     const result = buildAutonomousUserDirectiveContext({
       agent: "wase",
       promptText: "Please also adjust the current backlog to prioritize the API contract work.",
+      guidanceMode: "postcommit-guidance",
+      promptChanged: true,
     })
 
     expect(result).toContain("[autonomous-user-update]")
     expect(result).toContain("update, drop, or reorder stale todo items immediately")
   })
 
+  test("builds precommit revision context for fast autonomous corrections", () => {
+    const result = buildAutonomousUserDirectiveContext({
+      agent: "bio-autopilot",
+      promptText: "Actually, only continue with the DEG branch.",
+      guidanceMode: "precommit-revision",
+      promptChanged: true,
+      likelyUndoFailed: true,
+    })
+
+    expect(result).toContain("before a stable execution wave was committed")
+    expect(result).toContain("delayed corrective override")
+  })
+
+  test("skips autonomous user update context for the first autonomous prompt", () => {
+    const result = buildAutonomousUserDirectiveContext({
+      agent: "wase",
+      promptText: "Start the task.",
+      guidanceMode: "initial",
+      promptChanged: true,
+    })
+
+    expect(result).toBeNull()
+  })
+
   test("does not build autonomous user update context for command templates", () => {
     const result = buildAutonomousUserDirectiveContext({
       agent: "wase",
       promptText: "<command-instruction>\n# Command\n</command-instruction>\n<user-request>x</user-request>",
+      guidanceMode: "postcommit-guidance",
+      promptChanged: true,
     })
 
     expect(result).toBeNull()

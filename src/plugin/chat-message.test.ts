@@ -3,6 +3,7 @@ import { beforeEach, describe, test, expect } from "bun:test"
 import { createChatMessageHandler } from "./chat-message"
 import type { ChatMessageInput } from "./chat-message"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
+import { contextCollector } from "../features/context-injector"
 import { getSessionAgent, isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
 import {
   clearSessionAutoModelRouting,
@@ -84,6 +85,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     clearSessionForcedModel("test-session")
     clearSessionModelLock("test-session")
     clearSessionModel("test-session")
+    contextCollector.clear("test-session")
     _resetForTesting()
     resetForkedSessionsForTesting()
   })
@@ -171,6 +173,43 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     //#then
     expect(getSessionAgent(input.sessionID)).toBe("wase")
     expect(isUltraworkAutonomousSession(input.sessionID)).toBe(true)
+  })
+
+  test("does not inject autonomous user-update context on the first auto prompt", async () => {
+    const args = createMockHandlerArgs()
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "Build an API dashboard." })
+
+    await handler(input, output)
+
+    const pending = contextCollector.getPending(input.sessionID)
+    const ids = pending.entries.map((entry) => entry.id)
+
+    expect(ids).not.toContain("autonomous-user-update")
+    contextCollector.clear(input.sessionID)
+  })
+
+  test("injects autonomous user-update context when the user corrects an active auto session", async () => {
+    const args = createMockHandlerArgs()
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+
+    const firstOutput = createMockOutput()
+    firstOutput.parts.push({ type: "text", text: "Build an API dashboard." })
+    await handler(input, firstOutput)
+    contextCollector.clear(input.sessionID)
+
+    const secondOutput = createMockOutput()
+    secondOutput.parts.push({ type: "text", text: "Actually, focus only on latency panels." })
+    await handler(input, secondOutput)
+
+    const pending = contextCollector.getPending(input.sessionID)
+    const userUpdate = pending.entries.find((entry) => entry.id === "autonomous-user-update")
+
+    expect(userUpdate?.content).toContain("before a stable execution wave was committed")
+    contextCollector.clear(input.sessionID)
   })
 
   test("recovers latest agent from transcript when resumed session has no in-memory agent", async () => {

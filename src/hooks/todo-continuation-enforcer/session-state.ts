@@ -142,6 +142,8 @@ export function createSessionStateStore(): SessionStateStore {
         state.lastTodoBaselineSnapshot = currentTodoSnapshot
       }
       state.suppressedTodoSnapshot = undefined
+      state.awaitingUserGuidanceReconcile = false
+      state.lastUserGuidanceAt = undefined
       state.stagnationCount = 0
       state.awaitingPostInjectionProgressCheck = false
       return {

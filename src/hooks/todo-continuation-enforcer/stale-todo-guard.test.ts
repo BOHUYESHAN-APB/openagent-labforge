@@ -66,4 +66,30 @@ describe("shouldSuppressStaleTodoSnapshot", () => {
 
     expect(result).toEqual({ suppress: false })
   })
+
+  test("suppresses tracked autonomous workflow when fresh user guidance left the todo graph unchanged", () => {
+    const result = shouldSuppressStaleTodoSnapshot({
+      state: {
+        stagnationCount: 0,
+        consecutiveFailures: 0,
+        lastUserActivityAt: 200,
+        lastUserGuidanceAt: 200,
+        lastAssistantActivityAt: 320,
+        lastTodoGraphTouchAt: 100,
+        lastTodoBaselineSnapshot: '[{"id":"1","content":"old","priority":"high","status":"pending"}]',
+        awaitingUserGuidanceReconcile: true,
+      },
+      currentTodoSnapshot: '[{"id":"1","content":"old","priority":"high","status":"pending"}]',
+      hasContinuationIntent: false,
+      hasTrackedRuntimeWorkflow: true,
+      isMainSession: true,
+      isAutonomous: true,
+      lastRealUserAgent: "bio-autopilot",
+    })
+
+    expect(result).toEqual({
+      suppress: true,
+      reason: "fresh-user-guidance-left-todo-graph-unchanged",
+    })
+  })
 })

@@ -28,6 +28,7 @@ import {
 import {
   getSessionAgent,
   isAutonomousSessionAgent,
+  recordAutonomousUserTurn,
   setSessionAgent,
   setUltraworkAutonomousSession,
   updateSessionAgent,
@@ -250,10 +251,22 @@ export function createChatMessageHandler(args: {
 
     const userDirectiveContext = internalInitiatedPromptDetected
       ? null
-      : buildAutonomousUserDirectiveContext({
-          agent: activeAgent,
-          promptText: outputText,
-        })
+      : (() => {
+          const autonomousTurnAssessment = isStageManagedAutonomousSession && outputText.trim()
+            ? recordAutonomousUserTurn({
+                sessionID: input.sessionID,
+                promptText: outputText,
+              })
+            : undefined
+
+          return buildAutonomousUserDirectiveContext({
+            agent: activeAgent,
+            promptText: outputText,
+            guidanceMode: autonomousTurnAssessment?.mode,
+            promptChanged: autonomousTurnAssessment?.promptChanged,
+            likelyUndoFailed: autonomousTurnAssessment?.likelyUndoFailed,
+          })
+        })()
     if (userDirectiveContext) {
       contextCollector.register(input.sessionID, {
         id: "autonomous-user-update",

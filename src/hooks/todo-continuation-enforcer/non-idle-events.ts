@@ -1,4 +1,9 @@
 import { log } from "../../shared/logger"
+import {
+  clearAutonomousUserTurnState,
+  noteAutonomousAssistantTurn,
+  noteAutonomousTodoCommit,
+} from "../../features/claude-code-session-state"
 
 import {
   COUNTDOWN_GRACE_PERIOD_MS,
@@ -39,6 +44,8 @@ export function handleNonIdleEvent(args: {
       if (state) {
         state.abortDetectedAt = undefined
         state.lastUserActivityAt = Date.now()
+        state.awaitingUserGuidanceReconcile = true
+        state.lastUserGuidanceAt = state.lastUserActivityAt
       }
       sessionStateStore.resetContinuationProgress(sessionID)
       log(`[${HOOK_NAME}] Reset continuation progress after real user update`, { sessionID })
@@ -52,6 +59,7 @@ export function handleNonIdleEvent(args: {
         state.abortDetectedAt = undefined
         state.lastAssistantActivityAt = Date.now()
       }
+      noteAutonomousAssistantTurn(sessionID)
       sessionStateStore.cancelCountdown(sessionID)
       return
     }
@@ -66,7 +74,11 @@ export function handleNonIdleEvent(args: {
 
     if (sessionID && role === "assistant") {
       const state = sessionStateStore.getExistingState(sessionID)
-      if (state) state.abortDetectedAt = undefined
+      if (state) {
+        state.abortDetectedAt = undefined
+        state.lastAssistantActivityAt = Date.now()
+      }
+      noteAutonomousAssistantTurn(sessionID)
       sessionStateStore.cancelCountdown(sessionID)
     }
     return
@@ -84,7 +96,12 @@ export function handleNonIdleEvent(args: {
         if (toolName === "todowrite") {
           state.lastTodoGraphTouchAt = Date.now()
           state.suppressedTodoSnapshot = undefined
+          state.awaitingUserGuidanceReconcile = false
+          state.lastUserGuidanceAt = undefined
         }
+      }
+      if (typeof properties?.tool === "string" && properties.tool.toLowerCase() === "todowrite") {
+        noteAutonomousTodoCommit(sessionID)
       }
       sessionStateStore.cancelCountdown(sessionID)
     }
@@ -95,6 +112,7 @@ export function handleNonIdleEvent(args: {
     const sessionInfo = properties?.info as { id?: string } | undefined
     if (sessionInfo?.id) {
       sessionStateStore.cleanup(sessionInfo.id)
+      clearAutonomousUserTurnState(sessionInfo.id)
       log(`[${HOOK_NAME}] Session deleted: cleaned up`, { sessionID: sessionInfo.id })
     }
     return

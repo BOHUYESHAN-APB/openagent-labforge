@@ -64,6 +64,9 @@ Interaction mode: ${input.interactionMode}`
 export function buildAutonomousUserDirectiveContext(input: {
   agent: string | undefined
   promptText: string
+  guidanceMode?: "initial" | "repeat" | "precommit-revision" | "postcommit-guidance"
+  promptChanged?: boolean
+  likelyUndoFailed?: boolean
 }): string | null {
   const agent = toSupportedAgent(input.agent)
   if (!agent || !isAlwaysStageManagedAgent(agent)) {
@@ -73,16 +76,51 @@ export function buildAutonomousUserDirectiveContext(input: {
   const promptText = input.promptText.trim()
   if (!promptText) return null
   if (promptText.includes("<command-instruction>")) return null
+  if (
+    input.guidanceMode === undefined ||
+    input.guidanceMode === "initial" ||
+    input.guidanceMode === "repeat"
+  ) {
+    return null
+  }
 
-  return `[autonomous-user-update]
-The user added new guidance in this turn.
+  const lines = [
+    "[autonomous-user-update]",
+  ]
 
-Before continuing:
-- compare the new user guidance against the current todo list and runtime workflow memory
-- update, drop, or reorder stale todo items immediately if priorities or scope changed
-- if the new input narrows scope, shrink the current wave instead of blindly continuing the old backlog
-- if the new input expands scope, create the next concrete wave before resuming execution
-- do not spend multiple turns following an outdated plan after fresh user guidance`
+  if (input.guidanceMode === "precommit-revision") {
+    lines.push(
+      "The latest user message revises the immediately previous request before a stable execution wave was committed.",
+      "",
+      "Before continuing:",
+      "- treat any plan, todo sketch, or early internal draft from the prior user turn as provisional",
+      "- reuse valid pieces, but let the latest user message override the previous draft wherever they conflict",
+      "- if scope was narrowed, patch or replace the first wave before expanding the backlog",
+      "- do not hard-commit the first todo draft just because it was started first",
+    )
+
+    if (input.likelyUndoFailed) {
+      lines.push("- the session appears to have been busy, so interpret this as a delayed corrective override rather than a side comment")
+    }
+  } else {
+    lines.push(
+      "The user added new guidance after execution may already have started.",
+      "",
+      "Before continuing:",
+      "- compare the new user guidance against the current todo list and runtime workflow memory",
+      "- update, drop, or reorder stale todo items immediately if priorities or scope changed",
+      "- preserve already valid completed work, but rewrite pending backlog items that no longer match the latest user intent",
+      "- if the new input narrows scope, shrink the current wave instead of blindly continuing the old backlog",
+      "- if the new input expands scope, create the next concrete wave before resuming execution",
+      "- do not spend multiple turns following an outdated plan after fresh user guidance",
+    )
+  }
+
+  if (input.promptChanged === false) {
+    lines.push("- the new message mostly repeats the previous request, so avoid duplicating todos or restarting completed work unnecessarily")
+  }
+
+  return lines.join("\n")
 }
 
 function buildWaseStageBlock(input: {

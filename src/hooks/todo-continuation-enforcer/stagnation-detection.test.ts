@@ -123,6 +123,32 @@ describe("shouldStopForStagnation", () => {
         expect(state.completionAuditCount).toBe(0)
         expect(state.backlogExpansionCount).toBe(0)
         expect(state.lastBacklogExpansionTodoCount).toBeUndefined()
+        expect(state.awaitingUserGuidanceReconcile).toBe(true)
+        expect(typeof state.lastUserGuidanceAt).toBe("number")
+
+        sessionStateStore.shutdown()
+      })
+    })
+
+    describe("#when todowrite happens after the user correction", () => {
+      test("#then the pending reconcile marker is cleared", () => {
+        const sessionStateStore = createSessionStateStore()
+        const sessionID = "ses-user-directive-cleared"
+        const state = sessionStateStore.getState(sessionID)
+
+        handleNonIdleEvent({
+          eventType: "message.updated",
+          properties: { info: { sessionID, role: "user" } },
+          sessionStateStore,
+        })
+        handleNonIdleEvent({
+          eventType: "tool.execute.before",
+          properties: { sessionID, tool: "TodoWrite" },
+          sessionStateStore,
+        })
+
+        expect(state.awaitingUserGuidanceReconcile).toBe(false)
+        expect(state.lastUserGuidanceAt).toBeUndefined()
 
         sessionStateStore.shutdown()
       })
