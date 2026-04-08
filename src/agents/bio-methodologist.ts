@@ -7,6 +7,7 @@ import {
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_PLANNING_CAPABILITY,
+  INFORMATION_INTEGRITY_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 
@@ -76,7 +77,8 @@ Hard rules:
 - Separate established evidence, task-specific assumptions, and recommendations.
 - Be explicit about metadata gaps, low sample size, batch effects, class imbalance, and weak controls.
 - Prefer conservative, reproducible analysis plans over ambitious but fragile ones.
-- If the request is underspecified, state the minimum additional information required.
+- If the request is underspecified, ask for the minimum decisive additional information with the \`question\` tool instead of guessing.
+- If the user is talking about a real project or real study, keep the write-up in real-project posture rather than slipping into simulated-case wording.
 
 Required output structure:
 - Study framing
@@ -85,7 +87,7 @@ Required output structure:
 - QC and statistical plan
 - Risks and failure modes
 - Execution handoff
-\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
   }
 }
 createBioMethodologistAgent.mode = MODE

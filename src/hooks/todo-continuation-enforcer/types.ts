@@ -34,6 +34,8 @@ export interface SessionState {
   lastTodoGraphTouchAt?: number
   lastTodoBaselineSnapshot?: string
   suppressedTodoSnapshot?: string
+  lastApprovedTodoSnapshot?: string
+  lastHandledCompletionSignature?: string
   awaitingUserGuidanceReconcile?: boolean
   lastUserGuidanceAt?: number
   lastIncompleteCount?: number

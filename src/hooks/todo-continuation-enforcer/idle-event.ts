@@ -12,6 +12,7 @@ import {
 } from "../../features/claude-code-session-state"
 import type { ToolPermission } from "../../features/hook-message-injector"
 import {
+  markRuntimeWorkflowTerminalMessageHandled,
   readBoulderState,
   parseLatestAcceptanceReviewOutcome,
   readRuntimeWorkflowState,
@@ -36,6 +37,7 @@ import {
 } from "./constants"
 import { isLastAssistantMessageAborted } from "./abort-detection"
 import { acknowledgeCompactionGuard, isCompactionGuardActive } from "./compaction-guard"
+import { detectLatestAssistantCompletionPosture } from "./completion-posture-detection"
 import { startCountdown } from "./countdown"
 import { hasContinuationIntent } from "./continuation-intent-detection"
 import { hasUnansweredQuestion } from "./pending-question-detection"
@@ -116,6 +118,7 @@ export async function handleSessionIdle(args: {
     isUltraworkAutonomousSession(sessionID) ||
     isAutonomousSessionAgent(rememberedSessionAgent)
   let lastRealUserAgent: string | undefined
+  let latestCompletionPosture = detectLatestAssistantCompletionPosture([])
   const mainSessionID = getMainSessionID()
   const isMainSession = mainSessionID === sessionID
   const activeBoulderState = readBoulderState(ctx.directory)
@@ -159,6 +162,7 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: pending question awaiting user response`, { sessionID })
       return
     }
+    latestCompletionPosture = detectLatestAssistantCompletionPosture(messages)
     state.hasContinuationIntent = hasContinuationIntent(messages)
     const latestSessionAgent = extractLatestSessionAgent(messages)
     if (!isAutonomous && latestSessionAgent && isAutonomousSessionAgent(latestSessionAgent)) {
@@ -256,11 +260,25 @@ export async function handleSessionIdle(args: {
     ? (isHeavyAutonomous ? 2 : 1)
     : 0
 
+  const markBatchTerminalStop = (note: string): void => {
+    state.lastApprovedTodoSnapshot = currentTodoSnapshot
+    state.lastHandledCompletionSignature = latestCompletionPosture.signature
+    if (latestCompletionPosture.signature && runtimeState) {
+      markRuntimeWorkflowTerminalMessageHandled({
+        directory: ctx.directory,
+        sessionId: sessionID,
+        signature: latestCompletionPosture.signature,
+        note,
+      })
+    }
+  }
+
   if (
     isAutonomous &&
     interactionMode === "batch" &&
     runtimeState?.last_review_verdict === "approve"
   ) {
+    markBatchTerminalStop("Batch review already approved. Hold position until explicit user follow-up.")
     sessionStateStore.resetContinuationProgress(sessionID)
     log(`[${HOOK_NAME}] Batch autonomous session already approved; awaiting explicit user follow-up`, {
       sessionID,
@@ -292,6 +310,85 @@ export async function handleSessionIdle(args: {
   }
 
   if (incompleteCount === 0) {
+    if (isAutonomous && latestCompletionPosture.kind === "pseudo_complete") {
+      const pseudoCompletionAlreadyHandled =
+        state.lastHandledCompletionSignature === latestCompletionPosture.signature ||
+        runtimeState?.last_review_verdict === "reject" &&
+        runtimeState.last_review_signature === latestCompletionPosture.signature &&
+        runtimeState.last_review_handled_signature === latestCompletionPosture.signature
+
+      if (pseudoCompletionAlreadyHandled) {
+        log(`[${HOOK_NAME}] Pseudo-complete final message already handled; awaiting new execution state`, {
+          sessionID,
+          signature: latestCompletionPosture.signature,
+        })
+        return
+      }
+
+      if (runtimeState && latestCompletionPosture.signature) {
+        updateRuntimeWorkflowReviewOutcome({
+          directory: ctx.directory,
+          sessionId: sessionID,
+          verdict: "reject",
+          blockingFindings: latestCompletionPosture.blockingFindings,
+          nextStage: "plan",
+          signature: latestCompletionPosture.signature,
+          note: "Completion claim contradicted explicit remaining work in the final assistant message.",
+        })
+      }
+
+      if (runtimeState && latestCompletionPosture.signature) {
+        await injectAutonomousReviewRework({
+          ctx,
+          sessionID,
+          nextStage: "plan",
+          blockingFindings: latestCompletionPosture.blockingFindings,
+          reviewSignature: latestCompletionPosture.signature,
+          backgroundManager,
+          skipAgents,
+          sessionStateStore,
+          isContinuationStopped,
+        })
+      } else {
+        state.lastHandledCompletionSignature = latestCompletionPosture.signature
+        await injectContinuationReplan({
+          ctx,
+          sessionID,
+          backgroundManager,
+          skipAgents,
+          sessionStateStore,
+          isContinuationStopped,
+        })
+      }
+      return
+    }
+
+    if (
+      isAutonomous &&
+      interactionMode === "batch" &&
+      latestCompletionPosture.kind === "terminal_complete"
+    ) {
+      if (
+        runtimeState?.last_terminal_message_signature === latestCompletionPosture.signature ||
+        state.lastHandledCompletionSignature === latestCompletionPosture.signature
+      ) {
+        sessionStateStore.resetContinuationProgress(sessionID)
+        log(`[${HOOK_NAME}] Terminal completion already handled for this batch message`, {
+          sessionID,
+          signature: latestCompletionPosture.signature,
+        })
+        return
+      }
+
+      markBatchTerminalStop("Batch completion was accepted from the terminal assistant message after review.")
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Batch autonomous session reached clean terminal completion after review`, {
+        sessionID,
+        signature: latestCompletionPosture.signature,
+      })
+      return
+    }
+
     if (
       isAutonomous &&
       runtimeState?.last_review_verdict === "reject" &&

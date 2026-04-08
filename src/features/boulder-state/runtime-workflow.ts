@@ -1210,6 +1210,7 @@ export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
     blocking_findings: undefined,
     last_review_signature: undefined,
     last_review_handled_signature: undefined,
+    last_terminal_message_signature: undefined,
     updated_at: new Date().toISOString(),
   }
 
@@ -1220,6 +1221,41 @@ export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
       directory,
       sessionId,
       stage: "build",
+      content: note,
+    })
+  }
+
+  return nextState
+}
+
+export function markRuntimeWorkflowTerminalMessageHandled(args: {
+  directory: string
+  sessionId: string
+  signature: string
+  note?: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, signature, note } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  if (existing.last_terminal_message_signature === signature) {
+    return existing
+  }
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    last_terminal_message_signature: signature,
+    updated_at: new Date().toISOString(),
+  }
+
+  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+
+  if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: nextState.current_stage,
       content: note,
     })
   }

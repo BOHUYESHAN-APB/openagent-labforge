@@ -21,6 +21,7 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
@@ -40,6 +41,7 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<wase-autonomous-mode>")
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<wase-stage-management>")
     expect(agent.prompt).toContain("Autonomy quality bar:")
@@ -48,6 +50,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("Use session continuity when resuming delegated work")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
     expect(agent.prompt).toContain("delegate to `acceptance-reviewer`")
+    expect(agent.prompt).toContain("use the `question` tool")
+    expect(agent.prompt).toContain("Never invent a simulated project scenario")
   })
 
   test("hephaestus includes execution capability block", () => {
@@ -55,6 +59,7 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_execution_capability>")
     expect(agent.prompt).toContain("identify the narrow write surface before editing")
@@ -72,6 +77,7 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_orchestration_capability>")
     expect(agent.prompt).toContain("Orchestrator responsibilities:")
@@ -122,6 +128,7 @@ describe("engineering capability layering", () => {
 
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
     expect(agent.prompt).toContain("## Bio Skill Router")
@@ -133,6 +140,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("private sequencing data")
     expect(agent.prompt).toContain("MUST load `bio-methods`")
     expect(agent.prompt).toContain("blast / homolog / homology / ortholog / synteny / reciprocal best hit")
+    expect(agent.prompt).toContain("use the `question` tool early instead of guessing")
+    expect(agent.prompt).toContain("real-project posture")
   })
 
   test("bio-autopilot includes autonomous bio workflow and acceptance-review loop", () => {
@@ -143,6 +152,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("after a meaningful execution wave")
     expect(agent.prompt).toContain("use acceptance-reviewer for the final approve/reject decision")
     expect(agent.prompt).toContain("side validation")
+    expect(agent.prompt).toContain("request decisive missing data early with the `question` tool")
+    expect(agent.prompt).toContain("do not recast the task as a simulated scenario")
   })
 
   test("acceptance-reviewer includes review and autonomous acceptance workflow capability blocks", () => {
@@ -159,12 +170,15 @@ describe("engineering capability layering", () => {
 
     expect(agent.mode).toBe("subagent")
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
+    expect(agent.prompt).toContain("<information_integrity_capability>")
     expect(agent.prompt).toContain("<prompt_layering_protocol_capability>")
     expect(agent.prompt).toContain("<engineering_planning_capability>")
     expect(agent.prompt).toContain("<bio_data_interaction_capability>")
     expect(agent.prompt).toContain("<bio_environment_safety_capability>")
     expect(agent.prompt).toContain("## Bio Skill Tool Reminder")
     expect(agent.prompt).toContain("## Bio Skill Router")
+    expect(agent.prompt).toContain("ask for the minimum decisive additional information with the `question` tool")
+    expect(agent.prompt).toContain("real-project posture")
   })
 
   test("bio-pipeline-operator includes execution, data request, and environment safety capability blocks", () => {

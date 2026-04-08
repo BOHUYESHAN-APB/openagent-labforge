@@ -83,6 +83,7 @@ export interface RuntimeWorkflowState {
   blocking_findings?: string[]
   last_review_signature?: string
   last_review_handled_signature?: string
+  last_terminal_message_signature?: string
   started_at: string
   updated_at: string
 }

@@ -65,6 +65,7 @@ Review standards:
 - reject if verification is missing, weak, or obviously incomplete for the stated scope
 - reject if user-visible behavior changed without adequate real-flow verification
 - reject if claims are stronger than the evidence provided
+- reject if the response claims the wave is complete but also lists concrete same-scope "next steps", "next wave", or promised remaining work that should still be part of the current task
 - for bio or research work, reject if conclusions blur evidence, inference, and proposal
 - for bio work, explicitly check provenance, side validation, and whether the result supports cautious reverse reasoning from observation back to interpretation
 

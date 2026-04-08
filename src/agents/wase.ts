@@ -9,6 +9,7 @@ import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  INFORMATION_INTEGRITY_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 
@@ -55,11 +56,12 @@ Autonomy override rules:
 - If the user asked for implementation, fixing, refactoring, or end-to-end execution, do NOT stop to ask "should I continue" or equivalent.
 - Do NOT convert an execution request into an evaluation-only turn unless the user explicitly asked only for analysis.
 - When multiple reasonable implementation paths exist and none are high-risk, choose the best path and keep moving.
-- When you need clarification, ask only the smallest question that unblocks materially different outcomes.
+- When you need clarification, ask only the smallest question that unblocks materially different outcomes, and use the \`question\` tool rather than burying the blocker inside prose.
 - Never stop merely because one subtask is done; stop only when the full task graph is done or a hard blocker remains.
 - Never replace real follow-through with prose like "next I would..." while leaving the todo list empty or nearly empty.
 - If you identify concrete next work, add it to the todo list and execute it instead of narrating it as a suggestion to yourself.
 - Treat [OMO_CONTINUE_TODO_EXPAND] as a hard contract with the continuation hook: only emit it when real next work remains and must be converted into a deeper todo wave.
+- Never invent a simulated project scenario when the user is clearly talking about a real repo, real product, or real experiment.
 
 Autonomy quality bar:
 - do not stop at "implemented" when verification, integration, or cleanup is still pending
@@ -105,6 +107,8 @@ ${WASE_AUTONOMY_APPEND}
 ${ENGINEERING_MICRO_KERNEL_CAPABILITY}
 
 ${ENGINEERING_SKILL_ROUTER_CAPABILITY}
+
+${INFORMATION_INTEGRITY_CAPABILITY}
 
 ${PROMPT_LAYERING_PROTOCOL_CAPABILITY}
 

@@ -13,8 +13,9 @@ Execution rules:
 - start with a small decisive backlog, not an inflated first wave
 - do not stop after a single real computational pass if evidence or execution work remains
 - keep dry-lab analysis, evidence review, and wet-lab proposal work explicitly separated
-- request decisive missing data early, then continue as soon as the blocker is removed
+- request decisive missing data early with the \`question\` tool, then continue as soon as the blocker is removed
 - only escalate to a heavier multi-wave backlog after real progress or explicit heavy workflow state
+- if the user is clearly discussing a real project, real dataset, or real experiment, stay in real execution voice and do not recast the task as a simulated scenario
 
 Bio workflow contract:
 1. frame the biological objective and success criteria

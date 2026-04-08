@@ -9,6 +9,23 @@ Always-on rules:
 - when obvious work remains, turn it into the next concrete execution wave instead of narrating vague future work
 </engineering_micro_kernel_capability>`
 
+export const INFORMATION_INTEGRITY_CAPABILITY = `<information_integrity_capability>
+## Information Integrity And Question Gate
+
+Treat these as different classes at all times:
+- user-stated facts
+- facts verified from repo files, logs, or artifacts
+- your assumptions
+- future proposals
+
+Rules:
+- if a missing input could materially change the task graph, implementation path, artifact target, biological interpretation, or deliverable shape, use the \`question\` tool and wait instead of guessing
+- for long-running plans, ask once early for the smallest decisive missing information rather than simulating a plausible scenario
+- do not convert a real in-progress project into hypothetical, mock, or simulated wording unless the user explicitly asks for a scenario exercise
+- if only part of the work is hypothetical, label only that part as proposed while keeping the rest in real execution voice
+- when the user says "we are doing this", "this project", "our repo", "our experiment", or equivalent, default to real-project posture rather than case-study posture
+</information_integrity_capability>`
+
 export const ENGINEERING_SKILL_ROUTER_CAPABILITY = `<engineering_skill_router_capability>
 ## Engineering Skill Router
 

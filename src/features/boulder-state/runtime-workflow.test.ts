@@ -9,6 +9,7 @@ import {
   ensureRuntimeWorkflowGitExclude,
   ensureRuntimeWorkflowSession,
   getRuntimeWorkflowPaths,
+  markRuntimeWorkflowTerminalMessageHandled,
   markRuntimeWorkflowReviewHandled,
   readRuntimeWorkflowState,
   reopenRuntimeWorkflowAfterApprovedBatch,
@@ -328,5 +329,28 @@ Summary: Ready to ship.`)
     expect(state?.last_review_verdict).toBeUndefined()
     expect(state?.next_stage).toBe("build")
     expect(buildFile).toContain("Fresh user guidance reopened execution.")
+  })
+
+  test("records the latest handled terminal completion signature", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-terminal-1",
+      activePlan: "/repo/.sisyphus/plans/test.md",
+      currentStage: "review",
+    })
+
+    const updated = markRuntimeWorkflowTerminalMessageHandled({
+      directory: testDir,
+      sessionId: "session-terminal-1",
+      signature: "terminal:sig:1",
+      note: "Batch completion was handled and should not be re-audited on the same message.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-terminal-1")
+    const reviewFile = readFileSync(getRuntimeWorkflowPaths(testDir, "session-terminal-1").reviewFile, "utf-8")
+
+    expect(updated?.last_terminal_message_signature).toBe("terminal:sig:1")
+    expect(state?.last_terminal_message_signature).toBe("terminal:sig:1")
+    expect(reviewFile).toContain("should not be re-audited")
   })
 })

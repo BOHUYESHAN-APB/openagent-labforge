@@ -43,6 +43,14 @@ export function shouldSuppressStaleTodoSnapshot(args: {
       state.lastTodoGraphTouchAt < state.lastUserGuidanceAt
     ) &&
     state.lastTodoBaselineSnapshot === currentTodoSnapshot
+  const hasApprovedBatchTodoCarryover =
+    state.lastApprovedTodoSnapshot !== undefined &&
+    state.lastApprovedTodoSnapshot === currentTodoSnapshot &&
+    state.lastUserGuidanceAt !== undefined &&
+    (
+      state.lastTodoGraphTouchAt === undefined ||
+      state.lastTodoGraphTouchAt < state.lastUserGuidanceAt
+    )
 
   if (
     isMainSession &&
@@ -61,6 +69,13 @@ export function shouldSuppressStaleTodoSnapshot(args: {
     return {
       suppress: true,
       reason: "fresh-user-guidance-left-todo-graph-unchanged",
+    }
+  }
+
+  if (hasApprovedBatchTodoCarryover) {
+    return {
+      suppress: true,
+      reason: "approved-batch-todos-carried-into-new-user-wave",
     }
   }
 

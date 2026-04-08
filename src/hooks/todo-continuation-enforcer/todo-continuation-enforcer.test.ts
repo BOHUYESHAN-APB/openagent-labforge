@@ -765,6 +765,97 @@ describe("todo-continuation-enforcer", () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
+  test("terminal completion after one audit should not be re-audited on the same message in light batch mode", async () => {
+    const sessionID = "main-autonomous-terminal-signature"
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "Normal output before audit." }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput()
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
+
+    mockMessages = [
+      {
+        info: { id: "msg-2", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "这轮 reviewed wave 已完成。后续如果你继续想修改，我就直接基于这三个最终文件继续改。" }],
+      } as any,
+    ]
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(2500, true)
+    expect(promptCalls).toHaveLength(1)
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(2500, true)
+    expect(promptCalls).toHaveLength(1)
+  })
+
+  test("pseudo completion after audit should be rejected into a fresh rework wave", async () => {
+    const sessionID = "main-autonomous-pseudo-complete"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-pseudo-complete-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "small-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-3", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{
+          type: "text",
+          text: "这一小波完成了，但我已经把下一最小波锁好了。新增文件：84_下一波范围_先做DWF4普通荞麦与苦荞基因结构对照图.txt",
+        }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS REVIEW REWORK")
+    expect(promptCalls[0].text).toContain("Completion claim conflicts with explicitly declared remaining work")
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
   test("should not inject when remaining todos are blocked or deleted", async () => {
     // given - session where non-completed todos are only blocked/deleted
     const sessionID = "main-blocked-deleted"

@@ -92,4 +92,29 @@ describe("shouldSuppressStaleTodoSnapshot", () => {
       reason: "fresh-user-guidance-left-todo-graph-unchanged",
     })
   })
+
+  test("suppresses approved-batch todos when a fresh user wave has not replaced them yet", () => {
+    const result = shouldSuppressStaleTodoSnapshot({
+      state: {
+        stagnationCount: 0,
+        consecutiveFailures: 0,
+        lastUserActivityAt: 500,
+        lastUserGuidanceAt: 500,
+        lastAssistantActivityAt: 620,
+        lastTodoGraphTouchAt: 300,
+        lastApprovedTodoSnapshot: '[{"id":"1","content":"old","priority":"high","status":"pending"}]',
+      },
+      currentTodoSnapshot: '[{"id":"1","content":"old","priority":"high","status":"pending"}]',
+      hasContinuationIntent: false,
+      hasTrackedRuntimeWorkflow: true,
+      isMainSession: true,
+      isAutonomous: true,
+      lastRealUserAgent: "wase",
+    })
+
+    expect(result).toEqual({
+      suppress: true,
+      reason: "approved-batch-todos-carried-into-new-user-wave",
+    })
+  })
 })

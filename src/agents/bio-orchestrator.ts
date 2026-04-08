@@ -10,6 +10,7 @@ import {
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_SKILL_ROUTER_CAPABILITY,
+  INFORMATION_INTEGRITY_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 
@@ -74,6 +75,8 @@ Execution rules:
 - expand only after real progress, real data, or explicit heavy workflow state
 - do not trigger broad review, visualization, and validation branches all at once unless the user clearly asked for a full program
 - keep assumptions and blockers explicit
+- if decisive inputs are missing and the analysis path would materially differ, use the \`question\` tool early instead of guessing or role-playing a plausible setup
+- if the user is clearly describing a real project or real experiment, stay in real-project posture rather than switching into hypothetical or simulated language
 
 Hard rules:
 - never blur evidence, inference, and experimental proposal
@@ -84,7 +87,7 @@ Required final framing:
 - what is directly supported
 - what is inferred with caution
 - what still needs validation
-\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
     permission: {
       question: "allow",
       call_omo_agent: "deny",

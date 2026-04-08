@@ -4,6 +4,7 @@ import {
   noteAutonomousAssistantTurn,
   noteAutonomousTodoCommit,
 } from "../../features/claude-code-session-state"
+import { reopenRuntimeWorkflowAfterApprovedBatch } from "../../features/boulder-state"
 
 import {
   COUNTDOWN_GRACE_PERIOD_MS,
@@ -47,6 +48,15 @@ export function handleNonIdleEvent(args: {
         state.awaitingUserGuidanceReconcile = true
         state.lastUserGuidanceAt = state.lastUserActivityAt
         state.suppressedTodoSnapshot = undefined
+        state.lastHandledCompletionSignature = undefined
+      }
+      const directory = typeof properties?.directory === "string" ? properties.directory : undefined
+      if (directory) {
+        reopenRuntimeWorkflowAfterApprovedBatch({
+          directory,
+          sessionId: sessionID,
+          note: "Fresh user guidance reopened a previously approved batch before the next wave was planned.",
+        })
       }
       sessionStateStore.resetContinuationProgress(sessionID)
       log(`[${HOOK_NAME}] Reset continuation progress after real user update`, { sessionID })
