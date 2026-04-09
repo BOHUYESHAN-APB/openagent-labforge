@@ -208,6 +208,14 @@ export function createChatMessageHandler(args: {
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
       (rawInputModel === undefined || isAutoModelSelection(rawInputModelId))
+    const internalExplicitModelShouldHonorLock =
+      strictUserModelPriority &&
+      internalInitiatedPromptDetected &&
+      lockedModel !== undefined &&
+      rawInputModel !== undefined &&
+      !isAutoModelSelection(rawInputModelId) &&
+      !sameModel(rawInputModel, lockedModel) &&
+      !shouldBypassStickyLockForAgent
     let shouldShowRecoveryModelToast = false
 
     if (strictUserModelPriority && lockedModel && !shouldBypassStickyLockForAgent) {
@@ -217,6 +225,14 @@ export function createChatMessageHandler(args: {
       } else if (isAutoModelSelection(rawInputModelId)) {
         input.model = lockedModel
         clearSessionAutoModelRouting(input.sessionID)
+      } else if (internalExplicitModelShouldHonorLock) {
+        input.model = lockedModel
+        clearSessionAutoModelRouting(input.sessionID)
+        log("[chat-message] Restored locked model for internal prompt carrying stale explicit model", {
+          sessionID: input.sessionID,
+          lockedModel: `${lockedModel.providerID}/${lockedModel.modelID}`,
+          rawInputModel: `${rawInputModel.providerID}/${rawInputModel.modelID}`,
+        })
       } else if (!sameModel(rawInputModel, lockedModel)) {
         if (forcedModel && sameModel(rawInputModel, forcedModel) && !manualModelChangeDetected) {
           input.model = lockedModel
@@ -475,6 +491,7 @@ export function createChatMessageHandler(args: {
     const userRequestedModelId = rawInputModelId
     const shouldRefreshLockFromUserSelection =
       strictUserModelPriority &&
+      !internalInitiatedPromptDetected &&
       userRequestedModel !== undefined &&
       !isAutoModelSelection(userRequestedModelId)
     const shouldEnforceLockedOutput =

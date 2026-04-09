@@ -118,6 +118,7 @@ export async function handleSessionIdle(args: {
     isUltraworkAutonomousSession(sessionID) ||
     isAutonomousSessionAgent(rememberedSessionAgent)
   let lastRealUserAgent: string | undefined
+  let latestSessionAgent: string | undefined
   let latestCompletionPosture = detectLatestAssistantCompletionPosture([])
   const mainSessionID = getMainSessionID()
   const isMainSession = mainSessionID === sessionID
@@ -164,7 +165,7 @@ export async function handleSessionIdle(args: {
     }
     latestCompletionPosture = detectLatestAssistantCompletionPosture(messages)
     state.hasContinuationIntent = hasContinuationIntent(messages)
-    const latestSessionAgent = extractLatestSessionAgent(messages)
+    latestSessionAgent = extractLatestSessionAgent(messages)
     if (!isAutonomous && latestSessionAgent && isAutonomousSessionAgent(latestSessionAgent)) {
       updateSessionAgent(sessionID, latestSessionAgent)
       setUltraworkAutonomousSession(sessionID, true)
@@ -178,6 +179,27 @@ export async function handleSessionIdle(args: {
       }
       updateSessionAgent(sessionID, lastRealUserAgent)
       isAutonomous = false
+    }
+
+    const latestManualNonAutonomousWaveLeftTodoUntouched =
+      lastRealUserAgent !== undefined &&
+      latestSessionAgent !== undefined &&
+      !isAutonomousSessionAgent(lastRealUserAgent) &&
+      !isAutonomousSessionAgent(latestSessionAgent) &&
+      state.lastUserGuidanceAt !== undefined &&
+      (
+        state.lastTodoGraphTouchAt === undefined ||
+        state.lastTodoGraphTouchAt < state.lastUserGuidanceAt
+      )
+
+    if (latestManualNonAutonomousWaveLeftTodoUntouched) {
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Skipped: manual non-autonomous follow-up left the todo graph untouched`, {
+        sessionID,
+        lastRealUserAgent,
+        latestSessionAgent,
+      })
+      return
     }
 
     if (

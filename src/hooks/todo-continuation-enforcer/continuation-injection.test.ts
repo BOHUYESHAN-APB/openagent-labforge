@@ -3,8 +3,58 @@ const { describe, expect, test } = require("bun:test")
 
 import { injectContinuation } from "./continuation-injection"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../../shared/internal-initiator-marker"
+import { clearSessionModelLock, setSessionModelLock } from "../../shared/session-model-state"
 
 describe("injectContinuation", () => {
+  test("prefers the session-locked model over a stale resolved model", async () => {
+    // given
+    let capturedModel: { providerID?: string; modelID?: string } | undefined
+    const sessionID = "ses_locked_model"
+    setSessionModelLock(sessionID, {
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+
+    const ctx = {
+      directory: "/tmp/test",
+      client: {
+        session: {
+          todo: async () => ({ data: [{ id: "1", content: "todo", status: "pending", priority: "high" }] }),
+          promptAsync: async (input: {
+            body: {
+              model?: { providerID?: string; modelID?: string }
+              parts?: Array<{ type: string; text: string; synthetic?: boolean }>
+            }
+          }) => {
+            capturedModel = input.body.model
+            return {}
+          },
+        },
+      },
+    }
+    const sessionStateStore = {
+      getExistingState: () => ({ inFlight: false, lastInjectedAt: 0, consecutiveFailures: 0 }),
+    }
+
+    // when
+    await injectContinuation({
+      ctx: ctx as never,
+      sessionID,
+      resolvedInfo: {
+        agent: "Hephaestus",
+        model: { providerID: "openai", modelID: "gpt-5.4" },
+      },
+      sessionStateStore: sessionStateStore as never,
+    })
+
+    // then
+    expect(capturedModel).toEqual({
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+    clearSessionModelLock(sessionID)
+  })
+
   test("inherits tools from resolved message info when reinjecting", async () => {
     // given
     let capturedTools: Record<string, boolean> | undefined

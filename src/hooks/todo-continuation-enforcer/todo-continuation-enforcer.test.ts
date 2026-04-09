@@ -373,6 +373,63 @@ describe("todo-continuation-enforcer", () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
+  test("should not revive an old tracked todo flow when the user switched to a non-auto summary turn", async () => {
+    const sessionID = "main-manual-summary-takeover"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-manual-summary-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "tracked-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Tracked Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-1", role: "assistant", agent: "哇塞 (全自动超脑)", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "旧的自动执行还在待续。" }],
+      } as any,
+      {
+        info: { id: "msg-2", role: "user", agent: "总调度器 (超脑)", model: { providerID: "github-copilot", modelID: "gpt-5.3-codex" } },
+        parts: [{ type: "text", text: "先别继续旧 todo，先帮我做一次上下文总结，后面我再决定怎么接。" }],
+      } as any,
+      {
+        info: { id: "msg-3", role: "assistant", agent: "总调度器 (超脑)", model: { providerID: "github-copilot", modelID: "gpt-5.3-codex" } },
+        parts: [{ type: "text", text: "可以，我先给你整理当前上下文和断点。" }],
+      } as any,
+    ]
+
+    const hook = createTodoContinuationEnforcer(createMockPluginInput(tempDir), {})
+
+    await hook.handler({
+      event: {
+        type: "message.updated",
+        properties: {
+          directory: tempDir,
+          info: {
+            sessionID,
+            role: "user",
+            agent: "总调度器 (超脑)",
+          },
+        },
+      },
+    })
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    await fakeTimers.advanceBy(3000, true)
+
+    expect(promptCalls).toHaveLength(0)
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
   test("should not inject when all todos are complete", async () => {
     // given - session with all todos complete
     const sessionID = "main-456"

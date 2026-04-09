@@ -928,6 +928,51 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
+  test("does not let an internal continuation overwrite the locked user model with a stale explicit model", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    await handler(
+      createMockInput("hephaestus", { providerID: "github-copilot", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
+    const internalExplicitInput = createMockInput("hephaestus", { providerID: "openai", modelID: "gpt-5.4" })
+    const internalExplicitOutput: ChatMessageHandlerOutput = {
+      message: {},
+      parts: [{ type: "text", text: `continue work\n${OMO_INTERNAL_INITIATOR_MARKER}` }],
+    }
+
+    //#when
+    await handler(internalExplicitInput, internalExplicitOutput)
+
+    const continueInput = createMockInput("hephaestus", undefined)
+    const continueOutput = createMockOutput()
+    await handler(continueInput, continueOutput)
+
+    //#then
+    expect(internalExplicitOutput.message.model).toEqual({
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+    expect(continueOutput.message.model).toEqual({
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+  })
+
   test("allows explicit user switch even when selection matches prior forced model", async () => {
     //#given
     const args = createMockHandlerArgs({
