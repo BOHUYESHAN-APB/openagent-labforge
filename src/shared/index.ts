@@ -25,6 +25,7 @@ export type {
 export * from "./opencode-version"
 export * from "./opencode-storage-detection"
 export * from "./permission-compat"
+export * from "./repo-bootstrap-detection"
 export * from "./external-plugin-detector"
 export * from "./zip-extractor"
 export * from "./binary-downloader"

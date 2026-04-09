@@ -3,6 +3,10 @@ import {
   clearAutonomousUserTurnState,
   resetAutonomousUserTurnStateForTesting,
 } from "./autonomous-user-turn"
+import {
+  clearSessionBootstrapMode,
+  resetSessionBootstrapModesForTesting,
+} from "./bootstrap-mode"
 
 export const subagentSessions = new Set<string>()
 export const syncSubagentSessions = new Set<string>()
@@ -47,6 +51,7 @@ export function _resetForTesting(): void {
   registeredAgentNames.clear()
   ultraworkAutonomousSessionMap.clear()
   resetAutonomousUserTurnStateForTesting()
+  resetSessionBootstrapModesForTesting()
 }
 
 const sessionAgentMap = new Map<string, string>()
@@ -93,6 +98,7 @@ export function clearSessionAgent(sessionID: string): void {
   sessionAgentMap.delete(sessionID)
   ultraworkAutonomousSessionMap.delete(sessionID)
   clearAutonomousUserTurnState(sessionID)
+  clearSessionBootstrapMode(sessionID)
 }
 
 export function setUltraworkAutonomousSession(

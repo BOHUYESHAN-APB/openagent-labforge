@@ -1,17 +1,27 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import {
   ensureRuntimeWorkflowSession,
+  writeRepoBootstrapSelection,
   updateRuntimeWorkflowArtifactPolicy,
 } from "../features/boulder-state"
 import {
+  resetSessionBootstrapModesForTesting,
+  setSessionBootstrapMode,
+} from "../features/claude-code-session-state"
+import {
   buildAutonomousUserDirectiveContext,
+  buildFreshRepoBootstrapContext,
   buildStageManagedPromptContext,
 } from "./stage-managed-prompt"
 
 describe("buildStageManagedPromptContext", () => {
+  afterEach(() => {
+    resetSessionBootstrapModesForTesting()
+  })
+
   test("uses light batch defaults for wase without runtime workflow state", () => {
     const result = buildStageManagedPromptContext({
       directory: process.cwd(),
@@ -214,5 +224,111 @@ describe("buildStageManagedPromptContext", () => {
     })
 
     expect(result).toBeNull()
+  })
+
+  test("builds fresh repo bootstrap context for autonomous engineering sessions", () => {
+    const result = buildFreshRepoBootstrapContext({
+      agent: "wase",
+      promptText: "Help me build this project from scratch.",
+      detectionReason: "Fresh repository heuristic matched.",
+    })
+
+    expect(result).toContain("[fresh-repo-bootstrap]")
+    expect(result).toContain("ask exactly ONE setup question with the `question` tool")
+    expect(result).toContain("allow multi-select")
+    expect(result).toContain("product app / workspace repo")
+    expect(result).toContain("bootstrap-first scaffold")
+    expect(result).toContain("让 AI 自行设计工程姿态")
+    expect(result).toContain("custom project posture")
+  })
+
+  test("skips fresh repo bootstrap context when the user already specified the engineering system", () => {
+    const result = buildFreshRepoBootstrapContext({
+      agent: "wase",
+      promptText: "Create a Flutter dashboard app in this repo.",
+      detectionReason: "Fresh repository heuristic matched.",
+    })
+
+    expect(result).toBeNull()
+  })
+
+  test("builds bio-specific fresh repo bootstrap choices for bio autonomous sessions", () => {
+    const result = buildFreshRepoBootstrapContext({
+      agent: "bio-autopilot",
+      promptText: "Help me organize this new bio repo.",
+      detectionReason: "Fresh repository heuristic matched.",
+    })
+
+    expect(result).toContain("bio dry-lab pipeline workspace")
+    expect(result).toContain("mainline material pack")
+    expect(result).toContain("bootstrap-first bio scaffold")
+  })
+
+  test("explains the AI-designed bootstrap scale in fresh repo bootstrap context", () => {
+    const result = buildFreshRepoBootstrapContext({
+      agent: "wase",
+      promptText: "Help me set up this repo.",
+      detectionReason: "Fresh repository heuristic matched.",
+    })
+
+    expect(result).toContain("repo main type / 仓库主类型")
+    expect(result).toContain("default question policy / 默认提问策略")
+  })
+
+  test("injects sticky bootstrap mode context after the user selected a repo posture", () => {
+    setSessionBootstrapMode("ses_bootstrap_mode", {
+      category: "engineering",
+      primary: {
+        category: "engineering",
+        key: "backend-service-tooling",
+        labelZh: "后端 / 服务 / 工具链仓",
+        labelEn: "backend / service / tooling repo",
+        summaryZh: "按服务端工程体系起步，优先模块边界、配置、运行链路、验证和运维可观测性。",
+        summaryEn: "Treat the repo as backend/service/tooling and prioritize module boundaries, config, runtime paths, verification, and observability.",
+      },
+      secondary: [],
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: process.cwd(),
+      sessionID: "ses_bootstrap_mode",
+      agent: "wase",
+    })
+
+    expect(result).toContain("[bootstrap-mode]")
+    expect(result).toContain("后端 / 服务 / 工具链仓")
+    expect(result).toContain("Do not re-ask the bootstrap question every turn")
+  })
+
+  test("injects sticky bootstrap mode context from repo-local bootstrap storage when session memory is empty", () => {
+    const testDir = join(tmpdir(), `stage-managed-bootstrap-storage-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    writeRepoBootstrapSelection({
+      directory: testDir,
+      sessionId: "ses_bootstrap_storage",
+      selection: {
+        category: "engineering",
+        primary: {
+          category: "engineering",
+          key: "bootstrap-first-scaffold",
+          labelZh: "工程骨架优先（推荐）",
+          labelEn: "bootstrap-first scaffold",
+          summaryZh: "先搭工程骨架。",
+          summaryEn: "Bootstrap the repo first.",
+        },
+        secondary: [],
+      },
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_bootstrap_storage",
+      agent: "wase",
+    })
+
+    expect(result).toContain("[bootstrap-mode]")
+    expect(result).toContain("工程骨架优先（推荐）")
+
+    rmSync(testDir, { recursive: true, force: true })
   })
 })

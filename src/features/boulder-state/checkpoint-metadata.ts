@@ -21,6 +21,11 @@ export interface CheckpointMetadata {
   artifact_root?: string
   artifact_strategy?: RuntimeWorkflowArtifactStrategy
   active_work_item?: string
+  bootstrap_primary_key?: string
+  bootstrap_primary_label_zh?: string
+  bootstrap_primary_label_en?: string
+  bootstrap_secondary_keys?: string[]
+  bootstrap_custom_instruction?: string
 }
 
 export function getLatestCheckpointMetadataPath(directory: string): string {

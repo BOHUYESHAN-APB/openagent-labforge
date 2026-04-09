@@ -50,6 +50,15 @@ If the checkpoint metadata includes artifact policy fields:
 
 carry them forward into this session's runtime workflow memory and treat them as the default continuation policy.
 
+If the checkpoint metadata includes bootstrap posture fields:
+- bootstrap_primary_key
+- bootstrap_primary_label_zh
+- bootstrap_primary_label_en
+- bootstrap_secondary_keys
+- bootstrap_custom_instruction
+
+carry them forward into repo-local temporary memory and treat them as the default engineering posture for the resumed session.
+
 Do NOT try to reconstruct the entire old session.
 Treat the checkpoint as the primary source of truth for continuation.
 
@@ -62,6 +71,7 @@ After reading the checkpoint:
 - restate the carried-forward goal
 - restate the current state
 - restate the carried-forward artifact policy if one exists
+- restate the carried-forward engineering posture if one exists
 - rebuild a fresh todo/task list for this session from the checkpoint's pending tasks
 - continue with the user's new request in this session
 
@@ -86,6 +96,7 @@ Then provide:
 - GOAL CARRIED FORWARD
 - CURRENT STATE
 - ARTIFACT POLICY
+- ENGINEERING POSTURE
 - NEXT EXECUTION WAVE
 
 Keep it concise, actionable, and ready to continue immediately.
@@ -99,6 +110,7 @@ Keep it concise, actionable, and ready to continue immediately.
 - Do not depend on access to the old session
 - Do not reopen a huge session if the checkpoint is sufficient
 - Do prefer compact artifact-policy recovery over rereading large bundle directories when the checkpoint already captured the active root and work item
+- Do prefer compact bootstrap-posture recovery over re-asking the user how the repo should be organized if that posture was already captured
 
 ---
 

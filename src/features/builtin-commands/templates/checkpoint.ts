@@ -45,6 +45,10 @@ Analyze:
   - artifact_root
   - artifact_strategy
   - active_work_item
+- whether the repo already has a selected bootstrap / engineering posture:
+  - primary bootstrap mode
+  - secondary companion modes
+  - custom bootstrap instruction if present
 
 ---
 
@@ -72,6 +76,11 @@ The metadata JSON MUST include:
 - artifact_root
 - artifact_strategy
 - active_work_item
+- bootstrap_primary_key
+- bootstrap_primary_label_zh
+- bootstrap_primary_label_en
+- bootstrap_secondary_keys
+- bootstrap_custom_instruction
 
 Use this exact metadata shape:
 
@@ -89,7 +98,12 @@ Use this exact metadata shape:
   "artifact_mode": "<patch-existing|single-doc-rollup|package-bundle|or empty>",
   "artifact_root": "<current artifact root if one already governs the work>",
   "artifact_strategy": "<update-existing-first|append-supporting-artifacts|spawn-new-top-level-item|or empty>",
-  "active_work_item": "<current active item if one should carry across sessions>"
+  "active_work_item": "<current active item if one should carry across sessions>",
+  "bootstrap_primary_key": "<selected bootstrap primary mode key or empty>",
+  "bootstrap_primary_label_zh": "<selected bootstrap primary label zh or empty>",
+  "bootstrap_primary_label_en": "<selected bootstrap primary label en or empty>",
+  "bootstrap_secondary_keys": ["<optional companion mode key>"],
+  "bootstrap_custom_instruction": "<custom bootstrap instruction if user used custom mode>"
 }
 \`\`\`
 
@@ -142,6 +156,13 @@ ARTIFACT STRATEGY
 - [Current artifact root if one exists]
 - [Current active work item if one exists]
 - [Whether the next session should update existing outputs first or open a new top-level deliverable]
+
+ENGINEERING POSTURE
+-------------------
+- [Current bootstrap primary mode if one exists]
+- [Current companion modes if any]
+- [Current custom bootstrap instruction if any]
+- [How this posture constrains the next session]
 
 PENDING TASKS
 -------------
@@ -201,6 +222,7 @@ Continue from checkpoint file .opencode/openagent-labforge/checkpoints/latest.md
 - Do not include secrets or credentials
 - Do not exceed 12 files in KEY FILES
 - Do preserve artifact policy in compact form when the session is continuing inside an existing package, document workspace, or output bundle
+- Do preserve bootstrap / engineering posture in compact form so the next session does not have to re-ask how the repo should be organized
 
 ---
 

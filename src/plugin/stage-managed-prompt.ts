@@ -1,4 +1,5 @@
 import {
+  readRepoBootstrapSelection,
   readLatestCheckpointMetadata,
   readRuntimeWorkflowState,
 } from "../features/boulder-state"
@@ -8,6 +9,11 @@ import {
   buildOrchestrationRuntimeCapability,
 } from "../agents/engineering-capability"
 import { getAgentConfigKey } from "../shared/agent-display-names"
+import {
+  buildBootstrapChoicesBlock,
+  buildBootstrapModeStickyContext,
+} from "./bootstrap-mode"
+import { getSessionBootstrapMode } from "../features/claude-code-session-state"
 
 type SupportedStageManagedAgent =
   | "wase"
@@ -186,6 +192,67 @@ export function buildAutonomousUserDirectiveContext(input: {
 
   if (input.approvedBatchCarryover) {
     lines.push("- the prior reviewed batch already passed acceptance, so treat any still-pending todo items from that batch as stale unless the new user request explicitly carries them forward")
+  }
+
+  return lines.join("\n")
+}
+
+export function buildFreshRepoBootstrapContext(input: {
+  agent: string | undefined
+  promptText: string
+  detectionReason?: string
+}): string | null {
+  const agent = toSupportedAgent(input.agent)
+  if (!agent) return null
+  if (agent === "hephaestus") return null
+
+  const promptText = input.promptText.toLowerCase()
+  if (
+    /flutter|react|next\.?js|vue|plugin|sdk|library|cli|backend|api|bioinformatics|pipeline|rna-?seq|single cell|scrna|dashboard|tauri|electron|service/.test(promptText)
+  ) {
+    return null
+  }
+
+  const lines = [
+    "[fresh-repo-bootstrap]",
+    "The repository appears to be an initialization-stage repo with no stable engineering system yet.",
+    "这个仓库看起来仍处于初始化阶段，当前还没有稳定的工程体系。",
+    "",
+    "Before starting substantial execution:",
+    "在开始实质执行之前：",
+    "- ask exactly ONE setup question with the `question` tool",
+    "- ask which engineering system or project posture should be established first",
+    "- use a fixed preset option list plus one explicit custom/manual-fill option",
+    "- allow multi-select: one primary mode plus optional companion modes",
+    "- 问题允许多选：先确定一个主模式，再允许补充 1-2 个辅助模式。",
+    "- 问清楚这次要按哪种工程体系起步，再开始真正建仓和规划。",
+    "",
+    "Preset choices / 预设选项：",
+  ]
+  lines.push(...buildBootstrapChoicesBlock(input.agent))
+  lines.push(
+    "  8. 自定义工程姿态 | custom project posture",
+    "- If the user chooses custom, ask for one concise line describing the desired engineering posture, then continue with that as the first-wave contract.",
+    "- 如果用户选择自定义，就让用户补一行“这个仓库要按什么姿态起步”，然后把这行内容当作第一波工程契约。",
+    "- If the user chooses AI-designed, derive the repo posture with this scale:",
+    "  - repo main type / 仓库主类型",
+    "  - primary deliverable / 主交付物",
+    "  - execution rhythm / 执行节奏",
+    "  - artifact organization / 产物组织方式",
+    "  - verification intensity / 验证强度",
+    "  - user involvement level / 用户参与强度",
+    "  - default question policy / 默认提问策略",
+    "- 如果用户选择 AI 自行设计，就先按上面这套量表推导工程姿态，再把推导结果锁成后续常驻规则。",
+  )
+
+  lines.push(
+    "- do not guess the project posture from the repo name alone",
+    "- after the user answers, lock the chosen posture into the first real plan/wave and continue",
+    "- once selected, keep that repo posture as a lightweight persistent rule until the user changes it",
+  )
+
+  if (input.detectionReason) {
+    lines.push(`- bootstrap signal: ${input.detectionReason}`)
   }
 
   return lines.join("\n")
@@ -433,6 +500,47 @@ export function buildStageManagedPromptContext(
     checkpointMetadata?.consumed_by_session_id === input.sessionID
       ? checkpointMetadata
       : null
+  const checkpointBootstrapMode =
+    (() => {
+      const bootstrapCategory = (agent === "bio-autopilot" || agent === "bio-orchestrator")
+        ? "bio" as const
+        : "engineering" as const
+      if (
+        checkpointMetadata?.consumed_by_session_id !== input.sessionID ||
+        !checkpointMetadata.bootstrap_primary_key ||
+        !checkpointMetadata.bootstrap_primary_label_zh ||
+        !checkpointMetadata.bootstrap_primary_label_en
+      ) {
+        return null
+      }
+
+      return {
+        category: bootstrapCategory,
+        primary: {
+          category: bootstrapCategory,
+          key: checkpointMetadata.bootstrap_primary_key,
+          labelZh: checkpointMetadata.bootstrap_primary_label_zh,
+          labelEn: checkpointMetadata.bootstrap_primary_label_en,
+          summaryZh: "Recovered from checkpoint metadata.",
+          summaryEn: "Recovered from checkpoint metadata.",
+          ...(checkpointMetadata.bootstrap_custom_instruction
+            ? { isCustom: true, customInstruction: checkpointMetadata.bootstrap_custom_instruction }
+            : {}),
+        },
+        secondary: (checkpointMetadata.bootstrap_secondary_keys ?? []).map((key) => ({
+          category: bootstrapCategory,
+          key,
+          labelZh: key,
+          labelEn: key,
+          summaryZh: "Recovered companion posture from checkpoint metadata.",
+          summaryEn: "Recovered companion posture from checkpoint metadata.",
+        })),
+      }
+    })()
+  const bootstrapMode =
+    getSessionBootstrapMode(input.sessionID) ??
+    readRepoBootstrapSelection(input.directory) ??
+    checkpointBootstrapMode
   const artifactPolicyContext = buildArtifactPolicyContext({
     artifactMode: runtimeState?.artifact_mode ?? checkpointArtifactPolicy?.artifact_mode,
     artifactRoot: runtimeState?.artifact_root ?? checkpointArtifactPolicy?.artifact_root,
@@ -442,6 +550,9 @@ export function buildStageManagedPromptContext(
       runtimeState?.artifact_rationale ??
       (checkpointArtifactPolicy ? "Recovered from latest checkpoint metadata for this resumed session." : undefined),
   })
+  const bootstrapModeContext = bootstrapMode
+    ? buildBootstrapModeStickyContext(bootstrapMode)
+    : null
 
   if (agent === "wase") {
     const block = buildWaseStageBlock({
@@ -449,7 +560,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
+    return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
   }
 
   if (agent === "sisyphus" || agent === "hephaestus" || agent === "atlas") {
@@ -459,7 +570,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
+    return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
   }
 
   const block = buildBioStageBlock({
@@ -468,5 +579,5 @@ export function buildStageManagedPromptContext(
     autoModeLevel,
     interactionMode,
   })
-  return artifactPolicyContext ? `${block}\n\n${artifactPolicyContext}` : block
+  return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
 }

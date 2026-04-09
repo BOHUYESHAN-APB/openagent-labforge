@@ -7,8 +7,17 @@ import { createChatMessageHandler } from "./chat-message"
 import type { ChatMessageInput } from "./chat-message"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { contextCollector } from "../features/context-injector"
-import { getSessionAgent, isUltraworkAutonomousSession, _resetForTesting } from "../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  getSessionBootstrapMode,
+  isUltraworkAutonomousSession,
+  _resetForTesting,
+} from "../features/claude-code-session-state"
 import { ensureRuntimeWorkflowSession, readRuntimeWorkflowState, updateRuntimeWorkflowReviewOutcome } from "../features/boulder-state"
+
+async function initGitRepo(directory: string): Promise<void> {
+  await Bun.$`git init ${directory}`.quiet()
+}
 import {
   clearSessionAutoModelRouting,
   clearSessionForcedModel,
@@ -253,6 +262,123 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(state?.current_stage).toBe("build")
     expect(state?.last_review_verdict).toBeUndefined()
     expect(userUpdate?.content).toContain("still-pending todo items from that batch as stale")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("injects fresh repo bootstrap context on the first autonomous turn for a near-empty repo", async () => {
+    const testDir = join(tmpdir(), `chat-message-fresh-repo-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    await initGitRepo(testDir)
+    writeFileSync(join(testDir, "README.md"), "# Demo\n", "utf-8")
+
+    const args = createMockHandlerArgs({ shouldOverride: true, directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "Help me set up this project." })
+
+    await handler(input, output)
+
+    const pending = contextCollector.getPending(input.sessionID)
+    const bootstrap = pending.entries.find((entry) => entry.id === "fresh-repo-bootstrap")
+
+    expect(bootstrap?.content).toContain("[fresh-repo-bootstrap]")
+    expect(bootstrap?.content).toContain("ask exactly ONE setup question")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("persists selected bootstrap mode and injects sticky repo posture context on later autonomous turns", async () => {
+    const testDir = join(tmpdir(), `chat-message-bootstrap-mode-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    await initGitRepo(testDir)
+    writeFileSync(join(testDir, "README.md"), "# Demo\n", "utf-8")
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+
+    const firstOutput = createMockOutput()
+    firstOutput.parts.push({ type: "text", text: "Help me set up this project." })
+    await handler(input, firstOutput)
+    contextCollector.clear(input.sessionID)
+
+    const secondOutput = createMockOutput()
+    secondOutput.parts.push({ type: "text", text: "6. 先搭工程骨架，再进入长期迭代" })
+    await handler(input, secondOutput)
+
+    const mode = getSessionBootstrapMode(input.sessionID)
+    const pending = contextCollector.getPending(input.sessionID)
+    const stageManaged = pending.entries.find((entry) => entry.id === "stage-managed-prompt")
+
+    expect(mode?.primary.key).toBe("bootstrap-first-scaffold")
+    expect(stageManaged?.content).toContain("[bootstrap-mode]")
+    expect(stageManaged?.content).toContain("工程骨架优先（推荐）")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("persists bootstrap selection with companion modes when the user multi-selects options", async () => {
+    const testDir = join(tmpdir(), `chat-message-bootstrap-multi-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    await initGitRepo(testDir)
+    writeFileSync(join(testDir, "README.md"), "# Demo\n", "utf-8")
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("bio-autopilot", { providerID: "openai", modelID: "gpt-5.4" })
+
+    const firstOutput = createMockOutput()
+    firstOutput.parts.push({ type: "text", text: "Help me organize this new bio repo." })
+    await handler(input, firstOutput)
+    contextCollector.clear(input.sessionID)
+
+    const secondOutput = createMockOutput()
+    secondOutput.parts.push({ type: "text", text: "1,4 先按这个来，如果需要再补别的。" })
+    await handler(input, secondOutput)
+
+    const mode = getSessionBootstrapMode(input.sessionID)
+    const pending = contextCollector.getPending(input.sessionID)
+    const stageManaged = pending.entries.find((entry) => entry.id === "stage-managed-prompt")
+
+    expect(mode?.primary.key).toBe("mainline-material-pack")
+    expect(mode?.secondary[0]?.key).toBe("bio-figure-assets")
+    expect(stageManaged?.content).toContain("Companion postures")
+    expect(stageManaged?.content).toContain("图件 / 投稿资产仓")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("supports AI-designed bootstrap mode selection", async () => {
+    const testDir = join(tmpdir(), `chat-message-bootstrap-ai-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    await initGitRepo(testDir)
+    writeFileSync(join(testDir, "README.md"), "# Demo\n", "utf-8")
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+
+    const firstOutput = createMockOutput()
+    firstOutput.parts.push({ type: "text", text: "Help me set up this project." })
+    await handler(input, firstOutput)
+    contextCollector.clear(input.sessionID)
+
+    const secondOutput = createMockOutput()
+    secondOutput.parts.push({ type: "text", text: "7. 让AI自行设计" })
+    await handler(input, secondOutput)
+
+    const mode = getSessionBootstrapMode(input.sessionID)
+    const pending = contextCollector.getPending(input.sessionID)
+    const stageManaged = pending.entries.find((entry) => entry.id === "stage-managed-prompt")
+
+    expect(mode?.primary.key).toBe("ai-designed-posture")
+    expect(stageManaged?.content).toContain("让 AI 自行设计工程姿态")
 
     contextCollector.clear(input.sessionID)
     rmSync(testDir, { recursive: true, force: true })

@@ -5,6 +5,7 @@ import { hasConnectedProvidersCache } from "../shared"
 import { contextCollector } from "../features/context-injector"
 import { loadSoulRules, selectSoulContent } from "../shared/soul-rules"
 import { isAutoModelSelection } from "../shared/model-normalization"
+import { detectFreshRepositoryBootstrap } from "../shared/repo-bootstrap-detection"
 import {
   clearSessionAutoModelRouting,
   clearSessionForcedModel,
@@ -21,15 +22,23 @@ import {
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
-import { reopenRuntimeWorkflowAfterApprovedBatch } from "../features/boulder-state"
+import {
+  readRepoBootstrapSelection,
+  reopenRuntimeWorkflowAfterApprovedBatch,
+  writeRepoBootstrapSelection,
+} from "../features/boulder-state"
+import { parseBootstrapModeSelection } from "./bootstrap-mode"
 import {
   buildAutonomousUserDirectiveContext,
+  buildFreshRepoBootstrapContext,
   buildStageManagedPromptContext,
 } from "./stage-managed-prompt"
 import {
+  getSessionBootstrapMode,
   getSessionAgent,
   isAutonomousSessionAgent,
   recordAutonomousUserTurn,
+  setSessionBootstrapMode,
   setSessionAgent,
   setUltraworkAutonomousSession,
   updateSessionAgent,
@@ -138,6 +147,7 @@ export function createChatMessageHandler(args: {
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
   ): Promise<void> => {
+    const isFirstUserTurn = firstMessageVariantGate.shouldOverride(input.sessionID)
     const rememberedSessionAgent = getSessionAgent(input.sessionID)
 
     const outputText = output.parts
@@ -168,6 +178,23 @@ export function createChatMessageHandler(args: {
     const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
     const isForkedSessionLoad = isForkedSession(input.sessionID)
     const isStageManagedAutonomousSession = isStageManagedAutonomousAgent(activeAgent)
+    const repoBootstrapSelection = readRepoBootstrapSelection(ctx.directory)
+    const existingBootstrapMode = getSessionBootstrapMode(input.sessionID)
+    const parsedBootstrapMode =
+      !internalInitiatedPromptDetected &&
+      isStageManagedAutonomousSession &&
+      !existingBootstrapMode &&
+      !repoBootstrapSelection
+        ? parseBootstrapModeSelection(activeAgent, outputText)
+        : null
+    if (parsedBootstrapMode) {
+      setSessionBootstrapMode(input.sessionID, parsedBootstrapMode)
+      writeRepoBootstrapSelection({
+        directory: ctx.directory,
+        sessionId: input.sessionID,
+        selection: parsedBootstrapMode,
+      })
+    }
     const reopenedApprovedBatchState =
       !internalInitiatedPromptDetected &&
       isStageManagedAutonomousSession &&
@@ -259,6 +286,33 @@ export function createChatMessageHandler(args: {
       })
     }
 
+    if (
+      isFirstUserTurn &&
+      !internalInitiatedPromptDetected &&
+      isStageManagedAutonomousSession &&
+      !isForkedSessionLoad &&
+      !existingBootstrapMode &&
+      !repoBootstrapSelection &&
+      !parsedBootstrapMode
+    ) {
+      const freshRepo = detectFreshRepositoryBootstrap(ctx.directory)
+      if (freshRepo.isFresh) {
+        const bootstrapContext = buildFreshRepoBootstrapContext({
+          agent: activeAgent,
+          promptText: outputText,
+          detectionReason: freshRepo.reason,
+        })
+        if (bootstrapContext) {
+          contextCollector.register(input.sessionID, {
+            id: "fresh-repo-bootstrap",
+            source: "custom",
+            content: bootstrapContext,
+            priority: "high",
+          })
+        }
+      }
+    }
+
     const userDirectiveContext = internalInitiatedPromptDetected
       ? null
       : (() => {
@@ -306,7 +360,7 @@ export function createChatMessageHandler(args: {
         .catch(() => {})
     }
 
-    if (firstMessageVariantGate.shouldOverride(input.sessionID)) {
+    if (isFirstUserTurn) {
       firstMessageVariantGate.markApplied(input.sessionID)
     }
 
