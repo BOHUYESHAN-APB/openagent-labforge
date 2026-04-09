@@ -157,8 +157,77 @@ Current behavior:
   oversized backlog
 - `heavy + continuous` is for longer multi-wave execution and pushes backlog
   expansion, review routing, and continuation harder
+- batch-mode autonomous sessions now stop cleanly after an approved reviewed
+  wave instead of auto-rolling into another wave
+- stale todo graphs from a previously approved batch are treated as stale when a
+  fresh user wave starts
+- completion claims that also declare concrete same-scope "next wave / next
+  step" work are now treated as pseudo-completion and pushed back into a new
+  execution wave instead of being accepted at face value
 
 Mode selection is runtime-scoped and stored in the repo-local workflow state.
+
+### Fresh repo bootstrap
+
+When the user enters one of the two auto modes in a git-backed repo that still
+looks like an initialization-stage repository, the plugin can now ask a single
+bootstrap question before substantial execution begins.
+
+This bootstrap gate is intentionally narrow:
+
+- only for the two auto modes
+- only on the first user turn of a fresh session
+- only for git-backed repos that still look very early
+- skipped when the user already specified the engineering system explicitly
+- skipped for fork/resume/checkpoint-carry sessions that already have runtime
+  posture state
+
+The selected posture is persisted at:
+
+- `.opencode/openagent-labforge/bootstrap/current.json`
+
+and then reloaded as a lightweight persistent context block for later waves and
+resumed sessions.
+
+Current engineering bootstrap presets:
+
+1. `product workspace`
+2. `library / plugin / SDK`
+3. `backend / service / tooling`
+4. `documentation / knowledge-base`
+5. `research / prototype / spike`
+6. `bootstrap-first scaffold` (recommended)
+7. `let AI derive the repo posture`
+8. `custom project posture`
+
+Current bio bootstrap presets:
+
+1. `mainline material pack` (recommended)
+2. `bio dry-lab pipeline`
+3. `literature / evidence synthesis`
+4. `bio figure / submission assets`
+5. `lightweight exploratory proof`
+6. `bootstrap-first bio scaffold`
+7. `let AI derive the repo posture`
+8. `custom project posture`
+
+Practical reply examples for the first bootstrap question:
+
+- `6`
+- `1,4`
+- `7`
+- `8: build this repo as a plugin-first SDK with docs in root README and deep design notes kept private`
+
+When the user chooses `let AI derive the repo posture`, the fork expects the
+auto agent to infer the posture from a fixed scale rather than free-form vibes:
+
+- repo main type
+- primary deliverable
+- execution rhythm
+- artifact organization
+- verification intensity
+- user involvement level
+- default question policy
 
 ### Session cleanup commands
 
@@ -184,6 +253,12 @@ Practical intent:
 This matters because old todo/workflow state can otherwise leak into later
 conversations and make semi-automatic sessions feel heavy or misdirected.
 
+The current cleanup commands are especially useful after:
+
+- switching a session out of auto mode
+- carrying old todos into a fresh user wave
+- recovering from a long or over-continued reviewed batch
+
 ### Checkpoint handoff commands
 
 The fork now also includes repo-local checkpoint commands for long-running work
@@ -205,6 +280,21 @@ Practical intent:
   from file instead of old chat history
 - `/checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
   next execution wave in the current session
+
+Checkpoint files now also carry compact execution posture, not just prose
+summary:
+
+- artifact policy
+- active work item
+- bootstrap / repo posture
+
+That means a resumed session can recover:
+
+- where outputs should continue
+- whether the repo is running as a material pack, scaffold, docs repo, etc.
+- which engineering posture was selected during fresh-repo bootstrap
+
+without rereading the entire old session or broad output tree.
 
 This is the plugin-side fallback for older or unstable OpenCode desktop builds:
 it keeps cross-session continuation usable even when the upstream UI does not
@@ -318,6 +408,7 @@ Current behavior includes:
 - paper cache creation on literature / paper-oriented skills
 - asset, output, and revision manifests
 - child git repo initialization for document source workspaces when needed
+- audience / tracking / publish-target routing for docs and writing work
 
 This is intentionally source-first:
 
@@ -330,6 +421,21 @@ Current figure policy:
 - when a figure is needed and no image-bus backend is configured, the system
   should insert SVG placeholders or SVG-derived figures first
 - users can replace those later with final generated or manually refined figures
+
+Current document workspace routing rules:
+
+- public open-source docs can be routed as `repo-docs`
+  examples:
+  - `README.md`
+  - `docs/<name>.md`
+- internal notes, design docs, private user-facing drafts, and confidential
+  handoff material should default to repo-local workspace storage under
+  `.opencode/openagent-labforge/runtime/.../documents/`
+- document-oriented skills can now carry:
+  - `audience=public-reader|internal|end-user`
+  - `tracking=repo-tracked|workspace-git|ephemeral`
+  - `publish_target=repo-docs|workspace-private`
+  - `target_path=README.md|docs/<name>.md`
 
 ## Current MCP Set
 

@@ -124,8 +124,68 @@ Gemini 说明：
 
 - `light + batch`：适合较紧凑的一批一批执行，不强行扩成过大的 backlog
 - `heavy + continuous`：适合更长时间、多波次的持续推进，会更积极地触发 backlog 扩展、审查打回和继续执行
+- `batch` 自动模式在 reviewed wave 被批准后，现在会干净停下，而不是默认继续滚到下一波
+- 已批准波次遗留的旧 todo，在用户开启新一轮时会优先按 stale 处理，不再轻易“回魂”
+- 如果模型一边说“这轮完成了”，一边又列出当前范围内明确的“下一步 / 下一波”工作，系统会把它识别为伪完成，并打回重建下一轮执行波次
 
 这些模式信息会被写入 repo-local 的 runtime workflow state。
+
+### 新仓库 bootstrap 引导
+
+现在，当用户在两个 auto 模式里进入一个看起来仍处于初始化阶段、并且已经接入 git 的仓库时，插件可以先问一个“这个仓库要按什么工程姿态起步”的问题，再开始真正的大规模执行。
+
+这个 bootstrap 触发条件是刻意收紧的：
+
+- 仅限两个 auto 模式
+- 仅限会话首轮
+- 仅限 git-backed 且仍然很早期的仓库
+- 如果用户首句已经明确说了技术体系，就不再追问
+- 如果当前会话是 fork / resume / checkpoint 接力，且已经有工程姿态状态，也不会重复追问
+
+选定后的工程姿态会写到：
+
+- `.opencode/openagent-labforge/bootstrap/current.json`
+
+后续会作为一个很轻量的常驻提示继续注入，而不是每轮重新问。
+
+当前工程 bootstrap 预设：
+
+1. `产品工作台仓`
+2. `库 / 插件 / SDK 仓`
+3. `后端 / 服务 / 工具链仓`
+4. `文档 / 知识库仓`
+5. `研究 / 原型 / Spike 仓`
+6. `工程骨架优先（推荐）`
+7. `让 AI 自行设计工程姿态`
+8. `自定义工程姿态`
+
+当前生信 bootstrap 预设：
+
+1. `综合主线材料包（推荐）`
+2. `干实验流程仓`
+3. `文献 / 证据综合仓`
+4. `图件 / 投稿资产仓`
+5. `轻量探索 / 证明型仓`
+6. `清爽工程骨架优先`
+7. `让 AI 自行设计工程姿态`
+8. `自定义工程姿态`
+
+首轮 bootstrap 回答示例：
+
+- `6`
+- `1,4`
+- `7`
+- `8: 这个仓库按插件-SDK 主线起步，公开说明写 README，深层设计说明留在私有工作区`
+
+如果用户选择“让 AI 自行设计工程姿态”，插件希望 auto agent 按固定量表来推导，而不是自由发挥：
+
+- 仓库主类型
+- 主交付物
+- 执行节奏
+- 产物组织方式
+- 验证强度
+- 用户参与强度
+- 默认提问策略
 
 ### 会话清理命令
 
@@ -151,6 +211,12 @@ Gemini 说明：
 
 如果不处理，后续普通问答很容易被旧状态拖重或误导。
 
+这些命令尤其适合在下面几种情况后使用：
+
+- 自动模式切回普通问答
+- 旧 todo / 旧 batch 状态继续干扰当前会话
+- 长会话或长审查波次之后需要明显收口
+
 ### Checkpoint 接力命令
 
 现在也内置了一组面向长任务接力的 checkpoint 命令，用来避免把同一个会话无限拉长。
@@ -167,6 +233,20 @@ Gemini 说明：
 - `/checkpoint`：把关键接力信息写入 repo-local 文件，路径位于
   `.opencode/openagent-labforge/checkpoints/`
 - `/checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
+
+现在 checkpoint 不只是带一段摘要，还会带一小份结构化工程姿态：
+
+- artifact policy
+- 当前活跃 work item
+- bootstrap / repo posture
+
+这样新的接力会话可以恢复：
+
+- 输出应该继续写到哪里
+- 当前仓库是按材料包、骨架仓、文档仓还是别的姿态在运行
+- fresh repo 阶段选定的工程体系是什么
+
+而不需要重新读整段旧会话或重新扫整个输出目录树。
 
 这组命令的定位，是作为插件侧 fallback：
 
@@ -286,6 +366,7 @@ Gemini 说明：
 - 文献 / 论文类 skills 会创建 paper cache
 - 记录 asset / output / revision manifest
 - 必要时为文档源工作区初始化子 git 仓库
+- 文档工作区现在还能区分 audience / tracking / publish target
 
 这套机制是 source-first 的：
 
@@ -297,6 +378,21 @@ Gemini 说明：
 - 现阶段优先走 SVG
 - 当任务需要插图、但图像总线后端没有配置时，先插入 SVG 占位图或 SVG 派生图
 - 后续用户可以自行替换为正式生成图或手工优化后的图
+
+当前文档工作区的路由规则是：
+
+- 面向开源读者、应写进主仓库的文档，可以走 `repo-docs`
+  例如：
+  - `README.md`
+  - `docs/<name>.md`
+- 设计文档、内部说明、私有用户交付、定制文案等，默认应留在
+  `.opencode/openagent-labforge/runtime/.../documents/`
+  下的 repo-local 工作区，而不是直接落到主仓库公开树里
+- 文档类 skills 现在可以显式带这些参数：
+  - `audience=public-reader|internal|end-user`
+  - `tracking=repo-tracked|workspace-git|ephemeral`
+  - `publish_target=repo-docs|workspace-private`
+  - `target_path=README.md|docs/<name>.md`
 
 ## 当前 MCP 集合
 
