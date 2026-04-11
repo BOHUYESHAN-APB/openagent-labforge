@@ -82,6 +82,7 @@ describe("boulder-state", () => {
       //#then
       expect(result).not.toBeNull()
       expect(result!.session_ids).toEqual([])
+      expect(result!.session_origins).toEqual({})
     })
 
     test("should default session_ids to [] when not an array", () => {
@@ -132,6 +133,7 @@ describe("boulder-state", () => {
       expect(result).not.toBeNull()
       expect(result?.active_plan).toBe("/path/to/plan.md")
       expect(result?.session_ids).toEqual(["session-1", "session-2"])
+      expect(result?.session_origins).toEqual({})
       expect(result?.plan_name).toBe("my-plan")
     })
   })
@@ -155,6 +157,12 @@ describe("boulder-state", () => {
       expect(readBack).not.toBeNull()
       expect(readBack?.active_plan).toBe("/test/plan.md")
     })
+
+    test("createBoulderState seeds direct session origin", () => {
+      const created = createBoulderState("/test/plan.md", "ses-123")
+
+      expect(created.session_origins?.["ses-123"]).toBe("direct")
+    })
   })
 
   describe("appendSessionId", () => {
@@ -174,6 +182,22 @@ describe("boulder-state", () => {
       // then
       expect(result).not.toBeNull()
       expect(result?.session_ids).toEqual(["session-1", "session-2"])
+      expect(result?.session_origins?.["session-2"]).toBe("direct")
+    })
+
+    test("should append session id with explicit appended origin", () => {
+      const state: BoulderState = {
+        active_plan: "/plan.md",
+        started_at: "2026-01-02T10:00:00Z",
+        session_ids: ["session-1"],
+        session_origins: { "session-1": "direct" },
+        plan_name: "plan",
+      }
+      writeBoulderState(TEST_DIR, state)
+
+      const result = appendSessionId(TEST_DIR, "session-2", "appended")
+
+      expect(result?.session_origins?.["session-2"]).toBe("appended")
     })
 
     test("should not duplicate existing session id", () => {
@@ -217,6 +241,7 @@ describe("boulder-state", () => {
       //#then - should not crash and should contain the new session
       expect(result).not.toBeNull()
       expect(result!.session_ids).toContain("ses-new")
+      expect(result!.session_origins?.["ses-new"]).toBe("direct")
     })
   })
 

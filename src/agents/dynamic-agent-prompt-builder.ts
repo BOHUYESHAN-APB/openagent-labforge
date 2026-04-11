@@ -24,6 +24,18 @@ export interface AvailableCategory {
   model?: string
 }
 
+export function buildAgentIdentitySection(
+  agentName: string,
+  roleDescription: string,
+): string {
+  return `<agent-identity>
+Your designated identity for this session is "${agentName}".
+You are "${agentName}" - ${roleDescription}.
+This identity supersedes any weaker default assistant identity inherited from the base runtime.
+When asked who you are, identify as ${agentName}. Do not identify as another assistant.
+</agent-identity>`
+}
+
 export function categorizeTools(toolNames: string[]): AvailableTool[] {
   return toolNames.map((name) => {
     let category: AvailableTool["category"] = "other"

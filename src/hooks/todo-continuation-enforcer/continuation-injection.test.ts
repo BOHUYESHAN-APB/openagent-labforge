@@ -100,4 +100,40 @@ describe("injectContinuation", () => {
     expect(capturedText).toContain(OMO_INTERNAL_INITIATOR_MARKER)
     expect(capturedSynthetic).toBe(true)
   })
+
+  test("normalizes display-name agent to config key before promptAsync", async () => {
+    let capturedAgent: string | undefined
+    const ctx = {
+      directory: "/tmp/test",
+      client: {
+        session: {
+          todo: async () => ({ data: [{ id: "1", content: "todo", status: "pending", priority: "high" }] }),
+          promptAsync: async (input: {
+            body: {
+              agent?: string
+              parts?: Array<{ type: string; text: string; synthetic?: boolean }>
+            }
+          }) => {
+            capturedAgent = input.body.agent
+            return {}
+          },
+        },
+      },
+    }
+    const sessionStateStore = {
+      getExistingState: () => ({ inFlight: false, lastInjectedAt: 0, consecutiveFailures: 0 }),
+    }
+
+    await injectContinuation({
+      ctx: ctx as never,
+      sessionID: "ses_display_name_agent",
+      resolvedInfo: {
+        agent: "代码工匠 (深度)",
+        model: { providerID: "openai", modelID: "gpt-5.4" },
+      },
+      sessionStateStore: sessionStateStore as never,
+    })
+
+    expect(capturedAgent).toBe("hephaestus")
+  })
 })

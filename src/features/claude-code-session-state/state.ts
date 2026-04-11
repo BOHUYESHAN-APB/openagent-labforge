@@ -14,6 +14,7 @@ export const syncSubagentSessions = new Set<string>()
 let _mainSessionID: string | undefined
 
 const registeredAgentNames = new Set<string>()
+const registeredAgentNameMap = new Map<string, string>()
 const ZERO_WIDTH_CHARACTERS_REGEX = /[\u200B\u200C\u200D\uFEFF]/g
 
 function normalizeRegisteredAgentName(name: string): string {
@@ -31,15 +32,21 @@ export function getMainSessionID(): string | undefined {
 export function registerAgentName(name: string): void {
   const normalizedName = normalizeRegisteredAgentName(name)
   registeredAgentNames.add(normalizedName)
+  registeredAgentNameMap.set(normalizedName, name)
 
   const configKey = normalizeRegisteredAgentName(getAgentConfigKey(name))
   if (configKey !== normalizedName) {
     registeredAgentNames.add(configKey)
+    registeredAgentNameMap.set(configKey, name)
   }
 }
 
 export function isAgentRegistered(name: string): boolean {
   return registeredAgentNames.has(normalizeRegisteredAgentName(name))
+}
+
+export function resolveRegisteredAgentName(name: string): string | undefined {
+  return registeredAgentNameMap.get(normalizeRegisteredAgentName(name))
 }
 
 /** @internal For testing only */
@@ -49,6 +56,7 @@ export function _resetForTesting(): void {
   syncSubagentSessions.clear()
   sessionAgentMap.clear()
   registeredAgentNames.clear()
+  registeredAgentNameMap.clear()
   ultraworkAutonomousSessionMap.clear()
   resetAutonomousUserTurnStateForTesting()
   resetSessionBootstrapModesForTesting()
@@ -56,7 +64,7 @@ export function _resetForTesting(): void {
 
 const sessionAgentMap = new Map<string, string>()
 const ultraworkAutonomousSessionMap = new Map<string, boolean>()
-const AUTONOMOUS_SESSION_AGENT_KEYS = new Set(["wase", "bio-autopilot"])
+const AUTONOMOUS_SESSION_AGENT_KEYS = new Set(["wase", "bio-autopilot", "bio-orchestrator"])
 
 function normalizeSessionAgentName(agent: string): string {
   return getAgentConfigKey(agent)

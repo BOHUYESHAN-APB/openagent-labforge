@@ -33,6 +33,7 @@ export function detectKeywords(text: string, agentName?: string, modelID?: strin
 
 export function detectKeywordsWithType(text: string, agentName?: string, modelID?: string): DetectedKeyword[] {
   const textWithoutCode = removeCodeBlocks(text)
+  const normalizedLeadingText = textWithoutCode.trim().toLowerCase()
   return KEYWORD_DETECTORS.map(({ pattern, message }) => {
     const resolvedMessage = resolveMessage(message, agentName, modelID)
     let type: DetectedKeyword["type"] = "search"
@@ -45,7 +46,10 @@ export function detectKeywordsWithType(text: string, agentName?: string, modelID
     }
 
     return {
-      matches: pattern.test(textWithoutCode),
+      matches:
+        type === "ultrawork-autonomous"
+          ? /^(ultrawork\s+auto|ultrawork\s+autonomous|ultra\s+auto|ultra\s+autonomous|ulw\s+auto|ulw\s+autonomous)\b/i.test(normalizedLeadingText)
+          : pattern.test(textWithoutCode),
       type,
       message: resolvedMessage,
     }

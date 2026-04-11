@@ -46,4 +46,18 @@ describe("detectLatestAssistantCompletionPosture", () => {
 
     expect(result.kind).toBe("pseudo_complete")
   })
+
+  test("treats optional suggestion lists as terminal completion when they do not claim remaining owned work", () => {
+    const result = detectLatestAssistantCompletionPosture([
+      {
+        info: { role: "assistant", id: "msg-4" },
+        parts: [{
+          type: "text",
+          text: "这一波已经完成。如果你要，我下一步可以直接给你：\n1. 一份剩余 run 的下载命令清单\n2. 一份更省空间的分析顺序",
+        }],
+      },
+    ])
+
+    expect(result.kind).toBe("terminal_complete")
+  })
 })

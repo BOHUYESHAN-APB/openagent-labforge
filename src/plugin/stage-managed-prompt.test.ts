@@ -65,6 +65,7 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("Interaction mode: continuous")
     expect(result).toContain("Acceptance review belongs here")
     expect(result).toContain("## Autonomous Acceptance Reload")
+    expect(result).toContain("## Autonomous Closeout Reload")
     expect(result).toContain("## Engineering Execution Reload")
 
     rmSync(testDir, { recursive: true, force: true })
@@ -107,6 +108,7 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("## Engineering Orchestration Reload")
     expect(result).toContain("## Engineering Execution Reload")
     expect(result).toContain("## Autonomous Acceptance Reload")
+    expect(result).not.toContain("## Autonomous Closeout Reload")
 
     rmSync(testDir, { recursive: true, force: true })
   })
@@ -173,6 +175,70 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("[artifact-policy-reload]")
     expect(result).toContain("output_new/contest_bundle")
     expect(result).toContain("Recovered from latest checkpoint metadata")
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("builds stage capsule context for internal autonomous continuation", () => {
+    const testDir = join(tmpdir(), `stage-managed-prompt-capsule-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "ses_capsule",
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_capsule",
+      agent: "bio-autopilot",
+      promptMode: "capsule",
+    })
+
+    expect(result).toContain("[stage-managed-capsule]")
+    expect(result).toContain("Mode: heavy + continuous")
+    expect(result).toContain("Build rule")
+    expect(result).not.toContain("## Engineering Execution Reload")
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("builds stage delta context for ordinary internal same-stage continuation", () => {
+    const testDir = join(tmpdir(), `stage-managed-prompt-delta-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "ses_delta",
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+      autoModeLevel: "light",
+      interactionMode: "batch",
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_delta",
+      agent: "wase",
+      promptMode: "delta",
+    })
+
+    expect(result).toContain("[stage-managed-delta]")
+    expect(result).toContain("wase :: build")
+    expect(result).toContain("Keep executing the current checkpoint")
+    expect(result).not.toContain("## Engineering Orchestration Reload")
 
     rmSync(testDir, { recursive: true, force: true })
   })

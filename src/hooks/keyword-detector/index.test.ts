@@ -392,6 +392,26 @@ describe("keyword-detector word boundary", () => {
     expect(textPart!.text).toContain("finish this end-to-end")
   })
 
+  test("should NOT trigger autonomous ultrawork when the auto phrase appears later in the sentence", async () => {
+    setMainSession(undefined)
+
+    const toastCalls: string[] = []
+    const hook = createKeywordDetectorHook(createMockPluginInput({ toastCalls }))
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{ type: "text", text: "Please investigate this and maybe use ultrawork auto if needed" }],
+    }
+
+    await hook["chat.message"](
+      { sessionID: "autonomous-session-late" },
+      output
+    )
+
+    const textPart = output.parts.find(p => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect(textPart!.text).not.toContain("AUTONOMOUS EXECUTION ENABLED")
+  })
+
   test("should NOT trigger ultrawork on file references containing 'ulw' substring", async () => {
     // given - file reference contains 'ulw' as substring
     setMainSession(undefined)

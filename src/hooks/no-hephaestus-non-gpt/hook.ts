@@ -1,6 +1,10 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import { isGptModel } from "../../agents/types"
-import { getSessionAgent, updateSessionAgent } from "../../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  resolveRegisteredAgentName,
+  updateSessionAgent,
+} from "../../features/claude-code-session-state"
 import { log } from "../../shared"
 import { getAgentConfigKey, getAgentDisplayName } from "../../shared/agent-display-names"
 
@@ -55,11 +59,12 @@ export function createNoHephaestusNonGptHook(
         if (allowNonGptModel || !input.forceAgentModelRouting) {
           return
         }
-        input.agent = SISYPHUS_DISPLAY
+        const sisyphusName = resolveRegisteredAgentName("sisyphus") ?? SISYPHUS_DISPLAY
+        input.agent = sisyphusName
         if (output?.message) {
-          output.message.agent = SISYPHUS_DISPLAY
+          output.message.agent = sisyphusName
         }
-        updateSessionAgent(input.sessionID, SISYPHUS_DISPLAY)
+        updateSessionAgent(input.sessionID, sisyphusName)
       }
     },
   }

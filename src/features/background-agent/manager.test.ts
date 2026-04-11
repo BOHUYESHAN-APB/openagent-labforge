@@ -807,7 +807,7 @@ describe("LaunchInput.skillContent", () => {
 
 interface CurrentMessage {
   agent?: string
-  model?: { providerID?: string; modelID?: string }
+  model?: { providerID?: string; modelID?: string; variant?: string }
 }
 
 describe("BackgroundManager.notifyParentSession - dynamic message lookup", () => {
@@ -894,6 +894,32 @@ describe("BackgroundManager.notifyParentSession - dynamic message lookup", () =>
     // then - uses currentMessage values, not task.parentModel/parentAgent
     expect(promptBody.agent).toBe("sisyphus")
     expect(promptBody.model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4-6" })
+  })
+
+  test("should propagate parent-session variant when available", async () => {
+    const task: BackgroundTask = {
+      id: "task-variant",
+      sessionID: "session-child",
+      parentSessionID: "session-parent",
+      parentMessageID: "msg-parent",
+      description: "task with variant",
+      prompt: "test",
+      agent: "explore",
+      status: "completed",
+      startedAt: new Date(),
+      completedAt: new Date(),
+      parentAgent: "sisyphus",
+      parentModel: { providerID: "anthropic", modelID: "claude-opus-4-6", variant: "max" },
+    }
+    const currentMessage: CurrentMessage = {
+      agent: "sisyphus",
+      model: { providerID: "anthropic", modelID: "claude-opus-4-6", variant: "max" },
+    }
+
+    const promptBody = buildNotificationPromptBody(task, currentMessage)
+
+    expect(promptBody.model).toEqual({ providerID: "anthropic", modelID: "claude-opus-4-6" })
+    expect(promptBody.variant).toBe("max")
   })
 
   test("should fallback to parentAgent when currentMessage.agent is undefined", async () => {
@@ -1189,12 +1215,16 @@ function buildNotificationPromptBody(
   const model = currentMessage?.model?.providerID && currentMessage?.model?.modelID
     ? { providerID: currentMessage.model.providerID, modelID: currentMessage.model.modelID }
     : undefined
+  const variant = currentMessage?.model?.variant ?? task.parentModel?.variant
 
   if (agent !== undefined) {
     body.agent = agent
   }
   if (model !== undefined) {
     body.model = model
+  }
+  if (variant !== undefined) {
+    body.variant = variant
   }
 
   return body

@@ -124,6 +124,12 @@ const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
     compactionTodoPreserver: hooks.compactionTodoPreserver ?? undefined,
     claudeCodeHooks: hooks.claudeCodeHooks ?? undefined,
     compactionContextInjector: hooks.compactionContextInjector ?? undefined,
+  }, {
+    client: ctx.client as {
+      session: {
+        messages: (args: { path: { id: string } }) => Promise<unknown>
+      }
+    },
   })
 
   return {

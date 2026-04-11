@@ -56,7 +56,7 @@ export function createContinuationHooks(args: {
     : null
 
   const compactionContextInjector = isHookEnabled("compaction-context-injector")
-    ? safeHook("compaction-context-injector", () => createCompactionContextInjector(backgroundManager))
+    ? safeHook("compaction-context-injector", () => createCompactionContextInjector(backgroundManager, ctx.directory))
     : null
 
   const compactionTodoPreserver = isHookEnabled("compaction-todo-preserver")

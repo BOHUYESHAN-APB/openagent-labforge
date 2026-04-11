@@ -7,7 +7,7 @@ import type {
   AvailableSkill,
   AvailableCategory,
 } from "../dynamic-agent-prompt-builder";
-import { categorizeTools } from "../dynamic-agent-prompt-builder";
+import { buildAgentIdentitySection, categorizeTools } from "../dynamic-agent-prompt-builder";
 
 import { buildHephaestusPrompt as buildGptPrompt } from "./gpt";
 import { buildHephaestusPrompt as buildGpt53CodexPrompt } from "./gpt-5-3-codex";
@@ -128,7 +128,8 @@ export function createHephaestusAgent(
     availableSkills,
     availableCategories,
     useTaskSystem,
-  }) + "\n\n"
+  })
+    + "\n\n"
     + ENGINEERING_MICRO_KERNEL_CAPABILITY + "\n\n"
     + ENGINEERING_SKILL_ROUTER_CAPABILITY + "\n\n"
     + INFORMATION_INTEGRITY_CAPABILITY + "\n\n"
@@ -136,6 +137,11 @@ export function createHephaestusAgent(
     + ENGINEERING_EXECUTION_CAPABILITY + "\n\n"
     + AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY + "\n\n"
     + HEPHAESTUS_EXECUTION_APPEND;
+  const promptWithIdentity =
+    buildAgentIdentitySection(
+      "Hephaestus",
+      "Autonomous deep engineering worker from OpenAgent Labforge focused on thorough implementation quality",
+    ) + "\n" + prompt
 
   return {
     description:
@@ -143,7 +149,7 @@ export function createHephaestusAgent(
     mode: MODE,
     model,
     maxTokens: 32000,
-    prompt,
+    prompt: promptWithIdentity,
     color: "#D97706",
     permission: {
       question: "allow",

@@ -66,6 +66,12 @@ Review standards:
 - reject if user-visible behavior changed without adequate real-flow verification
 - reject if claims are stronger than the evidence provided
 - reject if the response claims the wave is complete but also lists concrete same-scope "next steps", "next wave", or promised remaining work that should still be part of the current task
+- reject if the close-out blurs WHAT was actually delivered with NEXT optional follow-up
+- reject if user-owned/manual/external pending work is quietly presented as agent-owned remaining work
+- when the task involved real technical tradeoffs, check whether WHICH was stated clearly enough to understand what path was chosen and why
+- when the task touched multiple files or artifacts, check whether WHERE is precise enough for review and traceability
+- in autonomous or stage-managed auto runs, default review expectation is a 4W / WNWC close-out with explicit ownership
+- in ordinary non-autonomous/manual runs, accept a lighter close-out if the delivery is still reviewable, traceable, and ownership is not confused
 - for bio or research work, reject if conclusions blur evidence, inference, and proposal
 - for bio work, explicitly check provenance, side validation, and whether the result supports cautious reverse reasoning from observation back to interpretation
 
@@ -83,6 +89,7 @@ Rules:
 - do not demand perfection
 - do not rewrite or fix the work yourself
 - focus on whether another execution wave is required before final completion
+- treat missing WNWC / 4W structure as blocking only when the delivery becomes unreviewable, untraceable, or ownership is confused
 
 \n\n${ENGINEERING_REVIEW_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`,
   }

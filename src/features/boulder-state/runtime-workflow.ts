@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 
@@ -28,6 +29,10 @@ import type {
   RuntimeWorkflowArtifactMode,
   RuntimeWorkflowArtifactStrategy,
   RuntimeWorkflowInteractionMode,
+  RuntimeWorkflowCheckpointKind,
+  RuntimeWorkflowCheckpointScope,
+  RuntimeWorkflowRehydrationLevel,
+  RuntimeWorkflowSessionSwitchRecommendation,
   RuntimeWorkflowStage,
   RuntimeWorkflowState,
   RuntimeWorkflowVerdict,
@@ -129,6 +134,8 @@ export function getRuntimeWorkflowPaths(directory: string, sessionId: string): R
     stateFile: join(rootDir, "state.json"),
     missionFile: join(rootDir, "mission.md"),
     roadmapFile: join(rootDir, "roadmap.md"),
+    stageAnchorFile: join(rootDir, "stage-anchor.md"),
+    stageCapsuleFile: join(rootDir, "stage-capsule.md"),
     planFile: join(rootDir, "plan.md"),
     buildFile: join(rootDir, "build.md"),
     reviewFile: join(rootDir, "review.md"),
@@ -148,6 +155,8 @@ function getLegacyRuntimeWorkflowPaths(directory: string, sessionId: string): Ru
     stateFile: join(rootDir, "state.json"),
     missionFile: join(rootDir, "mission.md"),
     roadmapFile: join(rootDir, "roadmap.md"),
+    stageAnchorFile: join(rootDir, "stage-anchor.md"),
+    stageCapsuleFile: join(rootDir, "stage-capsule.md"),
     planFile: join(rootDir, "plan.md"),
     buildFile: join(rootDir, "build.md"),
     reviewFile: join(rootDir, "review.md"),
@@ -280,6 +289,117 @@ ${rationale}
 - Use \`wave-XXX-plan.md\`, \`wave-XXX-build.md\`, and \`wave-XXX-review.md\` for stage-local memory
 - Advance the wave when review rejection or a major re-plan creates a new execution cycle
 `
+}
+
+function normalizeStageGuidance(stage: RuntimeWorkflowStage): string {
+  if (stage === "plan") {
+    return "Decide the next wave, keep scope disciplined, and avoid speculative backlog inflation."
+  }
+  if (stage === "review") {
+    return "Accept, reject, or reopen the current wave using concrete findings instead of vibe-based completion."
+  }
+  return "Execute the current wave, verify real outputs, and update the state after each checkpoint."
+}
+
+function buildStageAnchorMemory(args: {
+  state: RuntimeWorkflowState
+  paths: RuntimeWorkflowPaths
+}): string {
+  const { state, paths } = args
+  const lines = [
+    "# Stage Anchor",
+    "",
+    `- Session: \`${state.session_id}\``,
+    `- Stage: \`${state.current_stage}\``,
+    `- Wave: \`${String(state.current_wave ?? 1).padStart(3, "0")}\``,
+    `- Auto mode: \`${state.auto_mode_level ?? "light"}\``,
+    `- Interaction mode: \`${state.interaction_mode ?? "batch"}\``,
+    `- Active plan: \`${state.active_plan}\``,
+    `- Stage file: \`${getStageFilePath(paths, state.current_stage)}\``,
+    "",
+    "## Durable Constraints",
+    "",
+    `- ${normalizeStageGuidance(state.current_stage)}`,
+    "- Treat repo-local runtime files as the canonical execution memory when the chat history is compressed or degraded.",
+    "- Do not reopen broad package trees if artifact policy already identifies the active root and work item.",
+  ]
+
+  if (state.artifact_mode) {
+    lines.push(`- Artifact mode: \`${state.artifact_mode}\``)
+  }
+  if (state.artifact_root) {
+    lines.push(`- Artifact root: \`${state.artifact_root}\``)
+  }
+  if (state.active_work_item) {
+    lines.push(`- Active work item: ${state.active_work_item}`)
+  }
+  if (state.last_review_verdict) {
+    lines.push(`- Last review verdict: \`${state.last_review_verdict}\``)
+  }
+  if (state.next_stage) {
+    lines.push(`- Next stage on reopen: \`${state.next_stage}\``)
+  }
+  if (state.manual_boundaries && state.manual_boundaries.length > 0) {
+    lines.push("", "## User-Owned / Manual Boundaries", "")
+    for (const boundary of state.manual_boundaries) {
+      lines.push(`- ${boundary}`)
+    }
+  }
+
+  return `${lines.join("\n")}\n`
+}
+
+function buildStageCapsuleMemory(args: {
+  state: RuntimeWorkflowState
+}): string {
+  const { state } = args
+  const lines = [
+    "# Stage Capsule",
+    "",
+    `- Stage: \`${state.current_stage}\``,
+    `- Wave: \`${String(state.current_wave ?? 1).padStart(3, "0")}\``,
+    `- Mode: \`${state.auto_mode_level ?? "light"} + ${state.interaction_mode ?? "batch"}\``,
+    `- Anchor epoch: \`${state.stage_anchor_epoch ?? 1}\``,
+    `- Guidance: ${normalizeStageGuidance(state.current_stage)}`,
+    "- If context was compressed, reload this capsule before recreating a bigger stage prompt.",
+  ]
+
+  if (state.artifact_root) {
+    lines.push(`- Artifact root: \`${state.artifact_root}\``)
+  }
+  if (state.active_work_item) {
+    lines.push(`- Active work item: ${state.active_work_item}`)
+  }
+  if (state.last_rehydration_reason) {
+    lines.push(`- Last rehydration reason: ${state.last_rehydration_reason}`)
+  }
+  if (state.manual_boundaries && state.manual_boundaries.length > 0) {
+    lines.push(`- Manual boundaries: ${state.manual_boundaries.join(" | ")}`)
+  }
+
+  return `${lines.join("\n")}\n`
+}
+
+function computeStageAnchorHash(content: string): string {
+  return createHash("sha1").update(content).digest("hex").slice(0, 12)
+}
+
+function refreshRuntimeWorkflowMemoryFiles(args: {
+  paths: RuntimeWorkflowPaths
+  state: RuntimeWorkflowState
+}): RuntimeWorkflowState {
+  const { paths } = args
+  const anchorContent = buildStageAnchorMemory(args)
+  const capsuleContent = buildStageCapsuleMemory(args)
+  const anchorHash = computeStageAnchorHash(anchorContent)
+
+  writeFileSync(paths.stageAnchorFile, anchorContent, "utf-8")
+  writeFileSync(paths.stageCapsuleFile, capsuleContent, "utf-8")
+
+  return {
+    ...args.state,
+    stage_anchor_hash: anchorHash,
+  }
 }
 
 function ensureDirectory(path: string): void {
@@ -482,11 +602,19 @@ export function ensureRuntimeWorkflowSession(args: {
     auto_mode_level: resolvedAutoModeLevel,
     interaction_mode: resolvedInteractionMode,
     mode_rationale: existing?.mode_rationale ?? mode.rationale,
+    stage_anchor_epoch: existing?.stage_anchor_epoch ?? 1,
+    rehydration_level: existing?.rehydration_level ?? "full-anchor",
+    manual_boundaries: existing?.manual_boundaries ?? [],
+    manual_boundary_updated_at: existing?.manual_boundary_updated_at,
     started_at: existing?.started_at ?? now,
     updated_at: now,
   }
 
-  writeFileSync(paths.stateFile, JSON.stringify(state, null, 2), "utf-8")
+  const hydratedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(hydratedState, null, 2), "utf-8")
   writeFileIfMissing(paths.missionFile, createMissionTemplate({
     sessionId,
     activePlan,
@@ -547,7 +675,7 @@ export function ensureRuntimeWorkflowSession(args: {
 
   return {
     paths,
-    state,
+    state: hydratedState,
     excludeApplied: ensureRuntimeWorkflowGitExclude(directory),
   }
 }
@@ -1030,9 +1158,15 @@ export function updateRuntimeWorkflowStage(args: {
   const nextState: RuntimeWorkflowState = {
     ...existing,
     current_stage: currentStage,
+    rehydration_level: "full-anchor",
+    last_rehydration_reason: `stage-switch:${currentStage}`,
     updated_at: new Date().toISOString(),
   }
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1043,7 +1177,7 @@ export function updateRuntimeWorkflowStage(args: {
     })
   }
 
-  return nextState
+  return refreshedState
 }
 
 export function updateRuntimeWorkflowArtifactPolicy(args: {
@@ -1079,8 +1213,12 @@ export function updateRuntimeWorkflowArtifactPolicy(args: {
     ...(artifactRationale !== undefined ? { artifact_rationale: artifactRationale } : {}),
     updated_at: new Date().toISOString(),
   }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
 
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1091,7 +1229,51 @@ export function updateRuntimeWorkflowArtifactPolicy(args: {
     })
   }
 
-  return nextState
+  return refreshedState
+}
+
+export function updateRuntimeWorkflowManualBoundaries(args: {
+  directory: string
+  sessionId: string
+  boundaries: string[]
+  merge?: boolean
+  note?: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, boundaries, merge = true, note } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const normalizedBoundaries = boundaries
+    .map((entry) => entry.trim())
+    .filter((entry, index, array) => entry.length > 0 && array.indexOf(entry) === index)
+
+  const nextManualBoundaries = merge
+    ? Array.from(new Set([...(existing.manual_boundaries ?? []), ...normalizedBoundaries]))
+    : normalizedBoundaries
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    manual_boundaries: nextManualBoundaries,
+    manual_boundary_updated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
+
+  if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: refreshedState.current_stage,
+      content: note,
+    })
+  }
+
+  return refreshedState
 }
 
 export function updateRuntimeWorkflowReviewOutcome(args: {
@@ -1119,10 +1301,16 @@ export function updateRuntimeWorkflowReviewOutcome(args: {
       verdict === "reject"
         ? (existing.review_rejection_count ?? 0) + 1
         : (existing.review_rejection_count ?? 0),
+    rehydration_level: "capsule",
+    last_rehydration_reason: `review:${verdict}`,
     updated_at: new Date().toISOString(),
   }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
 
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1133,7 +1321,7 @@ export function updateRuntimeWorkflowReviewOutcome(args: {
     })
   }
 
-  return nextState
+  return refreshedState
 }
 
 export function markRuntimeWorkflowReviewHandled(args: {
@@ -1174,10 +1362,16 @@ export function markRuntimeWorkflowReviewHandled(args: {
     current_wave: nextWave,
     next_stage: nextStage,
     last_review_handled_signature: signature,
+    rehydration_level: "full-anchor",
+    last_rehydration_reason: `review-handled:${nextStage}`,
     updated_at: new Date().toISOString(),
   }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
 
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1188,7 +1382,7 @@ export function markRuntimeWorkflowReviewHandled(args: {
     })
   }
 
-  return nextState
+  return refreshedState
 }
 
 export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
@@ -1211,10 +1405,16 @@ export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
     last_review_signature: undefined,
     last_review_handled_signature: undefined,
     last_terminal_message_signature: undefined,
+    rehydration_level: "full-anchor",
+    last_rehydration_reason: "approved-batch-reopened",
     updated_at: new Date().toISOString(),
   }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
 
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1225,7 +1425,7 @@ export function reopenRuntimeWorkflowAfterApprovedBatch(args: {
     })
   }
 
-  return nextState
+  return refreshedState
 }
 
 export function markRuntimeWorkflowTerminalMessageHandled(args: {
@@ -1246,10 +1446,16 @@ export function markRuntimeWorkflowTerminalMessageHandled(args: {
   const nextState: RuntimeWorkflowState = {
     ...existing,
     last_terminal_message_signature: signature,
+    rehydration_level: "capsule",
+    last_rehydration_reason: "terminal-message-handled",
     updated_at: new Date().toISOString(),
   }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
 
-  writeFileSync(paths.stateFile, JSON.stringify(nextState, null, 2), "utf-8")
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
     appendRuntimeWorkflowNote({
@@ -1260,7 +1466,107 @@ export function markRuntimeWorkflowTerminalMessageHandled(args: {
     })
   }
 
-  return nextState
+  return refreshedState
+}
+
+export function markRuntimeWorkflowCompacted(args: {
+  directory: string
+  sessionId: string
+  note?: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, note } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    stage_anchor_epoch: (existing.stage_anchor_epoch ?? 1) + 1,
+    rehydration_level: "capsule",
+    last_rehydration_reason: "compaction",
+    last_compaction_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
+
+  if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: refreshedState.current_stage,
+      content: note,
+    })
+  }
+
+  return refreshedState
+}
+
+export function markRuntimeWorkflowPromptRehydrated(args: {
+  directory: string
+  sessionId: string
+  level: RuntimeWorkflowRehydrationLevel
+  reason: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, level, reason } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const now = new Date().toISOString()
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    rehydration_level: level,
+    last_rehydration_reason: reason,
+    ...(level === "full-anchor" ? { last_full_anchor_at: now } : {}),
+    ...(level === "capsule" ? { last_capsule_at: now } : {}),
+    updated_at: now,
+  }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
+  return refreshedState
+}
+
+export function markRuntimeWorkflowCheckpoint(args: {
+  directory: string
+  sessionId: string
+  checkpointKind: RuntimeWorkflowCheckpointKind
+  checkpointScope: RuntimeWorkflowCheckpointScope
+  sessionSwitchRecommendation: RuntimeWorkflowSessionSwitchRecommendation
+}): RuntimeWorkflowState | null {
+  const {
+    directory,
+    sessionId,
+    checkpointKind,
+    checkpointScope,
+    sessionSwitchRecommendation,
+  } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    last_checkpoint_kind: checkpointKind,
+    last_checkpoint_scope: checkpointScope,
+    last_session_switch_recommendation: sessionSwitchRecommendation,
+    rehydration_level: checkpointKind === "heavy" ? "full-anchor" : "capsule",
+    last_rehydration_reason: `checkpoint:${checkpointKind}`,
+    updated_at: new Date().toISOString(),
+  }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
+  return refreshedState
 }
 
 export function appendRuntimeWorkflowNote(args: {

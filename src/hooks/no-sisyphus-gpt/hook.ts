@@ -1,6 +1,10 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import { isGptModel, isGpt5_4Model } from "../../agents/types"
-import { getSessionAgent, updateSessionAgent } from "../../features/claude-code-session-state"
+import {
+  getSessionAgent,
+  resolveRegisteredAgentName,
+  updateSessionAgent,
+} from "../../features/claude-code-session-state"
 import { log } from "../../shared"
 import { getAgentConfigKey, getAgentDisplayName } from "../../shared/agent-display-names"
 
@@ -45,11 +49,12 @@ export function createNoSisyphusGptHook(ctx: PluginInput) {
       if (agentKey === "sisyphus" && modelID && isGptModel(modelID) && !isGpt5_4Model(modelID)) {
         showToast(ctx, input.sessionID)
         if (input.forceAgentModelRouting) {
-          input.agent = HEPHAESTUS_DISPLAY
+          const hephaestusName = resolveRegisteredAgentName("hephaestus") ?? HEPHAESTUS_DISPLAY
+          input.agent = hephaestusName
           if (output?.message) {
-            output.message.agent = HEPHAESTUS_DISPLAY
+            output.message.agent = hephaestusName
           }
-          updateSessionAgent(input.sessionID, HEPHAESTUS_DISPLAY)
+          updateSessionAgent(input.sessionID, hephaestusName)
         }
       }
     },

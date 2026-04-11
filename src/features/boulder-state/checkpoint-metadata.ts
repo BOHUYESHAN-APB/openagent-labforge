@@ -4,6 +4,12 @@ import { join } from "node:path"
 import type {
   RuntimeWorkflowArtifactMode,
   RuntimeWorkflowArtifactStrategy,
+  RuntimeWorkflowAutoModeLevel,
+  RuntimeWorkflowCheckpointKind,
+  RuntimeWorkflowCheckpointScope,
+  RuntimeWorkflowInteractionMode,
+  RuntimeWorkflowSessionSwitchRecommendation,
+  RuntimeWorkflowStage,
 } from "./types"
 import { OPENCODE_LABFORGE_DIR } from "./constants"
 
@@ -26,6 +32,19 @@ export interface CheckpointMetadata {
   bootstrap_primary_label_en?: string
   bootstrap_secondary_keys?: string[]
   bootstrap_custom_instruction?: string
+  checkpoint_kind?: RuntimeWorkflowCheckpointKind
+  checkpoint_scope?: RuntimeWorkflowCheckpointScope
+  session_switch_recommendation?: RuntimeWorkflowSessionSwitchRecommendation
+  user_confirmation_required?: boolean
+  source_stage?: RuntimeWorkflowStage
+  source_wave?: number
+  source_auto_mode_level?: RuntimeWorkflowAutoModeLevel
+  source_interaction_mode?: RuntimeWorkflowInteractionMode
+  stage_anchor_epoch?: number
+  stage_anchor_hash?: string
+  stage_anchor_file?: string
+  stage_capsule_file?: string
+  manual_boundaries?: string[]
 }
 
 export function getLatestCheckpointMetadataPath(directory: string): string {

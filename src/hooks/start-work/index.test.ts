@@ -492,7 +492,7 @@ ${START_WORK_TEMPLATE}
       updateSpy.mockRestore()
     })
 
-    test("should stamp outgoing message with active agent display name", async () => {
+    test("should stamp outgoing message with the registered active agent name", async () => {
       const hook = createStartWorkHook(createMockPluginInput())
       const output = {
         message: {} as Record<string, unknown>,
@@ -504,7 +504,7 @@ ${START_WORK_TEMPLATE}
         output,
       )
 
-      expect(output.message.agent).toBe(getAgentDisplayName("atlas"))
+      expect(output.message.agent).toBe("atlas")
     })
 
     test("should keep current worker when atlas is unavailable", async () => {
@@ -523,7 +523,7 @@ ${START_WORK_TEMPLATE}
         output,
       )
 
-      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(output.message.agent).toBe("sisyphus")
       expect(sessionState.getSessionAgent("ses-prometheus-to-sisyphus")).toBe("sisyphus")
     })
 
@@ -548,7 +548,7 @@ ${START_WORK_TEMPLATE}
         output,
       )
 
-      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(output.message.agent).toBe("sisyphus")
       expect(sessionState.getSessionAgent("ses-prometheus-to-worker")).toBe("sisyphus")
       expect(readBoulderState(testDir)?.agent).toBe("sisyphus")
     })
@@ -580,7 +580,7 @@ ${START_WORK_TEMPLATE}
         output,
       )
 
-      expect(output.message.agent).toBe(getAgentDisplayName("sisyphus"))
+      expect(output.message.agent).toBe("sisyphus")
       expect(readBoulderState(testDir)?.agent).toBe("sisyphus")
     })
   })

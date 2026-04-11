@@ -1,3 +1,5 @@
+import { parseStructuredExecutionStatus } from "./structured-execution-status"
+
 interface MessagePart {
   type?: string
   text?: string
@@ -19,6 +21,7 @@ export interface CompletionPosture {
 const COMPLETION_MARKER_PATTERNS = [
   /reviewed wave.*已完成/u,
   /current reviewed wave.*已完成/u,
+  /这一波.*(?:已经完成|已完成|完成了|可以收口|可以结束)/u,
   /这(?:一|本)(?:小)?波.*完成了/u,
   /这轮.*(?:已完成|完成了|可以收口|可以结束)/u,
   /这一轮.*(?:已完成|完成了|可以收口|可以结束)/u,
@@ -87,6 +90,42 @@ export function detectLatestAssistantCompletionPosture(messages: MessageLike[]):
 
     if (!combinedText) continue
 
+    const structuredStatus = parseStructuredExecutionStatus(combinedText)
+    if (
+      structuredStatus?.autoAction === "stop" &&
+      structuredStatus.agentOwnedRemaining === "none" &&
+      structuredStatus.currentWave === "complete"
+    ) {
+      return {
+        kind: "terminal_complete",
+        messageId: message.info?.id,
+        signature: buildCompletionSignature({
+          messageId: message.info?.id,
+          text: combinedText,
+          kind: "terminal_complete",
+        }),
+        blockingFindings: [],
+      }
+    }
+    if (
+      structuredStatus?.autoAction === "continue" ||
+      structuredStatus?.agentOwnedRemaining === "present"
+    ) {
+      return {
+        kind: "pseudo_complete",
+        messageId: message.info?.id,
+        signature: buildCompletionSignature({
+          messageId: message.info?.id,
+          text: combinedText,
+          kind: "pseudo_complete",
+        }),
+        blockingFindings: [
+          "Structured execution status declared that agent-owned work still remains.",
+          "Convert the remaining owned work into the next execution wave instead of stopping.",
+        ],
+      }
+    }
+
     const hasCompletionMarker = COMPLETION_MARKER_PATTERNS.some((pattern) => pattern.test(combinedText))
     if (!hasCompletionMarker) {
       return { kind: "none", blockingFindings: [] }
@@ -96,7 +135,7 @@ export function detectLatestAssistantCompletionPosture(messages: MessageLike[]):
     const hasConcreteRemaining = CONCRETE_REMAINING_PATTERNS.some((pattern) => pattern.test(combinedText))
     const hasList = LIST_SIGNAL_PATTERN.test(combinedText)
 
-    if (hasConcreteRemaining || (hasOptionalReturn && hasList)) {
+    if (hasConcreteRemaining) {
       return {
         kind: "pseudo_complete",
         messageId: message.info?.id,

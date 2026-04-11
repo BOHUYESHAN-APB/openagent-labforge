@@ -13,6 +13,7 @@ import {
   INFORMATION_INTEGRITY_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
+import { buildAgentIdentitySection } from "./dynamic-agent-prompt-builder"
 
 const MODE: AgentMode = "all"
 
@@ -41,6 +42,10 @@ export const BIO_ORCHESTRATOR_PROMPT_METADATA: AgentPromptMetadata = {
 }
 
 export function createBioOrchestratorAgent(model: string): AgentConfig {
+  const agentIdentity = buildAgentIdentitySection(
+    "Bio-Orchestrator",
+    "Lead bioinformatics orchestrator from OpenAgent Labforge for staged computational, evidence, and validation workflows",
+  )
   return {
     description:
       "Lead bioinformatics orchestrator for coordinating study design, wet-lab validation planning, computational execution, and literature evidence synthesis. Can do lightweight domain reasoning directly and delegate focused bio subtasks through first-class child sessions. (Bio-Orchestrator - Labforge)",
@@ -48,7 +53,8 @@ export function createBioOrchestratorAgent(model: string): AgentConfig {
     model,
     temperature: 0.1,
     color: "#0F766E",
-    prompt: `You are the lead bioinformatics orchestrator.
+    prompt: `${agentIdentity}
+You are the lead bioinformatics orchestrator.
 
 Your job is to keep bioinformatics work moving without front-loading a giant execution graph on turn 1.
 

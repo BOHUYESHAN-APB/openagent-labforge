@@ -1,7 +1,7 @@
 /// <reference types="bun-types" />
 
 import { describe, expect, spyOn, test } from "bun:test"
-import { _resetForTesting, updateSessionAgent } from "../../features/claude-code-session-state"
+import { _resetForTesting, registerAgentName, updateSessionAgent } from "../../features/claude-code-session-state"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 import { createNoHephaestusNonGptHook } from "./index"
 
@@ -163,6 +163,26 @@ describe("no-hephaestus-non-gpt hook", () => {
 
     // then
     expect(showToast).toHaveBeenCalledTimes(1)
+    expect(output.message.agent).toBe(SISYPHUS_DISPLAY)
+  })
+
+  test("prefers registered agent runtime name when force rerouting", async () => {
+    _resetForTesting()
+    registerAgentName(SISYPHUS_DISPLAY)
+    const showToast = spyOn({ fn: async (_input: unknown) => ({}) }, "fn")
+    const hook = createNoHephaestusNonGptHook({
+      client: { tui: { showToast } },
+    } as any)
+
+    const output = createOutput()
+
+    await hook["chat.message"]?.({
+      sessionID: "ses_force_registered",
+      agent: HEPHAESTUS_DISPLAY,
+      model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
+      forceAgentModelRouting: true,
+    }, output)
+
     expect(output.message.agent).toBe(SISYPHUS_DISPLAY)
   })
 })

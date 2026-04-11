@@ -7,6 +7,7 @@ import {
 import {
   clearContinuationMarker,
 } from "../../features/run-continuation-state"
+import { markRuntimeWorkflowCompacted } from "../../features/boulder-state"
 import { log } from "../../shared/logger"
 
 import { DEFAULT_SKIP_AGENTS, HOOK_NAME } from "./constants"
@@ -78,6 +79,11 @@ export function createTodoContinuationHandler(args: {
         const state = sessionStateStore.getState(sessionID)
         const compactionEpoch = armCompactionGuard(state, Date.now())
         sessionStateStore.cancelCountdown(sessionID)
+        markRuntimeWorkflowCompacted({
+          directory: ctx.directory,
+          sessionId: sessionID,
+          note: "Session compaction completed. Stage capsule should be treated as the primary recovery layer until a full anchor is reloaded.",
+        })
         log(`[${HOOK_NAME}] Session compacted: armed compaction guard`, { sessionID, compactionEpoch })
       }
       return

@@ -23,14 +23,18 @@ export async function resolveActiveBoulderSession(input: {
   }
 
   if (boulderState.session_ids.includes(input.sessionID)) {
-    return { boulderState, progress, appendedSession: false }
+    return {
+      boulderState,
+      progress,
+      appendedSession: boulderState.session_origins?.[input.sessionID] === "appended",
+    }
   }
 
   if (!subagentSessions.has(input.sessionID)) {
     return null
   }
 
-  const updatedBoulderState = appendSessionId(input.directory, input.sessionID)
+  const updatedBoulderState = appendSessionId(input.directory, input.sessionID, "appended")
   if (!updatedBoulderState?.session_ids.includes(input.sessionID)) {
     return null
   }

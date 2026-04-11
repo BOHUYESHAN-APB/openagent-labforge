@@ -4,6 +4,8 @@ export const CHECKPOINT_RESUME_TEMPLATE = `# Checkpoint Resume Command
 
 Use /checkpoint-resume in a fresh session to continue from a repo-local checkpoint instead of dragging the previous session forward.
 
+This command can also be used in the current session if the user wants to reload the checkpoint as a recovery anchor after compaction, provider switching, or long-context drift.
+
 Default checkpoint sources:
 - .opencode/openagent-labforge/checkpoints/latest.md
 - .opencode/openagent-labforge/checkpoints/latest.meta.json
@@ -59,6 +61,19 @@ If the checkpoint metadata includes bootstrap posture fields:
 
 carry them forward into repo-local temporary memory and treat them as the default engineering posture for the resumed session.
 
+If the checkpoint metadata includes stage memory fields:
+- source_stage
+- source_wave
+- source_auto_mode_level
+- source_interaction_mode
+- stage_anchor_epoch
+- stage_anchor_hash
+- checkpoint_kind
+- checkpoint_scope
+- session_switch_recommendation
+
+carry them forward into runtime workflow memory and treat them as the preferred stage rehydration anchor for this resumed or recovered session.
+
 Do NOT try to reconstruct the entire old session.
 Treat the checkpoint as the primary source of truth for continuation.
 
@@ -95,6 +110,7 @@ Then provide:
 - CARRIED-FORWARD MISSION
 - GOAL CARRIED FORWARD
 - CURRENT STATE
+- CHECKPOINT KIND AND SCOPE
 - ARTIFACT POLICY
 - ENGINEERING POSTURE
 - NEXT EXECUTION WAVE

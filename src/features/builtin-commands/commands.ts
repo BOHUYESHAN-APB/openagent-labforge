@@ -31,7 +31,7 @@ function createBuiltinCommandDefinitions(
 ): Record<BuiltinCommandName, Omit<CommandDefinition, "name">> {
   return {
   checkpoint: {
-    description: "(builtin) Create a repo-local checkpoint for continuing work in a fresh session",
+    description: "(builtin) Create a repo-local light/heavy checkpoint for same-session recovery or cross-session continuation",
     template: `<command-instruction>
 ${CHECKPOINT_TEMPLATE}
 </command-instruction>
@@ -44,10 +44,10 @@ Timestamp: $TIMESTAMP
 <user-request>
 $ARGUMENTS
 </user-request>`,
-    argumentHint: "[goal]",
+    argumentHint: "[light|heavy] [goal]",
   },
   "checkpoint-resume": {
-    description: "(builtin) Resume work from the latest or specified repo-local checkpoint",
+    description: "(builtin) Resume or reload work from the latest or specified repo-local checkpoint",
     template: `<command-instruction>
 ${CHECKPOINT_RESUME_TEMPLATE}
 </command-instruction>

@@ -211,13 +211,20 @@ describe("checkpoint command templates", () => {
     expect(CHECKPOINT_TEMPLATE).toContain("\"artifact_mode\":")
     expect(CHECKPOINT_TEMPLATE).toContain("\"artifact_root\":")
     expect(CHECKPOINT_TEMPLATE).toContain("\"bootstrap_primary_key\":")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"checkpoint_kind\":")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"checkpoint_scope\":")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"session_switch_recommendation\":")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"stage_anchor_epoch\":")
+    expect(CHECKPOINT_TEMPLATE).toContain("\"stage_anchor_hash\":")
     expect(CHECKPOINT_TEMPLATE).toContain("ENGINEERING POSTURE")
     expect(CHECKPOINT_TEMPLATE).toContain("ARTIFACT STRATEGY")
     expect(CHECKPOINT_TEMPLATE).toContain("CARRIED-FORWARD MISSION")
   })
 
-  test("checkpoint template instructs user to continue from a new session", () => {
-    expect(CHECKPOINT_TEMPLATE).toContain("fresh session")
+  test("checkpoint template separates checkpoint creation from session switching", () => {
+    expect(CHECKPOINT_TEMPLATE).toContain("creating a checkpoint does NOT automatically mean switching sessions")
+    expect(CHECKPOINT_TEMPLATE).toContain("same-session continuation hint")
+    expect(CHECKPOINT_TEMPLATE).toContain("ASK the user")
     expect(CHECKPOINT_TEMPLATE).toContain("Continue from checkpoint file")
   })
 
@@ -229,6 +236,8 @@ describe("checkpoint command templates", () => {
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("consumed_by_session_id")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("artifact_mode")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("bootstrap_primary_key")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoint_kind")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("stage_anchor_epoch")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("ENGINEERING POSTURE")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("ARTIFACT POLICY")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("do not reread broad package indexes or output trees")

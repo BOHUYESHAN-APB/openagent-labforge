@@ -1,9 +1,11 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import { getSessionAgent, isAgentRegistered } from "../../features/claude-code-session-state"
+import { readBoulderState } from "../../features/boulder-state"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
 import { log } from "../../shared/logger"
 import { injectBoulderContinuation } from "./boulder-continuation-injector"
 import { HOOK_NAME } from "./hook-name"
+import { isSessionInBoulderLineage } from "./boulder-session-lineage"
 import { getLastAgentFromSession } from "./session-last-agent"
 import { resolveActiveBoulderSession } from "./resolve-active-boulder-session"
 import type { AtlasHookOptions, SessionState } from "./types"
@@ -33,6 +35,26 @@ async function injectContinuation(input: {
   input.sessionState.lastContinuationInjectedAt = Date.now()
 
   try {
+    const currentBoulder = readBoulderState(input.ctx.directory)
+    if (!currentBoulder) {
+      return
+    }
+
+    const canContinueSession = await canContinueTrackedBoulderSession({
+      client: input.ctx.client,
+      sessionID: input.sessionID,
+      sessionOrigin: currentBoulder.session_origins?.[input.sessionID],
+      boulderSessionIDs: currentBoulder.session_ids,
+      requiredAgent: currentBoulder.agent,
+    })
+    if (!canContinueSession) {
+      log(`[${HOOK_NAME}] Skipped: tracked descendant agent does not match boulder agent`, {
+        sessionID: input.sessionID,
+        requiredAgent: currentBoulder.agent ?? "atlas",
+      })
+      return
+    }
+
     await injectBoulderContinuation({
       ctx: input.ctx,
       sessionID: input.sessionID,
@@ -150,6 +172,21 @@ export async function handleAtlasSessionIdle(input: {
     return
   }
 
+  const canContinueSession = await canContinueTrackedBoulderSession({
+    client: ctx.client,
+    sessionID,
+    sessionOrigin: boulderState.session_origins?.[sessionID],
+    boulderSessionIDs: boulderState.session_ids,
+    requiredAgent: boulderState.agent,
+  })
+  if (!canContinueSession) {
+    log(`[${HOOK_NAME}] Skipped: tracked descendant agent does not match boulder agent`, {
+      sessionID,
+      requiredAgent: boulderState.agent ?? "atlas",
+    })
+    return
+  }
+
   const sessionAgent = getSessionAgent(sessionID)
   const lastAgent = await getLastAgentFromSession(sessionID, ctx.client)
   const effectiveAgent = sessionAgent ?? lastAgent
@@ -207,4 +244,41 @@ export async function handleAtlasSessionIdle(input: {
     agent: boulderState.agent,
     worktreePath: boulderState.worktree_path,
   })
+}
+
+async function canContinueTrackedBoulderSession(input: {
+  client: PluginInput["client"]
+  sessionID: string
+  sessionOrigin?: "direct" | "appended"
+  boulderSessionIDs: string[]
+  requiredAgent?: string
+}): Promise<boolean> {
+  const ancestorSessionIDs = input.boulderSessionIDs.filter((trackedSessionID) => trackedSessionID !== input.sessionID)
+  if (ancestorSessionIDs.length === 0) {
+    return true
+  }
+
+  if (input.sessionOrigin === "direct") {
+    return true
+  }
+
+  const isTrackedDescendant = await isSessionInBoulderLineage({
+    client: input.client,
+    sessionID: input.sessionID,
+    boulderSessionIDs: ancestorSessionIDs,
+  })
+  if (!isTrackedDescendant) {
+    return false
+  }
+
+  const sessionAgent = await getLastAgentFromSession(input.sessionID, input.client)
+    ?? getSessionAgent(input.sessionID)
+  if (!sessionAgent) {
+    return false
+  }
+
+  const requiredAgentKey = getAgentConfigKey(input.requiredAgent ?? "atlas")
+  const sessionAgentKey = getAgentConfigKey(sessionAgent)
+  return sessionAgentKey === requiredAgentKey
+    || (requiredAgentKey === getAgentConfigKey("atlas") && sessionAgentKey === getAgentConfigKey("sisyphus"))
 }

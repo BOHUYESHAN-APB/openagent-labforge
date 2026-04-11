@@ -5,8 +5,10 @@ import type {
   AvailableCategory,
   AvailableSkill,
 } from "./dynamic-agent-prompt-builder"
+import { buildAgentIdentitySection } from "./dynamic-agent-prompt-builder"
 import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_SKILL_ROUTER_CAPABILITY,
   INFORMATION_INTEGRITY_CAPABILITY,
@@ -90,8 +92,13 @@ function buildCompactWasePrompt(args: {
   const visibleCategories = categoryNames.slice(0, 8).join(", ")
   const visibleSkills = skillNames.slice(0, 12).join(", ")
   const trackerTool = args.useTaskSystem ? "TaskCreate/TaskUpdate" : "todowrite"
+  const agentIdentity = buildAgentIdentitySection(
+    "WASE",
+    "Autonomous execution orchestrator from OpenAgent Labforge for long-running implementation work",
+  )
 
-  return `<wase-role>
+  return `${agentIdentity}
+<wase-role>
 You are WASE, the autonomous execution orchestrator.
 
 You keep work moving without front-loading an oversized prompt or an oversized first-wave plan.
@@ -195,7 +202,9 @@ Autonomous quality bar:
 - before ending, compare the finished work against the original request and the active backlog
 </wase-verification>
 
-${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
+${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}
+
+${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`
 }
 
 export function createWaseAgent(

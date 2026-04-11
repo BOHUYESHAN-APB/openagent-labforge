@@ -15,6 +15,7 @@ import {
   subagentSessions,
   updateSessionAgent,
 } from "../../features/claude-code-session-state"
+import { getAgentDisplayName } from "../../shared/agent-display-names"
 
 const TEST_STORAGE_ROOT = join(tmpdir(), `atlas-message-storage-${randomUUID()}`)
 const TEST_MESSAGE_STORAGE = join(TEST_STORAGE_ROOT, "message")
@@ -1182,8 +1183,8 @@ describe("atlas hook", () => {
        // then - should call prompt for sisyphus
        expect(mockInput._promptMock).toHaveBeenCalled()
        const callArgs = mockInput._promptMock.mock.calls[0][0]
-       expect(callArgs.body.agent).toBe("sisyphus")
-     })
+        expect(callArgs.body.agent).toBe(getAgentDisplayName("sisyphus"))
+      })
 
     test("should debounce rapid continuation injections (prevent infinite loop)", async () => {
       // given - boulder state with incomplete plan

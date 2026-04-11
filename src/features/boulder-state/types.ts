@@ -12,6 +12,7 @@ export interface BoulderState {
   started_at: string
   /** Session IDs that have worked on this plan */
   session_ids: string[]
+  session_origins?: Record<string, "direct" | "appended">
   /** Plan name derived from filename */
   plan_name: string
   /** Agent type to use when resuming (e.g., 'atlas') */
@@ -37,6 +38,20 @@ export type RuntimeWorkflowAutoModeLevel = "light" | "heavy"
 
 export type RuntimeWorkflowInteractionMode = "batch" | "continuous"
 
+export type RuntimeWorkflowCheckpointKind = "light" | "heavy"
+
+export type RuntimeWorkflowCheckpointScope =
+  | "same-session"
+  | "cross-session"
+  | "multi-session"
+
+export type RuntimeWorkflowSessionSwitchRecommendation =
+  | "stay"
+  | "ask-user"
+  | "recommend-switch"
+
+export type RuntimeWorkflowRehydrationLevel = "none" | "capsule" | "full-anchor"
+
 export type RuntimeWorkflowArtifactMode =
   | "patch-existing"
   | "single-doc-rollup"
@@ -56,6 +71,8 @@ export interface RuntimeWorkflowPaths {
   stateFile: string
   missionFile: string
   roadmapFile: string
+  stageAnchorFile: string
+  stageCapsuleFile: string
   planFile: string
   buildFile: string
   reviewFile: string
@@ -72,6 +89,19 @@ export interface RuntimeWorkflowState {
   auto_mode_level?: RuntimeWorkflowAutoModeLevel
   interaction_mode?: RuntimeWorkflowInteractionMode
   mode_rationale?: string
+  stage_anchor_epoch?: number
+  stage_anchor_hash?: string
+  last_full_anchor_at?: string
+  last_capsule_at?: string
+  last_rehydration_reason?: string
+  rehydration_level?: RuntimeWorkflowRehydrationLevel
+  last_compaction_at?: string
+  last_checkpoint_kind?: RuntimeWorkflowCheckpointKind
+  last_checkpoint_scope?: RuntimeWorkflowCheckpointScope
+  last_session_switch_recommendation?: RuntimeWorkflowSessionSwitchRecommendation
+  manual_boundaries?: string[]
+  manual_boundary_tags?: string[]
+  manual_boundary_updated_at?: string
   artifact_mode?: RuntimeWorkflowArtifactMode
   artifact_root?: string
   artifact_strategy?: RuntimeWorkflowArtifactStrategy

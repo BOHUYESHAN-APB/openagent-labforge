@@ -4,6 +4,7 @@ import { mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import * as dataPath from "./data-path"
 import { shouldRetryError, selectFallbackProvider } from "./model-error-classifier"
+import { resetConnectedProvidersCacheForTesting } from "./connected-providers-cache"
 
 const TEST_CACHE_DIR = join(import.meta.dir, "__test-cache__")
 
@@ -12,6 +13,7 @@ describe("model-error-classifier", () => {
 
   beforeEach(() => {
     cacheDirSpy = spyOn(dataPath, "getOmoOpenCodeCacheDir").mockReturnValue(TEST_CACHE_DIR)
+    resetConnectedProvidersCacheForTesting()
     if (existsSync(TEST_CACHE_DIR)) {
       rmSync(TEST_CACHE_DIR, { recursive: true })
     }
@@ -20,6 +22,7 @@ describe("model-error-classifier", () => {
 
   afterEach(() => {
     cacheDirSpy.mockRestore()
+    resetConnectedProvidersCacheForTesting()
     if (existsSync(TEST_CACHE_DIR)) {
       rmSync(TEST_CACHE_DIR, { recursive: true })
     }
@@ -34,6 +37,19 @@ describe("model-error-classifier", () => {
 
     //#then
     expect(result).toBe(true)
+  })
+
+  test("treats daily spending limit exhaustion as non-retryable", () => {
+    //#given
+    const error = {
+      message: "Daily spending limit reached. You have spent $90.0000 out of your $90.00 daily quota (remaining: $0.0000). Your quota will reset tomorrow.",
+    }
+
+    //#when
+    const result = shouldRetryError(error)
+
+    //#then
+    expect(result).toBe(false)
   })
 
   test("selectFallbackProvider prefers first connected provider in preference order", () => {

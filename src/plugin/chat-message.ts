@@ -23,17 +23,22 @@ import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-mark
 import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
 import {
+  markRuntimeWorkflowPromptRehydrated,
   readRepoBootstrapSelection,
+  readRuntimeWorkflowState,
   reopenRuntimeWorkflowAfterApprovedBatch,
+  updateRuntimeWorkflowManualBoundaries,
   writeRepoBootstrapSelection,
 } from "../features/boulder-state"
 import { parseBootstrapModeSelection } from "./bootstrap-mode"
 import {
   buildAutonomousUserDirectiveContext,
+  buildAutonomousReentryContext,
   buildFreshRepoBootstrapContext,
   buildStageManagedPromptContext,
 } from "./stage-managed-prompt"
 import {
+  clearAutonomousUserTurnState,
   getSessionBootstrapMode,
   getSessionAgent,
   isAutonomousSessionAgent,
@@ -107,6 +112,63 @@ function isStageManagedAutonomousAgent(agent: string | undefined): boolean {
   return isAutonomousSessionAgent(agent) || isBioAutonomousAgent(agent)
 }
 
+function chooseStageManagedPromptMode(args: {
+  internalInitiatedPromptDetected: boolean
+  isStageManagedAutonomousSession: boolean
+  runtimeState: ReturnType<typeof readRuntimeWorkflowState>
+}): "full-anchor" | "capsule" | "delta" {
+  const { internalInitiatedPromptDetected, isStageManagedAutonomousSession, runtimeState } = args
+  if (!isStageManagedAutonomousSession || !internalInitiatedPromptDetected) {
+    return "full-anchor"
+  }
+
+  const updatedAt = runtimeState?.updated_at ? Date.parse(runtimeState.updated_at) : undefined
+  const lastFullAnchorAt = runtimeState?.last_full_anchor_at ? Date.parse(runtimeState.last_full_anchor_at) : undefined
+  const lastCapsuleAt = runtimeState?.last_capsule_at ? Date.parse(runtimeState.last_capsule_at) : undefined
+  const lastCompactionAt = runtimeState?.last_compaction_at ? Date.parse(runtimeState.last_compaction_at) : undefined
+
+  if (
+    runtimeState?.rehydration_level === "capsule" &&
+    (
+      lastCapsuleAt === undefined ||
+      (lastCompactionAt !== undefined && lastCapsuleAt < lastCompactionAt) ||
+      (updatedAt !== undefined && lastCapsuleAt < updatedAt)
+    )
+  ) {
+    return "capsule"
+  }
+
+  if (
+    runtimeState?.rehydration_level === "full-anchor" &&
+    (
+      lastFullAnchorAt === undefined ||
+      (updatedAt !== undefined && lastFullAnchorAt < updatedAt)
+    )
+  ) {
+    return "full-anchor"
+  }
+
+  return "delta"
+}
+
+function extractManualBoundaryNotes(promptText: string): string[] {
+  const normalized = promptText
+    .replace(/\r/g, "\n")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  const matches = normalized.filter((line) => {
+    return (
+      /(?:由我|我来|我自己|我手动).{0,20}(?:处理|下载|安装|上传|提交|推送|运行|拉取|执行)/u.test(line) ||
+      /(?:下载|安装|上传|提交|推送|运行|拉取|执行).{0,20}(?:由我|我来|我自己|我手动)/u.test(line) ||
+      /(?:不要|先别).{0,24}(?:做|处理|下载|安装|推送|提交).{0,12}(?:我|由我|我来|我手动)/u.test(line)
+    )
+  })
+
+  return Array.from(new Set(matches))
+}
+
 export function createChatMessageHandler(args: {
   ctx: PluginContext
   pluginConfig: OhMyOpenCodeConfig
@@ -175,9 +237,22 @@ export function createChatMessageHandler(args: {
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
     const activeAgent = input.agent ?? rememberedSessionAgent
+    const explicitAgentSwitchDetected =
+      input.agent !== undefined &&
+      rememberedSessionAgent !== undefined &&
+      getAgentConfigKey(input.agent) !== getAgentConfigKey(rememberedSessionAgent)
     const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
     const isForkedSessionLoad = isForkedSession(input.sessionID)
     const isStageManagedAutonomousSession = isStageManagedAutonomousAgent(activeAgent)
+    const switchedFromAutoToManual =
+      explicitAgentSwitchDetected &&
+      isStageManagedAutonomousAgent(rememberedSessionAgent) &&
+      !isStageManagedAutonomousAgent(input.agent)
+    const switchedFromManualToAuto =
+      explicitAgentSwitchDetected &&
+      !isStageManagedAutonomousAgent(rememberedSessionAgent) &&
+      isStageManagedAutonomousAgent(input.agent)
+    const runtimeWorkflowState = readRuntimeWorkflowState(ctx.directory, input.sessionID)
     const repoBootstrapSelection = readRepoBootstrapSelection(ctx.directory)
     const existingBootstrapMode = getSessionBootstrapMode(input.sessionID)
     const parsedBootstrapMode =
@@ -193,6 +268,18 @@ export function createChatMessageHandler(args: {
         directory: ctx.directory,
         sessionId: input.sessionID,
         selection: parsedBootstrapMode,
+      })
+    }
+    const manualBoundaryNotes =
+      !internalInitiatedPromptDetected && outputText.trim().length > 0
+        ? extractManualBoundaryNotes(outputText)
+        : []
+    if (manualBoundaryNotes.length > 0 && runtimeWorkflowState) {
+      updateRuntimeWorkflowManualBoundaries({
+        directory: ctx.directory,
+        sessionId: input.sessionID,
+        boundaries: manualBoundaryNotes,
+        note: "Recorded explicit user-owned/manual-handled boundary from the latest user guidance.",
       })
     }
     const reopenedApprovedBatchState =
@@ -275,23 +362,55 @@ export function createChatMessageHandler(args: {
       }
     }
 
+    if (switchedFromAutoToManual || switchedFromManualToAuto) {
+      clearAutonomousUserTurnState(input.sessionID)
+    }
+
     if (input.agent) {
       if (rememberedSessionAgent === undefined) {
         setSessionAgent(input.sessionID, input.agent)
       } else {
         updateSessionAgent(input.sessionID, input.agent)
       }
-      if (isAutonomousSessionAgent(input.agent) || getAgentConfigKey(input.agent) === "wase") {
+      if (isStageManagedAutonomousAgent(input.agent)) {
         setUltraworkAutonomousSession(input.sessionID, true)
       }
-    } else if (activeAgent && isAutonomousSessionAgent(activeAgent)) {
+    } else if (activeAgent && isStageManagedAutonomousAgent(activeAgent)) {
       setUltraworkAutonomousSession(input.sessionID, true)
     }
 
+    const autonomousReentryContext =
+      !internalInitiatedPromptDetected &&
+      switchedFromManualToAuto
+        ? buildAutonomousReentryContext({
+            agent: activeAgent,
+          })
+        : null
+    if (autonomousReentryContext) {
+      contextCollector.register(input.sessionID, {
+        id: "autonomous-reentry",
+        source: "custom",
+        content: autonomousReentryContext,
+        priority: "high",
+      })
+      markRuntimeWorkflowPromptRehydrated({
+        directory: ctx.directory,
+        sessionId: input.sessionID,
+        level: "full-anchor",
+        reason: "manual-auto-reentry",
+      })
+    }
+
+    const stageManagedPromptMode = chooseStageManagedPromptMode({
+      internalInitiatedPromptDetected,
+      isStageManagedAutonomousSession,
+      runtimeState: runtimeWorkflowState,
+    })
     const stageManagedContext = buildStageManagedPromptContext({
       directory: ctx.directory,
       sessionID: input.sessionID,
       agent: activeAgent,
+      promptMode: stageManagedPromptMode,
     })
     if (stageManagedContext) {
       contextCollector.register(input.sessionID, {
@@ -299,6 +418,20 @@ export function createChatMessageHandler(args: {
         source: "custom",
         content: stageManagedContext,
         priority: "high",
+      })
+      markRuntimeWorkflowPromptRehydrated({
+        directory: ctx.directory,
+        sessionId: input.sessionID,
+        level:
+          stageManagedPromptMode === "delta"
+            ? "none"
+            : stageManagedPromptMode,
+        reason:
+          stageManagedPromptMode === "delta"
+            ? "internal-continuation-delta"
+            : internalInitiatedPromptDetected
+              ? "internal-continuation"
+              : "chat-message",
       })
     }
 

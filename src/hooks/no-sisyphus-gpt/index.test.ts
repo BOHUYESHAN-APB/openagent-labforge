@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
-import { _resetForTesting, updateSessionAgent } from "../../features/claude-code-session-state"
+import { _resetForTesting, registerAgentName, updateSessionAgent } from "../../features/claude-code-session-state"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 import { createNoSisyphusGptHook } from "./index"
 
@@ -153,6 +153,26 @@ describe("no-sisyphus-gpt hook", () => {
 
     // then
     expect(showToast).toHaveBeenCalledTimes(1)
+    expect(output.message.agent).toBe(HEPHAESTUS_DISPLAY)
+  })
+
+  test("prefers registered agent runtime name when force rerouting", async () => {
+    _resetForTesting()
+    registerAgentName(HEPHAESTUS_DISPLAY)
+    const showToast = spyOn({ fn: async () => ({}) }, "fn")
+    const hook = createNoSisyphusGptHook({
+      client: { tui: { showToast } },
+    } as any)
+
+    const output = createOutput()
+
+    await hook["chat.message"]?.({
+      sessionID: "ses_force_registered",
+      agent: SISYPHUS_DISPLAY,
+      model: { providerID: "openai", modelID: "gpt-5.3-codex" },
+      forceAgentModelRouting: true,
+    }, output)
+
     expect(output.message.agent).toBe(HEPHAESTUS_DISPLAY)
   })
 })

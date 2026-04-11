@@ -240,3 +240,9 @@ export async function updateConnectedProvidersCache(client: {
 		log("[connected-providers-cache] Error updating cache", { error: String(err) })
 	}
 }
+
+/** @internal test-only helper */
+export function resetConnectedProvidersCacheForTesting(): void {
+	connectedProvidersMemoryCache = null
+	providerModelsMemoryCache = null
+}

@@ -9,11 +9,13 @@ import {
   ensureRuntimeWorkflowGitExclude,
   ensureRuntimeWorkflowSession,
   getRuntimeWorkflowPaths,
+  markRuntimeWorkflowCompacted,
   markRuntimeWorkflowTerminalMessageHandled,
   markRuntimeWorkflowReviewHandled,
   readRuntimeWorkflowState,
   reopenRuntimeWorkflowAfterApprovedBatch,
   updateRuntimeWorkflowArtifactPolicy,
+  updateRuntimeWorkflowManualBoundaries,
   updateRuntimeWorkflowStage,
   updateRuntimeWorkflowReviewOutcome,
 } from "./runtime-workflow"
@@ -46,6 +48,8 @@ describe("runtime-workflow", () => {
     expect(paths.stateFile).toEndWith("state.json")
     expect(paths.missionFile).toEndWith("mission.md")
     expect(paths.roadmapFile).toEndWith("roadmap.md")
+    expect(paths.stageAnchorFile).toEndWith("stage-anchor.md")
+    expect(paths.stageCapsuleFile).toEndWith("stage-capsule.md")
     expect(paths.planFile).toEndWith("plan.md")
     expect(paths.buildFile).toEndWith("build.md")
     expect(paths.reviewFile).toEndWith("review.md")
@@ -69,6 +73,8 @@ describe("runtime-workflow", () => {
     expect(existsSync(result.paths.stateFile)).toBe(true)
     expect(existsSync(result.paths.missionFile)).toBe(true)
     expect(existsSync(result.paths.roadmapFile)).toBe(true)
+    expect(existsSync(result.paths.stageAnchorFile)).toBe(true)
+    expect(existsSync(result.paths.stageCapsuleFile)).toBe(true)
     expect(existsSync(result.paths.planFile)).toBe(true)
     expect(existsSync(result.paths.buildFile)).toBe(true)
     expect(existsSync(result.paths.reviewFile)).toBe(true)
@@ -82,8 +88,32 @@ describe("runtime-workflow", () => {
     expect(state.active_agent).toBe("atlas")
     expect(state.current_stage).toBe("plan")
     expect(state.current_wave).toBe(1)
+    expect(state.stage_anchor_epoch).toBe(1)
+    expect(state.rehydration_level).toBe("full-anchor")
+    expect(typeof state.stage_anchor_hash).toBe("string")
     expect(typeof state.auto_mode_level).toBe("string")
     expect(typeof state.interaction_mode).toBe("string")
+  })
+
+  test("marks runtime workflow as compacted and promotes capsule recovery", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-compacted-1",
+      activePlan: "/repo/.sisyphus/plans/test.md",
+      currentStage: "build",
+    })
+
+    const updated = markRuntimeWorkflowCompacted({
+      directory: testDir,
+      sessionId: "session-compacted-1",
+      note: "Compaction happened.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-compacted-1")
+    expect(updated?.rehydration_level).toBe("capsule")
+    expect(updated?.last_rehydration_reason).toBe("compaction")
+    expect(updated?.stage_anchor_epoch).toBe(2)
+    expect(state?.last_compaction_at).toBeDefined()
   })
 
   test("adds runtime workflow path to .git/info/exclude without duplication", () => {
@@ -201,6 +231,29 @@ describe("runtime-workflow", () => {
     expect(updated?.active_work_item).toBe("67/68 promoter figure set")
     expect(state?.artifact_rationale).toContain("existing bundle")
     expect(buildFile).toContain("Artifact policy restored from checkpoint handoff.")
+  })
+
+  test("persists explicit user-owned manual boundaries in runtime workflow state", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-manual-boundary-1",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+      currentStage: "build",
+    })
+
+    const updated = updateRuntimeWorkflowManualBoundaries({
+      directory: testDir,
+      sessionId: "session-manual-boundary-1",
+      boundaries: ["下载由我处理，我手动去下载。"],
+      note: "User kept download work as a manual responsibility.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-manual-boundary-1")
+    const buildFile = readFileSync(getRuntimeWorkflowPaths(testDir, "session-manual-boundary-1").stageAnchorFile, "utf-8")
+
+    expect(updated?.manual_boundaries).toContain("下载由我处理，我手动去下载。")
+    expect(state?.manual_boundary_updated_at).toBeDefined()
+    expect(buildFile).toContain("User-Owned / Manual Boundaries")
   })
 
   test("preserves wave and mode state when the runtime workflow session is re-initialized", () => {

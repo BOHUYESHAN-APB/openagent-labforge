@@ -230,6 +230,70 @@ Acceptance expectations:
 - for bioinformatics work, separate evidence from inference and label proposed wet-lab work as proposed rather than executed
 </autonomous_acceptance_workflow_capability>`
 
+export const AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY = `<autonomous_closure_protocol_capability>
+## Autonomous Closure Protocol
+
+When ending a meaningful wave, separate completed work, incomplete owned work, manual/user-owned work, and optional future work explicitly.
+
+Baseline delivery language:
+- in autonomous or stage-managed auto execution, default to a customized 4W / WNWC closeout pattern unless the user explicitly requested another reporting style
+- do not force the full WNWC card onto ordinary non-autonomous/manual turns; outside auto, a lighter closeout is acceptable when the delivery stays reviewable
+- only switch to a more specialized reporting frame when the user explicitly asks for it or the repo posture / audience contract already demands it
+- the minimum engineering handoff skeleton is:
+  - What
+  - Next
+  - Where
+  - Which
+
+Required close-out structure:
+- What: what this wave actually completed
+- Next: either the next owned execution wave OR optional follow-up ideas, but never mix them
+- Where: the key files, artifacts, or surfaces changed
+- Which: which technical path, architecture choice, dependency, or implementation branch was selected when a real choice existed
+- Verification: what evidence was actually checked
+- Boundaries: what this wave did NOT do on purpose
+- Ownership: which remaining items belong to the agent vs the user vs external prerequisites
+- Risks: residual caveats or weak points that still matter
+
+Recommended close-out card:
+
+WNWC Closeout
+- What:
+- Next:
+- Where:
+- Which:
+- Verification:
+- Boundaries:
+- Ownership:
+- Risks:
+
+If you are stopping, finish with this exact block:
+
+Execution Status
+- Current wave: complete
+- Agent-owned remaining work: none
+- User-owned/external pending: none|present
+- Auto action: stop
+
+If you are continuing, finish with this exact block:
+
+Execution Status
+- Current wave: incomplete
+- Agent-owned remaining work: present
+- User-owned/external pending: none|present
+- Auto action: continue
+
+Rules:
+- optional suggestions, future ideas, or user-owned/manual/external tasks must NOT be presented as agent-owned remaining work
+- if the user said they will handle a step manually, that belongs under user-owned/external pending, not under agent-owned remaining work
+- do not write vague endings like "if you want I can continue" without the Execution Status block
+- do not mix "wave complete" language with hidden owned backlog in the same close-out
+- do not hide key technical choices inside prose when the user will need to review the decision later; put them under Which
+- do not omit Where on multi-file or multi-artifact tasks
+- if verification is partial, say so under Verification and Risks instead of pretending the wave is fully closed
+- if something was intentionally deferred, say it under Boundaries or Ownership instead of smuggling it into Next
+</autonomous_closure_protocol_capability>`
+
 type RuntimeEngineeringStage = "plan" | "build" | "review"
 type RuntimeEngineeringProfile = "default" | "wase" | "bio"
 
@@ -379,6 +443,38 @@ export function buildAcceptanceRuntimeCapability(
 
   appendRuntimeModeGuidance(lines, input)
   lines.push("</autonomous_acceptance_runtime_capability>")
+
+  return lines.join("\n")
+}
+
+export function buildAutonomousCloseoutRuntimeCapability(
+  input: RuntimeEngineeringInput,
+): string {
+  const lines = [
+    "<autonomous_closeout_runtime_capability>",
+    "## Autonomous Closeout Reload",
+  ]
+
+  if (input.stage === "plan") {
+    lines.push(
+      "- Decide early what the closeout will need to prove: What changed, Where it changed, Which path was chosen, and what still belongs to the user or external prerequisites.",
+      "- Do not plan a wave whose ending would rely on vague prose like 'if you want I can continue'.",
+    )
+  } else if (input.stage === "build") {
+    lines.push(
+      "- As evidence accumulates, keep the eventual closeout structured enough that stop-vs-continue can be inferred from explicit ownership, not from tone.",
+      "- If user-owned/manual or external work remains, keep it out of the autonomous owned backlog and reserve it for Boundaries or Ownership.",
+    )
+  } else {
+    lines.push(
+      "- If this wave ends here, close it with 4W / WNWC plus explicit Verification, Boundaries, Ownership, Risks, and Execution Status.",
+      "- If agent-owned work still remains, declare `Current wave: incomplete`, set `Agent-owned remaining work: present`, and continue instead of ending with optional future-work prose.",
+      "- If only user-owned/manual or external work remains, keep `Agent-owned remaining work: none` and report the remainder under Ownership rather than reopening it as autonomous work.",
+    )
+  }
+
+  appendRuntimeModeGuidance(lines, input)
+  lines.push("</autonomous_closeout_runtime_capability>")
 
   return lines.join("\n")
 }

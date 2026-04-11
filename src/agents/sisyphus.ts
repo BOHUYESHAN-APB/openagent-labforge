@@ -35,6 +35,7 @@ import type {
   AvailableCategory,
 } from "./dynamic-agent-prompt-builder";
 import {
+  buildAgentIdentitySection,
   buildKeyTriggersSection,
   buildToolSelectionTable,
   buildExploreSection,
@@ -463,9 +464,14 @@ export function createSisyphusAgent(
   const skills = availableSkills ?? [];
   const categories = availableCategories ?? [];
   const agents = availableAgents ?? [];
+  const agentIdentity = buildAgentIdentitySection(
+    "Sisyphus",
+    "Powerful AI orchestrator from OpenAgent Labforge focused on disciplined engineering execution and delegation",
+  )
 
   if (isGpt5_4Model(model)) {
-    const prompt = `${buildGpt54SisyphusPrompt(
+    const prompt = `${agentIdentity}
+${buildGpt54SisyphusPrompt(
       model,
       agents,
       tools,
@@ -520,7 +526,8 @@ export function createSisyphusAgent(
     );
   }
 
-  prompt = `${prompt}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
+  prompt = `${agentIdentity}
+${prompt}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
 
   const permission = {
     question: "allow",

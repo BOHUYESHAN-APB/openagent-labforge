@@ -1,63 +1,112 @@
+import { existsSync, readFileSync } from "node:fs"
 import type { BackgroundManager } from "../../features/background-agent"
+import { getRuntimeWorkflowPaths, readRuntimeWorkflowState } from "../../features/boulder-state"
 import {
-  createSystemDirective,
-  SystemDirectiveTypes,
-} from "../../shared/system-directive"
+  clearCompactionAgentConfigCheckpoint,
+  setCompactionAgentConfigCheckpoint,
+} from "../../shared/compaction-agent-config-checkpoint"
+import { log } from "../../shared/logger"
+import { normalizePromptTools } from "../../shared"
+import {
+  findNearestMessageWithFields,
+  findNearestMessageWithFieldsFromSDK,
+} from "../../features/hook-message-injector"
+import { isSqliteBackend } from "../../shared/opencode-storage-detection"
+import { getMessageDir } from "../todo-continuation-enforcer/message-directory"
+import { COMPACTION_CONTEXT_PROMPT } from "./compaction-context-prompt"
+import { createRecoveryLogic } from "./recovery"
+import { resolveSessionPromptConfig } from "./session-prompt-config-resolver"
+import { resolveSessionID } from "./session-id"
+import {
+  finalizeTrackedAssistantMessage,
+  shouldTreatAssistantPartAsOutput,
+  trackAssistantOutput,
+  type TailMonitorState,
+} from "./tail-monitor"
+import type { CompactionContextClient } from "./types"
 
-const COMPACTION_CONTEXT_PROMPT = `${createSystemDirective(SystemDirectiveTypes.COMPACTION_CONTEXT)}
+function buildRuntimeWorkflowCompactionContext(
+  directory: string | undefined,
+  sessionID: string | undefined,
+): string {
+  if (!directory || !sessionID) return ""
 
-When summarizing this session, you MUST include the following sections in your summary:
+  const state = readRuntimeWorkflowState(directory, sessionID)
+  if (!state) return ""
 
-## 1. User Requests (As-Is)
-- List all original user requests exactly as they were stated
-- Preserve the user's exact wording and intent
+  const paths = getRuntimeWorkflowPaths(directory, sessionID)
+  const lines = [
+    "## 9. Runtime Workflow Anchor",
+    `- Stage: \`${state.current_stage}\``,
+    `- Wave: \`${String(state.current_wave ?? 1).padStart(3, "0")}\``,
+    `- Auto mode: \`${state.auto_mode_level ?? "light"}\``,
+    `- Interaction mode: \`${state.interaction_mode ?? "batch"}\``,
+    `- Rehydration level: \`${state.rehydration_level ?? "full-anchor"}\``,
+    `- Anchor epoch: \`${state.stage_anchor_epoch ?? 1}\``,
+    ...(state.artifact_root
+      ? [`- Artifact root: \`${state.artifact_root}\``]
+      : []),
+    ...(state.active_work_item
+      ? [`- Active work item: ${state.active_work_item}`]
+      : []),
+    ...(state.last_rehydration_reason
+      ? [`- Last rehydration reason: ${state.last_rehydration_reason}`]
+      : []),
+  ]
 
-## 2. Final Goal
-- What the user ultimately wanted to achieve
-- The end result or deliverable expected
+  if (existsSync(paths.stageCapsuleFile)) {
+    const capsule = readFileSync(paths.stageCapsuleFile, "utf-8").trim()
+    if (capsule.length > 0) {
+      lines.push("", "### Stage Capsule", capsule)
+    }
+  }
 
-## 3. Work Completed
-- What has been done so far
-- Files created/modified
-- Features implemented
-- Problems solved
+  return `\n${lines.join("\n")}\n`
+}
 
-## 4. Remaining Tasks
-- What still needs to be done
-- Pending items from the original request
-- Follow-up tasks identified during the work
+export function createCompactionContextInjector(
+  backgroundManager?: BackgroundManager,
+  directory?: string,
+) {
+  const tailStates = new Map<string, TailMonitorState>()
 
-## 5. Active Working Context (For Seamless Continuation)
-- **Files**: Paths of files currently being edited or frequently referenced
-- **Code in Progress**: Key code snippets, function signatures, or data structures under active development
-- **External References**: Documentation URLs, library APIs, or external resources being consulted
-- **State & Variables**: Important variable names, configuration values, or runtime state relevant to ongoing work
+  const getTailState = (sessionID: string): TailMonitorState => {
+    const existing = tailStates.get(sessionID)
+    if (existing) {
+      return existing
+    }
 
-## 6. Explicit Constraints (Verbatim Only)
-- Include ONLY constraints explicitly stated by the user or in existing AGENTS.md context
-- Quote constraints verbatim (do not paraphrase)
-- Do NOT invent, add, or modify constraints
-- If no explicit constraints exist, write "None"
+    const created: TailMonitorState = {
+      currentHasOutput: false,
+      consecutiveNoTextMessages: 0,
+    }
+    tailStates.set(sessionID, created)
+    return created
+  }
 
-## 7. Agent Verification State (Critical for Reviewers)
-- **Current Agent**: What agent is running (momus, oracle, etc.)
-- **Verification Progress**: Files already verified/validated
-- **Pending Verifications**: Files still needing verification
-- **Previous Rejections**: If reviewer agent, what was rejected and why
-- **Acceptance Status**: Current state of review process
+  const resolveRecoveryContext = (
+    ctx?: {
+      client: {
+        session: {
+          messages: (args: {
+            path: { id: string }
+          }) => Promise<unknown>
+          promptAsync: (args: unknown) => Promise<unknown>
+        }
+      }
+    },
+  ): CompactionContextClient | undefined => {
+    if (!directory || !ctx?.client) {
+      return undefined
+    }
 
-This section is CRITICAL for reviewer agents (momus, oracle) to maintain continuity.
+    return {
+      client: ctx.client,
+      directory,
+    }
+  }
 
-## 8. Delegated Agent Sessions
-- List ALL background agent tasks spawned during this session
-- For each: agent name, category, status, description, and **session_id**
-- **RESUME, DON'T RESTART.** Each listed session retains full context. After compaction, use \`session_id\` to continue existing agent sessions instead of spawning new ones. This saves tokens, preserves learned context, and prevents duplicate work.
-
-This context is critical for maintaining continuity after compaction.
-`
-
-export function createCompactionContextInjector(backgroundManager?: BackgroundManager) {
-  return (sessionID?: string): string => {
+  const injector = ((sessionID?: string): string => {
     let prompt = COMPACTION_CONTEXT_PROMPT
 
     if (backgroundManager && sessionID) {
@@ -67,6 +116,192 @@ export function createCompactionContextInjector(backgroundManager?: BackgroundMa
       }
     }
 
+    prompt += buildRuntimeWorkflowCompactionContext(directory, sessionID)
+
     return prompt
+  }) as ((sessionID?: string) => string) & {
+    capture?: (
+      sessionID: string,
+      client?: {
+        session: {
+          messages: (args: {
+            path: { id: string }
+          }) => Promise<unknown>
+        }
+      },
+    ) => Promise<void>
+    event?: (
+      input: { event: { type: string; properties?: unknown } },
+      ctx?: {
+        client: {
+          session: {
+            messages: (args: {
+              path: { id: string }
+            }) => Promise<unknown>
+            promptAsync: (args: unknown) => Promise<unknown>
+          }
+        }
+      },
+    ) => Promise<void>
   }
+
+  injector.capture = async (sessionID, client): Promise<void> => {
+    if (!sessionID) return
+
+    const recoveryContext =
+      client && directory
+        ? {
+            client,
+            directory,
+          }
+        : undefined
+    const resolved = recoveryContext
+      ? await resolveSessionPromptConfig(recoveryContext, sessionID)
+      : {}
+
+    let stored: Awaited<ReturnType<typeof findNearestMessageWithFieldsFromSDK>> | null =
+      null
+    if (!resolved.agent || !resolved.model || !resolved.tools) {
+      if (client && isSqliteBackend()) {
+        stored = await findNearestMessageWithFieldsFromSDK(
+          client as never,
+          sessionID,
+        )
+      } else {
+        const messageDir = getMessageDir(sessionID)
+        stored = messageDir ? findNearestMessageWithFields(messageDir) : null
+      }
+    }
+
+    const checkpoint = {
+      ...(resolved.agent
+        ? { agent: resolved.agent }
+        : stored?.agent
+          ? { agent: stored.agent }
+          : {}),
+      ...(resolved.model?.providerID && resolved.model?.modelID
+        ? { model: resolved.model }
+        : stored?.model?.providerID && stored.model?.modelID
+          ? {
+              model: {
+                providerID: stored.model.providerID,
+                modelID: stored.model.modelID,
+                ...(stored.model.variant
+                  ? { variant: stored.model.variant }
+                  : {}),
+              },
+            }
+          : {}),
+      ...(resolved.tools
+        ? { tools: resolved.tools }
+        : stored?.tools
+          ? { tools: normalizePromptTools(stored.tools) }
+          : {}),
+    }
+
+    if (!checkpoint.agent && !checkpoint.model && !checkpoint.tools) {
+      return
+    }
+
+    setCompactionAgentConfigCheckpoint(sessionID, checkpoint)
+    log("[compaction-context-injector] Captured agent checkpoint before compaction", {
+      sessionID,
+      agent: checkpoint.agent,
+      model: checkpoint.model,
+      hasTools: !!checkpoint.tools,
+    })
+  }
+
+  injector.event = async ({ event }, ctx): Promise<void> => {
+    const props = event.properties as Record<string, unknown> | undefined
+    const sessionID = resolveSessionID(props)
+    if (!sessionID) {
+      return
+    }
+
+    const recoveryContext = resolveRecoveryContext(ctx)
+    const { recoverCheckpointedAgentConfig, maybeWarnAboutNoTextTail } =
+      createRecoveryLogic(recoveryContext, getTailState)
+
+    if (event.type === "session.deleted") {
+      clearCompactionAgentConfigCheckpoint(sessionID)
+      tailStates.delete(sessionID)
+      return
+    }
+
+    if (event.type === "session.idle") {
+      const noTextCount = finalizeTrackedAssistantMessage(getTailState(sessionID))
+      if (noTextCount > 0) {
+        await maybeWarnAboutNoTextTail(sessionID)
+      }
+      return
+    }
+
+    if (event.type === "session.compacted") {
+      const tailState = getTailState(sessionID)
+      finalizeTrackedAssistantMessage(tailState)
+      tailState.lastCompactedAt = Date.now()
+      await maybeWarnAboutNoTextTail(sessionID)
+      await recoverCheckpointedAgentConfig(sessionID, "session.compacted")
+      return
+    }
+
+    if (event.type === "message.updated") {
+      const info = props?.info as {
+        id?: string
+        role?: string
+        sessionID?: string
+      } | undefined
+
+      if (!info?.sessionID || info.role !== "assistant" || !info.id) {
+        return
+      }
+
+      const tailState = getTailState(info.sessionID)
+      if (
+        tailState.currentMessageID &&
+        tailState.currentMessageID !== info.id
+      ) {
+        finalizeTrackedAssistantMessage(tailState)
+        await maybeWarnAboutNoTextTail(info.sessionID)
+      }
+
+      if (tailState.currentMessageID !== info.id) {
+        tailState.currentMessageID = info.id
+        tailState.currentHasOutput = false
+      }
+      return
+    }
+
+    if (event.type === "message.part.delta") {
+      const deltaSessionID = props?.sessionID as string | undefined
+      const messageID = props?.messageID as string | undefined
+      const field = props?.field as string | undefined
+      const delta = props?.delta as string | undefined
+
+      if (!deltaSessionID || field !== "text" || !delta?.trim()) {
+        return
+      }
+
+      trackAssistantOutput(getTailState(deltaSessionID), messageID)
+      return
+    }
+
+    if (event.type === "message.part.updated") {
+      const part = props?.part as {
+        messageID?: string
+        sessionID?: string
+        type?: string
+        text?: string
+      } | undefined
+
+      if (!part?.sessionID || !shouldTreatAssistantPartAsOutput(part)) {
+        return
+      }
+
+      trackAssistantOutput(getTailState(part.sessionID), part.messageID)
+    }
+  }
+
+  return injector
 }

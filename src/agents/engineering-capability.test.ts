@@ -19,6 +19,8 @@ describe("engineering capability layering", () => {
   test("sisyphus includes orchestration and execution capability blocks", () => {
     const agent = createSisyphusAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<agent-identity>")
+    expect(agent.prompt).toContain('Your designated identity for this session is "Sisyphus"')
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
     expect(agent.prompt).toContain("<information_integrity_capability>")
@@ -37,6 +39,8 @@ describe("engineering capability layering", () => {
   test("wase keeps autonomous engineering guardrails in compact staged form", () => {
     const agent = createWaseAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<agent-identity>")
+    expect(agent.prompt).toContain('Your designated identity for this session is "WASE"')
     expect(agent.prompt).toContain("<wase-role>")
     expect(agent.prompt).toContain("<wase-autonomous-mode>")
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
@@ -52,11 +56,16 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("delegate to `acceptance-reviewer`")
     expect(agent.prompt).toContain("use the `question` tool")
     expect(agent.prompt).toContain("Never invent a simulated project scenario")
+    expect(agent.prompt).toContain("customized 4W / WNWC closeout pattern")
+    expect(agent.prompt).toContain("WNWC Closeout")
+    expect(agent.prompt).toContain("- Which:")
   })
 
   test("hephaestus includes execution capability block", () => {
     const agent = createHephaestusAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<agent-identity>")
+    expect(agent.prompt).toContain('Your designated identity for this session is "Hephaestus"')
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
     expect(agent.prompt).toContain("<information_integrity_capability>")
@@ -75,6 +84,8 @@ describe("engineering capability layering", () => {
   test("atlas includes orchestration capability block", () => {
     const agent = createAtlasAgent({ model: "openai/gpt-5.4" })
 
+    expect(agent.prompt).toContain("<agent-identity>")
+    expect(agent.prompt).toContain('Your designated identity for this session is "Atlas"')
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
     expect(agent.prompt).toContain("<information_integrity_capability>")
@@ -126,6 +137,8 @@ describe("engineering capability layering", () => {
   test("bio-orchestrator includes bio data and environment capability blocks", () => {
     const agent = createBioOrchestratorAgent("openai/gpt-5.4")
 
+    expect(agent.prompt).toContain("<agent-identity>")
+    expect(agent.prompt).toContain('Your designated identity for this session is "Bio-Orchestrator"')
     expect(agent.prompt).toContain("<engineering_micro_kernel_capability>")
     expect(agent.prompt).toContain("<engineering_skill_router_capability>")
     expect(agent.prompt).toContain("<information_integrity_capability>")
@@ -163,6 +176,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("<engineering_review_capability>")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
     expect(agent.prompt).toContain("[APPROVE] or [REJECT]")
+    expect(agent.prompt).toContain("WHAT was actually delivered")
+    expect(agent.prompt).toContain("WHICH was stated clearly enough")
   })
 
   test("bio-methodologist includes planning, data request, and environment safety capability blocks", () => {

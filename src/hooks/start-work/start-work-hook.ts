@@ -16,6 +16,7 @@ import { log } from "../../shared/logger"
 import {
   getSessionAgent,
   isAgentRegistered,
+  resolveRegisteredAgentName,
   updateSessionAgent,
 } from "../../features/claude-code-session-state"
 import {
@@ -168,10 +169,11 @@ export function createStartWorkHook(ctx: PluginInput) {
             ? "atlas"
             : "sisyphus"
       const activeAgentDisplayName = getAgentDisplayName(activeAgent)
+      const resolvedActiveAgentName = resolveRegisteredAgentName(activeAgent) ?? activeAgentDisplayName
       updateSessionAgent(input.sessionID, activeAgent)
       const outputMessage = output as StartWorkHookOutput & { message?: Record<string, unknown> }
       if (outputMessage.message) {
-        outputMessage.message.agent = activeAgentDisplayName
+        outputMessage.message.agent = resolvedActiveAgentName
       }
 
       const existingState = readBoulderState(ctx.directory)
@@ -282,9 +284,13 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
                 agent: activeAgent,
                 ...(worktreePath !== undefined ? { worktree_path: worktreePath } : {}),
                 session_ids: updatedSessions,
+                session_origins: {
+                  ...(existingState.session_origins ?? {}),
+                  [sessionId]: "direct",
+                },
               })
             } else if (!sessionAlreadyTracked) {
-              appendSessionId(ctx.directory, sessionId)
+              appendSessionId(ctx.directory, sessionId, "direct")
             }
 
           const runtimeWorkflow = ensureRuntimeWorkflowSession({

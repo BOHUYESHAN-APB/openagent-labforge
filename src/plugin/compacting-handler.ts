@@ -12,13 +12,16 @@ type CompactingHooks = {
       output: { context: string[] },
     ) => Promise<void>
   }
-  compactionContextInjector?: (sessionID: string) => string
+  compactionContextInjector?: ((sessionID: string) => string) & {
+    capture?: (sessionID: string, client?: { session: { messages: (args: { path: { id: string } }) => Promise<unknown> } }) => Promise<void>
+  }
 }
 
 type CompactingHandlerOptions = {
   captureTimeoutMs?: number
   preCompactTimeoutMs?: number
   maxInjectedContextChars?: number
+  client?: { session: { messages: (args: { path: { id: string } }) => Promise<unknown> } }
 }
 
 async function runWithTimeout(
@@ -76,6 +79,7 @@ export function createCompactingHandler(
   const preCompactTimeoutMs = options.preCompactTimeoutMs ?? DEFAULT_PRECOMPACT_TIMEOUT_MS
   const maxInjectedContextChars =
     options.maxInjectedContextChars ?? DEFAULT_CONTEXT_MAX_CHARS
+  const client = options.client
 
   return async (
     input: { sessionID: string },
@@ -87,6 +91,15 @@ export function createCompactingHandler(
         input.sessionID,
         captureTimeoutMs,
         () => hooks.compactionTodoPreserver!.capture(input.sessionID),
+      )
+    }
+
+    if (hooks.compactionContextInjector?.capture) {
+      await runWithTimeout(
+        "compaction-agent-config-capture",
+        input.sessionID,
+        captureTimeoutMs,
+        () => hooks.compactionContextInjector!.capture!(input.sessionID, client),
       )
     }
 

@@ -31,7 +31,7 @@ export interface BackgroundTask {
   result?: string
   error?: string
   progress?: TaskProgress
-  parentModel?: { providerID: string; modelID: string }
+  parentModel?: { providerID: string; modelID: string; variant?: string }
   model?: { providerID: string; modelID: string; variant?: string }
   /** Fallback chain for runtime retry on model errors */
   fallbackChain?: FallbackEntry[]
@@ -62,7 +62,7 @@ export interface LaunchInput {
   agent: string
   parentSessionID: string
   parentMessageID: string
-  parentModel?: { providerID: string; modelID: string }
+  parentModel?: { providerID: string; modelID: string; variant?: string }
   parentAgent?: string
   parentTools?: Record<string, boolean>
   model?: { providerID: string; modelID: string; variant?: string }
@@ -79,7 +79,7 @@ export interface ResumeInput {
   prompt: string
   parentSessionID: string
   parentMessageID: string
-  parentModel?: { providerID: string; modelID: string }
+  parentModel?: { providerID: string; modelID: string; variant?: string }
   parentAgent?: string
   parentTools?: Record<string, boolean>
 }

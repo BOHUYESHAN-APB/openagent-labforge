@@ -267,6 +267,89 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     rmSync(testDir, { recursive: true, force: true })
   })
 
+  test("injects autonomous reentry context when switching back to auto after manual takeover", async () => {
+    const testDir = join(tmpdir(), `chat-message-auto-reentry-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "test-session",
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "build",
+    })
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+
+    const autoInput = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const autoOutput = createMockOutput()
+    autoOutput.parts.push({ type: "text", text: "Start the autonomous wave." })
+    await handler(autoInput, autoOutput)
+    contextCollector.clear(autoInput.sessionID)
+
+    const manualInput = createMockInput("sisyphus", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const manualOutput = createMockOutput()
+    manualOutput.parts.push({ type: "text", text: "I will manually inspect the current files first." })
+    await handler(manualInput, manualOutput)
+    contextCollector.clear(manualInput.sessionID)
+
+    const reentryInput = createMockInput("wase", { providerID: "anthropic", modelID: "claude-opus-4-6" })
+    const reentryOutput = createMockOutput()
+    reentryOutput.parts.push({ type: "text", text: "Continue in auto mode from here." })
+    await handler(reentryInput, reentryOutput)
+
+    const pending = contextCollector.getPending(reentryInput.sessionID)
+    const ids = pending.entries.map((entry) => entry.id)
+    const reentry = pending.entries.find((entry) => entry.id === "autonomous-reentry")
+
+    expect(ids).toContain("autonomous-reentry")
+    expect(ids).toContain("stage-managed-prompt")
+    expect(ids).not.toContain("autonomous-user-update")
+    expect(reentry?.content).toContain("manual non-autonomous takeover")
+
+    contextCollector.clear(reentryInput.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("records explicit user-owned manual boundaries into runtime workflow memory", async () => {
+    const testDir = join(tmpdir(), `chat-message-manual-boundary-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "test-session",
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+    })
+
+    const args = createMockHandlerArgs({ directory: testDir })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("bio-autopilot", { providerID: "openai", modelID: "gpt-5.4" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "下载由我处理，我手动去下载，你不要继续补下载类 todo。" })
+
+    await handler(input, output)
+
+    const state = readRuntimeWorkflowState(testDir, "test-session")
+    const pending = contextCollector.getPending(input.sessionID)
+    const stageManaged = pending.entries.find((entry) => entry.id === "stage-managed-prompt")
+
+    expect(state?.manual_boundaries).toContain("下载由我处理，我手动去下载，你不要继续补下载类 todo。")
+    expect(stageManaged?.content).toContain("[manual-boundaries]")
+    expect(stageManaged?.content).toContain("Do NOT reopen them as autonomous todos")
+
+    contextCollector.clear(input.sessionID)
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
   test("injects fresh repo bootstrap context on the first autonomous turn for a near-empty repo", async () => {
     const testDir = join(tmpdir(), `chat-message-fresh-repo-${Date.now()}`)
     mkdirSync(testDir, { recursive: true })

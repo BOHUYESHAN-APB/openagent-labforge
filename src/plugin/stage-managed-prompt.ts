@@ -5,6 +5,7 @@ import {
 } from "../features/boulder-state"
 import {
   buildAcceptanceRuntimeCapability,
+  buildAutonomousCloseoutRuntimeCapability,
   buildExecutionRuntimeCapability,
   buildOrchestrationRuntimeCapability,
 } from "../agents/engineering-capability"
@@ -14,6 +15,7 @@ import {
   buildBootstrapModeStickyContext,
 } from "./bootstrap-mode"
 import { getSessionBootstrapMode } from "../features/claude-code-session-state"
+import type { SessionBootstrapSelection } from "../features/claude-code-session-state"
 
 type SupportedStageManagedAgent =
   | "wase"
@@ -27,6 +29,7 @@ type StageManagedPromptInput = {
   directory: string
   sessionID: string
   agent: string | undefined
+  promptMode?: "full-anchor" | "capsule" | "delta"
 }
 
 type StageName = "plan" | "build" | "review"
@@ -126,6 +129,136 @@ function buildArtifactPolicyContext(input: {
   return lines.join("\n")
 }
 
+function buildCompactArtifactPolicyContext(input: {
+  artifactMode?: string
+  artifactRoot?: string
+  activeWorkItem?: string
+  artifactRationale?: string
+}): string | null {
+  const { artifactMode, artifactRoot, activeWorkItem, artifactRationale } = input
+  if (!artifactMode && !artifactRoot && !activeWorkItem) {
+    return null
+  }
+
+  const lines = ["[artifact-policy-capsule]"]
+  if (artifactMode) lines.push(`- Mode: ${artifactMode}`)
+  if (artifactRoot) lines.push(`- Root: \`${artifactRoot}\``)
+  if (activeWorkItem) lines.push(`- Active item: ${activeWorkItem}`)
+  if (artifactRationale) lines.push(`- Note: ${artifactRationale}`)
+  return lines.join("\n")
+}
+
+function buildManualBoundaryContext(boundaries: string[] | undefined): string | null {
+  if (!boundaries || boundaries.length === 0) return null
+  return [
+    "[manual-boundaries]",
+    "- These items are explicitly owned by the user or require manual external handling.",
+    "- Do NOT reopen them as autonomous todos unless the user explicitly hands them back.",
+    ...boundaries.map((boundary) => `- ${boundary}`),
+  ].join("\n")
+}
+
+function buildCompactManualBoundaryContext(boundaries: string[] | undefined): string | null {
+  if (!boundaries || boundaries.length === 0) return null
+  return [
+    "[manual-boundary-capsule]",
+    "- User-owned / manual items stay out of the autonomous backlog by default.",
+    ...boundaries.map((boundary) => `- ${boundary}`),
+  ].join("\n")
+}
+
+function buildCompactBootstrapModeContext(selection: SessionBootstrapSelection): string {
+  const lines = [
+    "[bootstrap-capsule]",
+    `- Primary posture: ${selection.primary.labelZh} | ${selection.primary.labelEn}`,
+  ]
+
+  if (selection.secondary.length > 0) {
+    lines.push(`- Companion modes: ${selection.secondary.map((mode) => mode.key).join(", ")}`)
+  }
+  if (selection.primary.isCustom && selection.primary.customInstruction) {
+    lines.push(`- Custom instruction: ${selection.primary.customInstruction}`)
+  }
+
+  return lines.join("\n")
+}
+
+function buildCompactStageCapsule(input: {
+  agent: SupportedStageManagedAgent
+  stage: StageName
+  autoModeLevel: string
+  interactionMode: string
+  currentWave?: number
+  rehydrationReason?: string
+  lastCheckpointKind?: string
+}): string {
+  const lines = [
+    "[stage-managed-capsule]",
+    `- Agent: ${input.agent}`,
+    `- Stage: ${input.stage}`,
+    `- Wave: ${String(input.currentWave ?? 1).padStart(3, "0")}`,
+    `- Mode: ${input.autoModeLevel} + ${input.interactionMode}`,
+  ]
+
+  if (input.agent === "wase") {
+    lines.push("- Contract: orchestrate the current wave, keep backlog disciplined, and finish the reviewed batch before inventing a new one.")
+  } else if (input.agent === "bio-autopilot" || input.agent === "bio-orchestrator") {
+    lines.push("- Contract: keep evidence, inference, and wet-lab proposals separated; execute only the current bio wave before widening scope.")
+  } else if (input.agent === "hephaestus") {
+    lines.push("- Contract: stay execution-first; do not reload the full autonomous doctrine unless stage posture clearly drifted.")
+  } else if (input.agent === "atlas") {
+    lines.push("- Contract: keep delegation and review inspectable; do not reopen stale autonomous backlog by default.")
+  } else {
+    lines.push("- Contract: keep orchestration strong but only for the current stage and wave.")
+  }
+
+  if (input.stage === "review") {
+    lines.push("- Review rule: accept or reject with concrete findings; do not self-close on vague completion language.")
+  } else if (input.stage === "plan") {
+    lines.push("- Planning rule: define only the next decisive wave.")
+  } else {
+    lines.push("- Build rule: execute the current checkpoint and update state after each meaningful verification.")
+  }
+
+  if (input.rehydrationReason) {
+    lines.push(`- Rehydration reason: ${input.rehydrationReason}`)
+  }
+  if (input.lastCheckpointKind) {
+    lines.push(`- Last checkpoint kind: ${input.lastCheckpointKind}`)
+  }
+
+  return lines.join("\n")
+}
+
+function buildStageDelta(input: {
+  agent: SupportedStageManagedAgent
+  stage: StageName
+  currentWave?: number
+  autoModeLevel: string
+  interactionMode: string
+  activeWorkItem?: string
+}): string {
+  const lines = [
+    "[stage-managed-delta]",
+    `- ${input.agent} :: ${input.stage} :: wave ${String(input.currentWave ?? 1).padStart(3, "0")}`,
+    `- Mode: ${input.autoModeLevel} + ${input.interactionMode}`,
+  ]
+
+  if (input.stage === "plan") {
+    lines.push("- Only shape the next decisive wave.")
+  } else if (input.stage === "review") {
+    lines.push("- Review with concrete findings and either accept or route the next fix wave.")
+  } else {
+    lines.push("- Keep executing the current checkpoint and update state after verification.")
+  }
+
+  if (input.activeWorkItem) {
+    lines.push(`- Active item: ${input.activeWorkItem}`)
+  }
+
+  return lines.join("\n")
+}
+
 export function buildAutonomousUserDirectiveContext(input: {
   agent: string | undefined
   promptText: string
@@ -195,6 +328,27 @@ export function buildAutonomousUserDirectiveContext(input: {
   }
 
   return lines.join("\n")
+}
+
+export function buildAutonomousReentryContext(input: {
+  agent: string | undefined
+}): string | null {
+  const agent = toSupportedAgent(input.agent)
+  if (!agent || !isAlwaysStageManagedAgent(agent)) {
+    return null
+  }
+
+  return [
+    "[autonomous-reentry]",
+    "This session is returning to an autonomous stage-managed agent after a manual non-autonomous takeover.",
+    "",
+    "Before continuing:",
+    "- treat the current runtime workflow files as the canonical recovery source",
+    "- reload the current stage and wave before assuming the old autonomous backlog is still valid",
+    "- compare the current todo graph against the latest user-visible intent and drop stale pending items aggressively",
+    "- if the manual takeover changed priorities, rebuild the next wave instead of resuming the old one blindly",
+    "- restart autonomous turn classification from this point instead of inheriting stale pre-takeover turn state",
+  ].join("\n")
 }
 
 export function buildFreshRepoBootstrapContext(input: {
@@ -325,6 +479,12 @@ function buildWaseStageBlock(input: {
       interactionMode: input.interactionMode,
       profile: "wase",
     }),
+    buildAutonomousCloseoutRuntimeCapability({
+      stage: input.stage,
+      autoModeLevel: input.autoModeLevel,
+      interactionMode: input.interactionMode,
+      profile: "wase",
+    }),
   )
 
   return lines.join("\n\n")
@@ -387,6 +547,12 @@ function buildBioStageBlock(input: {
       profile: "bio",
     }),
     buildAcceptanceRuntimeCapability({
+      stage: input.stage,
+      autoModeLevel: input.autoModeLevel,
+      interactionMode: input.interactionMode,
+      profile: "bio",
+    }),
+    buildAutonomousCloseoutRuntimeCapability({
       stage: input.stage,
       autoModeLevel: input.autoModeLevel,
       interactionMode: input.interactionMode,
@@ -485,31 +651,31 @@ export function buildStageManagedPromptContext(
   if (!runtimeState && !isAlwaysStageManagedAgent(agent)) {
     return null
   }
+  const checkpointMetadata = readLatestCheckpointMetadata(input.directory)
+  const consumedCheckpointMetadata =
+    checkpointMetadata?.consumed_by_session_id === input.sessionID
+      ? checkpointMetadata
+      : null
 
-  const stage = toStageName(runtimeState?.current_stage ?? "build")
-  const autoModeLevel = runtimeState?.auto_mode_level ?? "light"
-  const interactionMode = runtimeState?.interaction_mode ?? "batch"
-  const checkpointMetadata =
+  const stage = toStageName(runtimeState?.current_stage ?? consumedCheckpointMetadata?.source_stage ?? "build")
+  const autoModeLevel = runtimeState?.auto_mode_level ?? consumedCheckpointMetadata?.source_auto_mode_level ?? "light"
+  const interactionMode = runtimeState?.interaction_mode ?? consumedCheckpointMetadata?.source_interaction_mode ?? "batch"
+  const checkpointArtifactPolicy =
     runtimeState?.artifact_mode ||
     runtimeState?.artifact_root ||
     runtimeState?.artifact_strategy ||
     runtimeState?.active_work_item
       ? null
-      : readLatestCheckpointMetadata(input.directory)
-  const checkpointArtifactPolicy =
-    checkpointMetadata?.consumed_by_session_id === input.sessionID
-      ? checkpointMetadata
-      : null
+      : consumedCheckpointMetadata
   const checkpointBootstrapMode =
     (() => {
       const bootstrapCategory = (agent === "bio-autopilot" || agent === "bio-orchestrator")
         ? "bio" as const
         : "engineering" as const
       if (
-        checkpointMetadata?.consumed_by_session_id !== input.sessionID ||
-        !checkpointMetadata.bootstrap_primary_key ||
-        !checkpointMetadata.bootstrap_primary_label_zh ||
-        !checkpointMetadata.bootstrap_primary_label_en
+        !consumedCheckpointMetadata?.bootstrap_primary_key ||
+        !consumedCheckpointMetadata.bootstrap_primary_label_zh ||
+        !consumedCheckpointMetadata.bootstrap_primary_label_en
       ) {
         return null
       }
@@ -518,16 +684,16 @@ export function buildStageManagedPromptContext(
         category: bootstrapCategory,
         primary: {
           category: bootstrapCategory,
-          key: checkpointMetadata.bootstrap_primary_key,
-          labelZh: checkpointMetadata.bootstrap_primary_label_zh,
-          labelEn: checkpointMetadata.bootstrap_primary_label_en,
+          key: consumedCheckpointMetadata.bootstrap_primary_key,
+          labelZh: consumedCheckpointMetadata.bootstrap_primary_label_zh,
+          labelEn: consumedCheckpointMetadata.bootstrap_primary_label_en,
           summaryZh: "Recovered from checkpoint metadata.",
           summaryEn: "Recovered from checkpoint metadata.",
-          ...(checkpointMetadata.bootstrap_custom_instruction
-            ? { isCustom: true, customInstruction: checkpointMetadata.bootstrap_custom_instruction }
+          ...(consumedCheckpointMetadata.bootstrap_custom_instruction
+            ? { isCustom: true, customInstruction: consumedCheckpointMetadata.bootstrap_custom_instruction }
             : {}),
         },
-        secondary: (checkpointMetadata.bootstrap_secondary_keys ?? []).map((key) => ({
+        secondary: (consumedCheckpointMetadata.bootstrap_secondary_keys ?? []).map((key) => ({
           category: bootstrapCategory,
           key,
           labelZh: key,
@@ -553,6 +719,51 @@ export function buildStageManagedPromptContext(
   const bootstrapModeContext = bootstrapMode
     ? buildBootstrapModeStickyContext(bootstrapMode)
     : null
+  const compactArtifactPolicyContext = buildCompactArtifactPolicyContext({
+    artifactMode: runtimeState?.artifact_mode ?? checkpointArtifactPolicy?.artifact_mode,
+    artifactRoot: runtimeState?.artifact_root ?? checkpointArtifactPolicy?.artifact_root,
+    activeWorkItem: runtimeState?.active_work_item ?? checkpointArtifactPolicy?.active_work_item,
+    artifactRationale:
+      runtimeState?.artifact_rationale ??
+      (checkpointArtifactPolicy ? "Recovered from latest checkpoint metadata for this resumed session." : undefined),
+  })
+  const compactBootstrapModeContext = bootstrapMode
+    ? buildCompactBootstrapModeContext(bootstrapMode)
+    : null
+  const manualBoundaryContext = buildManualBoundaryContext(runtimeState?.manual_boundaries ?? consumedCheckpointMetadata?.manual_boundaries)
+  const compactManualBoundaryContext = buildCompactManualBoundaryContext(runtimeState?.manual_boundaries ?? consumedCheckpointMetadata?.manual_boundaries)
+
+  if (input.promptMode === "capsule") {
+    return [
+      buildCompactStageCapsule({
+        agent,
+        stage,
+        autoModeLevel,
+        interactionMode,
+        currentWave: runtimeState?.current_wave ?? consumedCheckpointMetadata?.source_wave,
+        rehydrationReason: runtimeState?.last_rehydration_reason ?? "checkpoint-recovery",
+        lastCheckpointKind: runtimeState?.last_checkpoint_kind ?? consumedCheckpointMetadata?.checkpoint_kind,
+      }),
+      compactArtifactPolicyContext,
+      compactBootstrapModeContext,
+      compactManualBoundaryContext,
+    ].filter(Boolean).join("\n\n")
+  }
+
+  if (input.promptMode === "delta") {
+    return [
+      buildStageDelta({
+        agent,
+        stage,
+        currentWave: runtimeState?.current_wave ?? consumedCheckpointMetadata?.source_wave,
+        autoModeLevel,
+        interactionMode,
+        activeWorkItem: runtimeState?.active_work_item ?? checkpointArtifactPolicy?.active_work_item,
+      }),
+      compactArtifactPolicyContext,
+      compactManualBoundaryContext,
+    ].filter(Boolean).join("\n\n")
+  }
 
   if (agent === "wase") {
     const block = buildWaseStageBlock({
@@ -560,7 +771,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
+    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
   }
 
   if (agent === "sisyphus" || agent === "hephaestus" || agent === "atlas") {
@@ -570,7 +781,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
+    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
   }
 
   const block = buildBioStageBlock({
@@ -579,5 +790,5 @@ export function buildStageManagedPromptContext(
     autoModeLevel,
     interactionMode,
   })
-  return [block, artifactPolicyContext, bootstrapModeContext].filter(Boolean).join("\n\n")
+  return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
 }

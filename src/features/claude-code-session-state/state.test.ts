@@ -6,9 +6,11 @@ import {
   updateSessionAgent,
   isAutonomousSessionAgent,
   isUltraworkAutonomousSession,
+  resolveRegisteredAgentName,
   setMainSession,
   getMainSessionID,
   _resetForTesting,
+  registerAgentName,
 } from "./state"
 import { getAgentDisplayName, setAgentDisplayLanguage } from "../../shared/agent-display-names"
 
@@ -75,6 +77,7 @@ describe("claude-code-session-state", () => {
     test("recognizes built-in autonomous agent keys", () => {
       expect(isAutonomousSessionAgent("wase")).toBe(true)
       expect(isAutonomousSessionAgent("bio-autopilot")).toBe(true)
+      expect(isAutonomousSessionAgent("bio-orchestrator")).toBe(true)
       expect(isAutonomousSessionAgent("sisyphus")).toBe(false)
     })
 
@@ -143,6 +146,14 @@ describe("claude-code-session-state", () => {
       _resetForTesting()
       // then
       expect(getMainSessionID()).toBeUndefined()
+    })
+  })
+
+  describe("registered agent name resolution", () => {
+    test("resolves registered display name from config key", () => {
+      registerAgentName("总调度器 (超脑)")
+
+      expect(resolveRegisteredAgentName("sisyphus")).toBe("总调度器 (超脑)")
     })
   })
 

@@ -29,6 +29,14 @@ const NON_RETRYABLE_ERROR_NAMES = new Set([
   "UserError",
 ])
 
+const NON_RETRYABLE_MESSAGE_PATTERNS = [
+  "daily spending limit reached",
+  "daily quota",
+  "quota will reset tomorrow",
+  "billing hard limit",
+  "monthly spending limit reached",
+]
+
 /**
  * Message patterns that indicate a retryable error even without a known error name.
  */
@@ -79,6 +87,9 @@ export function isRetryableModelError(error: ErrorInfo): boolean {
 
   // Check message patterns for unknown errors
   const msg = error.message?.toLowerCase() ?? ""
+  if (NON_RETRYABLE_MESSAGE_PATTERNS.some((pattern) => msg.includes(pattern))) {
+    return false
+  }
   return RETRYABLE_MESSAGE_PATTERNS.some((pattern) => msg.includes(pattern))
 }
 

@@ -3,11 +3,23 @@ export const CHECKPOINT_TEMPLATE = `# Checkpoint Command
 ## Purpose
 
 Use /checkpoint when:
-- the current session is getting too long and quality or UI responsiveness is degrading
-- you have reached a meaningful milestone and want a clean handoff point
-- the task will continue in a fresh session instead of stretching this one further
+- you want a durable stage memory snapshot without trusting the current chat history alone
+- you reached a meaningful milestone and want a clean recovery point
+- you may continue in this session, a fresh session, or multiple sessions later
 
-This command creates a repo-local checkpoint that can be resumed from a new session without depending on the old chat history.
+This command creates a repo-local checkpoint that can be resumed later without depending on the old chat history.
+
+Checkpoint modes:
+- \`light\`: stage handoff / same-session recovery / multi-session reference card
+- \`heavy\`: cross-session high-fidelity handoff for long-running continuation
+
+If the user did not specify \`light\` or \`heavy\`, default to \`light\`.
+
+IMPORTANT:
+- creating a checkpoint does NOT automatically mean switching sessions
+- after the checkpoint is written, recommend whether session switching may help
+- if switching sessions would materially change workflow, ASK THE USER
+- do not auto-create a new session
 
 ---
 
@@ -49,6 +61,13 @@ Analyze:
   - primary bootstrap mode
   - secondary companion modes
   - custom bootstrap instruction if present
+- whether runtime workflow memory already exposes stage anchor information:
+  - current_stage
+  - current_wave
+  - stage_anchor_epoch
+  - stage_anchor_hash
+  - auto_mode_level
+  - interaction_mode
 
 ---
 
@@ -81,6 +100,18 @@ The metadata JSON MUST include:
 - bootstrap_primary_label_en
 - bootstrap_secondary_keys
 - bootstrap_custom_instruction
+- checkpoint_kind
+- checkpoint_scope
+- session_switch_recommendation
+- user_confirmation_required
+- source_stage
+- source_wave
+- source_auto_mode_level
+- source_interaction_mode
+- stage_anchor_epoch
+- stage_anchor_hash
+- stage_anchor_file
+- stage_capsule_file
 
 Use this exact metadata shape:
 
@@ -103,7 +134,19 @@ Use this exact metadata shape:
   "bootstrap_primary_label_zh": "<selected bootstrap primary label zh or empty>",
   "bootstrap_primary_label_en": "<selected bootstrap primary label en or empty>",
   "bootstrap_secondary_keys": ["<optional companion mode key>"],
-  "bootstrap_custom_instruction": "<custom bootstrap instruction if user used custom mode>"
+  "bootstrap_custom_instruction": "<custom bootstrap instruction if user used custom mode>",
+  "checkpoint_kind": "<light|heavy>",
+  "checkpoint_scope": "<same-session|cross-session|multi-session>",
+  "session_switch_recommendation": "<stay|ask-user|recommend-switch>",
+  "user_confirmation_required": true,
+  "source_stage": "<plan|build|review>",
+  "source_wave": 1,
+  "source_auto_mode_level": "<light|heavy>",
+  "source_interaction_mode": "<batch|continuous>",
+  "stage_anchor_epoch": 1,
+  "stage_anchor_hash": "<runtime anchor hash or empty>",
+  "stage_anchor_file": ".opencode/openagent-labforge/runtime/$SESSION_ID/stage-anchor.md",
+  "stage_capsule_file": ".opencode/openagent-labforge/runtime/$SESSION_ID/stage-capsule.md"
 }
 \`\`\`
 
@@ -121,6 +164,8 @@ SOURCE SESSION
 --------------
 - Session ID: $SESSION_ID
 - Created At: $TIMESTAMP
+- Checkpoint Kind: [light|heavy]
+- Checkpoint Scope: [same-session|cross-session|multi-session]
 
 USER REQUESTS (AS-IS)
 ---------------------
@@ -138,6 +183,7 @@ CHECKPOINT REACHED
 ------------------
 - [What milestone was completed]
 - [Why this is a good handoff boundary]
+- [Why this should stay in-session or why it may benefit from a new session]
 
 WORK COMPLETED
 --------------
@@ -149,6 +195,7 @@ CURRENT STATE
 - [Current code / research / document state]
 - [Build/test/run status if applicable]
 - [Environment or artifact state if relevant]
+- [Current runtime stage / wave / auto mode / interaction mode]
 
 ARTIFACT STRATEGY
 -----------------
@@ -188,6 +235,12 @@ RESUME INSTRUCTIONS
 - [How the new session should pick this up]
 - [Fresh todo/task list the next session should create]
 - [Warnings or gotchas]
+
+SESSION SWITCH RECOMMENDATION
+-----------------------------
+- [stay | ask-user | recommend-switch]
+- [Why]
+- [If the user stays in the same session, how this checkpoint should still be used]
 \`\`\`
 
 Rules:
@@ -204,12 +257,21 @@ Rules:
 After writing the files:
 - print the path to latest.md
 - print the path to by-session/$SESSION_ID.md
-- provide a compact resume prompt the user can paste into a new session
+- print the checkpoint kind and scope you used
+- provide a compact resume prompt
+- provide a same-session continuation hint
+- if a new session would help, ASK the user which path they want
 
 The resume prompt must be:
 
 \`\`\`
 Continue from checkpoint file .opencode/openagent-labforge/checkpoints/latest.md. [Next task]
+\`\`\`
+
+The same-session continuation hint must be:
+
+\`\`\`
+Continue in the current session, but treat .opencode/openagent-labforge/checkpoints/latest.md as the recovery anchor for the next wave. [Next task]
 \`\`\`
 
 ---
@@ -221,6 +283,9 @@ Continue from checkpoint file .opencode/openagent-labforge/checkpoints/latest.md
 - Do keep the checkpoint self-contained
 - Do not include secrets or credentials
 - Do not exceed 12 files in KEY FILES
+- Do separate checkpoint creation from session-switch decisions
+- Do default to \`light\` unless the user explicitly asked for \`heavy\` or the handoff clearly needs cross-session high-fidelity continuation
+- Do ask the user before switching sessions when the recommendation is not \`stay\`
 - Do preserve artifact policy in compact form when the session is continuing inside an existing package, document workspace, or output bundle
 - Do preserve bootstrap / engineering posture in compact form so the next session does not have to re-ask how the repo should be organized
 

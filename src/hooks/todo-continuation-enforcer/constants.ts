@@ -45,6 +45,9 @@ All current todos are completed, but autonomous execution does NOT stop here aut
 
 - Audit the original user request against the actual work completed
 - If any substantial work remains, immediately create a new wave of 5-15 concrete todos
+- Distinguish agent-owned remaining work from user-owned/manual/external follow-up
+- If a remaining step was explicitly assigned to the user, depends on the user's manual download/install/acquisition, or is an external prerequisite not owned by the agent, do NOT reopen it as an autonomous todo wave
+- In those cases, report it as a waiting condition, external dependency, or optional future handoff instead of continuing execution
 - If the task is truly complete, only then provide a final completion answer
 - Do not ask the user whether you should continue when clear unfinished work remains
 - Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`

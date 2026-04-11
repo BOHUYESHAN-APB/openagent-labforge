@@ -1314,6 +1314,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
 
       let agent: string | undefined = task.parentAgent
       let model: { providerID: string; modelID: string } | undefined
+      let variant: string | undefined = task.parentModel?.variant
       let tools: Record<string, boolean> | undefined = task.parentTools
 
       if (this.enableParentSessionNotifications) {
@@ -1322,9 +1323,10 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           const messages = normalizeSDKResponse(messagesResp, [] as Array<{
             info?: {
               agent?: string
-              model?: { providerID: string; modelID: string }
+              model?: { providerID: string; modelID: string; variant?: string }
               modelID?: string
               providerID?: string
+              variant?: string
               tools?: Record<string, boolean | "allow" | "deny" | "ask">
             }
           }>)
@@ -1339,6 +1341,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
             if (info?.agent || info?.model || (info?.modelID && info?.providerID) || normalizedTools) {
               agent = info?.agent ?? task.parentAgent
               model = info?.model ?? (info?.providerID && info?.modelID ? { providerID: info.providerID, modelID: info.modelID } : undefined)
+              variant = info?.model?.variant ?? info?.variant ?? variant
               tools = normalizedTools ?? tools
               break
             }
@@ -1356,6 +1359,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           model = currentMessage?.model?.providerID && currentMessage?.model?.modelID
             ? { providerID: currentMessage.model.providerID, modelID: currentMessage.model.modelID }
             : undefined
+          variant = currentMessage?.model?.variant ?? variant
           tools = normalizePromptTools(currentMessage?.tools) ?? tools
         }
 
@@ -1365,6 +1369,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
           taskId: task.id,
           resolvedAgent: agent,
           resolvedModel: model,
+          resolvedVariant: variant,
         })
 
         try {
@@ -1375,6 +1380,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
               noReply: !allComplete,
               ...(runtimeAgent !== undefined ? { agent: runtimeAgent } : {}),
               ...(model !== undefined ? { model } : {}),
+              ...(variant !== undefined ? { variant } : {}),
               ...(resolvedTools ? { tools: resolvedTools } : {}),
               parts: [createInternalAgentTextPart(notification)],
             },
