@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises"
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -385,8 +385,7 @@ async function materializeBioBundle(workspaceRoot: string): Promise<void> {
       const leafDir = join(categoryDir, leaf.skillName)
 
       if (leaf.source === "gptomics" && leaf.sourcePath) {
-        await mkdir(leafDir, { recursive: true })
-        await copyFile(join(leaf.sourcePath, "SKILL.md"), join(leafDir, "SKILL.md"))
+        await cp(leaf.sourcePath, leafDir, { recursive: true })
         await rewriteCopiedSkillMetadata({
           skillDir: leafDir,
           name: leaf.skillName,

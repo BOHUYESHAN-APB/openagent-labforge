@@ -360,7 +360,8 @@ own bio wrappers. It is committed under:
 
 - `generated/skills-bundles/bio/`
 
-The current compact local bundle size is about `4.0 MB` before packaging.
+This bundle is intended to be committed so cloud builds and release automation
+do not depend on local-only generated skill state.
 
 ### TypeScript built-in skills
 
