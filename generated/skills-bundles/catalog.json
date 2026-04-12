@@ -1,0 +1,989 @@
+{
+  "schema": "labforge-skills-catalog/v1",
+  "generatedAt": "2026-03-21T18:22:37.599Z",
+  "bundles": {
+    "full": {
+      "skillCount": 65,
+      "categories": [
+        "data-analysis",
+        "engineering",
+        "productivity",
+        "research"
+      ]
+    },
+    "paper": {
+      "skillCount": 64,
+      "categories": [
+        "data-analysis",
+        "engineering",
+        "productivity",
+        "research"
+      ]
+    }
+  },
+  "entries": [
+    {
+      "name": "auto-claude/monitor-experiment",
+      "description": "Monitor running experiments, check progress, collect results. Use when user says \"check results\", \"is it done\", \"monitor\", or wants experiment output.",
+      "slug": "auto-claude__monitor-experiment",
+      "category": "data-analysis",
+      "subcategory": "experiment-monitoring",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\monitor-experiment"
+    },
+    {
+      "name": "auto-claude/run-experiment",
+      "description": "Deploy and run ML experiments on local or remote GPU servers. Use when user says \"run experiment\", \"deploy to server\", \"跑实验\", or needs to launch training jobs.",
+      "slug": "auto-claude__run-experiment",
+      "category": "data-analysis",
+      "subcategory": "experiment-ops",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\run-experiment"
+    },
+    {
+      "name": "openai-curated/jupyter-notebook",
+      "description": "Use when the user asks to create, scaffold, or edit Jupyter notebooks (`.ipynb`) for experiments, explorations, or tutorials; prefer the bundled templates and run the helper script `new_notebook.py` to generate a clean starting notebook.",
+      "slug": "openai-curated__jupyter-notebook",
+      "category": "data-analysis",
+      "subcategory": "notebooks",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\jupyter-notebook\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\jupyter-notebook"
+    },
+    {
+      "name": "auto-claude/dse-loop",
+      "description": "Autonomous design space exploration loop for computer architecture and EDA. Runs a program, analyzes results, tunes parameters, and iterates until objective is met or timeout. Use when user says \\\"DSE\\\", \\\"design space exploration\\\", \\\"sweep parameters\\\", \\\"optimize\\\", \\\"find best config\\\", or wants iterative parameter tuning.",
+      "slug": "auto-claude__dse-loop",
+      "category": "data-analysis",
+      "subcategory": "optimization",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\dse-loop"
+    },
+    {
+      "name": "auto-claude/analyze-results",
+      "description": "Analyze ML experiment results, compute statistics, generate comparison tables and insights. Use when user says \"analyze results\", \"compare\", or needs to interpret experimental data.",
+      "slug": "auto-claude__analyze-results",
+      "category": "data-analysis",
+      "subcategory": "statistics",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\analyze-results"
+    },
+    {
+      "name": "data-analysis",
+      "description": "Statistical analysis workflow with reproducible outputs.",
+      "slug": "builtin__data-analysis__data-analysis",
+      "category": "data-analysis",
+      "subcategory": "statistics",
+      "origin": "builtin",
+      "source": "builtin:data-analysis",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\data-analysis.ts"
+    },
+    {
+      "name": "openai-curated/spreadsheet",
+      "description": "Use when tasks involve creating, editing, analyzing, or formatting spreadsheets (`.xlsx`, `.csv`, `.tsv`) with formula-aware workflows, cached recalculation, and visual review.",
+      "slug": "openai-curated__spreadsheet",
+      "category": "data-analysis",
+      "subcategory": "tabular-analysis",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\spreadsheet\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\spreadsheet"
+    },
+    {
+      "name": "xlsx-analyst",
+      "description": "Analyze and format XLSX files with reproducible calculations.",
+      "slug": "builtin__xlsx-analyst__xlsx-analyst",
+      "category": "data-analysis",
+      "subcategory": "tabular-analysis",
+      "origin": "builtin",
+      "source": "builtin:xlsx-analyst",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\xlsx.ts"
+    },
+    {
+      "name": "auto-claude/paper-figure",
+      "description": "Generate publication-quality figures and tables from experiment results. Use when user says \\\"画图\\\", \\\"作图\\\", \\\"generate figures\\\", \\\"paper figures\\\", or needs plots for a paper.",
+      "slug": "auto-claude__paper-figure",
+      "category": "data-analysis",
+      "subcategory": "visualization",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\paper-figure"
+    },
+    {
+      "name": "openai-curated/chatgpt-apps",
+      "description": "Build, scaffold, refactor, and troubleshoot ChatGPT Apps SDK applications that combine an MCP server and widget UI. Use when Codex needs to design tools, register UI resources, wire the MCP Apps bridge or ChatGPT compatibility APIs, apply Apps SDK metadata or CSP or domain settings, or produce a docs-aligned project scaffold. Prefer a docs-first workflow by invoking the openai-docs skill or OpenAI developer docs MCP tools before generating code.",
+      "slug": "openai-curated__chatgpt-apps",
+      "category": "engineering",
+      "subcategory": "app-integration",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\chatgpt-apps\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\chatgpt-apps"
+    },
+    {
+      "name": "microsoft/fastapi-router-py",
+      "description": "Create FastAPI routers with CRUD operations, authentication dependencies, and proper response models. Use when building REST API endpoints, creating new routes, implementing CRUD operations, or adding authenticated endpoints in FastAPI applications.",
+      "slug": "microsoft__fastapi-router-py",
+      "category": "engineering",
+      "subcategory": "backend-api",
+      "origin": "external",
+      "source": "microsoft",
+      "license": "external\\microsoft-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\microsoft-skills\\.github\\skills\\fastapi-router-py"
+    },
+    {
+      "name": "microsoft/pydantic-models-py",
+      "description": "Create Pydantic models following the multi-model pattern with Base, Create, Update, Response, and InDB variants. Use when defining API request/response schemas, database models, or data validation in Python applications using Pydantic v2.",
+      "slug": "microsoft__pydantic-models-py",
+      "category": "engineering",
+      "subcategory": "backend-api",
+      "origin": "external",
+      "source": "microsoft",
+      "license": "external\\microsoft-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\microsoft-skills\\.github\\skills\\pydantic-models-py"
+    },
+    {
+      "name": "agent-browser",
+      "description": "Persistent browser automation using agent-browser CLI.",
+      "slug": "builtin__agent-browser__agent-browser",
+      "category": "engineering",
+      "subcategory": "browser-automation",
+      "origin": "builtin",
+      "source": "builtin:agent-browser",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\playwright.ts"
+    },
+    {
+      "name": "dev-browser",
+      "description": "Scriptable browser automation with persistent page state for navigation, scraping, and testing.",
+      "slug": "builtin__dev-browser__dev-browser",
+      "category": "engineering",
+      "subcategory": "browser-automation",
+      "origin": "builtin",
+      "source": "builtin:dev-browser",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\dev-browser.ts"
+    },
+    {
+      "name": "openai-curated/playwright",
+      "description": "Use when the task requires automating a real browser from the terminal (navigation, form filling, snapshots, screenshots, data extraction, UI-flow debugging) via `playwright-cli` or the bundled wrapper script.",
+      "slug": "openai-curated__playwright",
+      "category": "engineering",
+      "subcategory": "browser-automation",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\playwright\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\playwright"
+    },
+    {
+      "name": "openai-curated/playwright-interactive",
+      "description": "Persistent browser and Electron interaction through `js_repl` for fast iterative UI debugging.",
+      "slug": "openai-curated__playwright-interactive",
+      "category": "engineering",
+      "subcategory": "browser-automation",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\playwright-interactive\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\playwright-interactive"
+    },
+    {
+      "name": "playwright",
+      "description": "Browser automation via Playwright MCP for verification, scraping, screenshots, and site interaction.",
+      "slug": "builtin__playwright__playwright",
+      "category": "engineering",
+      "subcategory": "browser-automation",
+      "origin": "builtin",
+      "source": "builtin:playwright",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\playwright.ts"
+    },
+    {
+      "name": "anthropic/webapp-testing",
+      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+      "slug": "anthropic__webapp-testing",
+      "category": "engineering",
+      "subcategory": "browser-testing",
+      "origin": "external",
+      "source": "anthropic",
+      "license": "external\\anthropics-skills\\skills\\webapp-testing\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\anthropics-skills\\skills\\webapp-testing"
+    },
+    {
+      "name": "openai-curated/screenshot",
+      "description": "Use when the user explicitly asks for a desktop or system screenshot (full screen, specific app or window, or a pixel region), or when tool-specific capture capabilities are unavailable and an OS-level capture is needed.",
+      "slug": "openai-curated__screenshot",
+      "category": "engineering",
+      "subcategory": "browser-testing",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\screenshot\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\screenshot"
+    },
+    {
+      "name": "openai-curated/gh-fix-ci",
+      "description": "Use when a user asks to debug or fix failing GitHub PR checks that run in GitHub Actions; use `gh` to inspect checks and logs, summarize failure context, draft a fix plan, and implement only after explicit approval. Treat external providers (for example Buildkite) as out of scope and report only the details URL.",
+      "slug": "openai-curated__gh-fix-ci",
+      "category": "engineering",
+      "subcategory": "ci-and-delivery",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\gh-fix-ci\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\gh-fix-ci"
+    },
+    {
+      "name": "openai-curated/gh-address-comments",
+      "description": "Help address review/issue comments on the open GitHub PR for the current branch using gh CLI; verify gh auth first and prompt the user to authenticate if not logged in.",
+      "slug": "openai-curated__gh-address-comments",
+      "category": "engineering",
+      "subcategory": "code-review",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\gh-address-comments\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\gh-address-comments"
+    },
+    {
+      "name": "openai-curated/cloudflare-deploy",
+      "description": "Deploy applications and infrastructure to Cloudflare using Workers, Pages, and related platform services. Use when the user asks to deploy, host, publish, or set up a project on Cloudflare.",
+      "slug": "openai-curated__cloudflare-deploy",
+      "category": "engineering",
+      "subcategory": "deployment",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\cloudflare-deploy\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\cloudflare-deploy"
+    },
+    {
+      "name": "openai-curated/netlify-deploy",
+      "description": "Deploy web projects to Netlify using the Netlify CLI (`npx netlify`). Use when the user asks to deploy, host, publish, or link a site/repo on Netlify, including preview and production deploys.",
+      "slug": "openai-curated__netlify-deploy",
+      "category": "engineering",
+      "subcategory": "deployment",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\netlify-deploy\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\netlify-deploy"
+    },
+    {
+      "name": "openai-curated/render-deploy",
+      "description": "Deploy applications to Render by analyzing codebases, generating render.yaml Blueprints, and providing Dashboard deeplinks. Use when the user wants to deploy, host, publish, or set up their application on Render's cloud platform.",
+      "slug": "openai-curated__render-deploy",
+      "category": "engineering",
+      "subcategory": "deployment",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\render-deploy\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\render-deploy"
+    },
+    {
+      "name": "openai-curated/vercel-deploy",
+      "description": "Deploy applications and websites to Vercel. Use when the user requests deployment actions like \"deploy my app\", \"deploy and give me the link\", \"push this live\", or \"create a preview deployment\".",
+      "slug": "openai-curated__vercel-deploy",
+      "category": "engineering",
+      "subcategory": "deployment",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\vercel-deploy\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\vercel-deploy"
+    },
+    {
+      "name": "anthropic/frontend-design",
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics.",
+      "slug": "anthropic__frontend-design",
+      "category": "engineering",
+      "subcategory": "frontend-ui",
+      "origin": "external",
+      "source": "anthropic",
+      "license": "external\\anthropics-skills\\skills\\frontend-design\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\anthropics-skills\\skills\\frontend-design"
+    },
+    {
+      "name": "frontend-ui-ux",
+      "description": "High-design frontend UI and UX implementation skill.",
+      "slug": "builtin__frontend-ui-ux__frontend-ui-ux",
+      "category": "engineering",
+      "subcategory": "frontend-ui",
+      "origin": "builtin",
+      "source": "builtin:frontend-ui-ux",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\frontend-ui-ux.ts"
+    },
+    {
+      "name": "anthropic/mcp-builder",
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+      "slug": "anthropic__mcp-builder",
+      "category": "engineering",
+      "subcategory": "mcp-and-tooling",
+      "origin": "external",
+      "source": "anthropic",
+      "license": "external\\anthropics-skills\\skills\\mcp-builder\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\anthropics-skills\\skills\\mcp-builder"
+    },
+    {
+      "name": "microsoft/mcp-builder",
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP), Node/TypeScript (MCP SDK), or C#/.NET (Microsoft MCP SDK).",
+      "slug": "microsoft__mcp-builder",
+      "category": "engineering",
+      "subcategory": "mcp-and-tooling",
+      "origin": "external",
+      "source": "microsoft",
+      "license": "external\\microsoft-skills\\LICENSE",
+      "bundleTargets": [
+        "full"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\microsoft-skills\\.github\\skills\\mcp-builder"
+    },
+    {
+      "name": "openai-curated/sentry",
+      "description": "Use when the user asks to inspect Sentry issues or events, summarize recent production errors, or pull basic Sentry health data via the Sentry API; perform read-only queries with the bundled script and require `SENTRY_AUTH_TOKEN`.",
+      "slug": "openai-curated__sentry",
+      "category": "engineering",
+      "subcategory": "observability",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\sentry\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\sentry"
+    },
+    {
+      "name": "openai-curated/security-best-practices",
+      "description": "Perform language and framework specific security best-practice reviews and suggest improvements. Trigger only when the user explicitly requests security best practices guidance, a security review/report, or secure-by-default coding help. Trigger only for supported languages (python, javascript/typescript, go). Do not trigger for general code review, debugging, or non-security tasks.",
+      "slug": "openai-curated__security-best-practices",
+      "category": "engineering",
+      "subcategory": "security",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\security-best-practices\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\security-best-practices"
+    },
+    {
+      "name": "openai-curated/security-ownership-map",
+      "description": "Analyze git repositories to build a security ownership topology (people-to-file), compute bus factor and sensitive-code ownership, and export CSV/JSON for graph databases and visualization. Trigger only when the user explicitly wants a security-oriented ownership or bus-factor analysis grounded in git history (for example: orphaned sensitive code, security maintainers, CODEOWNERS reality checks for risk, sensitive hotspots, or ownership clusters). Do not trigger for general maintainer lists or non-security ownership questions.",
+      "slug": "openai-curated__security-ownership-map",
+      "category": "engineering",
+      "subcategory": "security",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\security-ownership-map\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\security-ownership-map"
+    },
+    {
+      "name": "openai-curated/security-threat-model",
+      "description": "Repository-grounded threat modeling that enumerates trust boundaries, assets, attacker capabilities, abuse paths, and mitigations, and writes a concise Markdown threat model. Trigger only when the user explicitly asks to threat model a codebase or path, enumerate threats/abuse paths, or perform AppSec threat modeling. Do not trigger for general architecture summaries, code review, or non-security design work.",
+      "slug": "openai-curated__security-threat-model",
+      "category": "engineering",
+      "subcategory": "security",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\security-threat-model\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\security-threat-model"
+    },
+    {
+      "name": "anthropic/skill-creator",
+      "description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.",
+      "slug": "anthropic__skill-creator",
+      "category": "engineering",
+      "subcategory": "skill-authoring",
+      "origin": "external",
+      "source": "anthropic",
+      "license": "external\\anthropics-skills\\skills\\skill-creator\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\anthropics-skills\\skills\\skill-creator"
+    },
+    {
+      "name": "microsoft/skill-creator",
+      "description": "Guide for creating effective skills for AI coding agents working with Azure SDKs and Microsoft Foundry services. Use when creating new skills or updating existing skills.",
+      "slug": "microsoft__skill-creator",
+      "category": "engineering",
+      "subcategory": "skill-authoring",
+      "origin": "external",
+      "source": "microsoft",
+      "license": "external\\microsoft-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\microsoft-skills\\.github\\skills\\skill-creator"
+    },
+    {
+      "name": "openai-system/skill-creator",
+      "description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations.",
+      "slug": "openai-system__skill-creator",
+      "category": "engineering",
+      "subcategory": "skill-authoring",
+      "origin": "external",
+      "source": "openai-system",
+      "license": "external\\openai-skills\\skills\\.system\\skill-creator\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.system\\skill-creator"
+    },
+    {
+      "name": "openai-system/skill-installer",
+      "description": "Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+      "slug": "openai-system__skill-installer",
+      "category": "engineering",
+      "subcategory": "skill-authoring",
+      "origin": "external",
+      "source": "openai-system",
+      "license": "external\\openai-skills\\skills\\.system\\skill-installer\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.system\\skill-installer"
+    },
+    {
+      "name": "git-master",
+      "description": "Advanced git workflow skill for commit splitting, history search, and rebase operations.",
+      "slug": "builtin__git-master__git-master",
+      "category": "engineering",
+      "subcategory": "version-control",
+      "origin": "builtin",
+      "source": "builtin:git-master",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\git-master.ts"
+    },
+    {
+      "name": "anthropic/internal-comms",
+      "description": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).",
+      "slug": "anthropic__internal-comms",
+      "category": "productivity",
+      "subcategory": "communication",
+      "origin": "external",
+      "source": "anthropic",
+      "license": "external\\anthropics-skills\\skills\\internal-comms\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\anthropics-skills\\skills\\internal-comms"
+    },
+    {
+      "name": "auto-claude/feishu-notify",
+      "description": "Send notifications to Feishu/Lark. Internal utility used by other skills, or manually via /feishu-notify. Supports push-only (webhook) and interactive (bidirectional) modes. Use when user says \\\"发飞书\\\", \\\"notify feishu\\\", or other skills need to send status updates.",
+      "slug": "auto-claude__feishu-notify",
+      "category": "productivity",
+      "subcategory": "communication",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\feishu-notify"
+    },
+    {
+      "name": "microsoft/github-issue-creator",
+      "description": "Convert raw notes, error logs, voice dictation, or screenshots into crisp GitHub-flavored markdown issue reports. Use when the user pastes bug info, error messages, or informal descriptions and wants a structured GitHub issue. Supports images/GIFs for visual evidence.",
+      "slug": "microsoft__github-issue-creator",
+      "category": "productivity",
+      "subcategory": "issue-tracking",
+      "origin": "external",
+      "source": "microsoft",
+      "license": "external\\microsoft-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\microsoft-skills\\.github\\skills\\github-issue-creator"
+    },
+    {
+      "name": "openai-curated/linear",
+      "description": "Manage issues, projects & team workflows in Linear. Use when the user wants to read, create or updates tickets in Linear.",
+      "slug": "openai-curated__linear",
+      "category": "productivity",
+      "subcategory": "issue-tracking",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\linear\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\linear"
+    },
+    {
+      "name": "auto-claude/pixel-art",
+      "description": "Generate pixel art SVG illustrations for READMEs, docs, or slides. Use when user says \"画像素图\", \"pixel art\", \"make an SVG illustration\", \"README hero image\", or wants a cute visual.",
+      "slug": "auto-claude__pixel-art",
+      "category": "productivity",
+      "subcategory": "visual-design",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\pixel-art"
+    },
+    {
+      "name": "openai-curated/openai-docs",
+      "description": "Use when the user asks how to build with OpenAI products or APIs and needs up-to-date official documentation with citations, help choosing the latest model for a use case, or explicit GPT-5.4 upgrade and prompt-upgrade guidance; prioritize OpenAI docs MCP tools, use bundled references only as helper context, and restrict any fallback browsing to official OpenAI domains.",
+      "slug": "openai-curated__openai-docs",
+      "category": "research",
+      "subcategory": "api-documentation",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\openai-docs\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\openai-docs"
+    },
+    {
+      "name": "openai-system/openai-docs",
+      "description": "Use when the user asks how to build with OpenAI products or APIs and needs up-to-date official documentation with citations, help choosing the latest model for a use case, or explicit GPT-5.4 upgrade and prompt-upgrade guidance; prioritize OpenAI docs MCP tools, use bundled references only as helper context, and restrict any fallback browsing to official OpenAI domains.",
+      "slug": "openai-system__openai-docs",
+      "category": "research",
+      "subcategory": "api-documentation",
+      "origin": "external",
+      "source": "openai-system",
+      "license": "external\\openai-skills\\skills\\.system\\openai-docs\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.system\\openai-docs"
+    },
+    {
+      "name": "auto-claude/paper-compile",
+      "description": "Compile LaTeX paper to PDF, fix errors, and verify output. Use when user says \\\"编译论文\\\", \\\"compile paper\\\", \\\"build PDF\\\", \\\"生成PDF\\\", or wants to compile LaTeX into a submission-ready PDF.",
+      "slug": "auto-claude__paper-compile",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\paper-compile"
+    },
+    {
+      "name": "auto-claude/paper-plan",
+      "description": "Generate a structured paper outline from review conclusions and experiment results. Use when user says \\\"写大纲\\\", \\\"paper outline\\\", \\\"plan the paper\\\", \\\"论文规划\\\", or wants to create a paper plan before writing.",
+      "slug": "auto-claude__paper-plan",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\paper-plan"
+    },
+    {
+      "name": "auto-claude/paper-write",
+      "description": "Draft LaTeX paper section by section from an outline. Use when user says \\\"写论文\\\", \\\"write paper\\\", \\\"draft LaTeX\\\", \\\"开始写\\\", or wants to generate LaTeX content from a paper plan.",
+      "slug": "auto-claude__paper-write",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\paper-write"
+    },
+    {
+      "name": "auto-claude/paper-writing",
+      "description": "Workflow 3: Full paper writing pipeline. Orchestrates paper-plan → paper-figure → paper-write → paper-compile → ULTRAWORK QA to go from a narrative report to a polished, submission-ready PDF. Use when user says \\\"写论文全流程\\\", \\\"write paper pipeline\\\", \\\"从报告到PDF\\\", \\\"paper writing\\\", or wants the complete paper generation workflow.",
+      "slug": "auto-claude__paper-writing",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\paper-writing"
+    },
+    {
+      "name": "docx-workbench",
+      "description": "Create, edit, and review DOCX documents with reproducible formatting.",
+      "slug": "builtin__docx-workbench__docx-workbench",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "builtin",
+      "source": "builtin:docx-workbench",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\docx.ts"
+    },
+    {
+      "name": "openai-curated/doc",
+      "description": "Use when the task involves reading, creating, or editing `.docx` documents, especially when formatting or layout fidelity matters; prefer `python-docx` plus the bundled `scripts/render_docx.py` for visual checks.",
+      "slug": "openai-curated__doc",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\doc\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\doc"
+    },
+    {
+      "name": "openai-curated/pdf",
+      "description": "Use when tasks involve reading, creating, or reviewing PDF files where rendering and layout matter; prefer visual checks by rendering pages (Poppler) and use Python tools such as `reportlab`, `pdfplumber`, and `pypdf` for generation and extraction.",
+      "slug": "openai-curated__pdf",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\pdf\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\pdf"
+    },
+    {
+      "name": "pdf-toolkit",
+      "description": "Create, extract, and transform PDFs with reproducible layout.",
+      "slug": "builtin__pdf-toolkit__pdf-toolkit",
+      "category": "research",
+      "subcategory": "document-authoring",
+      "origin": "builtin",
+      "source": "builtin:pdf-toolkit",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\pdf.ts"
+    },
+    {
+      "name": "auto-claude/arxiv",
+      "description": "Search, download, and summarize academic papers from arXiv using MCP tools. Use when user says \"search arxiv\", \"download paper\", \"fetch arxiv\", \"arxiv search\", \"get paper pdf\", or wants to find and save papers from arXiv to the local paper library.",
+      "slug": "auto-claude__arxiv",
+      "category": "research",
+      "subcategory": "literature-and-web-search",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\arxiv"
+    },
+    {
+      "name": "auto-claude/novelty-check",
+      "description": "Verify research idea novelty against recent literature. Use when user says \"查新\", \"novelty check\", \"有没有人做过\", \"check novelty\", or wants to verify a research idea is novel before implementing.",
+      "slug": "auto-claude__novelty-check",
+      "category": "research",
+      "subcategory": "literature-and-web-search",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\novelty-check"
+    },
+    {
+      "name": "auto-claude/research-lit",
+      "description": "Search and analyze research papers, find related work, summarize key ideas. Use when user says \"find papers\", \"related work\", \"literature review\", \"what does this paper say\", or needs to understand academic papers.",
+      "slug": "auto-claude__research-lit",
+      "category": "research",
+      "subcategory": "literature-and-web-search",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\research-lit"
+    },
+    {
+      "name": "web-research",
+      "description": "Structured web research and source triage with citations.",
+      "slug": "builtin__web-research__web-research",
+      "category": "research",
+      "subcategory": "literature-and-web-search",
+      "origin": "builtin",
+      "source": "builtin:web-research",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\web-research.ts"
+    },
+    {
+      "name": "openai-curated/transcribe",
+      "description": "Transcribe audio files to text with optional diarization and known-speaker hints. Use when a user asks to transcribe speech from audio/video, extract text from recordings, or label speakers in interviews or meetings.",
+      "slug": "openai-curated__transcribe",
+      "category": "research",
+      "subcategory": "media-transcription",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\transcribe\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\transcribe"
+    },
+    {
+      "name": "openai-curated/slides",
+      "description": "Create and edit presentation slide decks (`.pptx`) with PptxGenJS, bundled layout helpers, and render/validation utilities. Use when tasks involve building a new PowerPoint deck, recreating slides from screenshots/PDFs/reference decks, modifying slide content while preserving editable output, adding charts/diagrams/visuals, or diagnosing layout issues such as overflow, overlaps, and font substitution.",
+      "slug": "openai-curated__slides",
+      "category": "research",
+      "subcategory": "presentation-authoring",
+      "origin": "external",
+      "source": "openai-curated",
+      "license": "external\\openai-skills\\skills\\.curated\\slides\\LICENSE.txt",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\openai-skills\\skills\\.curated\\slides"
+    },
+    {
+      "name": "pptx-studio",
+      "description": "Generate and edit PPTX decks with structured layouts.",
+      "slug": "builtin__pptx-studio__pptx-studio",
+      "category": "research",
+      "subcategory": "presentation-authoring",
+      "origin": "builtin",
+      "source": "builtin:pptx-studio",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\src\\features\\builtin-skills\\skills\\pptx.ts"
+    },
+    {
+      "name": "auto-claude/idea-creator",
+      "description": "Generate and rank research ideas given a broad direction. Use when user says \"找idea\", \"brainstorm ideas\", \"generate research ideas\", \"what can we work on\", or wants to explore a research area for publishable directions.",
+      "slug": "auto-claude__idea-creator",
+      "category": "research",
+      "subcategory": "research-ideation",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\idea-creator"
+    },
+    {
+      "name": "auto-claude/idea-discovery",
+      "description": "Workflow 1: Full idea discovery pipeline. Orchestrates research-lit → idea-creator → novelty-check to go from a broad research direction to validated, pilot-tested ideas. Use when user says \\\"找idea全流程\\\", \\\"idea discovery pipeline\\\", \\\"从零开始找方向\\\", or wants the complete idea exploration workflow.",
+      "slug": "auto-claude__idea-discovery",
+      "category": "research",
+      "subcategory": "research-ideation",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\idea-discovery"
+    },
+    {
+      "name": "auto-claude/idea-discovery-robot",
+      "description": "Workflow 1 adaptation for robotics and embodied AI. Orchestrates robotics-aware literature survey, idea generation, novelty check, and internal critique to go from a broad robotics direction to benchmark-grounded, simulation-first ideas. Use when user says \\\"robotics idea discovery\\\", \\\"机器人找idea\\\", \\\"embodied AI idea\\\", \\\"机器人方向探索\\\", \\\"sim2real 选题\\\", or wants ideas for manipulation, locomotion, navigation, drones, humanoids, or general robot learning.",
+      "slug": "auto-claude__idea-discovery-robot",
+      "category": "research",
+      "subcategory": "research-ideation",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\idea-discovery-robot"
+    },
+    {
+      "name": "auto-claude/research-pipeline",
+      "description": "Full research pipeline: Workflow 1 (idea discovery) → implementation → Workflow 2 (ULTRAWORK loop). Goes from a broad research direction all the way to a submission-ready paper. Use when user says \\\"全流程\\\", \\\"full pipeline\\\", \\\"从找idea到投稿\\\", \\\"end-to-end research\\\", or wants the complete autonomous research lifecycle.",
+      "slug": "auto-claude__research-pipeline",
+      "category": "research",
+      "subcategory": "research-ideation",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\research-pipeline"
+    },
+    {
+      "name": "auto-claude/proof-writer",
+      "description": "Writes rigorous mathematical proofs for ML/AI theory. Use when asked to prove a theorem, lemma, proposition, or corollary, fill in missing proof steps, formalize a proof sketch, 补全证明, 写证明, 证明某个命题, or determine whether a claimed proof can actually be completed under the stated assumptions.",
+      "slug": "auto-claude__proof-writer",
+      "category": "research",
+      "subcategory": "theory-writing",
+      "origin": "external",
+      "source": "auto-claude",
+      "license": "external\\auto-claude-skills\\LICENSE",
+      "bundleTargets": [
+        "full",
+        "paper"
+      ],
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\external\\auto-claude-skills\\skills\\proof-writer"
+    }
+  ]
+}
