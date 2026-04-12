@@ -32,7 +32,37 @@ For operational attribution context, also see:
 - `NOTICE`
 - `docs/licensing.md`
 
-## 3) Third-Party MCP and Integration Register
+## 3) Third-Party Skill Derivations
+
+The following skill content is adapted from third-party repositories and integrated
+into OpenAgent Labforge built-in skills with repo-specific routing, agent ownership,
+and allowed-tool metadata.
+
+- Source: `GPTomics/bioSkills`
+- Repository: https://github.com/GPTomics/bioSkills
+- License: MIT (verified from upstream LICENSE snapshot inspected on 2026-04-12)
+- Integration status: full file-backed bundle generation for the upstream bioSkills tree, plus selectively inlined built-in adaptations
+- Adapted and generated coverage in this repository:
+  - file-backed `generated/skills-bundles/bio` bundle generated from the upstream bioSkills tree when the source checkout is available
+  - category-first routing over upstream bio categories and detailed leaf skills
+  - selected inlined built-in adaptations:
+    - `experimental-design`
+    - `read-qc`
+    - `read-alignment`
+    - `rna-quantification`
+    - `pathway-analysis`
+    - `variant-calling`
+    - `genome-annotation`
+    - `workflow-management`
+    - `reporting`
+    - `genome-intervals`
+
+Integration notes:
+- Upstream leaf skills are carried as file-backed skills for lazy loading and path-preserving references.
+- Discovery is intentionally category-first so leaf skills do not flood the global skill list.
+- Built-in Labforge bio skills are also exposed through generated category wrappers to participate in the same routing flow.
+
+## 4) Third-Party MCP and Integration Register
 
 The following register is maintained as an engineering attribution, intake,
 and review record for bundled, referenced, or installer-supported third-party
@@ -51,7 +81,7 @@ Fields may remain `Unknown` until verified from upstream repository sources.
 | server-puppeteer | ModelScope / npm | `@modelcontextprotocol/server-puppeteer` | MIT (verified) | No | Browser automation | candidate-priority | Treat as high-trust-boundary tool; strict domain/URL policy |
 | Fetch-Browser | ModelScope / OSS registry | `TheSethRose/Fetch-Browser` | MIT (verified) | No | Browser + Google scraping path | candidate-priority | Network-aware gating required for Google-dependent paths |
 
-## 4) Intake and Verification Rule
+## 5) Intake and Verification Rule
 
 Before enabling any MCP in default profiles or installer-written presets:
 
@@ -60,7 +90,7 @@ Before enabling any MCP in default profiles or installer-written presets:
 3. Update this notice matrix with verified fields.
 4. If license, terms, or key requirements cannot be verified, keep status as `defer`.
 
-## 5) Professional Notice Practice
+## 6) Professional Notice Practice
 
 - Keep component names, upstream repositories, and verified licenses precise.
 - Distinguish clearly between `integrated`, `candidate`, and `defer` states.

@@ -35,6 +35,10 @@ import type {
   RuntimeWorkflowSessionSwitchRecommendation,
   RuntimeWorkflowStage,
   RuntimeWorkflowState,
+  RuntimeWorkflowTodoKind,
+  RuntimeWorkflowTodoNode,
+  RuntimeWorkflowTodoOwner,
+  RuntimeWorkflowTodoSource,
   RuntimeWorkflowVerdict,
 } from "./types"
 
@@ -345,6 +349,12 @@ function buildStageAnchorMemory(args: {
       lines.push(`- ${boundary}`)
     }
   }
+  if (state.structured_todos && state.structured_todos.length > 0) {
+    lines.push("", "## Structured Todo Graph", "")
+    for (const todo of state.structured_todos) {
+      lines.push(`- [${todo.status}] (${todo.kind}/${todo.owner}) ${todo.content}`)
+    }
+  }
 
   return `${lines.join("\n")}\n`
 }
@@ -376,8 +386,113 @@ function buildStageCapsuleMemory(args: {
   if (state.manual_boundaries && state.manual_boundaries.length > 0) {
     lines.push(`- Manual boundaries: ${state.manual_boundaries.join(" | ")}`)
   }
+  if (state.structured_todos && state.structured_todos.length > 0) {
+    const activeTodos = state.structured_todos
+      .filter((todo) => todo.status !== "completed" && todo.status !== "cancelled" && todo.status !== "deleted")
+      .slice(0, 6)
+      .map((todo) => `${todo.kind}/${todo.owner}:${todo.content}`)
+    if (activeTodos.length > 0) {
+      lines.push(`- Structured todos: ${activeTodos.join(" | ")}`)
+    }
+  }
 
   return `${lines.join("\n")}\n`
+}
+
+function normalizeTodoGraphSnapshot(todos: RuntimeWorkflowTodoNode[]): string {
+  return JSON.stringify(
+    todos.map((todo) => ({
+      id: todo.id ?? null,
+      content: todo.content,
+      status: todo.status,
+      priority: todo.priority,
+      kind: todo.kind,
+      owner: todo.owner,
+      source: todo.source,
+    })),
+  )
+}
+
+function guessUserOwnedFromBoundaries(
+  content: string,
+  boundaries: string[] | undefined,
+): boolean {
+  if (!boundaries || boundaries.length === 0) return false
+
+  const normalized = content.toLowerCase()
+  const keywordGroups = [
+    ["下载", "download"],
+    ["安装", "install"],
+    ["上传", "upload"],
+    ["提交", "commit"],
+    ["推送", "push"],
+    ["运行", "run"],
+    ["拉取", "pull"],
+    ["执行", "execute"],
+  ]
+
+  return keywordGroups.some((group) => {
+    const boundaryMatched = boundaries.some((boundary) =>
+      group.some((keyword) => boundary.toLowerCase().includes(keyword)),
+    )
+    return boundaryMatched && group.some((keyword) => normalized.includes(keyword))
+  })
+}
+
+function classifyRuntimeTodoNode(args: {
+  todo: { id?: string; content: string; status: string; priority: string }
+  manualBoundaries?: string[]
+}): RuntimeWorkflowTodoNode {
+  const { todo, manualBoundaries } = args
+  const normalized = todo.content.toLowerCase()
+
+  let kind: RuntimeWorkflowTodoKind = "implement"
+  let owner: RuntimeWorkflowTodoOwner = "agent"
+  let source: RuntimeWorkflowTodoSource = "model"
+
+  if (todo.status === "blocked") {
+    kind = "blocked"
+    owner = "external"
+    source = "system"
+  } else if (
+    /acceptance-review|acceptance reviewer|reviewer|验收|review blocker|review gate/i.test(normalized)
+  ) {
+    kind = "review-gate"
+    owner = "external"
+    source = "review"
+  } else if (
+    /verify|validation|validate|qa|re-verify|check|required tools|smoke|regression/i.test(normalized)
+  ) {
+    kind = "verify"
+  } else if (
+    /install|setup|toolchain|environment|bootstrap|wsl|conda|uv|fastqc|fastp|hisat2|samtools|salmon|featurecounts|sra-toolkit|bedtools|seqtk|minimap2|bwa/i.test(normalized)
+  ) {
+    kind = "setup"
+  } else if (
+    /record|write up|write-up|note|manifest|readme|doc|docs|说明|清单|记录|报告|summary|route|boundaries|prerequisites/i.test(normalized)
+  ) {
+    kind = "document"
+  } else if (
+    /inspect|locate|find|discover|audit|probe|identify|check which|核对|审计|确认/i.test(normalized)
+  ) {
+    kind = "discovery"
+  }
+
+  if (guessUserOwnedFromBoundaries(todo.content, manualBoundaries)) {
+    kind = "user-owned"
+    owner = "user"
+    source = "manual-boundary"
+  }
+
+  return {
+    id: todo.id,
+    content: todo.content,
+    status: todo.status,
+    priority: todo.priority,
+    kind,
+    owner,
+    source,
+  }
 }
 
 function computeStageAnchorHash(content: string): string {
@@ -606,6 +721,10 @@ export function ensureRuntimeWorkflowSession(args: {
     rehydration_level: existing?.rehydration_level ?? "full-anchor",
     manual_boundaries: existing?.manual_boundaries ?? [],
     manual_boundary_updated_at: existing?.manual_boundary_updated_at,
+    structured_todos: existing?.structured_todos ?? [],
+    todo_graph_generation: existing?.todo_graph_generation ?? 0,
+    todo_graph_snapshot: existing?.todo_graph_snapshot,
+    last_todo_reconciliation_at: existing?.last_todo_reconciliation_at,
     started_at: existing?.started_at ?? now,
     updated_at: now,
   }
@@ -1265,6 +1384,55 @@ export function updateRuntimeWorkflowManualBoundaries(args: {
   writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
 
   if (note) {
+    appendRuntimeWorkflowNote({
+      directory,
+      sessionId,
+      stage: refreshedState.current_stage,
+      content: note,
+    })
+  }
+
+  return refreshedState
+}
+
+export function reconcileRuntimeWorkflowTodoGraph(args: {
+  directory: string
+  sessionId: string
+  todos: Array<{ id?: string; content: string; status: string; priority: string }>
+  note?: string
+}): RuntimeWorkflowState | null {
+  const { directory, sessionId, todos, note } = args
+  const paths = getRuntimeWorkflowPaths(directory, sessionId)
+  const existing = readRuntimeWorkflowState(directory, sessionId)
+  if (!existing) return null
+
+  const structuredTodos = todos.map((todo) =>
+    classifyRuntimeTodoNode({
+      todo,
+      manualBoundaries: existing.manual_boundaries,
+    }),
+  )
+  const snapshot = normalizeTodoGraphSnapshot(structuredTodos)
+  const nextGeneration =
+    snapshot !== existing.todo_graph_snapshot
+      ? (existing.todo_graph_generation ?? 0) + 1
+      : (existing.todo_graph_generation ?? 0)
+
+  const nextState: RuntimeWorkflowState = {
+    ...existing,
+    structured_todos: structuredTodos,
+    todo_graph_snapshot: snapshot,
+    todo_graph_generation: nextGeneration,
+    last_todo_reconciliation_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  const refreshedState = refreshRuntimeWorkflowMemoryFiles({
+    paths,
+    state: nextState,
+  })
+  writeFileSync(paths.stateFile, JSON.stringify(refreshedState, null, 2), "utf-8")
+
+  if (note && snapshot !== existing.todo_graph_snapshot) {
     appendRuntimeWorkflowNote({
       directory,
       sessionId,

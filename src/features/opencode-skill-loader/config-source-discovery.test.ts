@@ -69,6 +69,35 @@ describe("config source discovery", () => {
     expect(names).not.toContain("skip/skipped")
   })
 
+  it("loads full bundle together with bio bundle when bundle is full", async () => {
+    // given
+    const configDir = join(TEST_DIR, "config")
+    const fullDir = join(configDir, "generated", "skills-bundles", "full", "skills", "engineering", "external-skill")
+    const bioDir = join(configDir, "generated", "skills-bundles", "bio", "skills", "research")
+
+    writeSkill(fullDir, "external-skill", "Loaded from full bundle")
+    mkdirSync(bioDir, { recursive: true })
+    writeFileSync(
+      join(bioDir, "bioinformatics.md"),
+      `---\nname: bioinformatics\ndescription: Root bio skill\nmetadata:\n  category: research/bioinformatics\n  discovery_hidden: "false"\n---\nBody\n`,
+    )
+
+    const config = SkillsConfigSchema.parse({
+      bundle: "full",
+    })
+
+    // when
+    const skills = await discoverConfigSourceSkills({
+      config,
+      configDir,
+    })
+
+    // then
+    const names = skills.map((skill) => skill.name)
+    expect(names).toContain("engineering/external-skill")
+    expect(names).toContain("research/bioinformatics")
+  })
+
   it("normalizes windows separators before glob matching", () => {
     // given
     const windowsPath = "keep\\nested\\SKILL.md"

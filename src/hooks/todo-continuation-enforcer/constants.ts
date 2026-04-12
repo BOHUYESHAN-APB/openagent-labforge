@@ -48,6 +48,8 @@ All current todos are completed, but autonomous execution does NOT stop here aut
 - Distinguish agent-owned remaining work from user-owned/manual/external follow-up
 - If a remaining step was explicitly assigned to the user, depends on the user's manual download/install/acquisition, or is an external prerequisite not owned by the agent, do NOT reopen it as an autonomous todo wave
 - In those cases, report it as a waiting condition, external dependency, or optional future handoff instead of continuing execution
+- Before claiming substantial work is complete, invoke \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\\nChanged files/artifacts: ...\\nVerification evidence: ...\\nResidual assumptions/risks: ...\\nReturn [APPROVE] or [REJECT].")\`
+- If \`acceptance-reviewer\` is unavailable or fails to run, do NOT provide a final completion answer. Keep the wave open and continue with concrete owned work or state the blocker explicitly.
 - If the task is truly complete, only then provide a final completion answer
 - Do not ask the user whether you should continue when clear unfinished work remains
 - Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`

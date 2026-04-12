@@ -1,7 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createAgentToolRestrictions } from "../shared/permission-compat"
-import { BIO_SKILL_ROUTER, BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
+import { BIO_SKILL_MANDATE, BIO_SKILL_ROUTER, BIO_SKILL_TOOL_REMINDER } from "./bio-skill-guidance"
 import {
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
@@ -72,7 +72,7 @@ Hard rules:
 - Distinguish gold-standard validation from lower-cost fallback validation.
 - Be explicit about sample size, controls, and what would falsify the hypothesis.
 - If a required reagent, model system, or instrument is missing, say so plainly.
-\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${ENGINEERING_PLANNING_CAPABILITY}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
   }
 }
 createWetLabDesignerAgent.mode = MODE

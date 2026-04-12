@@ -1,3 +1,14 @@
+export const BIO_SKILL_MANDATE = `## Bio Skill First
+
+For substantial bioinformatics work, skill loading is mandatory setup.
+
+- if the task is broad or modality-specific, first call \`skill(name="research/bioinformatics")\`
+- then call the matching category guide
+- then call the narrowest leaf skill
+- do not do a serious bio reasoning pass before at least one matching bio skill has actually been loaded
+- naming a skill from memory is not enough; invoke it and use returned details
+`
+
 export const BIO_SKILL_GUIDANCE = `## Bio Skill Loading Protocol
 
 Before acting, identify whether the task needs one or more specialized bio skills and load them proactively.
@@ -38,6 +49,7 @@ Core routing rule:
 Loading rule:
 - if the task touches a skill's domain, load it
 - if uncertainty remains, prefer loading more relevant bio skills rather than fewer
+- for file-backed bio workflows, do not rely on remembered category names alone; invoke the \`skill\` tool and read the returned directory/category/leaf content before the first serious pass
 - when charting or heatmaps are involved, strongly prefer \`bio-visualization\`
 - when cloning, plasmid, construct, or vector planning is involved, strongly prefer \`vector-design\`
 - when sequence interpretation depends on homology, prefer \`sequence-analysis\` plus \`blast-search\`
@@ -50,6 +62,34 @@ Loading rule:
 export const BIO_SKILL_ROUTER = `## Bio Skill Router
 
 Use this router before substantial bio work.
+
+Directory-first rule for file-backed bio skills:
+- if the task is substantial and the exact leaf skill has not already been loaded in the current turn, first call \`skill(name="research/bioinformatics")\`
+- then call the matching category guide: \`skill(name="research/bioinformatics/<category>")\`
+- then call the narrowest leaf: \`skill(name="research/bioinformatics/<category>/<leaf>")\`
+- do not merely cite a category or leaf name from memory; load it and use the returned content
+- do not skip directly from root to execution when the skill tree clearly has a matching category and leaf
+
+High-frequency file-backed bio routes:
+- root entry:
+  - \`research/bioinformatics\`
+- common category guides:
+  - \`research/bioinformatics/read-qc\`
+  - \`research/bioinformatics/read-alignment\`
+  - \`research/bioinformatics/rna-quantification\`
+  - \`research/bioinformatics/pathway-analysis\`
+  - \`research/bioinformatics/variant-calling\`
+  - \`research/bioinformatics/genome-annotation\`
+  - \`research/bioinformatics/single-cell\`
+  - \`research/bioinformatics/metagenomics\`
+  - \`research/bioinformatics/proteomics\`
+- common leaf examples:
+  - \`research/bioinformatics/read-qc/fastp-workflow\`
+  - \`research/bioinformatics/read-alignment/star-alignment\`
+  - \`research/bioinformatics/rna-quantification/featurecounts-counting\`
+  - \`research/bioinformatics/pathway-analysis/gsea\`
+  - \`research/bioinformatics/variant-calling/gatk-variant-calling\`
+  - \`research/bioinformatics/genome-annotation/prokaryotic-annotation\`
 
 Mandatory first-skill routing for main bio entrypoints:
 - study framing, QC strategy, cohort logic, statistics, method choice:
@@ -95,6 +135,7 @@ Execution rule:
 - do not postpone skill loading until after the first bio reasoning pass
 - pick the core skill first, then add the modality-specific skills
 - if multiple mappings apply, load the minimum set that still matches the biological task honestly
+- if the modality-specific skill exists as a file-backed bio leaf, reading it is part of setup, not optional garnish
 `
 
 export const BIO_RUNTIME_GUIDANCE = `## Bio Runtime Guidance
@@ -115,6 +156,7 @@ On-demand skill loading:
   - \`bio-visualization\` only when figures/plots are actually required
 - add modality or sequence skills only when the request clearly needs them
 - apply the Bio Skill Router before the first substantial wave instead of improvising skill choice late
+- in auto mode, treat directory -> category -> leaf loading as a mandatory setup step whenever the work depends on file-backed bio skills
 
 Escalation rules:
 - escalate to a heavier multi-wave backlog only after one of these is true:
@@ -136,4 +178,6 @@ Do not front-load the full bio skill catalog into the prompt.
 - prefer stage-specific loading over loading many skills at once
 - if the task touches a modality, sequence domain, pathway/domain lookup, or figure workflow, load the matching bio skill before proceeding
 - if you are a main bio entrypoint and the task is substantial, load at least one core bio skill before the first serious analytical pass
+- for file-backed bio domains, a serious pass without an actual \`skill\` call is a routing failure, not an acceptable shortcut
+- when root/category/leaf skills exist, do not stop at naming them; invoke them and use concrete details from their returned content
 `

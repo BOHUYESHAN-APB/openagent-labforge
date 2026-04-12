@@ -2,6 +2,7 @@ import type { AvailableSkill } from "../dynamic-agent-prompt-builder"
 import type { BrowserAutomationProvider } from "../../config/schema"
 import type { LoadedSkill, SkillScope } from "../../features/opencode-skill-loader/types"
 import { createBuiltinSkills } from "../../features/builtin-skills"
+import { isSkillHiddenFromDiscovery } from "../../features/opencode-skill-loader"
 
 function mapScopeToLocation(scope: SkillScope): AvailableSkill["location"] {
   if (scope === "user" || scope === "opencode") return "user"
@@ -25,6 +26,7 @@ export function buildAvailableSkills(
 
   const discoveredAvailable: AvailableSkill[] = discoveredSkills
     .filter(s => !builtinSkillNames.has(s.name) && !disabledSkills?.has(s.name))
+    .filter((skill) => !isSkillHiddenFromDiscovery(skill))
     .map((skill) => ({
       name: skill.name,
       description: skill.definition.description ?? "",

@@ -14,6 +14,7 @@ import {
   discoverOpencodeProjectSkills,
   discoverProjectAgentsSkills,
   discoverGlobalAgentsSkills,
+  filterDiscoveryVisibleSkills,
   mergeSkills,
 } from "../features/opencode-skill-loader"
 import { createBuiltinSkills } from "../features/builtin-skills"
@@ -189,7 +190,7 @@ export async function createSkillContext(args: {
     })
 
     const availableStartedAt = performance.now()
-    const availableSkills: AvailableSkill[] = mergedSkills.map((skill) => ({
+    const availableSkills: AvailableSkill[] = filterDiscoveryVisibleSkills(mergedSkills).map((skill) => ({
       name: skill.name,
       description: skill.definition.description ?? "",
       location: mapScopeToLocation(skill.scope),

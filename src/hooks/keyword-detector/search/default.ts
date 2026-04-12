@@ -16,5 +16,6 @@ export const SEARCH_MESSAGE = `[search-mode]
 MAXIMIZE SEARCH EFFORT. Launch multiple background agents IN PARALLEL:
 - explore agents (codebase patterns, file structures, ast-grep)
 - librarian agents (remote repos, official docs, GitHub examples)
-Plus direct tools: Grep, ripgrep (rg), ast-grep (sg)
+Plus direct tools: \`grep\`, \`glob\`, \`ast_grep\`, and targeted \`lsp_*\`
+If shell tools like \`rg\` or \`sg\` are unavailable in the current environment, use the built-in tools instead of failing over to missing binaries.
 NEVER stop at first result - be exhaustive.`

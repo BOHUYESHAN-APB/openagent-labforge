@@ -14,6 +14,8 @@ export { createAstGrepTools } from "./ast-grep"
 export { createGrepTools } from "./grep"
 export { createGlobTools } from "./glob"
 export { createSkillTool } from "./skill"
+export { createRecallTool } from "./recall"
+export { createBatchTool } from "./batch"
 export { discoverCommandsSync } from "./slashcommand"
 export { createSessionManagerTools } from "./session-manager"
 

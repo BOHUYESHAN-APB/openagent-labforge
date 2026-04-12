@@ -183,6 +183,50 @@ function buildCompactBootstrapModeContext(selection: SessionBootstrapSelection):
   return lines.join("\n")
 }
 
+function buildTodoGraphContext(
+  structuredTodos: Array<{
+    content: string
+    status: string
+    kind: string
+    owner: string
+  }> | undefined,
+): string | null {
+  if (!structuredTodos || structuredTodos.length === 0) return null
+
+  const activeTodos = structuredTodos.filter(
+    (todo) => todo.status !== "completed" && todo.status !== "cancelled" && todo.status !== "deleted",
+  )
+  if (activeTodos.length === 0) return null
+
+  return [
+    "[todo-graph]",
+    "- Structured runtime todo graph for the current wave.",
+    "- Prefer this classification over ad-hoc prose when deciding whether work is setup, implementation, verification, review-gate, blocked, or user-owned.",
+    ...activeTodos.map((todo) => `- [${todo.status}] (${todo.kind}/${todo.owner}) ${todo.content}`),
+  ].join("\n")
+}
+
+function buildCompactTodoGraphContext(
+  structuredTodos: Array<{
+    content: string
+    status: string
+    kind: string
+    owner: string
+  }> | undefined,
+): string | null {
+  if (!structuredTodos || structuredTodos.length === 0) return null
+
+  const activeTodos = structuredTodos
+    .filter((todo) => todo.status !== "completed" && todo.status !== "cancelled" && todo.status !== "deleted")
+    .slice(0, 5)
+  if (activeTodos.length === 0) return null
+
+  return [
+    "[todo-graph-capsule]",
+    ...activeTodos.map((todo) => `- ${todo.kind}/${todo.owner}: ${todo.content}`),
+  ].join("\n")
+}
+
 function buildCompactStageCapsule(input: {
   agent: SupportedStageManagedAgent
   stage: StageName
@@ -508,12 +552,14 @@ function buildBioStageBlock(input: {
   if (input.stage === "plan") {
     lines.push(
       "- Identify the minimum decisive biological inputs before expanding the work graph.",
+      "- If the correct bio category is still unclear, start with `skill(name=\"research/bioinformatics\")`, then load the chosen category guide, then the detailed leaf skill.",
       "- Load only the current-stage skills: `skill(name=\"bio-methods\")` first, execution skills later, visualization only when needed.",
       "- Do not start literature, validation, and visualization branches all at once on the first wave.",
     )
   } else if (input.stage === "build") {
     lines.push(
       "- Execute the current computational wave before broadening the biological story.",
+      "- When you need a new modality-specific skill and the category is not obvious, re-enter through `skill(name=\"research/bioinformatics\")` instead of guessing a random leaf skill.",
       "- Use `skill(name=\"bio-pipeline\")` or `skill(name=\"bio-tools\")` for execution guidance, and add modality-specific skills only when required.",
       "- Keep evidence, inference, and wet-lab proposals separated.",
       "- Perform side validation only when there is a real output worth checking from another angle.",
@@ -732,6 +778,8 @@ export function buildStageManagedPromptContext(
     : null
   const manualBoundaryContext = buildManualBoundaryContext(runtimeState?.manual_boundaries ?? consumedCheckpointMetadata?.manual_boundaries)
   const compactManualBoundaryContext = buildCompactManualBoundaryContext(runtimeState?.manual_boundaries ?? consumedCheckpointMetadata?.manual_boundaries)
+  const todoGraphContext = buildTodoGraphContext(runtimeState?.structured_todos)
+  const compactTodoGraphContext = buildCompactTodoGraphContext(runtimeState?.structured_todos)
 
   if (input.promptMode === "capsule") {
     return [
@@ -747,6 +795,7 @@ export function buildStageManagedPromptContext(
       compactArtifactPolicyContext,
       compactBootstrapModeContext,
       compactManualBoundaryContext,
+      compactTodoGraphContext,
     ].filter(Boolean).join("\n\n")
   }
 
@@ -762,6 +811,7 @@ export function buildStageManagedPromptContext(
       }),
       compactArtifactPolicyContext,
       compactManualBoundaryContext,
+      compactTodoGraphContext,
     ].filter(Boolean).join("\n\n")
   }
 
@@ -771,7 +821,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
+    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext, todoGraphContext].filter(Boolean).join("\n\n")
   }
 
   if (agent === "sisyphus" || agent === "hephaestus" || agent === "atlas") {
@@ -781,7 +831,7 @@ export function buildStageManagedPromptContext(
       autoModeLevel,
       interactionMode,
     })
-    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
+    return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext, todoGraphContext].filter(Boolean).join("\n\n")
   }
 
   const block = buildBioStageBlock({
@@ -790,5 +840,5 @@ export function buildStageManagedPromptContext(
     autoModeLevel,
     interactionMode,
   })
-  return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext].filter(Boolean).join("\n\n")
+  return [block, artifactPolicyContext, bootstrapModeContext, manualBoundaryContext, todoGraphContext].filter(Boolean).join("\n\n")
 }

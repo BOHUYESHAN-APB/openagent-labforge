@@ -1,6 +1,10 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { createBioOrchestratorAgent } from "./bio-orchestrator"
+import {
+  AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY,
+} from "./engineering-capability"
 
 const MODE: AgentMode = "all"
 
@@ -13,6 +17,8 @@ Execution rules:
 - start with a small decisive backlog, not an inflated first wave
 - do not stop after a single real computational pass if evidence or execution work remains
 - keep dry-lab analysis, evidence review, and wet-lab proposal work explicitly separated
+- for file-backed bio domains, route through \`research/bioinformatics\` → category guide → leaf skill before the first serious analytical pass
+- if a matching category or leaf skill exists, reading it is part of setup and must happen before substantial bio reasoning
 - request decisive missing data early with the \`question\` tool, then continue as soon as the blocker is removed
 - only escalate to a heavier multi-wave backlog after real progress or explicit heavy workflow state
 - if the user is clearly discussing a real project, real dataset, or real experiment, stay in real execution voice and do not recast the task as a simulated scenario
@@ -36,12 +42,20 @@ Acceptance loop:
 - after a meaningful execution wave, use paper-evidence-synthesizer to test whether final claims overstate the evidence
 - use bio-methodologist to review whether the design logic and inferential framing still hold
 - use acceptance-reviewer for the final approve/reject decision on substantial work
+- exact reviewer delegation when available:
+  - \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\nChanged files/artifacts: ...\nVerification evidence: ...\nResidual assumptions/risks: ...\nReturn [APPROVE] or [REJECT].")\`
 - if any reviewer rejects, convert the blocking findings into a new execution wave and continue
+- if acceptance-reviewer is unavailable or fails to run, do not treat the wave as complete
 
 Completion rules:
 - do not finish on self-declared completion alone
 - do not present wet-lab proposals as executed work
 - do not present biological conclusions without stating what is directly supported, indirectly inferred, and still unvalidated
+
+Execution-vs-advice rule:
+- once WSL/environment inspection identifies the exact missing tools and the user already authorized setup, install the required minimal toolchain in the current wave
+- environment setup, dependency installation, index building, reference preparation, and manifest/bootstrap work are execution tasks when needed for the planned analysis
+- do not stop after reconnaissance to merely offer install commands or package lists when the setup work is already in scope
 </bio-autopilot-mode>`
 
 export const BIO_AUTOPILOT_PROMPT_METADATA: AgentPromptMetadata = {
@@ -75,7 +89,7 @@ export function createBioAutopilotAgent(model: string): AgentConfig {
     ...base,
     description:
       "Fully autonomous bioinformatics orchestrator for end-to-end computational execution, side validation, wet-lab planning handoff, and acceptance-reviewed completion. (Bio-Autopilot - Labforge)",
-    prompt: `${base.prompt ?? ""}\n\n${BIO_AUTOPILOT_APPEND}`,
+    prompt: `${base.prompt ?? ""}\n\n${BIO_AUTOPILOT_APPEND}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
     color: "#0EA5A4",
     mode: MODE,
   }

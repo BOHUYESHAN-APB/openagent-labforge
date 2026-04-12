@@ -77,6 +77,55 @@ describe("keyword-detector message transform", () => {
     expect(textPart!.text).toContain("[search-mode]")
   })
 
+  test("should not duplicate an already-injected search-mode block on replay", async () => {
+    const collector = new ContextCollector()
+    const sessionID = "search-dedupe-session"
+    getMainSessionSpy = spyOn(sessionState, "getMainSessionID").mockReturnValue(sessionID)
+    const hook = createKeywordDetectorHook(createMockPluginInput(), collector)
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{
+        type: "text",
+        text: `[search-mode]
+MAXIMIZE SEARCH EFFORT.
+
+---
+
+search for the bug`,
+      }],
+    }
+
+    await hook["chat.message"]({ sessionID }, output)
+
+    const textPart = output.parts.find((p) => p.type === "text")
+    expect(textPart).toBeDefined()
+    expect((textPart!.text?.match(/\[search-mode\]/g) ?? []).length).toBe(1)
+  })
+
+  test("should strip stale analyze/search prelude when the replayed prompt no longer requests a mode", async () => {
+    const collector = new ContextCollector()
+    const sessionID = "mode-strip-session"
+    getMainSessionSpy = spyOn(sessionState, "getMainSessionID").mockReturnValue(sessionID)
+    const hook = createKeywordDetectorHook(createMockPluginInput(), collector)
+    const output = {
+      message: {} as Record<string, unknown>,
+      parts: [{
+        type: "text",
+        text: `[analyze-mode]
+ANALYSIS MODE.
+
+---
+
+just a normal message`,
+      }],
+    }
+
+    await hook["chat.message"]({ sessionID }, output)
+
+    const textPart = output.parts.find((p) => p.type === "text")
+    expect(textPart?.text).toBe("just a normal message")
+  })
+
   test("should inject semantic hint in suggest mode when no explicit keyword exists", async () => {
     // given
     const collector = new ContextCollector()

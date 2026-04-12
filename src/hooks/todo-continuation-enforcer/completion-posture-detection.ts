@@ -34,6 +34,7 @@ const COMPLETION_MARKER_PATTERNS = [
 ]
 
 const OPTIONAL_RETURN_PATTERNS = [
+  /如果你要/u,
   /后续如果(?:你)?(?:继续|还想|需要)/u,
   /如果你(?:后续)?(?:继续|还想|想要|需要)/u,
   /如果后续(?:还)?(?:要|想|需要)/u,
@@ -45,6 +46,7 @@ const CONCRETE_REMAINING_PATTERNS = [
   /下一最小波/u,
   /下一波范围/u,
   /下一轮/u,
+  /下一条/u,
   /下一步.{0,24}(先|就|继续|专门)/u,
   /还值得继续/u,
   /最值得继续/u,
@@ -134,8 +136,11 @@ export function detectLatestAssistantCompletionPosture(messages: MessageLike[]):
     const hasOptionalReturn = OPTIONAL_RETURN_PATTERNS.some((pattern) => pattern.test(combinedText))
     const hasConcreteRemaining = CONCRETE_REMAINING_PATTERNS.some((pattern) => pattern.test(combinedText))
     const hasList = LIST_SIGNAL_PATTERN.test(combinedText)
+    const hasConditionalStructuredFollowUp =
+      hasOptionalReturn &&
+      (hasList || /下一(?:条|轮|波|步)/u.test(combinedText) || /\bnext\b/i.test(combinedText))
 
-    if (hasConcreteRemaining) {
+    if (hasConcreteRemaining || hasConditionalStructuredFollowUp) {
       return {
         kind: "pseudo_complete",
         messageId: message.info?.id,
@@ -145,7 +150,9 @@ export function detectLatestAssistantCompletionPosture(messages: MessageLike[]):
           kind: "pseudo_complete",
         }),
         blockingFindings: [
-          "Completion claim conflicts with explicitly declared remaining work in the same response.",
+          hasConcreteRemaining
+            ? "Completion claim conflicts with explicitly declared remaining work in the same response."
+            : "Completion claim still defers concrete owned work as a conditional follow-up.",
           "Convert the declared next-step work into a fresh todo wave instead of ending with a conditional follow-up list.",
         ],
       }

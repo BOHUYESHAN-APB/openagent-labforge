@@ -9,8 +9,38 @@ export interface DetectedKeyword {
   message: string
 }
 
+const INJECTED_MODE_PREFIX_PATTERNS = [
+  "[search-mode]",
+  "[analyze-mode]",
+  "[semantic-mode-hint]",
+  "<ultrawork-mode>",
+]
+
+const INJECTION_SEPARATOR = "\n\n---\n\n"
+
 export function removeCodeBlocks(text: string): string {
   return text.replace(CODE_BLOCK_PATTERN, "").replace(INLINE_CODE_PATTERN, "")
+}
+
+export function stripInjectedKeywordPrelude(text: string): string {
+  let current = text
+
+  while (true) {
+    const trimmed = current.trimStart()
+    const hasInjectedPrefix = INJECTED_MODE_PREFIX_PATTERNS.some((prefix) =>
+      trimmed.startsWith(prefix),
+    )
+    if (!hasInjectedPrefix) {
+      return current
+    }
+
+    const separatorIndex = current.indexOf(INJECTION_SEPARATOR)
+    if (separatorIndex === -1) {
+      return current
+    }
+
+    current = current.slice(separatorIndex + INJECTION_SEPARATOR.length)
+  }
 }
 
 /**

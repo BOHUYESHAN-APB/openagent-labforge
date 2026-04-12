@@ -62,6 +62,34 @@ export type RuntimeWorkflowArtifactStrategy =
   | "append-supporting-artifacts"
   | "spawn-new-top-level-item"
 
+export type RuntimeWorkflowTodoKind =
+  | "discovery"
+  | "setup"
+  | "implement"
+  | "verify"
+  | "review-gate"
+  | "document"
+  | "blocked"
+  | "user-owned"
+
+export type RuntimeWorkflowTodoOwner = "agent" | "user" | "external"
+
+export type RuntimeWorkflowTodoSource =
+  | "model"
+  | "system"
+  | "review"
+  | "manual-boundary"
+
+export interface RuntimeWorkflowTodoNode {
+  id?: string
+  content: string
+  status: string
+  priority: string
+  kind: RuntimeWorkflowTodoKind
+  owner: RuntimeWorkflowTodoOwner
+  source: RuntimeWorkflowTodoSource
+}
+
 export interface RuntimeWorkflowPaths {
   rootDir: string
   artifactsDir: string
@@ -107,6 +135,10 @@ export interface RuntimeWorkflowState {
   artifact_strategy?: RuntimeWorkflowArtifactStrategy
   active_work_item?: string
   artifact_rationale?: string
+  structured_todos?: RuntimeWorkflowTodoNode[]
+  todo_graph_generation?: number
+  todo_graph_snapshot?: string
+  last_todo_reconciliation_at?: string
   next_stage?: RuntimeWorkflowStage
   last_review_verdict?: RuntimeWorkflowVerdict
   review_rejection_count?: number

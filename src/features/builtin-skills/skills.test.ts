@@ -83,8 +83,8 @@ describe("createBuiltinSkills", () => {
 		const agentBrowserSkills = createBuiltinSkills({ browserProvider: "agent-browser" })
 
 		// then
-		expect(defaultSkills).toHaveLength(40)
-		expect(agentBrowserSkills).toHaveLength(40)
+		expect(defaultSkills).toHaveLength(50)
+		expect(agentBrowserSkills).toHaveLength(50)
 		expect(defaultSkills.map((s) => s.name)).toContain("docx-workbench")
 		expect(defaultSkills.map((s) => s.name)).toContain("pdf-toolkit")
 		expect(defaultSkills.map((s) => s.name)).toContain("web-research")
@@ -98,11 +98,21 @@ describe("createBuiltinSkills", () => {
 		expect(defaultSkills.map((s) => s.name)).toContain("blast-search")
 		expect(defaultSkills.map((s) => s.name)).toContain("functional-annotation")
 		expect(defaultSkills.map((s) => s.name)).toContain("bio-methods")
+		expect(defaultSkills.map((s) => s.name)).toContain("experimental-design")
 		expect(defaultSkills.map((s) => s.name)).toContain("bio-visualization")
 		expect(defaultSkills.map((s) => s.name)).toContain("wet-lab-design")
 		expect(defaultSkills.map((s) => s.name)).toContain("bio-pipeline")
 		expect(defaultSkills.map((s) => s.name)).toContain("paper-evidence")
 		expect(defaultSkills.map((s) => s.name)).toContain("differential-expression")
+		expect(defaultSkills.map((s) => s.name)).toContain("read-qc")
+		expect(defaultSkills.map((s) => s.name)).toContain("read-alignment")
+		expect(defaultSkills.map((s) => s.name)).toContain("rna-quantification")
+		expect(defaultSkills.map((s) => s.name)).toContain("pathway-analysis")
+		expect(defaultSkills.map((s) => s.name)).toContain("variant-calling")
+		expect(defaultSkills.map((s) => s.name)).toContain("genome-annotation")
+		expect(defaultSkills.map((s) => s.name)).toContain("workflow-management")
+		expect(defaultSkills.map((s) => s.name)).toContain("reporting")
+		expect(defaultSkills.map((s) => s.name)).toContain("genome-intervals")
 		expect(defaultSkills.map((s) => s.name)).toContain("scrna-preprocessing")
 		expect(defaultSkills.map((s) => s.name)).toContain("cell-annotation")
 		expect(defaultSkills.map((s) => s.name)).toContain("atac-seq")
@@ -128,12 +138,22 @@ describe("createBuiltinSkills", () => {
 
 		// then
 		expect(byName.get("bio-methods")?.agent).toBe("bio-methodologist")
+		expect(byName.get("experimental-design")?.agent).toBe("bio-methodologist")
 		expect(byName.get("wet-lab-design")?.agent).toBe("wet-lab-designer")
 		expect(byName.get("paper-evidence")?.agent).toBe("paper-evidence-synthesizer")
 		expect(byName.get("bio-pipeline")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("bio-visualization")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("blast-search")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("functional-annotation")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("read-qc")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("read-alignment")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("rna-quantification")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("pathway-analysis")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("variant-calling")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("genome-annotation")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("workflow-management")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("genome-intervals")?.agent).toBe("bio-pipeline-operator")
+		expect(byName.get("reporting")?.agent).toBe("scientific-writer")
 		expect(byName.get("atac-seq")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("chip-seq")?.agent).toBe("bio-pipeline-operator")
 		expect(byName.get("metagenomics")?.agent).toBe("bio-pipeline-operator")
@@ -158,7 +178,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(39)
+		expect(skills.length).toBe(49)
 	})
 
 	test("should exclude multiple skills when they are in disabledSkills", () => {
@@ -173,7 +193,7 @@ describe("createBuiltinSkills", () => {
 		expect(skills.map((s) => s.name)).not.toContain("git-master")
 		expect(skills.map((s) => s.name)).toContain("frontend-ui-ux")
 		expect(skills.map((s) => s.name)).toContain("dev-browser")
-		expect(skills.length).toBe(38)
+		expect(skills.length).toBe(48)
 	})
 
 	test("should return an empty array when all skills are disabled", () => {
@@ -186,7 +206,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(36)
+		expect(skills.length).toBe(46)
 	})
 
 	test("should return all skills when disabledSkills set is empty", () => {
@@ -197,7 +217,7 @@ describe("createBuiltinSkills", () => {
 		const skills = createBuiltinSkills(options)
 
 		// #then
-		expect(skills.length).toBe(40)
+		expect(skills.length).toBe(50)
 	})
 
 	test("returns playwright-cli skill when browserProvider is 'playwright-cli'", () => {

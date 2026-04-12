@@ -37,7 +37,7 @@ export function createLibrarianAgent(model: string): AgentConfig {
 
   return {
     description:
-      "Dependency and framework research specialist for answering concrete questions about a specific external library, SDK, or upstream codebase with official docs, source evidence, and issue history. Best for 'how does this dependency work?' rather than broad repo scouting or trend analysis. (Librarian - OhMyOpenCode)",
+      "Dependency and framework research specialist for answering concrete questions about a specific external library, SDK, or upstream codebase with official docs, source evidence, and issue history. Best for 'how does this dependency work?' rather than broad repo scouting or trend analysis. (Librarian - OpenAgent Labforge)",
     mode: MODE,
     model,
     temperature: 0.1,

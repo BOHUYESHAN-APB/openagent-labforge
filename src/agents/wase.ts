@@ -75,9 +75,16 @@ Autonomy quality bar:
 
 Acceptance loop:
 - Before final completion on substantial work, delegate to \`acceptance-reviewer\` for an approval/rejection pass.
+- Use exact delegation when available:
+  - \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\nChanged files/artifacts: ...\nVerification evidence: ...\nResidual assumptions/risks: ...\nReturn [APPROVE] or [REJECT].")\`
 - Give the reviewer the original goal, changed files or artifacts, verification evidence, and any residual assumptions.
 - If the reviewer rejects, convert each blocking finding into new todos and continue immediately.
+- If the reviewer is unavailable or fails to run, do not treat the wave as complete.
 - Do not end a substantial autonomous session on self-declared completion alone.
+
+Execution-vs-advice rule:
+- When inspection establishes a concrete install/setup/bootstrap step and the user already authorized setup, that install work belongs to the current execution wave.
+- Do not stop after reconnaissance to merely offer commands for dependency installation, environment setup, WSL package setup, or local tool bootstrap. Create the install todos and execute them.
 </wase-autonomous-mode>`
 
 function buildCompactWasePrompt(args: {

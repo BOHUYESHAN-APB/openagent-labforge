@@ -13,7 +13,9 @@ import {
 import type { ToolPermission } from "../../features/hook-message-injector"
 import {
   markRuntimeWorkflowTerminalMessageHandled,
+  reconcileRuntimeWorkflowTodoGraph,
   readBoulderState,
+  parseLatestAcceptanceReviewBlocker,
   parseLatestAcceptanceReviewOutcome,
   readRuntimeWorkflowState,
   updateRuntimeWorkflowReviewOutcome,
@@ -46,8 +48,7 @@ import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
 import { shouldStopForStagnation } from "./stagnation-detection"
 import { shouldSuppressStaleTodoSnapshot } from "./stale-todo-guard"
-import { getIncompleteCount } from "./todo"
-import { getTodoSnapshot } from "./todo"
+import { getActiveStructuredTodos, getAgentOwnedStructuredTodoCount, getIncompleteCount, getTodoSnapshot } from "./todo"
 import { injectContinuationReplan } from "./continuation-injection"
 import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
@@ -64,6 +65,9 @@ function extractLastRealUserAgent(messages: Array<{ info?: MessageInfo; parts?: 
       .join("\n")
 
     if (combinedText.includes(OMO_INTERNAL_INITIATOR_MARKER)) {
+      continue
+    }
+    if (combinedText.includes("▣ DCP |") || combinedText.includes("Compression #")) {
       continue
     }
 
@@ -120,6 +124,7 @@ export async function handleSessionIdle(args: {
   let lastRealUserAgent: string | undefined
   let latestSessionAgent: string | undefined
   let latestCompletionPosture = detectLatestAssistantCompletionPosture([])
+  let latestReviewBlocker = null as ReturnType<typeof parseLatestAcceptanceReviewBlocker>
   const mainSessionID = getMainSessionID()
   const isMainSession = mainSessionID === sessionID
   const activeBoulderState = readBoulderState(ctx.directory)
@@ -217,6 +222,7 @@ export async function handleSessionIdle(args: {
     }
 
     const parsedReviewOutcome = parseLatestAcceptanceReviewOutcome(messages)
+    latestReviewBlocker = parseLatestAcceptanceReviewBlocker(messages)
     const runtimeState = readRuntimeWorkflowState(ctx.directory, sessionID)
     if (parsedReviewOutcome && runtimeState) {
       const alreadyRecorded = runtimeState.last_review_signature === parsedReviewOutcome.signature
@@ -274,18 +280,28 @@ export async function handleSessionIdle(args: {
     state.suppressedTodoSnapshot = undefined
   }
   const runtimeState = readRuntimeWorkflowState(ctx.directory, sessionID)
-  const autoModeLevel = runtimeState?.auto_mode_level ?? (isAutonomous ? "light" : undefined)
-  const interactionMode = runtimeState?.interaction_mode ?? (isAutonomous ? "batch" : undefined)
+  const reconciledRuntimeState = reconcileRuntimeWorkflowTodoGraph({
+    directory: ctx.directory,
+    sessionId: sessionID,
+    todos,
+    note: "Runtime todo graph reconciled from the latest session todo snapshot.",
+  }) ?? runtimeState
+  const activeStructuredTodos = getActiveStructuredTodos(reconciledRuntimeState?.structured_todos)
+  const agentOwnedStructuredTodoCount = getAgentOwnedStructuredTodoCount(reconciledRuntimeState?.structured_todos)
+  const autoModeLevel = reconciledRuntimeState?.auto_mode_level ?? (isAutonomous ? "light" : undefined)
+  const interactionMode = reconciledRuntimeState?.interaction_mode ?? (isAutonomous ? "batch" : undefined)
   const isHeavyAutonomous = isAutonomous && autoModeLevel !== "light"
   const shouldAutoContinueAcrossWaves = isAutonomous && interactionMode !== "batch"
   const completionAuditLimit = isAutonomous
     ? (isHeavyAutonomous ? 2 : 1)
     : 0
+  const hasApprovedAutonomousReview =
+    isAutonomous && reconciledRuntimeState?.last_review_verdict === "approve"
 
   const markBatchTerminalStop = (note: string): void => {
     state.lastApprovedTodoSnapshot = currentTodoSnapshot
     state.lastHandledCompletionSignature = latestCompletionPosture.signature
-    if (latestCompletionPosture.signature && runtimeState) {
+    if (latestCompletionPosture.signature && reconciledRuntimeState) {
       markRuntimeWorkflowTerminalMessageHandled({
         directory: ctx.directory,
         sessionId: sessionID,
@@ -298,7 +314,7 @@ export async function handleSessionIdle(args: {
   if (
     isAutonomous &&
     interactionMode === "batch" &&
-    runtimeState?.last_review_verdict === "approve"
+    hasApprovedAutonomousReview
   ) {
     markBatchTerminalStop("Batch review already approved. Hold position until explicit user follow-up.")
     sessionStateStore.resetContinuationProgress(sessionID)
@@ -314,7 +330,7 @@ export async function handleSessionIdle(args: {
     state,
     currentTodoSnapshot,
     hasContinuationIntent: state.hasContinuationIntent === true,
-    hasTrackedRuntimeWorkflow: isTrackedBoulderSession || runtimeState !== null,
+    hasTrackedRuntimeWorkflow: isTrackedBoulderSession || reconciledRuntimeState !== null,
     isMainSession,
     isAutonomous,
     lastRealUserAgent,
@@ -332,12 +348,50 @@ export async function handleSessionIdle(args: {
   }
 
   if (incompleteCount === 0) {
+    if (
+      isAutonomous &&
+      latestReviewBlocker &&
+      latestCompletionPosture.kind !== "pseudo_complete"
+    ) {
+      const blockerSignature = `${latestCompletionPosture.signature ?? "terminal"}::${latestReviewBlocker.signature}`
+      if (
+        reconciledRuntimeState?.last_terminal_message_signature === blockerSignature ||
+        state.lastHandledCompletionSignature === blockerSignature
+      ) {
+        sessionStateStore.resetContinuationProgress(sessionID)
+        log(`[${HOOK_NAME}] Acceptance-review blocker terminal stop already handled`, {
+          sessionID,
+          signature: blockerSignature,
+        })
+        return
+      }
+
+      markBatchTerminalStop(
+        "Autonomous wave reached a terminal stop with an explicit acceptance-review blocker. Hold position instead of reopening the same work.",
+      )
+      state.lastHandledCompletionSignature = blockerSignature
+      if (reconciledRuntimeState) {
+        markRuntimeWorkflowTerminalMessageHandled({
+          directory: ctx.directory,
+          sessionId: sessionID,
+          signature: blockerSignature,
+          note: "Autonomous wave stopped because acceptance-review delegation was explicitly unavailable.",
+        })
+      }
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Autonomous session paused on explicit acceptance-review blocker`, {
+        sessionID,
+        blockerSignature,
+      })
+      return
+    }
+
     if (isAutonomous && latestCompletionPosture.kind === "pseudo_complete") {
       const pseudoCompletionAlreadyHandled =
         state.lastHandledCompletionSignature === latestCompletionPosture.signature ||
-        runtimeState?.last_review_verdict === "reject" &&
-        runtimeState.last_review_signature === latestCompletionPosture.signature &&
-        runtimeState.last_review_handled_signature === latestCompletionPosture.signature
+        reconciledRuntimeState?.last_review_verdict === "reject" &&
+        reconciledRuntimeState.last_review_signature === latestCompletionPosture.signature &&
+        reconciledRuntimeState.last_review_handled_signature === latestCompletionPosture.signature
 
       if (pseudoCompletionAlreadyHandled) {
         log(`[${HOOK_NAME}] Pseudo-complete final message already handled; awaiting new execution state`, {
@@ -347,7 +401,7 @@ export async function handleSessionIdle(args: {
         return
       }
 
-      if (runtimeState && latestCompletionPosture.signature) {
+      if (reconciledRuntimeState && latestCompletionPosture.signature) {
         updateRuntimeWorkflowReviewOutcome({
           directory: ctx.directory,
           sessionId: sessionID,
@@ -359,7 +413,7 @@ export async function handleSessionIdle(args: {
         })
       }
 
-      if (runtimeState && latestCompletionPosture.signature) {
+      if (reconciledRuntimeState && latestCompletionPosture.signature) {
         await injectAutonomousReviewRework({
           ctx,
           sessionID,
@@ -388,10 +442,11 @@ export async function handleSessionIdle(args: {
     if (
       isAutonomous &&
       interactionMode === "batch" &&
-      latestCompletionPosture.kind === "terminal_complete"
+      latestCompletionPosture.kind === "terminal_complete" &&
+      hasApprovedAutonomousReview
     ) {
       if (
-        runtimeState?.last_terminal_message_signature === latestCompletionPosture.signature ||
+        reconciledRuntimeState?.last_terminal_message_signature === latestCompletionPosture.signature ||
         state.lastHandledCompletionSignature === latestCompletionPosture.signature
       ) {
         sessionStateStore.resetContinuationProgress(sessionID)
@@ -402,9 +457,9 @@ export async function handleSessionIdle(args: {
         return
       }
 
-      markBatchTerminalStop("Batch completion was accepted from the terminal assistant message after review.")
+      markBatchTerminalStop("Batch completion was accepted from the terminal assistant message after approved acceptance review.")
       sessionStateStore.resetContinuationProgress(sessionID)
-      log(`[${HOOK_NAME}] Batch autonomous session reached clean terminal completion after review`, {
+      log(`[${HOOK_NAME}] Batch autonomous session reached clean terminal completion after approved review`, {
         sessionID,
         signature: latestCompletionPosture.signature,
       })
@@ -413,17 +468,17 @@ export async function handleSessionIdle(args: {
 
     if (
       isAutonomous &&
-      runtimeState?.last_review_verdict === "reject" &&
-      runtimeState.last_review_signature &&
-      runtimeState.last_review_signature !== runtimeState.last_review_handled_signature
+      reconciledRuntimeState?.last_review_verdict === "reject" &&
+      reconciledRuntimeState.last_review_signature &&
+      reconciledRuntimeState.last_review_signature !== reconciledRuntimeState.last_review_handled_signature
     ) {
-      const nextStage = runtimeState.next_stage === "plan" ? "plan" : "build"
+      const nextStage = reconciledRuntimeState.next_stage === "plan" ? "plan" : "build"
       await injectAutonomousReviewRework({
         ctx,
         sessionID,
         nextStage,
-        blockingFindings: runtimeState.blocking_findings ?? [],
-        reviewSignature: runtimeState.last_review_signature,
+        blockingFindings: reconciledRuntimeState.blocking_findings ?? [],
+        reviewSignature: reconciledRuntimeState.last_review_signature,
         backgroundManager,
         skipAgents,
         sessionStateStore,
@@ -432,9 +487,26 @@ export async function handleSessionIdle(args: {
       return
     }
 
-    if (isAutonomous && runtimeState?.last_review_verdict === "approve") {
+    if (hasApprovedAutonomousReview) {
       sessionStateStore.resetContinuationProgress(sessionID)
       log(`[${HOOK_NAME}] Autonomous review approved completion`, { sessionID })
+      return
+    }
+    if (
+      isAutonomous &&
+      activeStructuredTodos.length > 0 &&
+      agentOwnedStructuredTodoCount === 0
+    ) {
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Autonomous session paused: only external or user-owned todo items remain`, {
+        sessionID,
+        activeStructuredTodos: activeStructuredTodos.map((todo) => ({
+          kind: todo.kind,
+          owner: todo.owner,
+          content: todo.content,
+          status: todo.status,
+        })),
+      })
       return
     }
 
@@ -447,6 +519,62 @@ export async function handleSessionIdle(args: {
         sessionStateStore,
         isContinuationStopped,
       })
+      return
+    }
+    if (isAutonomous) {
+      const missingReviewSignature = latestCompletionPosture.signature
+        ? `missing-review:${latestCompletionPosture.signature}`
+        : `missing-review:${sessionID}:${state.completionAuditCount ?? 0}`
+      const missingReviewFindings = [
+        "Autonomous execution attempted to stop without a recorded acceptance-reviewer verdict.",
+        "Run `task(subagent_type=\"acceptance-reviewer\", run_in_background=false, load_skills=[], prompt=\"Original goal: ... Changed files/artifacts: ... Verification evidence: ... Residual assumptions/risks: ... Return [APPROVE] or [REJECT].\")` before stopping.",
+      ]
+      const missingReviewAlreadyHandled =
+        reconciledRuntimeState?.last_review_verdict === "reject" &&
+        reconciledRuntimeState.last_review_signature === missingReviewSignature &&
+        reconciledRuntimeState.last_review_handled_signature === missingReviewSignature
+
+      if (missingReviewAlreadyHandled) {
+        sessionStateStore.resetContinuationProgress(sessionID)
+        log(`[${HOOK_NAME}] Missing-review terminal stop already handled; awaiting new execution state`, {
+          sessionID,
+          signature: missingReviewSignature,
+        })
+        return
+      }
+
+      if (reconciledRuntimeState) {
+        updateRuntimeWorkflowReviewOutcome({
+          directory: ctx.directory,
+          sessionId: sessionID,
+          verdict: "reject",
+          blockingFindings: missingReviewFindings,
+          nextStage: "build",
+          signature: missingReviewSignature,
+          note: "Autonomous wave attempted to stop without a recorded acceptance-reviewer verdict.",
+        })
+        await injectAutonomousReviewRework({
+          ctx,
+          sessionID,
+          nextStage: "build",
+          blockingFindings: missingReviewFindings,
+          reviewSignature: missingReviewSignature,
+          backgroundManager,
+          skipAgents,
+          sessionStateStore,
+          isContinuationStopped,
+        })
+      } else {
+        state.lastHandledCompletionSignature = missingReviewSignature
+        await injectContinuationReplan({
+          ctx,
+          sessionID,
+          backgroundManager,
+          skipAgents,
+          sessionStateStore,
+          isContinuationStopped,
+        })
+      }
       return
     }
     if (state.hasContinuationIntent && (!isAutonomous || shouldAutoContinueAcrossWaves)) {

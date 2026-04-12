@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import {
   ensureRuntimeWorkflowSession,
+  reconcileRuntimeWorkflowTodoGraph,
   writeRepoBootstrapSelection,
   updateRuntimeWorkflowArtifactPolicy,
 } from "../features/boulder-state"
@@ -150,6 +151,44 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("output_new/contest_bundle")
     expect(result).toContain("67/68 promoter figure set")
     expect(result).toContain("Token discipline")
+
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  test("injects structured todo graph context from runtime workflow state", () => {
+    const testDir = join(tmpdir(), `stage-managed-prompt-todo-graph-${Date.now()}`)
+    const planDir = join(testDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "ses_todo_graph",
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
+    reconcileRuntimeWorkflowTodoGraph({
+      directory: testDir,
+      sessionId: "ses_todo_graph",
+      todos: [
+        { id: "1", content: "Install the minimal RNA-seq toolchain in WSL", status: "in_progress", priority: "high" },
+        { id: "2", content: "Verify the installed WSL tools required for the first wave", status: "pending", priority: "high" },
+      ],
+    })
+
+    const result = buildStageManagedPromptContext({
+      directory: testDir,
+      sessionID: "ses_todo_graph",
+      agent: "bio-autopilot",
+    })
+
+    expect(result).toContain("[todo-graph]")
+    expect(result).toContain("(setup/agent) Install the minimal RNA-seq toolchain in WSL")
+    expect(result).toContain("(verify/agent) Verify the installed WSL tools required for the first wave")
 
     rmSync(testDir, { recursive: true, force: true })
   })

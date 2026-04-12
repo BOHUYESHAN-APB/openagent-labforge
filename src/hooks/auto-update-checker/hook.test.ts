@@ -232,12 +232,12 @@ describe("createAutoUpdateCheckerHook", () => {
     })
     await new Promise((resolve) => setTimeout(resolve, 50))
 
-    //#then - startup toast includes sisyphus wording
+    //#then - startup toast uses current Labforge branding
     expect(mockShowVersionToast).toHaveBeenCalledTimes(1)
     expect(mockShowVersionToast).toHaveBeenCalledWith(
       expect.anything(),
       "3.6.0",
-      expect.stringContaining("Sisyphus")
+      expect.stringContaining("OpenAgent Labforge")
     )
   })
 })

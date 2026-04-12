@@ -15,12 +15,12 @@ export function createAutoUpdateCheckerHook(ctx: PluginInput, options: AutoUpdat
   const getToastMessage = (isUpdate: boolean, latestVersion?: string): string => {
     if (isSisyphusEnabled) {
       return isUpdate
-        ? `Sisyphus on steroids is steering OpenCode.\nv${latestVersion} available. Restart to apply.`
-        : "Sisyphus on steroids is steering OpenCode."
+        ? `OpenAgent Labforge is steering OpenCode.\nv${latestVersion} available. Restart to apply.`
+        : "OpenAgent Labforge is steering OpenCode."
     }
     return isUpdate
-      ? `OpenCode is now on Steroids. openagent-labforge active.\nv${latestVersion} available. Restart OpenCode to apply.`
-      : "OpenCode is now on Steroids. openagent-labforge active."
+      ? `OpenAgent Labforge active.\nv${latestVersion} available. Restart OpenCode to apply.`
+      : "OpenAgent Labforge active."
   }
 
   let hasChecked = false

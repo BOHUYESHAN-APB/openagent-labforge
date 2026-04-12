@@ -29,7 +29,7 @@ export const SkillEntrySchema = z.union([z.boolean(), SkillDefinitionSchema])
 export const SkillsConfigSchema = z.union([
   z.array(z.string()),
   z.object({
-    bundle: z.enum(["full", "paper"]).optional(),
+    bundle: z.enum(["full", "paper", "bio"]).optional(),
     sources: z.array(SkillSourceSchema).optional(),
     enable: z.array(z.string()).optional(),
     disable: z.array(z.string()).optional(),

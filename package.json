@@ -26,9 +26,10 @@
     "./schema.json": "./dist/openagent-labforge.schema.json"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun --format esm --external @ast-grep/napi && tsc --emitDeclarationOnly && bun build src/cli/index.ts --outdir dist/cli --target bun --format esm --external @ast-grep/napi && bun run build:schema",
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm --external @ast-grep/napi && tsc --emitDeclarationOnly && bun build src/cli/index.ts --outdir dist/cli --target bun --format esm --external @ast-grep/napi && bun run build:schema && bun run build:bio-skills-catalog",
     "build:all": "bun run build && bun run build:binaries",
     "build:skills-catalog": "bun run script/build-skills-catalog.ts",
+    "build:bio-skills-catalog": "bun run script/build-bio-skills-catalog.ts",
     "build:binaries": "bun run script/build-binaries.ts",
     "build:schema": "bun run script/build-schema.ts",
     "skills:sync": "bun run script/sync-skills-whitelist.ts",

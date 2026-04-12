@@ -5,6 +5,7 @@ import type { SkillArgs, SkillInfo, SkillLoadOptions } from "./types"
 import type { LoadedSkill } from "../../features/opencode-skill-loader"
 import { getAllSkills, extractSkillTemplate } from "../../features/opencode-skill-loader/skill-content"
 import { injectGitMasterConfig } from "../../features/opencode-skill-loader/skill-content"
+import { filterDiscoveryVisibleSkills } from "../../features/opencode-skill-loader"
 import type { SkillMcpManager, SkillMcpClientInfo, SkillMcpServerContext } from "../../features/skill-mcp-manager"
 import type { Tool, Resource, Prompt } from "@modelcontextprotocol/sdk/types.js"
 import { discoverCommandsSync } from "../slashcommand/command-discovery"
@@ -213,14 +214,14 @@ export function createSkillTool(options: SkillLoadOptions = {}): ToolDefinition 
     if (cachedDescription) return cachedDescription
     const skills = await getSkills()
     const commands = getCommands()
-    const skillInfos = skills.map(loadedSkillToInfo)
+    const skillInfos = filterDiscoveryVisibleSkills(skills).map(loadedSkillToInfo)
     cachedDescription = formatCombinedDescription(skillInfos, commands)
     return cachedDescription
   }
 
   // Eagerly build description when callers pre-provide skills/commands.
   if (options.skills !== undefined) {
-    const skillInfos = options.skills.map(loadedSkillToInfo)
+    const skillInfos = filterDiscoveryVisibleSkills(options.skills).map(loadedSkillToInfo)
     const commandsForDescription = options.commands ?? []
     cachedDescription = formatCombinedDescription(skillInfos, commandsForDescription)
   } else if (options.commands !== undefined) {

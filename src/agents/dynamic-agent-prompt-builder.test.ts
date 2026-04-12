@@ -39,7 +39,9 @@ describe("buildCategorySkillsDelegationGuide", () => {
     const result = buildCategorySkillsDelegationGuide(categories, allSkills)
 
     //#then: should use compact format with both sections
-    expect(result).toContain("**Built-in**: playwright, frontend-ui-ux")
+    expect(result).toContain("**Built-in**:")
+    expect(result).toContain("playwright")
+    expect(result).toContain("frontend-ui-ux")
     expect(result).toContain("YOUR SKILLS (PRIORITY)")
     expect(result).toContain("react-19 (user)")
     expect(result).toContain("tailwind-4 (user)")
@@ -201,6 +203,19 @@ describe("buildUltraworkSection", () => {
     //#then: should have single section
     expect(result).toContain("Built-in Skills")
     expect(result).not.toContain("User-Installed Skills")
+  })
+
+  it("should cap long builtin skill listings with an overflow note", () => {
+    const skills: AvailableSkill[] = Array.from({ length: 12 }, (_, index) => ({
+      name: `builtin-${index + 1}`,
+      description: `Builtin skill ${index + 1}`,
+      location: "plugin",
+    }))
+
+    const result = buildUltraworkSection(agents, [], skills)
+
+    expect(result).toContain("Built-in Skills")
+    expect(result).toContain("... and 4 more built-in skills available")
   })
 })
 

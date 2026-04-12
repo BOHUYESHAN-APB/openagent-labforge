@@ -5027,7 +5027,8 @@
               "type": "string",
               "enum": [
                 "full",
-                "paper"
+                "paper",
+                "bio"
               ]
             },
             "sources": {

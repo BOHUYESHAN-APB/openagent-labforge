@@ -1,6 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { OhMyOpenCodeConfig } from "../../config"
-import { detectKeywordsWithType, extractPromptText } from "./detector"
+import { detectKeywordsWithType, extractPromptText, stripInjectedKeywordPrelude } from "./detector"
 import { getUltraworkMessage, isPlannerAgent } from "./constants"
 import { log } from "../../shared"
 import {
@@ -37,21 +37,27 @@ export function createKeywordDetectorHook(
       }
     ): Promise<void> => {
       const promptText = extractPromptText(output.parts)
+      const sanitizedPromptText = stripInjectedKeywordPrelude(promptText)
 
-      if (isSystemDirective(promptText)) {
+      if (isSystemDirective(sanitizedPromptText)) {
         log(`[keyword-detector] Skipping system directive message`, { sessionID: input.sessionID })
         return
       }
 
-      if (promptText.includes("<command-instruction>")) {
+      if (sanitizedPromptText.includes("<command-instruction>")) {
         log(`[keyword-detector] Skipping command template message`, { sessionID: input.sessionID })
         return
       }
 
       const currentAgent = getSessionAgent(input.sessionID) ?? input.agent
+      const textPartIndex = output.parts.findIndex((p) => p.type === "text" && p.text !== undefined)
+      const sanitizedPrimaryText =
+        textPartIndex !== -1
+          ? stripInjectedKeywordPrelude(output.parts[textPartIndex].text ?? "")
+          : undefined
 
       // Remove system-reminder content to prevent automated system messages from triggering mode keywords
-      const cleanText = removeSystemReminders(promptText)
+      const cleanText = removeSystemReminders(sanitizedPromptText)
       const modelID = input.model?.modelID
       let detectedKeywords = detectKeywordsWithType(cleanText, currentAgent, modelID)
 
@@ -77,6 +83,9 @@ export function createKeywordDetectorHook(
       }
 
       if (detectedKeywords.length === 0) {
+        if (textPartIndex !== -1 && sanitizedPrimaryText !== undefined) {
+          output.parts[textPartIndex].text = sanitizedPrimaryText
+        }
         return
       }
 
@@ -166,14 +175,13 @@ export function createKeywordDetectorHook(
           )
       }
 
-      const textPartIndex = output.parts.findIndex((p) => p.type === "text" && p.text !== undefined)
       if (textPartIndex === -1) {
         log(`[keyword-detector] No text part found, skipping injection`, { sessionID: input.sessionID })
         return
       }
 
       const allMessages = detectedKeywords.map((k) => k.message).join("\n\n")
-      const originalText = output.parts[textPartIndex].text ?? ""
+      const originalText = sanitizedPrimaryText ?? stripInjectedKeywordPrelude(output.parts[textPartIndex].text ?? "")
 
       output.parts[textPartIndex].text = `${allMessages}\n\n---\n\n${originalText}`
 

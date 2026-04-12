@@ -7,8 +7,18 @@ export interface ParsedReviewOutcome {
   signature: string
 }
 
+export interface ParsedReviewBlocker {
+  messageId?: string
+  reason: string
+  signature: string
+}
+
 const REJECT_PATTERN = /\[REJECT\]/i
 const APPROVE_PATTERN = /\[APPROVE\]/i
+const REVIEW_BLOCKER_AGENT_PATTERN =
+  /\bacceptance-review(?:er)?\b|验收|acceptance review|review delegation/iu
+const REVIEW_BLOCKER_UNAVAILABLE_PATTERN =
+  /\bunavailable\b|\bnot available\b|\bfailed to run\b|\btool .* unavailable\b|不可用|阻塞|blocked/iu
 const NUMBERED_FINDING_PATTERN = /^\s*\d+\.\s+(.+)$/gm
 const BULLET_FINDING_PATTERN = /^\s*[-*]\s+(.+)$/gm
 
@@ -52,6 +62,27 @@ export function parseAcceptanceReviewOutcome(text: string): ParsedReviewOutcome 
   return null
 }
 
+export function parseAcceptanceReviewBlocker(
+  text: string,
+): ParsedReviewBlocker | null {
+  if (!text) return null
+  if (
+    !REVIEW_BLOCKER_AGENT_PATTERN.test(text) ||
+    !REVIEW_BLOCKER_UNAVAILABLE_PATTERN.test(text)
+  ) {
+    return null
+  }
+
+  const normalized = text.replace(/\s+/g, " ").trim().slice(0, 600)
+  return {
+    reason: normalized,
+    signature: JSON.stringify({
+      kind: "review-blocker",
+      reason: normalized,
+    }),
+  }
+}
+
 interface MessagePart {
   type: string
   text?: string
@@ -81,6 +112,36 @@ export function parseLatestAcceptanceReviewOutcome(messages: MessageLike[]): Par
 
     const parsed = parseAcceptanceReviewOutcome(combinedText)
     if (parsed) return parsed
+  }
+
+  return null
+}
+
+export function parseLatestAcceptanceReviewBlocker(
+  messages: MessageLike[],
+): ParsedReviewBlocker | null {
+  if (!messages || messages.length === 0) return null
+
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]
+    const role = message.info?.role ?? message.role
+    if (role !== "assistant" || !message.parts) continue
+
+    const combinedText = message.parts
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => part.text?.trim() ?? "")
+      .join("\n")
+      .trim()
+
+    if (!combinedText) continue
+
+    const parsed = parseAcceptanceReviewBlocker(combinedText)
+    if (parsed) {
+      return {
+        ...parsed,
+        messageId: (message.info as { id?: string } | undefined)?.id,
+      }
+    }
   }
 
   return null

@@ -1,4 +1,5 @@
 import type { Todo } from "./types"
+import type { RuntimeWorkflowTodoNode } from "../../features/boulder-state"
 
 export function getIncompleteCount(todos: Todo[]): number {
   return todos.filter(
@@ -34,4 +35,24 @@ export function getTodoSnapshot(todos: Todo[]): string {
     })
 
   return JSON.stringify(normalizedTodos)
+}
+
+export function getActiveStructuredTodos(
+  todos: RuntimeWorkflowTodoNode[] | undefined,
+): RuntimeWorkflowTodoNode[] {
+  if (!todos) return []
+
+  return todos.filter(
+    (todo) =>
+      todo.status !== "completed" &&
+      todo.status !== "cancelled" &&
+      todo.status !== "deleted",
+  )
+}
+
+export function getAgentOwnedStructuredTodoCount(
+  todos: RuntimeWorkflowTodoNode[] | undefined,
+): number {
+  return getActiveStructuredTodos(todos).filter((todo) => todo.owner === "agent")
+    .length
 }

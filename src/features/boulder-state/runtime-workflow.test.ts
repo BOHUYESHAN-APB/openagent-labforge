@@ -13,13 +13,19 @@ import {
   markRuntimeWorkflowTerminalMessageHandled,
   markRuntimeWorkflowReviewHandled,
   readRuntimeWorkflowState,
+  reconcileRuntimeWorkflowTodoGraph,
   reopenRuntimeWorkflowAfterApprovedBatch,
   updateRuntimeWorkflowArtifactPolicy,
   updateRuntimeWorkflowManualBoundaries,
   updateRuntimeWorkflowStage,
   updateRuntimeWorkflowReviewOutcome,
 } from "./runtime-workflow"
-import { parseAcceptanceReviewOutcome, parseLatestAcceptanceReviewOutcome } from "./review-outcome"
+import {
+  parseAcceptanceReviewBlocker,
+  parseAcceptanceReviewOutcome,
+  parseLatestAcceptanceReviewBlocker,
+  parseLatestAcceptanceReviewOutcome,
+} from "./review-outcome"
 
 describe("runtime-workflow", () => {
   let testDir: string
@@ -256,6 +262,48 @@ describe("runtime-workflow", () => {
     expect(buildFile).toContain("User-Owned / Manual Boundaries")
   })
 
+  test("reconciles a structured runtime todo graph with setup, verify, review-gate, and user-owned tasks", () => {
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-todo-graph-1",
+      activePlan: "/repo/.opencode/openagent-labforge/plans/test.md",
+      currentStage: "build",
+    })
+
+    updateRuntimeWorkflowManualBoundaries({
+      directory: testDir,
+      sessionId: "session-todo-graph-1",
+      boundaries: ["下载由我处理，我手动去下载。"],
+    })
+
+    const updated = reconcileRuntimeWorkflowTodoGraph({
+      directory: testDir,
+      sessionId: "session-todo-graph-1",
+      todos: [
+        { id: "1", content: "Install the minimal RNA-seq toolchain in WSL", status: "in_progress", priority: "high" },
+        { id: "2", content: "Verify the installed WSL tools required for the first wave", status: "pending", priority: "high" },
+        { id: "3", content: "Keep the acceptance-review blocker explicitly recorded for this checkpoint", status: "pending", priority: "medium" },
+        { id: "4", content: "下载剩余数据文件", status: "pending", priority: "medium" },
+      ],
+      note: "Todo graph reconciled.",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-todo-graph-1")
+    expect(updated?.todo_graph_generation).toBe(1)
+    expect(state?.structured_todos?.map((todo) => todo.kind)).toEqual([
+      "setup",
+      "verify",
+      "review-gate",
+      "user-owned",
+    ])
+    expect(state?.structured_todos?.map((todo) => todo.owner)).toEqual([
+      "agent",
+      "agent",
+      "external",
+      "user",
+    ])
+  })
+
   test("preserves wave and mode state when the runtime workflow session is re-initialized", () => {
     ensureRuntimeWorkflowSession({
       directory: testDir,
@@ -316,6 +364,31 @@ Summary: Ready to ship.`)
 
     expect(parsed?.verdict).toBe("reject")
     expect(parsed?.blockingFindings).toContain("Missing verification evidence")
+  })
+
+  test("parses acceptance review blocker from assistant closeout text", () => {
+    const parsed = parseAcceptanceReviewBlocker(
+      "正式 acceptance-review delegation 仍受工具不可用阻塞，因此当前只能先停在这里等待后续处理。",
+    )
+
+    expect(parsed?.reason).toContain("acceptance-review")
+    expect(typeof parsed?.signature).toBe("string")
+  })
+
+  test("parses the latest acceptance review blocker from assistant messages", () => {
+    const parsed = parseLatestAcceptanceReviewBlocker([
+      { info: { role: "assistant", id: "msg-1" }, parts: [{ type: "text", text: "old blocker" }] },
+      {
+        info: { role: "assistant", id: "msg-2" },
+        parts: [{
+          type: "text",
+          text: "正式 acceptance-review delegation 仍受工具不可用阻塞，因此当前只能先停在这里等待后续处理。",
+        }],
+      },
+    ])
+
+    expect(parsed?.messageId).toBe("msg-2")
+    expect(parsed?.reason).toContain("工具不可用")
   })
 
   test("marks review rejection as handled and moves to next stage", () => {

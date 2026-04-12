@@ -24,6 +24,18 @@ export interface AvailableCategory {
   model?: string
 }
 
+const MAX_BUILTIN_SKILL_PREVIEW = 8
+const MAX_CUSTOM_SKILL_PREVIEW = 10
+
+function buildSkillPreview(skills: AvailableSkill[], limit: number): string {
+  const names = skills.map((skill) => skill.name)
+  const shown = names.slice(0, limit)
+  const hiddenCount = Math.max(0, names.length - shown.length)
+  if (shown.length === 0) return "(none)"
+  if (hiddenCount === 0) return shown.join(", ")
+  return `${shown.join(", ")} ... (+${hiddenCount} more)`
+}
+
 export function buildAgentIdentitySection(
   agentName: string,
   roleDescription: string,
@@ -182,11 +194,15 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
   const builtinSkills = skills.filter((s) => s.location === "plugin")
   const customSkills = skills.filter((s) => s.location !== "plugin")
 
-  const builtinNames = builtinSkills.map((s) => s.name).join(", ")
-  const customNames = customSkills.map((s) => {
+  const builtinNames = buildSkillPreview(builtinSkills, MAX_BUILTIN_SKILL_PREVIEW)
+  const customNames = buildSkillPreview(customSkills.map((s) => ({
+    ...s,
+    name: `${s.name} (${s.location === "project" ? "project" : "user"})`,
+  })), MAX_CUSTOM_SKILL_PREVIEW)
+  const customSkillSourceLines = customSkills.map((s) => {
     const source = s.location === "project" ? "project" : "user"
-    return `${s.name} (${source})`
-  }).join(", ")
+    return `- ${s.name} (${source})`
+  }).slice(0, MAX_CUSTOM_SKILL_PREVIEW)
   const skillNames = new Set(skills.map((s) => s.name))
   const frontendVerificationSkills = ["playwright", "agent-browser", "dev-browser"]
     .filter((name) => skillNames.has(name))
@@ -247,6 +263,7 @@ export function buildCategorySkillsDelegationGuide(categories: AvailableCategory
 
 **Built-in**: ${builtinNames}
 **⚡ YOUR SKILLS (PRIORITY)**: ${customNames}
+${customSkillSourceLines.length > 0 ? `\n${customSkillSourceLines.join("\n")}` : ""}
 
 > User-installed skills OVERRIDE built-in defaults. ALWAYS prefer YOUR SKILLS when domain matches.
 > Full skill descriptions → use the \`skill\` tool to check before EVERY delegation.`
@@ -405,6 +422,7 @@ export function buildHardBlocksSection(): string {
     "- Leave code in broken state after failures — **Never**",
     "- `background_cancel(all=true)` — **Never.** Always cancel individually by taskId.",
     "- Delivering final answer before collecting Oracle result — **Never.**",
+    "- Declaring the current wave complete while launched background tasks that materially affect the active todo are still unresolved — **Never**.",
   ]
 
   return `## Hard Blocks (NEVER violate)
@@ -420,6 +438,8 @@ export function buildAntiPatternsSection(): string {
     "- **Search**: Firing agents for single-line typos or obvious syntax errors",
     "- **Debugging**: Shotgun debugging, random changes",
     "- **Background Tasks**: Polling `background_output` on running tasks — end response and wait for notification",
+    "- **Background Tasks**: Cancelling unresolved exploration/research subtasks before collecting their result or explicitly proving they are disposable",
+    "- **Subagent Evidence**: Treating `0 toolcalls`, empty exploration, or missing-binary shell failures as valid evidence instead of failed reconnaissance",
     "- **Oracle**: Delivering answer without collecting Oracle results",
   ]
 
@@ -500,18 +520,24 @@ export function buildUltraworkSection(
 
     if (builtinSkills.length > 0) {
       lines.push("**Built-in Skills** (combine with categories):")
-      for (const skill of builtinSkills) {
+      for (const skill of builtinSkills.slice(0, MAX_BUILTIN_SKILL_PREVIEW)) {
         const shortDesc = skill.description.split(".")[0] || skill.description
         lines.push(`- \`${skill.name}\`: ${shortDesc}`)
+      }
+      if (builtinSkills.length > MAX_BUILTIN_SKILL_PREVIEW) {
+        lines.push(`- ... and ${builtinSkills.length - MAX_BUILTIN_SKILL_PREVIEW} more built-in skills available through \`skill(name=\"...\")\``)
       }
       lines.push("")
     }
 
     if (customSkills.length > 0) {
       lines.push("**User-Installed Skills** (HIGH PRIORITY - user installed these for their workflow):")
-      for (const skill of customSkills) {
+      for (const skill of customSkills.slice(0, MAX_CUSTOM_SKILL_PREVIEW)) {
         const shortDesc = skill.description.split(".")[0] || skill.description
         lines.push(`- \`${skill.name}\`: ${shortDesc}`)
+      }
+      if (customSkills.length > MAX_CUSTOM_SKILL_PREVIEW) {
+        lines.push(`- ... and ${customSkills.length - MAX_CUSTOM_SKILL_PREVIEW} more user/project skills available through \`skill(name=\"...\")\``)
       }
       lines.push("")
     }

@@ -18,7 +18,8 @@ ANALYSIS MODE. Gather context before diving deep:
 CONTEXT GATHERING (parallel):
 - 1-2 explore agents (codebase patterns, implementations)
 - 1-2 librarian agents (if external library involved)
-- Direct tools: Grep, AST-grep, LSP for targeted searches
+- Direct tools: \`grep\`, \`glob\`, \`ast_grep\`, and \`lsp_*\` for targeted searches
+- If shell tools like \`rg\` or \`sg\` are unavailable, prefer the built-in tools instead of trying missing binaries
 
 IF COMPLEX - DO NOT STRUGGLE ALONE. Consult specialists:
 - **Oracle**: Conventional problems (architecture, debugging, complex logic)

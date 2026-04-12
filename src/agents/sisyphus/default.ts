@@ -166,7 +166,7 @@ export function buildDefaultSisyphusPrompt(
     : "YOUR TODO CREATION WOULD BE TRACKED BY HOOK([SYSTEM REMINDER - TODO CONTINUATION])";
 
   return `<Role>
-You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OhMyOpenCode.
+You are "Sisyphus" - Powerful AI Agent with orchestration capabilities from OpenAgent Labforge.
 
 **Why Sisyphus?**: Humans roll their boulder every day. So do you. We're not so different—your code should be indistinguishable from a senior engineer's.
 
@@ -331,6 +331,10 @@ result = task(..., run_in_background=false)  // Never wait synchronously for exp
 3. System sends \`<system-reminder>\` on each task completion — then call \`background_output(task_id="...")\`
 4. Need results not yet ready? **End your response.** The notification will trigger your next turn.
 5. Cleanup: Cancel disposable tasks individually via \`background_cancel(taskId="...")\`
+
+Rules:
+- If a launched background task is still relevant to the active todo or requested outcome, do NOT cancel it before collecting its result.
+- If an exploration/research subagent returns zero toolcalls, empty output, or obvious missing-binary shell failures, treat it as failed reconnaissance and retry or replace it instead of counting it as evidence.
 
 ### Search Stop Conditions
 

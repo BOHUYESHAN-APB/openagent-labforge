@@ -53,7 +53,7 @@ function getPackageRootDir(): string {
 }
 
 function buildConfigSourceCacheKey(options: {
-  bundle?: "full" | "paper"
+  bundle?: "full" | "paper" | "bio"
   sources: Array<string | { path: string; recursive?: boolean; glob?: string }>
 }): string {
   return JSON.stringify({
@@ -70,22 +70,31 @@ function buildConfigSourceCacheKey(options: {
   })
 }
 
-function getGeneratedBundleSource(options: { configDir: string; bundle?: "full" | "paper" }): { path: string; recursive: true; glob?: string } | null {
-  if (!options.bundle) return null
+function getGeneratedBundleSourcePaths(options: {
+  configDir: string
+  bundle?: "full" | "paper" | "bio"
+}): Array<{ path: string; recursive: true; glob?: string }> {
+  if (!options.bundle) return []
 
-  const configDirCandidate = join(options.configDir, "generated", "skills-bundles", options.bundle, "skills")
-  if (existsSync(configDirCandidate)) {
+  const bundleNames =
+    options.bundle === "full"
+      ? (["full", "bio"] as const)
+      : ([options.bundle] as const)
+
+  return bundleNames.map((bundleName) => {
+    const configDirCandidate = join(options.configDir, "generated", "skills-bundles", bundleName, "skills")
+    if (existsSync(configDirCandidate)) {
+      return {
+        path: configDirCandidate,
+        recursive: true,
+      }
+    }
+
     return {
-      path: configDirCandidate,
+      path: join(getPackageRootDir(), "generated", "skills-bundles", bundleName, "skills"),
       recursive: true,
     }
-  }
-
-  const packageCandidate = join(getPackageRootDir(), "generated", "skills-bundles", options.bundle, "skills")
-  return {
-    path: packageCandidate,
-    recursive: true,
-  }
+  })
 }
 
 function isHttpUrl(path: string): boolean {
@@ -161,13 +170,13 @@ export async function discoverConfigSourceSkills(options: {
 }): Promise<LoadedSkill[]> {
   const startedAt = performance.now()
   const normalized = normalizeSkillsConfig(options.config)
-  const generatedBundleSource = getGeneratedBundleSource({
+  const generatedBundleSources = getGeneratedBundleSourcePaths({
     configDir: options.configDir,
     bundle: normalized.bundle,
   })
 
-  const effectiveSources = generatedBundleSource
-    ? [generatedBundleSource, ...normalized.sources]
+  const effectiveSources = generatedBundleSources.length > 0
+    ? [...generatedBundleSources, ...normalized.sources]
     : normalized.sources
 
   const cacheKey = buildConfigSourceCacheKey({
@@ -182,7 +191,7 @@ export async function discoverConfigSourceSkills(options: {
       elapsedMs: Math.round(performance.now() - startedAt),
       configuredBundle: normalized.bundle,
       sourceCount: effectiveSources.length,
-      resolvedBundlePath: generatedBundleSource?.path,
+      resolvedBundlePath: generatedBundleSources.map((source) => source.path),
       loadedSkillCount: cached.skills.length,
       cache: "memory-hit",
     })
@@ -196,7 +205,7 @@ export async function discoverConfigSourceSkills(options: {
       elapsedMs: Math.round(performance.now() - startedAt),
       configuredBundle: normalized.bundle,
       sourceCount: effectiveSources.length,
-      resolvedBundlePath: generatedBundleSource?.path,
+      resolvedBundlePath: generatedBundleSources.map((source) => source.path),
       loadedSkillCount: skills.length,
       cache: "inflight-hit",
     })
@@ -241,7 +250,7 @@ export async function discoverConfigSourceSkills(options: {
       elapsedMs: Math.round(performance.now() - startedAt),
       configuredBundle: normalized.bundle,
       sourceCount: effectiveSources.length,
-      resolvedBundlePath: generatedBundleSource?.path,
+      resolvedBundlePath: generatedBundleSources.map((source) => source.path),
       loadedSkillCount: deduplicated.length,
       cache: "miss",
     })

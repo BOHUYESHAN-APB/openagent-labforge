@@ -283,9 +283,18 @@ Execution Status
 - User-owned/external pending: none|present
 - Auto action: continue
 
+If the current wave is materially finished but formal acceptance review is blocked by missing tools, unavailable reviewer delegation, or another explicit external gate, finish with this exact block:
+
+Execution Status
+- Current wave: complete
+- Agent-owned remaining work: none
+- User-owned/external pending: present
+- Auto action: ask-user
+
 Rules:
 - optional suggestions, future ideas, or user-owned/manual/external tasks must NOT be presented as agent-owned remaining work
 - if the user said they will handle a step manually, that belongs under user-owned/external pending, not under agent-owned remaining work
+- if formal acceptance review is blocked by unavailable tools or reviewer delegation, do not fake approval and do not mark agent-owned work as present just to keep looping
 - do not write vague endings like "if you want I can continue" without the Execution Status block
 - do not mix "wave complete" language with hidden owned backlog in the same close-out
 - do not hide key technical choices inside prose when the user will need to review the decision later; put them under Which
@@ -470,6 +479,7 @@ export function buildAutonomousCloseoutRuntimeCapability(
       "- If this wave ends here, close it with 4W / WNWC plus explicit Verification, Boundaries, Ownership, Risks, and Execution Status.",
       "- If agent-owned work still remains, declare `Current wave: incomplete`, set `Agent-owned remaining work: present`, and continue instead of ending with optional future-work prose.",
       "- If only user-owned/manual or external work remains, keep `Agent-owned remaining work: none` and report the remainder under Ownership rather than reopening it as autonomous work.",
+      "- If formal acceptance review is blocked by unavailable tools or reviewer delegation, treat that as a blocked closeout: `Current wave: complete`, `Agent-owned remaining work: none`, `User-owned/external pending: present`, `Auto action: ask-user`.",
     )
   }
 

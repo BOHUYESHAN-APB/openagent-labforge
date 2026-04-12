@@ -56,8 +56,10 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("delegate to `acceptance-reviewer`")
     expect(agent.prompt).toContain("use the `question` tool")
     expect(agent.prompt).toContain("Never invent a simulated project scenario")
+    expect(agent.prompt).toContain("Create the install todos and execute them")
     expect(agent.prompt).toContain("customized 4W / WNWC closeout pattern")
     expect(agent.prompt).toContain("WNWC Closeout")
+    expect(agent.prompt).toContain("Auto action: ask-user")
     expect(agent.prompt).toContain("- Which:")
   })
 
@@ -164,9 +166,13 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("only escalate to a heavier multi-wave backlog after real progress or explicit heavy workflow state")
     expect(agent.prompt).toContain("after a meaningful execution wave")
     expect(agent.prompt).toContain("use acceptance-reviewer for the final approve/reject decision")
+    expect(agent.prompt).toContain("task(subagent_type=\"acceptance-reviewer\"")
+    expect(agent.prompt).toContain("install the required minimal toolchain in the current wave")
     expect(agent.prompt).toContain("side validation")
     expect(agent.prompt).toContain("request decisive missing data early with the `question` tool")
     expect(agent.prompt).toContain("do not recast the task as a simulated scenario")
+    expect(agent.prompt).toContain("WNWC Closeout")
+    expect(agent.prompt).toContain("Auto action: ask-user")
   })
 
   test("acceptance-reviewer includes review and autonomous acceptance workflow capability blocks", () => {

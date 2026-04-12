@@ -8,6 +8,12 @@ Future/**
 # Build output
 dist/
 generated/
+!generated/
+generated/*
+!generated/skills-bundles/
+generated/skills-bundles/*
+!generated/skills-bundles/bio/
+!generated/skills-bundles/bio/**
 *.tgz
 *.zip
 *.tar

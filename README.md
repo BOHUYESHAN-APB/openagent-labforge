@@ -333,7 +333,38 @@ This is not limited to generic "analysis". The intended workflow includes:
 
 ## Built-in Skill Direction
 
-The built-in skill set now covers both general and bio workflows.
+The skill system has two bundled forms:
+
+- TypeScript built-in skills: high-frequency, always-packaged skills maintained
+  in source code
+- file-backed skills: `SKILL.md` directory bundles shipped under
+  `generated/skills-bundles/`
+
+Both forms ship with the plugin package. Users do not need to install the
+bundled skills separately.
+
+The rule of thumb is:
+
+- keep high-frequency operational skills as TypeScript built-ins
+- keep large, fast-growing domain catalogs as file-backed bundles
+- load heavy file-backed details on demand through the `skill` tool
+
+Current file-backed bundles:
+
+- `full`: general engineering / writing / research bundle
+- `paper`: paper-writing focused bundle
+- `bio`: full bioinformatics catalog bundle
+
+The `bio` bundle is generated from the imported bioSkills tree plus Labforge's
+own bio wrappers. It is committed under:
+
+- `generated/skills-bundles/bio/`
+
+The current compact local bundle size is about `4.0 MB` before packaging.
+
+### TypeScript built-in skills
+
+The TypeScript built-in skill set now covers both general and bio workflows.
 
 Examples:
 
@@ -380,6 +411,50 @@ Examples:
 The bio skills are written as execution-oriented references: they specify
 preferred tools, typical commands/code paths, expected artifacts, and boundary
 conditions rather than acting as vague prompt decoration.
+
+### File-backed bioinformatics skills
+
+The bioinformatics file-backed bundle uses a directory-first routing mechanism.
+
+Root entry:
+
+- `research/bioinformatics`
+
+Routing pattern:
+
+1. load `skill(name="research/bioinformatics")`
+2. choose and load a category guide, for example:
+   - `research/bioinformatics/read-qc`
+   - `research/bioinformatics/read-alignment`
+   - `research/bioinformatics/rna-quantification`
+   - `research/bioinformatics/pathway-analysis`
+   - `research/bioinformatics/variant-calling`
+   - `research/bioinformatics/genome-annotation`
+   - `research/bioinformatics/single-cell`
+3. load the narrowest leaf skill, for example:
+   - `research/bioinformatics/read-qc/fastp-workflow`
+   - `research/bioinformatics/read-alignment/star-alignment`
+   - `research/bioinformatics/rna-quantification/featurecounts-counting`
+   - `research/bioinformatics/pathway-analysis/gsea`
+   - `research/bioinformatics/variant-calling/gatk-variant-calling`
+   - `research/bioinformatics/genome-annotation/prokaryotic-annotation`
+
+The leaf skills are intentionally file-backed and loaded on demand. This avoids
+front-loading hundreds of detailed bioinformatics workflows into the prompt
+while still shipping them as part of the plugin package.
+
+Labforge's TypeScript bio skills are also exposed through the generated
+`research/bioinformatics/labforge-core` wrapper category, so bio agents can use
+one directory-style route even when the final target is a TypeScript built-in
+skill such as `bio-tools`, `bio-methods`, or `bio-pipeline`.
+
+Bio agents now carry explicit instructions to treat file-backed skill loading
+as setup for substantial bioinformatics work:
+
+- broad or modality-specific bio work should start at
+  `research/bioinformatics`
+- category guides should be loaded before leaf skills
+- leaf skills should be invoked and used, not merely named from memory
 
 The newer general-purpose additions are meant to strengthen:
 
@@ -513,10 +588,12 @@ Current install reality:
 Recommended workflow:
 
 ```bash
-bun run build:skills-catalog
 bun run build
 bun pm pack
 ```
+
+`bun run build` now also generates the bio skill bundle through
+`build:bio-skills-catalog`.
 
 Then follow:
 

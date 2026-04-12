@@ -47,7 +47,7 @@ describe("detectLatestAssistantCompletionPosture", () => {
     expect(result.kind).toBe("pseudo_complete")
   })
 
-  test("treats optional suggestion lists as terminal completion when they do not claim remaining owned work", () => {
+  test("treats conditional next-step lists as pseudo completion", () => {
     const result = detectLatestAssistantCompletionPosture([
       {
         info: { role: "assistant", id: "msg-4" },
@@ -58,6 +58,6 @@ describe("detectLatestAssistantCompletionPosture", () => {
       },
     ])
 
-    expect(result.kind).toBe("terminal_complete")
+    expect(result.kind).toBe("pseudo_complete")
   })
 })

@@ -7,7 +7,11 @@ import { tmpdir } from "node:os"
 import type { BackgroundManager } from "../../features/background-agent"
 import { setMainSession, subagentSessions, _resetForTesting } from "../../features/claude-code-session-state"
 import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
-import { ensureRuntimeWorkflowSession, updateRuntimeWorkflowReviewOutcome } from "../../features/boulder-state"
+import {
+  ensureRuntimeWorkflowSession,
+  updateRuntimeWorkflowManualBoundaries,
+  updateRuntimeWorkflowReviewOutcome,
+} from "../../features/boulder-state"
 import { getAgentDisplayName } from "../../shared/agent-display-names"
 import { createTodoContinuationEnforcer } from "."
 import {
@@ -710,7 +714,7 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
 
-  test("batch interaction mode should not auto-replan into another wave after the audit pass", async () => {
+  test("batch interaction mode should reject terminal stop without reviewer verdict after the audit pass", async () => {
     const sessionID = "main-autonomous-batch-stop"
     const tempDir = mkdtempSync(join(tmpdir(), "todo-batch-stop-"))
     const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
@@ -760,7 +764,9 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
-    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls).toHaveLength(2)
+    expect(promptCalls[1].text).toContain("AUTONOMOUS REVIEW REWORK")
+    expect(promptCalls[1].text).toContain("without a recorded acceptance-reviewer verdict")
 
     rmSync(tempDir, { recursive: true, force: true })
   })
@@ -822,10 +828,23 @@ describe("todo-continuation-enforcer", () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  test("terminal completion after one audit should not be re-audited on the same message in light batch mode", async () => {
+  test("terminal completion without approved review is rejected into a rework wave after the audit pass", async () => {
     const sessionID = "main-autonomous-terminal-signature"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-terminal-no-review-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "small-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
     setMainSession(sessionID)
     setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "review",
+    })
 
     mockMessages = [
       {
@@ -834,7 +853,7 @@ describe("todo-continuation-enforcer", () => {
       } as any,
     ]
 
-    const mockInput = createMockPluginInput()
+    const mockInput = createMockPluginInput(tempDir)
     mockInput.client.session.todo = async () => ({ data: [
       { id: "1", content: "Task 1", status: "completed", priority: "high" },
     ]})
@@ -857,14 +876,74 @@ describe("todo-continuation-enforcer", () => {
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
-    await fakeTimers.advanceBy(2500, true)
-    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls).toHaveLength(2)
+    expect(promptCalls[1].text).toContain("AUTONOMOUS REVIEW REWORK")
+    expect(promptCalls[1].text).toContain("without a recorded acceptance-reviewer verdict")
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test("explicit acceptance-review blocker pauses batch completion instead of re-auditing the same wave", async () => {
+    const sessionID = "main-autonomous-review-blocked"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-review-blocked-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "blocked-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "review",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-blocked", role: "assistant", agent: "bio-autopilot", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{
+          type: "text",
+          text: `WNWC Closeout
+- What:
+- Next:
+- Where:
+- Which:
+- Verification:
+- Boundaries:
+- Ownership:
+- Risks:
+- 正式 acceptance-review delegation 仍受工具不可用阻塞。
+
+Execution Status
+- Current wave: complete
+- Agent-owned remaining work: none
+- User-owned/external pending: present
+- Auto action: stop`,
+        }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
 
     await hook.handler({
       event: { type: "session.idle", properties: { sessionID } },
     })
-    await fakeTimers.advanceBy(2500, true)
-    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls).toHaveLength(0)
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(0)
+
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("pseudo completion after audit should be rejected into a fresh rework wave", async () => {
@@ -936,6 +1015,45 @@ describe("todo-continuation-enforcer", () => {
 
     // then - no continuation injected
     expect(promptCalls).toHaveLength(0)
+  })
+
+  test("autonomous session should pause when only user-owned or external structured todos remain", async () => {
+    const sessionID = "main-user-owned-only"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-user-owned-only-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "user-owned-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "build",
+    })
+    updateRuntimeWorkflowManualBoundaries({
+      directory: tempDir,
+      sessionId: sessionID,
+      boundaries: ["下载由我处理，我手动去下载。"],
+    })
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "下载剩余数据文件", status: "pending", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    expect(promptCalls).toHaveLength(0)
+
+    rmSync(tempDir, { recursive: true, force: true })
   })
 
   test("should not inject when background tasks are running", async () => {
@@ -1460,7 +1578,7 @@ describe("todo-continuation-enforcer", () => {
 
     //#then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].agent).toBe(getAgentDisplayName("wase"))
+    expect(promptCalls[0].agent).toBe("wase")
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
     rmSync(tempDir, { recursive: true, force: true })
@@ -2176,7 +2294,7 @@ describe("todo-continuation-enforcer", () => {
 
      // then - continuation uses Sisyphus (skipped compaction agent)
      expect(promptCalls.length).toBe(1)
-    expect(promptCalls[0].agent).toBe(getAgentDisplayName("sisyphus"))
+    expect(promptCalls[0].agent).toBe("sisyphus")
   })
 
   test("should skip injection when only compaction agent messages exist", async () => {
