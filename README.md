@@ -85,6 +85,35 @@ Reason:
 - leaving headroom is usually more stable than running the context window at the
   limit
 
+### Strong Practical Recommendation
+
+For serious autonomous use, especially:
+
+- `wase`
+- `bio-autopilot`
+- `bio-orchestrator`
+- long-running engineering sessions
+- long-running bioinformatics sessions
+
+prefer models with **more than 500K effective context** whenever possible.
+
+Practical rule:
+
+- below ~400K: use with caution for deep autonomous sessions
+- ~500K and above: strongly recommended
+- ~1M and above: best experience for long-running auto / bio sessions
+
+Why this matters:
+
+- the model may generate large summaries on its own
+- repeated compaction can happen with very short gaps between real work waves
+- lower-context provider variants of the "same" model family can behave very differently
+
+Example:
+
+- some provider variants of Gemini may expose much less context than the model family suggests
+- do not assume provider A and provider B offer the same practical context window for the same model name
+
 ## Current Core Capabilities
 
 ### Engineering orchestration
