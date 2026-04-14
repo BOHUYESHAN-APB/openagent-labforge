@@ -24,7 +24,7 @@ import {
 } from "../../features/hook-message-injector"
 import { log } from "../../shared/logger"
 import { isSqliteBackend } from "../../shared/opencode-storage-detection"
-import { getAgentConfigKey } from "../../shared/agent-display-names"
+import { getAgentConfigKey, getRuntimeAgentName } from "../../shared/agent-display-names"
 
 import {
   AUTONOMOUS_BACKLOG_EXPANSION_PROMPT,
@@ -90,7 +90,7 @@ function buildWorkflowModeContext(args: {
 
 function toRuntimeAgentName(agentName: string | undefined): string | undefined {
   if (!agentName) return undefined
-  return getAgentConfigKey(agentName)
+  return getRuntimeAgentName(agentName)
 }
 
 function preferSessionLockedModel(

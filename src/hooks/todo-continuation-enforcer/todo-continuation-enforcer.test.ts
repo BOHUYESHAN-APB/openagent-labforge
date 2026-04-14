@@ -477,6 +477,7 @@ describe("todo-continuation-enforcer", () => {
 
     // then
     expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("wase"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS COMPLETION AUDIT")
     expect(promptCalls[0].text).toContain("create a new wave of 5-15 concrete todos")
   })
@@ -1578,7 +1579,7 @@ Execution Status
 
     //#then
     expect(promptCalls).toHaveLength(1)
-    expect(promptCalls[0].agent).toBe("wase")
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("wase"))
     expect(promptCalls[0].text).toContain("AUTONOMOUS BACKLOG EXPANSION")
     expect(promptCalls[0].text).toContain("[Current todo count: 2]")
     rmSync(tempDir, { recursive: true, force: true })
@@ -2294,7 +2295,7 @@ Execution Status
 
      // then - continuation uses Sisyphus (skipped compaction agent)
      expect(promptCalls.length).toBe(1)
-    expect(promptCalls[0].agent).toBe("sisyphus")
+    expect(promptCalls[0].agent).toBe(getAgentDisplayName("sisyphus"))
   })
 
   test("should skip injection when only compaction agent messages exist", async () => {
