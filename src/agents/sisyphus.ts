@@ -13,6 +13,7 @@ import { buildGpt54SisyphusPrompt } from "./sisyphus/gpt-5-4";
 import { buildTaskManagementSection } from "./sisyphus/default";
 import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
+  AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
   ENGINEERING_EXECUTION_CAPABILITY,
   ENGINEERING_ORCHESTRATION_CAPABILITY,
@@ -381,6 +382,7 @@ A task is complete when:
 - [ ] Diagnostics clean on changed files
 - [ ] Build passes (if applicable)
 - [ ] User's original request fully addressed
+- For substantial or long-running work, the final delivery should use a WNWC / 4W-style closeout plus explicit execution status instead of optional "I can continue" prose
 
 If verification fails:
 1. Fix issues caused by your changes
@@ -478,7 +480,7 @@ ${buildGpt54SisyphusPrompt(
       skills,
       categories,
       useTaskSystem,
-    )}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`;
+    )}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`;
     return {
       description:
         "Powerful AI orchestrator. Plans obsessively with todos, assesses search complexity before exploration, delegates strategically via category+skills combinations. Uses explore for internal code (parallel-friendly), librarian for external docs. (Sisyphus - OpenAgent Labforge)",
@@ -527,7 +529,7 @@ ${buildGpt54SisyphusPrompt(
   }
 
   prompt = `${agentIdentity}
-${prompt}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}`
+${prompt}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${ENGINEERING_ORCHESTRATION_CAPABILITY}\n\n${ENGINEERING_EXECUTION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`
 
   const permission = {
     question: "allow",

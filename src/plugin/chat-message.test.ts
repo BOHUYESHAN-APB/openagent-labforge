@@ -705,7 +705,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(output.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
-  test("keeps locked model when selected model is auto sentinel", async () => {
+  test("releases locked model when user explicitly selects auto sentinel", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -732,8 +732,8 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(input, output)
 
     //#then
-    expect(output.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
-    expect(args._toastCalls[0]?.title).toBe("Model lock restored")
+    expect(output.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(args._toastCalls[0]?.title).toBeUndefined()
   })
 
   test("shows recovery toast only once per session until explicit model change", async () => {
@@ -758,8 +758,8 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     )
 
     //#when
-    await handler(createMockInput("hephaestus", { providerID: "auto", modelID: "deep" }), createMockOutput())
-    await handler(createMockInput("hephaestus", { providerID: "auto", modelID: "deep" }), createMockOutput())
+    await handler(createMockInput("hephaestus", undefined), createMockOutput())
+    await handler(createMockInput("hephaestus", undefined), createMockOutput())
 
     //#then
     expect(args._toastCalls.filter((t) => t.title === "Model lock restored")).toHaveLength(1)
@@ -830,7 +830,7 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     expect(switchedBackOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
   })
 
-  test("does not restore sticky model onto agent with explicit configured model", async () => {
+  test("keeps explicit user model above agent configured model until user selects auto", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -869,13 +869,13 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
 
     //#then
     expect(switchedAgentOutput.message.model).toEqual({
-      providerID: "github-copilot",
-      modelID: "claude-opus-4.6",
+      providerID: "gmn",
+      modelID: "gpt-5.3-codex",
     })
-    expect(args._toastCalls.filter((t) => t.title === "Model lock restored")).toHaveLength(0)
+    expect(args._toastCalls.filter((t) => t.title === "Model lock restored")).toHaveLength(1)
   })
 
-  test("does not clear sticky lock when user explicitly switches to auto", async () => {
+  test("releases sticky lock when user explicitly switches to auto", async () => {
     //#given
     const args = createMockHandlerArgs({
       pluginConfig: {
@@ -905,8 +905,85 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     await handler(continueInput, continueOutput)
 
     //#then
-    expect(autoOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
-    expect(continueOutput.message.model).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
+    expect(autoOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+    expect(continueOutput.message.model).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+  })
+
+  test("does not treat host replay model during agent switch as an explicit user model reselection", async () => {
+    //#given
+    const args = createMockHandlerArgs({
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const handler = createChatMessageHandler(args)
+
+    await handler(
+      createMockInput("hephaestus", { providerID: "github-copilot", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+
+    const switchedAgentInput = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.4" })
+    const switchedAgentOutput = createMockOutput()
+
+    //#when
+    await handler(switchedAgentInput, switchedAgentOutput)
+
+    //#then
+    expect(switchedAgentOutput.message.model).toEqual({
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+  })
+
+  test("restores persisted user model lock after handler restart", async () => {
+    //#given
+    const testDir = join(tmpdir(), `chat-message-model-lock-${Date.now()}`)
+    mkdirSync(testDir, { recursive: true })
+    const args = createMockHandlerArgs({
+      directory: testDir,
+      pluginConfig: {
+        experimental: {
+          strict_user_model_priority: true,
+        },
+      },
+    })
+    args.hooks.runtimeFallback = {
+      "chat.message": async (_input: unknown, output: ChatMessageHandlerOutput): Promise<void> => {
+        output.message.model = { providerID: "openai", modelID: "gpt-5.4" }
+      },
+    }
+    const firstHandler = createChatMessageHandler(args)
+
+    await firstHandler(
+      createMockInput("hephaestus", { providerID: "github-copilot", modelID: "gpt-5.3-codex" }),
+      createMockOutput(),
+    )
+    clearSessionModel("test-session")
+    clearSessionModelLock("test-session")
+    clearSessionForcedModel("test-session")
+    clearSessionAutoModelRouting("test-session")
+
+    const restartedHandler = createChatMessageHandler(args)
+    const restartOutput = createMockOutput()
+
+    //#when
+    await restartedHandler(createMockInput("hephaestus", undefined), restartOutput)
+
+    //#then
+    expect(restartOutput.message.model).toEqual({
+      providerID: "github-copilot",
+      modelID: "gpt-5.3-codex",
+    })
+
+    rmSync(testDir, { recursive: true, force: true })
   })
 
   test("keeps explicit model when replayed input matches prior forced model", async () => {

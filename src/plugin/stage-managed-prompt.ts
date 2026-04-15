@@ -653,6 +653,11 @@ function buildEngineeringStageBlock(input: {
         autoModeLevel: input.autoModeLevel,
         interactionMode: input.interactionMode,
       }),
+      buildAutonomousCloseoutRuntimeCapability({
+        stage: input.stage,
+        autoModeLevel: input.autoModeLevel,
+        interactionMode: input.interactionMode,
+      }),
     )
   } else if (input.agent === "hephaestus") {
     lines.push(

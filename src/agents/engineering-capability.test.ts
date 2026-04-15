@@ -34,6 +34,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("for frontend work, default to visual specialists plus UI verification skills")
     expect(agent.prompt).toContain("backend or API work, load architecture-oriented skills")
     expect(agent.prompt).toContain("<autonomous_acceptance_workflow_capability>")
+    expect(agent.prompt).toContain("WNWC Closeout")
+    expect(agent.prompt).toContain("Auto action: ask-user")
   })
 
   test("wase keeps autonomous engineering guardrails in compact staged form", () => {
@@ -157,6 +159,8 @@ describe("engineering capability layering", () => {
     expect(agent.prompt).toContain("blast / homolog / homology / ortholog / synteny / reciprocal best hit")
     expect(agent.prompt).toContain("use the `question` tool early instead of guessing")
     expect(agent.prompt).toContain("real-project posture")
+    expect(agent.prompt).toContain("WNWC Closeout")
+    expect(agent.prompt).toContain("What / Next / Where / Which must stay reviewable")
   })
 
   test("bio-autopilot includes autonomous bio workflow and acceptance-review loop", () => {

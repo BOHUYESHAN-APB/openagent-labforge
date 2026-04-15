@@ -19,6 +19,10 @@ import {
   setSessionModelLock,
   isSessionAutoModelRoutingEnabled,
 } from "../shared/session-model-state"
+import {
+  readPersistedSessionModelState,
+  writePersistedSessionModelState,
+} from "../shared/session-model-persistence"
 import { OMO_INTERNAL_INITIATOR_MARKER } from "../shared/internal-initiator-marker"
 import { isForkedSession } from "../shared/forked-session-state"
 import { log } from "../shared/logger"
@@ -220,11 +224,35 @@ export function createChatMessageHandler(args: {
 
     const previousSessionModel = getSessionModel(input.sessionID)
     const currentInputModel = input.model
+    const activeAgent = input.agent ?? rememberedSessionAgent
+    const explicitAgentSwitchDetected =
+      input.agent !== undefined &&
+      rememberedSessionAgent !== undefined &&
+      getAgentConfigKey(input.agent) !== getAgentConfigKey(rememberedSessionAgent)
+    const persistedModelState = readPersistedSessionModelState(ctx.directory, input.sessionID)
+    const recoveredLockedModel = getSessionModelLock(input.sessionID) ?? persistedModelState?.lockedModel
+    if (!getSessionModelLock(input.sessionID) && recoveredLockedModel) {
+      setSessionModelLock(input.sessionID, recoveredLockedModel)
+    }
+    let effectiveSessionModel = previousSessionModel
+    if (!previousSessionModel && persistedModelState?.selectedModel) {
+      setSessionModel(input.sessionID, persistedModelState.selectedModel)
+      effectiveSessionModel = persistedModelState.selectedModel
+    }
+    if (persistedModelState?.autoRouting) {
+      setSessionAutoModelRouting(input.sessionID, true)
+    }
+    const hostReplayModelDuringAgentSwitch =
+      currentInputModel !== undefined &&
+      explicitAgentSwitchDetected &&
+      effectiveSessionModel !== undefined &&
+      !sameModel(currentInputModel, effectiveSessionModel)
     const manualModelChangeDetected =
       currentInputModel !== undefined &&
-      previousSessionModel !== undefined &&
-      (currentInputModel.providerID !== previousSessionModel.providerID ||
-        currentInputModel.modelID !== previousSessionModel.modelID)
+      effectiveSessionModel !== undefined &&
+      !hostReplayModelDuringAgentSwitch &&
+      (currentInputModel.providerID !== effectiveSessionModel.providerID ||
+        currentInputModel.modelID !== effectiveSessionModel.modelID)
 
     if (manualModelChangeDetected) {
       clearPendingModelFallback(input.sessionID)
@@ -236,11 +264,10 @@ export function createChatMessageHandler(args: {
     const forcedModel = getSessionForcedModel(input.sessionID)
     const rawInputModel = input.model
     const rawInputModelId = modelToString(rawInputModel)
-    const activeAgent = input.agent ?? rememberedSessionAgent
-    const explicitAgentSwitchDetected =
-      input.agent !== undefined &&
-      rememberedSessionAgent !== undefined &&
-      getAgentConfigKey(input.agent) !== getAgentConfigKey(rememberedSessionAgent)
+    const explicitAutoModelRequested =
+      !internalInitiatedPromptDetected &&
+      rawInputModel !== undefined &&
+      isAutoModelSelection(rawInputModelId)
     const isNativeLightweightAgent = isOpenCodeNativeLightweightAgent(activeAgent)
     const isForkedSessionLoad = isForkedSession(input.sessionID)
     const isStageManagedAutonomousSession = isStageManagedAutonomousAgent(activeAgent)
@@ -294,7 +321,7 @@ export function createChatMessageHandler(args: {
     const agentHasExplicitModelOverride = hasExplicitAgentModelOverride(activeAgent, pluginConfig)
     const shouldBypassStickyLockForAgent =
       agentHasExplicitModelOverride &&
-      (rawInputModel === undefined || isAutoModelSelection(rawInputModelId))
+      (explicitAutoModelRequested || isSessionAutoModelRoutingEnabled(input.sessionID))
     const internalExplicitModelShouldHonorLock =
       strictUserModelPriority &&
       internalInitiatedPromptDetected &&
@@ -306,9 +333,17 @@ export function createChatMessageHandler(args: {
     let shouldShowRecoveryModelToast = false
 
     if (strictUserModelPriority && lockedModel && !shouldBypassStickyLockForAgent) {
-      shouldShowRecoveryModelToast = !rawInputModel || isAutoModelSelection(rawInputModelId)
+      shouldShowRecoveryModelToast = !rawInputModel || (isAutoModelSelection(rawInputModelId) && !explicitAutoModelRequested)
       if (!rawInputModel) {
         input.model = lockedModel
+      } else if (explicitAutoModelRequested) {
+        clearSessionModelLock(input.sessionID)
+        clearSessionForcedModel(input.sessionID)
+        setSessionAutoModelRouting(input.sessionID, true)
+        writePersistedSessionModelState(ctx.directory, input.sessionID, {
+          selectedModel: effectiveSessionModel ?? persistedModelState?.selectedModel,
+          autoRouting: true,
+        })
       } else if (isAutoModelSelection(rawInputModelId)) {
         input.model = lockedModel
         clearSessionAutoModelRouting(input.sessionID)
@@ -645,13 +680,21 @@ export function createChatMessageHandler(args: {
         : undefined
 
     if (requestedModel !== undefined && isAutoModelSelection(requestedModelId)) {
-      if (lockedModel) {
+      if (lockedModel && explicitAutoModelRequested) {
+        clearSessionModelLock(input.sessionID)
+        clearSessionForcedModel(input.sessionID)
+        setSessionAutoModelRouting(input.sessionID, true)
+      } else if (lockedModel) {
         input.model = lockedModel
         output.message["model"] = lockedModel
         clearSessionAutoModelRouting(input.sessionID)
       } else if (!internalInitiatedPromptDetected) {
         setSessionAutoModelRouting(input.sessionID, true)
       }
+      writePersistedSessionModelState(ctx.directory, input.sessionID, {
+        selectedModel: effectiveSessionModel ?? persistedModelState?.selectedModel,
+        autoRouting: true,
+      })
     } else if (shouldRefreshLockFromUserSelection) {
       recoveryModelToastSessions.delete(input.sessionID)
       log("[chat-message] Refreshed session model lock from explicit user selection", {
@@ -670,6 +713,11 @@ export function createChatMessageHandler(args: {
       } else {
         clearSessionForcedModel(input.sessionID)
       }
+      writePersistedSessionModelState(ctx.directory, input.sessionID, {
+        selectedModel: userRequestedModel,
+        lockedModel: userRequestedModel,
+        autoRouting: false,
+      })
     }
 
     if (shouldEnforceLockedOutput) {
@@ -687,9 +735,19 @@ export function createChatMessageHandler(args: {
       const modelID = (finalOutputModel as { modelID?: string }).modelID
       if (typeof providerID === "string" && typeof modelID === "string") {
         setSessionModel(input.sessionID, { providerID, modelID })
+        writePersistedSessionModelState(ctx.directory, input.sessionID, {
+          selectedModel: { providerID, modelID },
+          lockedModel: getSessionModelLock(input.sessionID),
+          autoRouting: isSessionAutoModelRoutingEnabled(input.sessionID),
+        })
       }
     } else if (requestedModel) {
       setSessionModel(input.sessionID, requestedModel)
+      writePersistedSessionModelState(ctx.directory, input.sessionID, {
+        selectedModel: requestedModel,
+        lockedModel: getSessionModelLock(input.sessionID),
+        autoRouting: isSessionAutoModelRoutingEnabled(input.sessionID),
+      })
     }
   }
 }

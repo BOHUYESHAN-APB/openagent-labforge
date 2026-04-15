@@ -7,6 +7,7 @@ import {
   BIO_SKILL_TOOL_REMINDER,
 } from "./bio-skill-guidance"
 import {
+  AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY,
   BIO_DATA_INTERACTION_CAPABILITY,
   BIO_ENVIRONMENT_SAFETY_CAPABILITY,
   ENGINEERING_MICRO_KERNEL_CAPABILITY,
@@ -91,10 +92,12 @@ Hard rules:
 - use \`task(subagent_type="...")\` for real specialist delegation instead of hiding work behind fallback wrappers
 
 Required final framing:
+- for meaningful delivery waves, default to a WNWC / 4W-style closeout instead of a loose narrative ending
+- What / Next / Where / Which must stay reviewable when files, artifacts, or analysis branches changed
 - what is directly supported
 - what is inferred with caution
 - what still needs validation
-\n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}`,
+\n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
     permission: {
       question: "allow",
       call_omo_agent: "deny",

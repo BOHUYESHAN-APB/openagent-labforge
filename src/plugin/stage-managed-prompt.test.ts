@@ -109,7 +109,7 @@ describe("buildStageManagedPromptContext", () => {
     expect(result).toContain("## Engineering Orchestration Reload")
     expect(result).toContain("## Engineering Execution Reload")
     expect(result).toContain("## Autonomous Acceptance Reload")
-    expect(result).not.toContain("## Autonomous Closeout Reload")
+    expect(result).toContain("## Autonomous Closeout Reload")
 
     rmSync(testDir, { recursive: true, force: true })
   })
