@@ -391,6 +391,59 @@ describe("context-window-monitor", () => {
     rmSync(testDir, { recursive: true, force: true })
   })
 
+  it("writes L2 auto checkpoint metadata without user confirmation requirement", async () => {
+    const testDir = `/tmp/labforge-context-l2-${Date.now()}`
+    const localCtx = {
+      client: {
+        session: {
+          messages: mock(() => Promise.resolve({ data: [] })),
+        },
+        tui: {
+          showToast: mock(() => Promise.resolve({})),
+        },
+      },
+      directory: testDir,
+    }
+    const hook = createContextWindowMonitorHook(localCtx as never)
+    const sessionID = "ses_l2_capsule"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 330000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const output = { title: "", output: "test", metadata: null }
+    await hook["tool.execute.after"](
+      { tool: "bash", sessionID, callID: "call_l2" },
+      output,
+    )
+
+    const { readFileSync, rmSync } = await import("node:fs")
+    const autoCheckpointMetaPath = `${testDir}/.opencode/openagent-labforge/checkpoints/auto/latest.meta.json`
+    const metadata = readFileSync(autoCheckpointMetaPath, "utf-8")
+    expect(metadata).toContain("\"checkpoint_kind\": \"light\"")
+    expect(metadata).toContain("\"checkpoint_scope\": \"same-session\"")
+    expect(metadata).toContain("\"session_switch_recommendation\": \"stay\"")
+    expect(metadata).toContain("\"user_confirmation_required\": false")
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
   it("prunes old compression notice messages during transform under context debt", async () => {
     const hook = createContextWindowMonitorHook(ctx as never)
     const sessionID = "ses_transform_prune_notice"

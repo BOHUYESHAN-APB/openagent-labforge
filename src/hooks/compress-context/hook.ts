@@ -275,6 +275,7 @@ export function createCompressContextHook(
           totalInputTokens: carriedTokens ?? 0,
           cacheReadTokens: cacheReadTokens ?? 0,
           contextLimit: contextLimit ?? 0,
+          invocation: "manual",
         })
         checkpointPath = ".opencode/openagent-labforge/checkpoints/auto/latest.md"
         files.push(checkpoint.markdownPath.includes("auto/latest.md") ? checkpointPath : checkpoint.markdownPath)

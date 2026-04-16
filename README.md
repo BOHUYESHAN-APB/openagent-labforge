@@ -314,9 +314,10 @@ Practical intent:
   - `l2`: reinforce repo-local runtime memory for the same session
   - `l3`: prepare a heavy cross-session checkpoint without automatically
     switching sessions
-- `/checkpoint` writes a repo-local checkpoint under
-  `.opencode/openagent-labforge/checkpoints/` so the next session can resume
-  from file instead of old chat history
+- `/checkpoint` writes an explicit repo-local checkpoint under
+  `.opencode/openagent-labforge/checkpoints/`:
+  - `light` (default): compact same-session or short handoff recovery anchor
+  - `heavy`: high-fidelity cross-session handoff anchor for long-running work
 - `/checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
   next execution wave in the current session
 
@@ -327,15 +328,43 @@ Command split:
 - `/compress-context` may refresh auto-checkpoint files under
   `.opencode/openagent-labforge/checkpoints/auto/`, but it does NOT replace an
   explicit `/checkpoint` when the user wants a deliberate human-reviewed handoff
+- `/compress-context` and `/checkpoint` intentionally share part of the same
+  checkpoint-writing runtime to avoid duplicated logic, but they are still
+  different products:
+  - auto checkpoint (`checkpoints/auto/`): operational recovery artifacts from
+    compression flow
+  - explicit checkpoint (`checkpoints/latest.md` and `checkpoints/by-session/*`):
+    deliberate handoff artifacts for human-reviewed continuation
+- `/checkpoint-resume` can recover from both, preferring explicit checkpoint
+  files first, then auto-checkpoint fallback
 
 Compression levels:
 
 - `L1`: native summarize request plus visible short summary, without printing
-  the compacted context body
+  the compacted context body. Goal: real context-window pressure drop.
 - `L2`: local runtime reinforcement via repo-local files such as
-  `context-capsule.md` and `context-pressure.json`
+  `context-capsule.md` and `context-pressure.json`. Goal: keep execution
+  capability stable after compaction.
 - `L3`: heavy checkpoint preparation for likely cross-session continuation; it
-  recommends a fresh session but does not auto-switch
+  recommends a fresh session but does not auto-switch. Goal: clean handoff for
+  long-running work.
+
+Checkpoint levels:
+
+- `light`: fast checkpoint for same-session recovery, short continuation, or
+  anti-drift anchor after compaction
+- `heavy`: cross-session high-fidelity handoff when the current session is too
+  heavy, laggy, or near practical continuation limits
+
+Session-switch policy:
+
+- Compression and checkpoint creation are separate from session switching.
+- Automatic L3 can prepare heavy artifacts, but switching sessions should still
+  be user-confirmed.
+- Manual `/compress-context l3` means the user explicitly requested heavy
+  preparation; no extra consent is needed for preparation itself.
+- If UI latency or context debt is already hurting execution quality, create a
+  heavy checkpoint and continue in a fresh session via `/checkpoint-resume`.
 
 Checkpoint files now also carry compact execution posture, not just prose
 summary:
@@ -634,13 +663,18 @@ practical local workflow substantially.
 
 ## Installation Reality
 
-This project is still optimized for local-first use, but there is now a real
-published path for `Windows x64`.
+This project is still optimized for local-first use, including Windows.
 
 Current install reality:
 
-- `Windows x64`: published npm package path is available
-- other platforms: local build + local install remains the reliable path
+- all platforms (recommended): local clone + local build + local file plugin install
+- `Windows x64` (optional convenience path): published npm package is available
+- non-Windows platforms: local build + local install remains the reliable path
+
+Recommended default:
+
+- treat local clone/build install as the primary path
+- treat published npm binaries as fallback/convenience, not the baseline workflow
 
 Recommended workflow:
 

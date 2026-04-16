@@ -1,5 +1,5 @@
 import { describe, expect, test, mock } from "bun:test"
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import type { OhMyOpenCodeConfig } from "../../config"
@@ -89,6 +89,46 @@ describe("compress-context hook", () => {
     expect(String(output.parts[0].text)).toContain("Native summarize: requested")
     expect(existsSync(join(directory, ".opencode", "openagent-labforge", "runtime", sessionID, "context-capsule.md"))).toBe(true)
     expect(existsSync(join(directory, ".opencode", "openagent-labforge", "runtime", sessionID, "context-pressure.json"))).toBe(true)
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  test("manual l3 mode writes heavy auto-checkpoint metadata without extra confirmation", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "compress-l3-"))
+    const sessionID = "ses_l3"
+    const runtimeDir = join(directory, ".opencode", "openagent-labforge", "runtime", sessionID)
+    mkdirSync(runtimeDir, { recursive: true })
+    writeFileSync(join(runtimeDir, "context-pressure.json"), JSON.stringify({
+      carried_tokens: 650000,
+      cache_read_tokens: 0,
+      context_limit: 1000000,
+      usage_ratio: 0.65,
+      level: 3,
+      removed_tokens: 10000,
+      removed_messages: 4,
+      compacted_tool_outputs: 3,
+      updated_at: new Date().toISOString(),
+    }), "utf-8")
+
+    const ctx = createCtx(directory)
+    const hook = createCompressContextHook(ctx, {} as OhMyOpenCodeConfig)
+    const output = {
+      parts: [{ type: "text", text: buildCommandPrompt("l3") }],
+    }
+
+    await hook["chat.message"](
+      { sessionID, agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+      output,
+    )
+
+    const metadata = readFileSync(
+      join(directory, ".opencode", "openagent-labforge", "checkpoints", "auto", "latest.meta.json"),
+      "utf-8",
+    )
+    expect(metadata).toContain("\"checkpoint_kind\": \"heavy\"")
+    expect(metadata).toContain("\"checkpoint_scope\": \"cross-session\"")
+    expect(metadata).toContain("\"session_switch_recommendation\": \"recommend-switch\"")
+    expect(metadata).toContain("\"user_confirmation_required\": false")
 
     rmSync(directory, { recursive: true, force: true })
   })

@@ -257,8 +257,10 @@ Gemini 说明：
   - `l1`：请求原生 OpenCode 风格 summarize / compaction，并只展示简短摘要
   - `l2`：加强 repo-local 的同会话运行时记忆
   - `l3`：准备重型跨会话 checkpoint，但不会自动切会话
-- `/checkpoint`：把关键接力信息写入 repo-local 文件，路径位于
+- `/checkpoint`：显式写入 repo-local checkpoint，路径位于
   `.opencode/openagent-labforge/checkpoints/`
+  - `light`（默认）：用于同会话恢复或短接力
+  - `heavy`：用于跨会话高保真接力
 - `/checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
 
 这几个命令的边界现在明确是：
@@ -268,12 +270,36 @@ Gemini 说明：
 - `/compress-context` 可能会刷新
   `.opencode/openagent-labforge/checkpoints/auto/`
   下的 auto checkpoint，但它不等同于用户显式执行 `/checkpoint`
+- `/compress-context` 与 `/checkpoint` 会复用一部分 checkpoint 落盘逻辑，
+  用来减少重复代码；但两者语义仍然分离：
+  - auto checkpoint（`checkpoints/auto/`）：压缩流程的运行时恢复产物
+  - explicit checkpoint（`checkpoints/latest.md`、`checkpoints/by-session/*`）：
+    面向人工审阅和明确交接的耐久产物
+- `/checkpoint-resume` 可同时恢复两类文件，优先 explicit checkpoint，
+  不存在时再回退到 auto checkpoint
 
 压缩层级目前是：
 
-- `L1`：原生 summarize 请求 + 可见短摘要，不把压缩后的正文直接展示给用户
-- `L2`：把本地 runtime memory 补强到 repo-local 文件，比如 `context-capsule.md`、`context-pressure.json`
-- `L3`：准备更适合跨会话续接的 heavy checkpoint；通常只推荐新会话，不自动切换
+- `L1`：原生 summarize 请求 + 可见短摘要，不把压缩后的正文直接展示给用户。
+  目标：让上下文窗口压力真实下降。
+- `L2`：把本地 runtime memory 补强到 repo-local 文件，比如
+  `context-capsule.md`、`context-pressure.json`。
+  目标：压缩后工程执行能力不掉。
+- `L3`：准备更适合跨会话续接的 heavy checkpoint；推荐新会话，但不自动切换。
+  目标：长任务交接可持续。
+
+checkpoint 层级目前是：
+
+- `light`：同会话恢复、短接力、压缩后的防漂移锚点
+- `heavy`：当前会话已过重、出现卡顿或已接近可持续上限时的跨会话接力锚点
+
+会话切换策略：
+
+- 压缩/写 checkpoint 与切会话是两件事，默认分离。
+- 自动 L3 可以自动准备 heavy 产物，但切会话应保持用户确认。
+- 手动 `/compress-context l3` 视为用户已明确要求重型准备，准备阶段不再二次确认。
+- 当上下文债务和 UI 卡顿已经影响执行质量时，应优先写 heavy checkpoint，
+  然后用 `/checkpoint-resume` 在新会话续跑。
 
 现在 checkpoint 不只是带一段摘要，还会带一小份结构化工程姿态：
 
@@ -498,13 +524,18 @@ OpenAgent Labforge 强烈建议和下面两个插件搭配使用：
 
 ## 当前安装现实
 
-这个项目仍以本地优先为主，但 `Windows x64` 现在已经有可用的
-npm 发布路径。
+这个项目仍以本地优先为主，Windows 也建议走本地克隆 + 本地构建安装。
 
 当前安装现实：
 
-- `Windows x64`：可以走已发布 npm 包
-- 其他平台：仍以本地构建 + 本地安装为准
+- 全平台（推荐）：本地克隆 + 本地构建 + 本地文件插件安装
+- `Windows x64`（可选便捷路径）：可以走已发布 npm 包
+- 非 Windows 平台：仍以本地构建 + 本地安装为准
+
+推荐默认策略：
+
+- 把本地克隆/构建/安装作为主路径
+- 把 npm 已发布二进制当作兜底或便捷路径，而不是主工作流
 
 推荐流程：
 

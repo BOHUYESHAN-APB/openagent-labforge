@@ -16,6 +16,7 @@ type AutoCompressionCheckpointArgs = {
   totalInputTokens: number
   cacheReadTokens: number
   contextLimit: number
+  invocation?: "automatic" | "manual"
 }
 
 function formatCompactTokens(tokens: number): string {
@@ -52,6 +53,7 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     totalInputTokens,
     cacheReadTokens,
     contextLimit,
+    invocation = "automatic",
   } = args
   const checkpointRoot = join(directory, ".opencode", "openagent-labforge", "checkpoints")
   const autoRoot = join(checkpointRoot, "auto")
@@ -66,7 +68,8 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
   const contextCapsule = readTextIfExists(contextCapsulePath)
   const checkpointKind = level >= 3 ? "heavy" : "light"
   const checkpointScope = level >= 3 ? "cross-session" : "same-session"
-  const sessionSwitchRecommendation = level >= 3 ? "recommend-switch" : "ask-user"
+  const sessionSwitchRecommendation = level >= 3 ? "recommend-switch" : "stay"
+  const userConfirmationRequired = level >= 3 && invocation === "automatic"
 
   markRuntimeWorkflowCheckpoint({
     directory,
@@ -162,7 +165,7 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     checkpoint_kind: checkpointKind,
     checkpoint_scope: checkpointScope,
     session_switch_recommendation: sessionSwitchRecommendation,
-    user_confirmation_required: true,
+    user_confirmation_required: userConfirmationRequired,
     source_stage: state?.current_stage ?? "build",
     source_wave: state?.current_wave ?? 1,
     source_auto_mode_level: state?.auto_mode_level ?? "light",

@@ -1,6 +1,6 @@
 {
   "name": "openagent-labforge-windows-x64",
-  "version": "3.13.3",
+  "version": "3.13.4",
   "description": "Platform-specific binary for openagent-labforge (windows-x64)",
   "license": "MIT",
   "repository": {
