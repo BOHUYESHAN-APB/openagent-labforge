@@ -132,4 +132,20 @@ describe("resolveSubagentExecution", () => {
     expect(result.categoryModel).toEqual({ providerID: "gmn", modelID: "gpt-5.3-codex" })
     cacheSpy.mockRestore()
   })
+
+  test("resolves acceptance-reviewer as a normal callable subagent", async () => {
+    //#given
+    const args = createBaseArgs({ subagent_type: "acceptance-reviewer" })
+    const executorCtx = createExecutorContext(async () => ([
+      { name: "acceptance-reviewer", mode: "subagent", model: "openai/gpt-5.4" },
+    ]))
+
+    //#when
+    const result = await resolveSubagentExecution(args, executorCtx, "bio-autopilot", "deep")
+
+    //#then
+    expect(result.error).toBeUndefined()
+    expect(result.agentToUse).toBe("acceptance-reviewer")
+    expect(result.categoryModel).toEqual({ providerID: "openai", modelID: "gpt-5.4" })
+  })
 })

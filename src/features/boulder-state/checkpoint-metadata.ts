@@ -51,13 +51,24 @@ export function getLatestCheckpointMetadataPath(directory: string): string {
   return join(directory, OPENCODE_LABFORGE_DIR, "checkpoints", "latest.meta.json")
 }
 
-export function readLatestCheckpointMetadata(directory: string): CheckpointMetadata | null {
-  const path = getLatestCheckpointMetadataPath(directory)
-  if (!existsSync(path)) return null
+export function getAutoCheckpointMetadataPath(directory: string): string {
+  return join(directory, OPENCODE_LABFORGE_DIR, "checkpoints", "auto", "latest.meta.json")
+}
 
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as CheckpointMetadata
-  } catch {
-    return null
+export function readLatestCheckpointMetadata(directory: string): CheckpointMetadata | null {
+  const candidates = [
+    getLatestCheckpointMetadataPath(directory),
+    getAutoCheckpointMetadataPath(directory),
+  ]
+
+  for (const path of candidates) {
+    if (!existsSync(path)) continue
+    try {
+      return JSON.parse(readFileSync(path, "utf-8")) as CheckpointMetadata
+    } catch {
+      continue
+    }
   }
+
+  return null
 }

@@ -1,29 +1,35 @@
 /**
- * Unified system directive prefix for oh-my-opencode internal messages.
+ * Unified system directive prefix for OpenAgent Labforge internal messages.
  * All system-generated messages should use this prefix for consistent filtering.
  *
- * Format: [SYSTEM DIRECTIVE: OH-MY-OPENCODE - {TYPE}]
+ * Format: [SYSTEM DIRECTIVE: OPENAGENT-LABFORGE - {TYPE}]
  */
 
-export const SYSTEM_DIRECTIVE_PREFIX = "[SYSTEM DIRECTIVE: OH-MY-OPENCODE"
+export const SYSTEM_DIRECTIVE_PREFIX = "[SYSTEM DIRECTIVE: OPENAGENT-LABFORGE"
+export const LEGACY_SYSTEM_DIRECTIVE_PREFIX = "[SYSTEM DIRECTIVE: OH-MY-OPENCODE"
 
 /**
  * Creates a system directive header with the given type.
  * @param type - The directive type (e.g., "TODO CONTINUATION", "RALPH LOOP")
- * @returns Formatted directive string like "[SYSTEM DIRECTIVE: OH-MY-OPENCODE - TODO CONTINUATION]"
+ * @returns Formatted directive string like "[SYSTEM DIRECTIVE: OPENAGENT-LABFORGE - TODO CONTINUATION]"
  */
 export function createSystemDirective(type: string): string {
   return `${SYSTEM_DIRECTIVE_PREFIX} - ${type}]`
 }
 
+export function containsSystemDirectivePrefix(text: string): boolean {
+  return text.includes(SYSTEM_DIRECTIVE_PREFIX) || text.includes(LEGACY_SYSTEM_DIRECTIVE_PREFIX)
+}
+
 /**
- * Checks if a message starts with the oh-my-opencode system directive prefix.
+ * Checks if a message starts with a system directive prefix (Labforge or legacy).
  * Used by keyword-detector and other hooks to skip system-generated messages.
  * @param text - The message text to check
  * @returns true if the message is a system directive
  */
 export function isSystemDirective(text: string): boolean {
-  return text.trimStart().startsWith(SYSTEM_DIRECTIVE_PREFIX)
+  const trimmed = text.trimStart()
+  return trimmed.startsWith(SYSTEM_DIRECTIVE_PREFIX) || trimmed.startsWith(LEGACY_SYSTEM_DIRECTIVE_PREFIX)
 }
 
 /**

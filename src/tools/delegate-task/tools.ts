@@ -70,6 +70,7 @@ export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefini
   **CORRECT - Using subagent_type:**
   \`\`\`
   task(subagent_type="explore", load_skills=[], description="Find patterns", prompt="...", run_in_background=true)
+  task(subagent_type="acceptance-reviewer", load_skills=[], description="Acceptance review", prompt="Original goal: ...", run_in_background=false)
   \`\`\`
   
   REQUIRED: Provide ONE of:
@@ -82,7 +83,7 @@ export function createDelegateTask(options: DelegateTaskToolOptions): ToolDefini
   - category: Use predefined category → Spawns Sisyphus-Junior with category config
     Available categories:
   ${categoryList}
-  - subagent_type: Use specific agent directly (explore, librarian, oracle, metis, momus)
+  - subagent_type: Use specific agent directly (explore, librarian, oracle, metis, momus, acceptance-reviewer, bio-methodologist, paper-evidence-synthesizer, wet-lab-designer, etc.)
   - run_in_background: true=async (returns task_id), false=sync (waits). Default: false. Use background=true ONLY for parallel exploration with 5+ independent queries.
   - session_id: Existing Task session to continue (from previous task output). Continues agent with FULL CONTEXT PRESERVED - saves tokens, maintains continuity.
   - command: The command that triggered this task (optional, for slash command tracking).

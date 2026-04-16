@@ -297,6 +297,7 @@ indefinitely.
 Current checkpoint commands:
 
 - `/handoff`
+- `/compress-context`
 - `/checkpoint`
 - `/checkpoint-resume`
 
@@ -304,11 +305,37 @@ Practical intent:
 
 - `/handoff` creates an inline continuation summary for manual copy/paste into a
   new session
+- `/compress-context` is a runtime context-management command for the CURRENT
+  session:
+  - `status`: inspect current compression state
+  - `auto`: choose the appropriate level automatically
+  - `l1`: request native OpenCode-style summarize/compaction and show only a
+    short summary
+  - `l2`: reinforce repo-local runtime memory for the same session
+  - `l3`: prepare a heavy cross-session checkpoint without automatically
+    switching sessions
 - `/checkpoint` writes a repo-local checkpoint under
   `.opencode/openagent-labforge/checkpoints/` so the next session can resume
   from file instead of old chat history
 - `/checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
   next execution wave in the current session
+
+Command split:
+
+- `/compress-context` is operational compression and runtime-memory management
+- `/checkpoint` is an explicit durable handoff artifact
+- `/compress-context` may refresh auto-checkpoint files under
+  `.opencode/openagent-labforge/checkpoints/auto/`, but it does NOT replace an
+  explicit `/checkpoint` when the user wants a deliberate human-reviewed handoff
+
+Compression levels:
+
+- `L1`: native summarize request plus visible short summary, without printing
+  the compacted context body
+- `L2`: local runtime reinforcement via repo-local files such as
+  `context-capsule.md` and `context-pressure.json`
+- `L3`: heavy checkpoint preparation for likely cross-session continuation; it
+  recommends a fresh session but does not auto-switch
 
 Checkpoint files now also carry compact execution posture, not just prose
 summary:

@@ -568,6 +568,7 @@ export function createChatMessageHandler(args: {
       })
     }
     await hooks.autoSlashCommand?.["chat.message"]?.(input, output)
+    await hooks.compressContext?.["chat.message"]?.(input, output)
     const forceAgentModelRouting =
       pluginConfig.sisyphus_agent?.force_agent_model_routing ?? false
     input.forceAgentModelRouting = forceAgentModelRouting

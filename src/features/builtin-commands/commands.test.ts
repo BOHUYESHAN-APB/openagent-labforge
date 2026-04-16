@@ -1,6 +1,7 @@
 import { beforeEach, describe, test, expect } from "bun:test"
 import { loadBuiltinCommands } from "./commands"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { COMPRESS_CONTEXT_TEMPLATE } from "./templates/compress-context"
 import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
 import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
 import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
@@ -25,6 +26,7 @@ describe("loadBuiltinCommands", () => {
     //#then
     expect(commands.checkpoint).toBeDefined()
     expect(commands["checkpoint-resume"]).toBeDefined()
+    expect(commands["compress-context"]).toBeDefined()
     expect(commands.handoff).toBeDefined()
     expect(commands.handoff.name).toBe("handoff")
     expect(commands["todo-clear"]).toBeDefined()
@@ -78,6 +80,11 @@ describe("loadBuiltinCommands", () => {
   test("should include checkpoint commands with template content", () => {
     const commands = loadBuiltinCommands()
 
+    expect(commands["compress-context"]).toBeDefined()
+    expect(commands["compress-context"].template).toContain(COMPRESS_CONTEXT_TEMPLATE)
+    expect(commands["compress-context"].template).toContain("$SESSION_ID")
+    expect(commands["compress-context"].template).toContain("$TIMESTAMP")
+    expect(commands["compress-context"].template).toContain("$ARGUMENTS")
     expect(commands.checkpoint).toBeDefined()
     expect(commands["checkpoint-resume"]).toBeDefined()
     expect(commands.checkpoint.template).toContain(CHECKPOINT_TEMPLATE)
@@ -230,6 +237,8 @@ describe("checkpoint command templates", () => {
 
   test("checkpoint resume template loads latest or session-scoped checkpoint", () => {
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoints/latest.md")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoints/auto/latest.md")
+    expect(CHECKPOINT_RESUME_TEMPLATE).toContain("checkpoints/auto/by-session/$ARGUMENTS.md")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("by-session/<session-id>.md")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("rebuild a fresh todo/task list")
     expect(CHECKPOINT_RESUME_TEMPLATE).toContain("status from `pending` to `consumed`")

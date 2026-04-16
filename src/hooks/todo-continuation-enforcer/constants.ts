@@ -49,7 +49,9 @@ All current todos are completed, but autonomous execution does NOT stop here aut
 - If a remaining step was explicitly assigned to the user, depends on the user's manual download/install/acquisition, or is an external prerequisite not owned by the agent, do NOT reopen it as an autonomous todo wave
 - In those cases, report it as a waiting condition, external dependency, or optional future handoff instead of continuing execution
 - Before claiming substantial work is complete, invoke \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\\nChanged files/artifacts: ...\\nVerification evidence: ...\\nResidual assumptions/risks: ...\\nReturn [APPROVE] or [REJECT].")\`
-- If \`acceptance-reviewer\` is unavailable or fails to run, do NOT provide a final completion answer. Keep the wave open and continue with concrete owned work or state the blocker explicitly.
+- Treat \`acceptance-reviewer\` as a normal callable subagent when it appears in the available agent list. Do not claim the reviewer is unavailable unless the \`task()\` call actually returns an error.
+- If no agent-owned work remains and only user-owned/manual/external pending work remains, do NOT emit ${CONTINUATION_REPLAN_MARKER}; report the waiting condition and stop.
+- If \`acceptance-reviewer\` actually fails to run while agent-owned work remains, do NOT provide a final completion answer. Keep the wave open and continue with concrete owned work or state the blocker explicitly.
 - If the task is truly complete, only then provide a final completion answer
 - Do not ask the user whether you should continue when clear unfinished work remains
 - Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`
@@ -60,9 +62,10 @@ AUTONOMOUS BACKLOG EXPANSION.
 
 Your current todo backlog is too shallow for autonomous execution.
 
-- If the task still has meaningful remaining scope and the total todo count is below 5, immediately expand it to 5-15 concrete todos
+- If the task still has meaningful agent-owned remaining scope and the total todo count is below 5, immediately expand it to 5-15 concrete todos
 - Do not keep a shallow 1-4 item backlog for substantial work
 - Convert obvious remaining scope into explicit tasks covering discovery, implementation, verification, cleanup, and output sync when relevant
+- If the only remaining items are user-owned/manual/external prerequisites, do not expand the backlog; pause and state the waiting condition.
 - Do not reply with "next I would..." prose while keeping the backlog short
 - Expand the backlog first, then continue execution`
 

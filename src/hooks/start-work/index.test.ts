@@ -5,7 +5,7 @@ import { tmpdir, homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createStartWorkHook } from "./index"
 import { START_WORK_TEMPLATE } from "../../features/builtin-commands/templates/start-work"
-import { getAgentDisplayName } from "../../shared/agent-display-names"
+import { getAgentDisplayName, setAgentDisplayLanguage } from "../../shared/agent-display-names"
 import {
   writeBoulderState,
   clearBoulderState,
@@ -38,6 +38,7 @@ describe("start-work hook", () => {
   }
 
   beforeEach(() => {
+    setAgentDisplayLanguage("en")
     sessionState._resetForTesting()
     sessionState.registerAgentName("atlas")
     sessionState.registerAgentName("sisyphus")
@@ -53,6 +54,7 @@ describe("start-work hook", () => {
   })
 
   afterEach(() => {
+    setAgentDisplayLanguage("en")
     sessionState._resetForTesting()
     clearBoulderState(testDir)
     if (existsSync(testDir)) {
@@ -505,6 +507,26 @@ ${START_WORK_TEMPLATE}
       )
 
       expect(output.message.agent).toBe("atlas")
+    })
+
+    test("should stamp outgoing message with the registered Chinese atlas name when that is the runtime agent", async () => {
+      setAgentDisplayLanguage("zh")
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("执行官 (计划执行)")
+      sessionState.registerAgentName("总调度器 (超脑)")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt() }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-prometheus-to-atlas-zh" },
+        output,
+      )
+
+      expect(output.message.agent).toBe("执行官 (计划执行)")
     })
 
     test("should keep current worker when atlas is unavailable", async () => {

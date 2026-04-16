@@ -7,6 +7,9 @@
 - normalized session agent storage to config keys so display-name recovery does not break continuation paths
 - split atlas idle continuation logic into dedicated modules to reduce event-handler complexity and stabilize session resume behavior
 - restored OpenCode's lightweight `build` and `plan` agents by default; our plugin now only hijacks them when explicitly configured
+- fixed orchestrator tool permissions so `wase`, `bio-autopilot`, and `bio-orchestrator` can actually delegate to `acceptance-reviewer`
+- fixed autonomous continuation so external/user-owned pending work pauses cleanly instead of reopening bogus todo waves
+- made L1 context compression visibly report what was pruned and which repo-local files were refreshed
 
 ### OpenCode compatibility
 
@@ -51,3 +54,11 @@
 - rewrote `README.md` to reflect only the current product surface
 - rewrote `README.zh-cn.md` to match the current fork direction
 - added `docs/release/upstream-oh-my-openagent-3.11-plus-audit.md`
+- documented `/compress-context` and clarified how it differs from `/checkpoint`
+
+### Context compression
+
+- added a builtin `/compress-context` command with `status`, `auto`, `l1`, `l2`, and `l3`
+- `L1` now maps to native summarize request + visible short summary
+- `L2` reinforces repo-local runtime memory for the current session
+- `L3` prepares a heavier cross-session checkpoint without auto-switching sessions

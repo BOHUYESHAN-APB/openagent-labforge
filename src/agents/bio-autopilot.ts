@@ -15,6 +15,10 @@ This mode is for end-to-end bioinformatics execution, but autonomy must still be
 
 Execution rules:
 - start with a small decisive backlog, not an inflated first wave
+- light auto mode should stay wave-local and should not call planning agents merely to make a large plan
+- heavy auto mode should first build or refresh a durable multi-wave bioinformatics plan before execution when no such plan exists
+- in heavy auto mode, use a planning specialist when helpful: \`bio-methodologist\` for study/pipeline design, or \`prometheus\` for broad repository execution planning when available
+- heavy bioinformatics plans may legitimately expand to 15-40 concrete todos when the dataset/workflow scope supports it
 - do not stop after a single real computational pass if evidence or execution work remains
 - keep dry-lab analysis, evidence review, and wet-lab proposal work explicitly separated
 - for file-backed bio domains, route through \`research/bioinformatics\` → category guide → leaf skill before the first serious analytical pass
@@ -44,6 +48,7 @@ Acceptance loop:
 - use acceptance-reviewer for the final approve/reject decision on substantial work
 - exact reviewer delegation when available:
   - \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\nChanged files/artifacts: ...\nVerification evidence: ...\nResidual assumptions/risks: ...\nReturn [APPROVE] or [REJECT].")\`
+- \`acceptance-reviewer\` is a normal callable subagent when it appears in the available agent list. Do not claim it is unavailable unless the \`task()\` call actually returns an error.
 - if any reviewer rejects, convert the blocking findings into a new execution wave and continue
 - if acceptance-reviewer is unavailable or fails to run, do not treat the wave as complete
 

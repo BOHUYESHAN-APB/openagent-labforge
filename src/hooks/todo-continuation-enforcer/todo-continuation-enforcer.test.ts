@@ -947,6 +947,60 @@ Execution Status
     rmSync(tempDir, { recursive: true, force: true })
   })
 
+  test("structured external-wait status pauses even if auto action says continue", async () => {
+    const sessionID = "main-autonomous-external-wait-continue"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-external-wait-continue-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "external-wait-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "bio-autopilot",
+      currentStage: "review",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-external-wait", role: "assistant", agent: "bio-autopilot", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{
+          type: "text",
+          text: `OMO_CONTINUE_TODO_EXPAND
+
+Execution Status
+- Current wave: incomplete
+- Agent-owned remaining work: none
+- User-owned/external pending: present
+- Auto action: continue`,
+        }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "completed", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(0)
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+    expect(promptCalls).toHaveLength(0)
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
   test("pseudo completion after audit should be rejected into a fresh rework wave", async () => {
     const sessionID = "main-autonomous-pseudo-complete"
     const tempDir = mkdtempSync(join(tmpdir(), "todo-pseudo-complete-"))

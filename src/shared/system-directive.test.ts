@@ -4,6 +4,7 @@ import {
   removeSystemReminders,
   isSystemDirective,
   createSystemDirective,
+  LEGACY_SYSTEM_DIRECTIVE_PREFIX,
 } from "./system-directive"
 
 describe("system-directive utilities", () => {
@@ -126,8 +127,13 @@ const x = 1;
   })
 
   describe("isSystemDirective", () => {
-    test("should return true for OH-MY-OPENCODE system directives", () => {
+    test("should return true for Labforge system directives", () => {
       const directive = createSystemDirective("TEST")
+      expect(isSystemDirective(directive)).toBe(true)
+    })
+
+    test("should return true for legacy OH-MY-OPENCODE system directives", () => {
+      const directive = `${LEGACY_SYSTEM_DIRECTIVE_PREFIX} - TEST]`
       expect(isSystemDirective(directive)).toBe(true)
     })
 

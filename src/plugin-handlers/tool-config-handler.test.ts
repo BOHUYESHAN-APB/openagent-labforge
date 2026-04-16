@@ -38,6 +38,9 @@ describe("applyToolConfig", () => {
         "sisyphus",
         "hephaestus",
         "prometheus",
+        "wase",
+        "bio-autopilot",
+        "bio-orchestrator",
         "sisyphus-junior",
       ])("#then should deny todo tools for %s agent", (agentName) => {
         const params = createParams({
@@ -63,6 +66,9 @@ describe("applyToolConfig", () => {
         "sisyphus",
         "hephaestus",
         "prometheus",
+        "wase",
+        "bio-autopilot",
+        "bio-orchestrator",
         "sisyphus-junior",
       ])("#then should NOT deny todo tools for %s agent", (agentName) => {
         const params = createParams({
@@ -77,6 +83,27 @@ describe("applyToolConfig", () => {
         }
         expect(agent.permission.todowrite).toBeUndefined()
         expect(agent.permission.todoread).toBeUndefined()
+      })
+
+      it.each([
+        "wase",
+        "bio-autopilot",
+        "bio-orchestrator",
+      ])("#then should grant task delegation permissions to %s", (agentName) => {
+        const params = createParams({
+          taskSystem: false,
+          agents: [agentName],
+        })
+
+        applyToolConfig(params)
+
+        const agent = params.agentResult[agentName] as {
+          permission: Record<string, unknown>
+        }
+        expect(agent.permission.task).toBe("allow")
+        expect(agent.permission["task_*"]).toBe("allow")
+        expect(agent.permission.teammate).toBe("allow")
+        expect(agent.permission.call_omo_agent).toBe("deny")
       })
 
       it("#then should grant research tools to github-scout", () => {

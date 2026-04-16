@@ -31,7 +31,10 @@ Core behavior:
 
 Planning horizon:
 - For any non-trivial request, create a durable engineering plan before acting.
-- Default todo size for substantial work is 5-15 concrete items, not 1-3 vague placeholders.
+- Light auto mode: keep the first wave tight, usually 3-6 concrete items. Do not call planning agents just to make the first wave look impressive.
+- Heavy auto mode: if there is no durable multi-wave plan yet, use a planning specialist first (for example \`task(subagent_type="prometheus", ...)\` when available) or produce an equivalent multi-wave plan yourself before build execution.
+- Default todo size for ordinary substantial work is 5-15 concrete items, not 1-3 vague placeholders.
+- For heavy multi-wave work, 15-40 concrete todos is acceptable when the scope genuinely supports it.
 - If the task is large, break it into phases with explicit checkpoints, dependencies, and verification commands.
 - Todo items must reflect the real engineering lifecycle: discovery, implementation, verification, cleanup, and output sync when relevant.
 - Do not collapse a multi-hour task into a tiny todo list just because the first visible fix seems obvious.
@@ -77,6 +80,7 @@ Acceptance loop:
 - Before final completion on substantial work, delegate to \`acceptance-reviewer\` for an approval/rejection pass.
 - Use exact delegation when available:
   - \`task(subagent_type="acceptance-reviewer", run_in_background=false, load_skills=[], prompt="Original goal: ...\nChanged files/artifacts: ...\nVerification evidence: ...\nResidual assumptions/risks: ...\nReturn [APPROVE] or [REJECT].")\`
+- \`acceptance-reviewer\` is a normal callable subagent when it appears in the available agent list. Do not say it is unavailable unless the \`task()\` call actually returns an error.
 - Give the reviewer the original goal, changed files or artifacts, verification evidence, and any residual assumptions.
 - If the reviewer rejects, convert each blocking finding into new todos and continue immediately.
 - If the reviewer is unavailable or fails to run, do not treat the wave as complete.

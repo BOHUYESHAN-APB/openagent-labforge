@@ -244,15 +244,36 @@ Gemini 说明：
 当前 checkpoint 命令：
 
 - `/handoff`
+- `/compress-context`
 - `/checkpoint`
 - `/checkpoint-resume`
 
 它们的用途是：
 
 - `/handoff`：生成一份可直接复制到新会话里的上下文摘要
+- `/compress-context`：管理当前会话的运行时压缩，而不是做人类交接用 checkpoint
+  - `status`：查看当前压缩状态
+  - `auto`：自动选择压缩层级
+  - `l1`：请求原生 OpenCode 风格 summarize / compaction，并只展示简短摘要
+  - `l2`：加强 repo-local 的同会话运行时记忆
+  - `l3`：准备重型跨会话 checkpoint，但不会自动切会话
 - `/checkpoint`：把关键接力信息写入 repo-local 文件，路径位于
   `.opencode/openagent-labforge/checkpoints/`
 - `/checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
+
+这几个命令的边界现在明确是：
+
+- `/compress-context`：运行时压缩和上下文治理
+- `/checkpoint`：显式、可审阅、可交接的耐久 handoff
+- `/compress-context` 可能会刷新
+  `.opencode/openagent-labforge/checkpoints/auto/`
+  下的 auto checkpoint，但它不等同于用户显式执行 `/checkpoint`
+
+压缩层级目前是：
+
+- `L1`：原生 summarize 请求 + 可见短摘要，不把压缩后的正文直接展示给用户
+- `L2`：把本地 runtime memory 补强到 repo-local 文件，比如 `context-capsule.md`、`context-pressure.json`
+- `L3`：准备更适合跨会话续接的 heavy checkpoint；通常只推荐新会话，不自动切换
 
 现在 checkpoint 不只是带一段摘要，还会带一小份结构化工程姿态：
 

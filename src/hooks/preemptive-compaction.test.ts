@@ -1,6 +1,7 @@
 /// <reference types="bun-types" />
 
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { _resetForTesting, updateSessionAgent } from "../features/claude-code-session-state"
 
 const ANTHROPIC_CONTEXT_ENV_KEY = "ANTHROPIC_1M_CONTEXT"
 const VERTEX_CONTEXT_ENV_KEY = "VERTEX_ANTHROPIC_1M_CONTEXT"
@@ -68,6 +69,7 @@ describe("preemptive-compaction", () => {
   beforeEach(() => {
     ctx = createMockCtx()
     logMock.mockClear()
+    _resetForTesting()
     delete process.env[ANTHROPIC_CONTEXT_ENV_KEY]
     delete process.env[VERTEX_CONTEXT_ENV_KEY]
   })
@@ -284,7 +286,7 @@ describe("preemptive-compaction", () => {
     })
   })
 
-  it("should use 1M limit when model cache flag is enabled", async () => {
+  it("should trigger compaction around 300K on 1M models when model cache flag is enabled", async () => {
     //#given
     const hook = createPreemptiveCompactionHook(ctx as never, {}, {
       anthropicContext1MEnabled: true,
@@ -319,7 +321,7 @@ describe("preemptive-compaction", () => {
     )
 
     //#then
-    expect(ctx.client.session.summarize).not.toHaveBeenCalled()
+    expect(ctx.client.session.summarize).toHaveBeenCalled()
   })
 
   it("should keep env var fallback when model cache flag is disabled", async () => {
@@ -358,7 +360,44 @@ describe("preemptive-compaction", () => {
     )
 
     //#then
-    expect(ctx.client.session.summarize).not.toHaveBeenCalled()
+    expect(ctx.client.session.summarize).toHaveBeenCalled()
+  })
+
+  it("triggers compaction earlier for bio sessions on 1M-class models", async () => {
+    const hook = createPreemptiveCompactionHook(ctx as never, {}, {
+      anthropicContext1MEnabled: false,
+      modelContextLimitsCache: new Map([["openai/gpt-5.4", 1_000_000]]),
+    })
+    const sessionID = "ses_bio_1m"
+    updateSessionAgent(sessionID, "生信总控官")
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 260000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 5000, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    await hook["tool.execute.after"](
+      { tool: "bash", sessionID, callID: "call_bio_1m" },
+      { title: "", output: "test", metadata: null }
+    )
+
+    expect(ctx.client.session.summarize).toHaveBeenCalled()
   })
 
   it("should clear in-progress lock when summarize times out", async () => {

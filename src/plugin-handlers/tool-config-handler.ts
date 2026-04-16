@@ -110,6 +110,20 @@ export function applyToolConfig(params: {
       ...denyTodoTools,
     };
   }
+  for (const orchestratorName of ["wase", "bio-autopilot", "bio-orchestrator"]) {
+    const orchestrator = agentByKey(params.agentResult, orchestratorName);
+    if (orchestrator) {
+      orchestrator.permission = {
+        ...orchestrator.permission,
+        call_omo_agent: "deny",
+        task: "allow",
+        question: questionPermission,
+        "task_*": "allow",
+        teammate: "allow",
+        ...denyTodoTools,
+      };
+    }
+  }
   const junior = agentByKey(params.agentResult, "sisyphus-junior");
   if (junior) {
     junior.permission = {

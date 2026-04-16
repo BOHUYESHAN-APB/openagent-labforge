@@ -12,7 +12,7 @@ interface MessageLike {
 }
 
 export interface CompletionPosture {
-  kind: "none" | "terminal_complete" | "pseudo_complete"
+  kind: "none" | "terminal_complete" | "pseudo_complete" | "external_wait"
   signature?: string
   messageId?: string
   blockingFindings: string[]
@@ -93,6 +93,22 @@ export function detectLatestAssistantCompletionPosture(messages: MessageLike[]):
     if (!combinedText) continue
 
     const structuredStatus = parseStructuredExecutionStatus(combinedText)
+    if (
+      structuredStatus?.agentOwnedRemaining === "none" &&
+      structuredStatus.userOwnedPending === "present"
+    ) {
+      return {
+        kind: "external_wait",
+        messageId: message.info?.id,
+        signature: buildCompletionSignature({
+          messageId: message.info?.id,
+          text: combinedText,
+          kind: "terminal_complete",
+        }),
+        blockingFindings: [],
+      }
+    }
+
     if (
       structuredStatus?.autoAction === "stop" &&
       structuredStatus.agentOwnedRemaining === "none" &&

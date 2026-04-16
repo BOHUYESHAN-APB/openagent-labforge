@@ -60,4 +60,23 @@ describe("detectLatestAssistantCompletionPosture", () => {
 
     expect(result.kind).toBe("pseudo_complete")
   })
+
+  test("pauses when structured status says only user-owned or external work remains", () => {
+    const result = detectLatestAssistantCompletionPosture([
+      {
+        info: { role: "assistant", id: "msg-5" },
+        parts: [{
+          type: "text",
+          text: `Execution Status
+- Current wave: incomplete
+- Agent-owned remaining work: none
+- User-owned/external pending: present
+- Auto action: continue`,
+        }],
+      },
+    ])
+
+    expect(result.kind).toBe("external_wait")
+    expect(result.blockingFindings).toHaveLength(0)
+  })
 })

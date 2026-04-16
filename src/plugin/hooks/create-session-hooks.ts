@@ -24,6 +24,7 @@ import {
   createNoHephaestusNonGptHook,
   createQuestionLabelTruncatorHook,
   createPreemptiveCompactionHook,
+  createCompressContextHook,
   createRuntimeFallbackHook,
 } from "../../hooks"
 import { createAnthropicEffortHook } from "../../hooks/anthropic-effort"
@@ -57,6 +58,7 @@ export type SessionHooks = {
   noSisyphusGpt: ReturnType<typeof createNoSisyphusGptHook> | null
   noHephaestusNonGpt: ReturnType<typeof createNoHephaestusNonGptHook> | null
   questionLabelTruncator: ReturnType<typeof createQuestionLabelTruncatorHook> | null
+  compressContext: ReturnType<typeof createCompressContextHook> | null
   taskResumeInfo: ReturnType<typeof createTaskResumeInfoHook> | null
   anthropicEffort: ReturnType<typeof createAnthropicEffortHook> | null
   runtimeFallback: ReturnType<typeof createRuntimeFallbackHook> | null
@@ -80,7 +82,7 @@ export function createSessionHooks(args: {
 
   const preemptiveCompaction =
     isHookEnabled("preemptive-compaction") &&
-    pluginConfig.experimental?.preemptive_compaction
+    (pluginConfig.experimental?.preemptive_compaction ?? true)
       ? safeHook("preemptive-compaction", () =>
           createPreemptiveCompactionHook(ctx, pluginConfig, modelCacheState))
       : null
@@ -241,6 +243,9 @@ export function createSessionHooks(args: {
   const questionLabelTruncator = isHookEnabled("question-label-truncator")
     ? safeHook("question-label-truncator", () => createQuestionLabelTruncatorHook())
     : null
+  const compressContext = isHookEnabled("compress-context")
+    ? safeHook("compress-context", () => createCompressContextHook(ctx, pluginConfig))
+    : null
   const taskResumeInfo = isHookEnabled("task-resume-info")
     ? safeHook("task-resume-info", () => createTaskResumeInfoHook())
     : null
@@ -282,6 +287,7 @@ export function createSessionHooks(args: {
     noSisyphusGpt,
     noHephaestusNonGpt,
     questionLabelTruncator,
+    compressContext,
     taskResumeInfo,
     anthropicEffort,
     runtimeFallback,

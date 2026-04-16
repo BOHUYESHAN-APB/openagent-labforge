@@ -472,8 +472,12 @@ function buildWaseStageBlock(input: {
 
   if (input.stage === "plan") {
     lines.push(
-      "- Build only the next decisive execution wave.",
-      "- Default to 3-6 concrete tasks unless runtime workflow is explicitly heavy.",
+      input.autoModeLevel === "light"
+        ? "- Build only the next decisive execution wave."
+        : "- Build or refresh a durable multi-wave execution plan before entering build.",
+      input.autoModeLevel === "light"
+        ? "- Default to 3-6 concrete tasks; do not call planning agents for routine light auto work."
+        : "- Use a planning specialist such as `prometheus` when available if the current plan is shallow, stale, or missing; target 15-40 concrete todos only when the scope genuinely supports it.",
       "- Load only the skills needed for the current phase before delegating.",
       "- Use `skill(name=\"backend-architecture\")`, `skill(name=\"frontend-ui-ux\")`, or `skill(name=\"proposal-and-roadmap\")` only when the current phase clearly needs them.",
     )
@@ -495,7 +499,7 @@ function buildWaseStageBlock(input: {
   if (input.autoModeLevel === "light") {
     lines.push("- Light mode: do not inflate the backlog unnecessarily.")
   } else {
-    lines.push("- Heavy mode: expand backlog only when real progress justifies a larger wave.")
+    lines.push("- Heavy mode: a shallow first todo list is a planning failure unless a durable plan already exists.")
   }
 
   if (input.interactionMode === "batch") {
@@ -551,7 +555,12 @@ function buildBioStageBlock(input: {
 
   if (input.stage === "plan") {
     lines.push(
-      "- Identify the minimum decisive biological inputs before expanding the work graph.",
+      input.autoModeLevel === "light"
+        ? "- Identify the minimum decisive biological inputs before expanding the work graph."
+        : "- Build or refresh a durable multi-wave bioinformatics plan before entering execution.",
+      input.autoModeLevel === "light"
+        ? "- Keep the first bio wave narrow; do not call planning agents for routine light auto work."
+        : "- Use `bio-methodologist` for biological/statistical planning and `prometheus` for broad repository execution planning when available.",
       "- If the correct bio category is still unclear, start with `skill(name=\"research/bioinformatics\")`, then load the chosen category guide, then the detailed leaf skill.",
       "- Load only the current-stage skills: `skill(name=\"bio-methods\")` first, execution skills later, visualization only when needed.",
       "- Do not start literature, validation, and visualization branches all at once on the first wave.",
@@ -576,7 +585,7 @@ function buildBioStageBlock(input: {
   if (input.autoModeLevel === "light") {
     lines.push("- Light mode: keep the first bio wave tight and reviewable.")
   } else {
-    lines.push("- Heavy mode: maintain a multi-wave backlog only after real progress or explicit heavy workflow state.")
+    lines.push("- Heavy mode: maintain a multi-wave backlog; 15-40 concrete todos is acceptable for genuinely broad bioinformatics work.")
   }
 
   if (input.interactionMode === "batch") {

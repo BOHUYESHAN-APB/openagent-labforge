@@ -9,6 +9,8 @@ This command can also be used in the current session if the user wants to reload
 Default checkpoint sources:
 - .opencode/openagent-labforge/checkpoints/latest.md
 - .opencode/openagent-labforge/checkpoints/latest.meta.json
+- .opencode/openagent-labforge/checkpoints/auto/latest.md
+- .opencode/openagent-labforge/checkpoints/auto/latest.meta.json
 
 If the user passes an argument, treat it as:
 - a checkpoint path
@@ -21,9 +23,12 @@ If the user passes an argument, treat it as:
 1. If $ARGUMENTS is empty:
    - read .opencode/openagent-labforge/checkpoints/latest.meta.json if it exists
    - read .opencode/openagent-labforge/checkpoints/latest.md
+   - if latest.md does not exist, read .opencode/openagent-labforge/checkpoints/auto/latest.meta.json if it exists
+   - then read .opencode/openagent-labforge/checkpoints/auto/latest.md
 
 2. If $ARGUMENTS looks like a session id:
    - read .opencode/openagent-labforge/checkpoints/by-session/$ARGUMENTS.md
+   - if missing, read .opencode/openagent-labforge/checkpoints/auto/by-session/$ARGUMENTS.md
 
 3. If $ARGUMENTS looks like a path:
    - read that file directly

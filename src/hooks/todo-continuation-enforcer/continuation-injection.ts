@@ -82,10 +82,34 @@ function buildWorkflowModeContext(args: {
   if (autoModeLevel === "light") {
     lines.push("- This session is in light autonomous mode: do not inflate the backlog unnecessarily; keep the current batch tight and reviewable.")
   } else if (autoModeLevel === "heavy") {
-    lines.push("- This session is in heavy autonomous mode: maintain a durable backlog and keep the multi-wave execution graph explicit.")
+    lines.push("- This session is in heavy autonomous mode: maintain a durable multi-wave backlog and keep the execution graph explicit.")
+    lines.push("- If the backlog is shallow and no durable plan exists, call a planning specialist when available before continuing build execution.")
+    lines.push("- For genuinely broad work, 15-40 concrete todos is acceptable; avoid tiny 3-item plans for heavy mode.")
   }
 
   return lines.join("\n")
+}
+
+function resolveAutonomousFallbackAgent(args: {
+  directory: string
+  sessionID: string
+  agentName?: string
+}): string | undefined {
+  if (args.agentName) {
+    return args.agentName
+  }
+
+  const sessionAgent = getSessionAgent(args.sessionID)
+  if (sessionAgent) {
+    return sessionAgent
+  }
+
+  const runtimeState = readRuntimeWorkflowState(args.directory, args.sessionID)
+  if (runtimeState?.active_agent) {
+    return runtimeState.active_agent
+  }
+
+  return isUltraworkAutonomousSession(args.sessionID) ? "wase" : undefined
 }
 
 function toRuntimeAgentName(agentName: string | undefined): string | undefined {
@@ -170,7 +194,11 @@ export async function injectContinuation(args: {
     return
   }
 
-  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 
@@ -333,7 +361,11 @@ export async function injectContinuationReplan(args: {
     return
   }
 
-  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 
@@ -470,7 +502,11 @@ export async function injectAutonomousCompletionAudit(args: {
     return
   }
 
-  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 
@@ -610,7 +646,11 @@ export async function injectAutonomousBacklogExpansion(args: {
     return
   }
 
-  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 
@@ -747,7 +787,11 @@ export async function injectAutonomousReviewRework(args: {
     : false
   if (hasRunningBgTasks) return
 
-  let agentName = resolvedInfo?.agent ?? getSessionAgent(sessionID)
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
   let model = resolvedInfo?.model
   let tools = resolvedInfo?.tools
 

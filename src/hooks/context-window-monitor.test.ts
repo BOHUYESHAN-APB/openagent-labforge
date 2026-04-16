@@ -29,8 +29,43 @@ function createMockCtx() {
       session: {
         messages: mock(() => Promise.resolve({ data: [] })),
       },
+      tui: {
+        showToast: mock(() => Promise.resolve({})),
+      },
     },
     directory: "/tmp/test",
+  }
+}
+
+function createTransformMessage(args: {
+  sessionID: string
+  role: "user" | "assistant"
+  agent?: string
+  text?: string
+  toolPart?: Record<string, unknown>
+  id: string
+}) {
+  const parts: Array<Record<string, unknown>> = []
+  if (args.text !== undefined) {
+    parts.push({
+      id: `${args.id}_text`,
+      sessionID: args.sessionID,
+      messageID: args.id,
+      type: "text",
+      text: args.text,
+    })
+  }
+  if (args.toolPart) {
+    parts.push(args.toolPart)
+  }
+  return {
+    info: {
+      id: args.id,
+      sessionID: args.sessionID,
+      role: args.role,
+      ...(args.agent ? { agent: args.agent } : {}),
+    },
+    parts,
   }
 }
 
@@ -217,10 +252,10 @@ describe("context-window-monitor", () => {
     expect(output.output).toBe("test")
   })
 
-  // #given non-anthropic provider
+  // #given non-anthropic provider with high carried context
   // #when message.updated fires
-  // #then should not trigger reminder
-  it("should ignore non-anthropic providers", async () => {
+  // #then labforge compression notice should still trigger
+  it("should append labforge notice for non-anthropic providers when context debt is high", async () => {
     const hook = createContextWindowMonitorHook(ctx as never)
     const sessionID = "ses_openai"
 
@@ -244,7 +279,325 @@ describe("context-window-monitor", () => {
       { tool: "bash", sessionID, callID: "call_1" },
       output
     )
-    expect(output.output).toBe("test")
+    expect(output.output).toContain("Labforge")
+    expect(output.output).toContain("Severe context debt")
+  })
+
+  it("writes a local context capsule when labforge notice triggers", async () => {
+    const testDir = `/tmp/labforge-context-${Date.now()}`
+    const localCtx = {
+      client: {
+        session: {
+          messages: mock(() => Promise.resolve({ data: [] })),
+        },
+      },
+      directory: testDir,
+    }
+    const hook = createContextWindowMonitorHook(localCtx as never)
+    const sessionID = "ses_capsule"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 650000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const output = { title: "", output: "test", metadata: null }
+    await hook["tool.execute.after"](
+      { tool: "bash", sessionID, callID: "call_capsule" },
+      output
+    )
+
+    const { existsSync, readFileSync, rmSync } = await import("node:fs")
+    const capsulePath = `${testDir}/.opencode/openagent-labforge/runtime/${sessionID}/context-capsule.md`
+    const autoCheckpointPath = `${testDir}/.opencode/openagent-labforge/checkpoints/auto/latest.md`
+    const autoCheckpointMetaPath = `${testDir}/.opencode/openagent-labforge/checkpoints/auto/latest.meta.json`
+    expect(existsSync(capsulePath)).toBe(true)
+    expect(readFileSync(capsulePath, "utf-8")).toContain("Labforge Context Capsule")
+    expect(existsSync(autoCheckpointPath)).toBe(true)
+    expect(readFileSync(autoCheckpointPath, "utf-8")).toContain("AUTO COMPRESSION CHECKPOINT")
+    expect(existsSync(autoCheckpointMetaPath)).toBe(true)
+    expect(readFileSync(autoCheckpointMetaPath, "utf-8")).toContain("\"checkpoint_kind\": \"heavy\"")
+    expect(output.output).toContain("checkpoints/auto/latest.md")
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  it("shows a visible L1 summary without creating an auto checkpoint", async () => {
+    const testDir = `/tmp/labforge-context-l1-${Date.now()}`
+    const localCtx = {
+      client: {
+        session: {
+          messages: mock(() => Promise.resolve({ data: [] })),
+        },
+        tui: {
+          showToast: mock(() => Promise.resolve({})),
+        },
+      },
+      directory: testDir,
+    }
+    const hook = createContextWindowMonitorHook(localCtx as never)
+    const sessionID = "ses_l1_capsule"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 230000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const output = { title: "", output: "test", metadata: null }
+    await hook["tool.execute.after"](
+      { tool: "bash", sessionID, callID: "call_l1" },
+      output
+    )
+
+    const { existsSync, rmSync } = await import("node:fs")
+    expect(output.output).toContain("Compression guard L1")
+    expect(output.output).toContain("context-capsule.md")
+    expect(output.output).toContain("context-pressure.json")
+    expect(output.output).toContain("Checkpoint: pending")
+    expect(existsSync(`${testDir}/.opencode/openagent-labforge/runtime/${sessionID}/context-capsule.md`)).toBe(true)
+    expect(existsSync(`${testDir}/.opencode/openagent-labforge/checkpoints/auto/latest.md`)).toBe(false)
+    expect(localCtx.client.tui.showToast).toHaveBeenCalled()
+    rmSync(testDir, { recursive: true, force: true })
+  })
+
+  it("prunes old compression notice messages during transform under context debt", async () => {
+    const hook = createContextWindowMonitorHook(ctx as never)
+    const sessionID = "ses_transform_prune_notice"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 650000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const messages = [
+      createTransformMessage({
+        sessionID,
+        role: "assistant",
+        text: "▣ DCP | -1476.5K removed, +477.5K summary\nCompression #192",
+        id: "msg_old_notice",
+      }),
+      ...Array.from({ length: 54 }, (_, index) =>
+        createTransformMessage({
+          sessionID,
+          role: index % 2 === 0 ? "user" : "assistant",
+          text: `message_${index}`,
+          id: `msg_${index}`,
+        })
+      ),
+    ]
+
+    const output = { messages }
+    await hook["experimental.chat.messages.transform"]?.({}, output as never)
+
+    expect(output.messages.length).toBe(54)
+    expect(
+      output.messages.some((message) =>
+        message.parts.some((part) => typeof part.text === "string" && String(part.text).includes("▣ DCP |"))
+      )
+    ).toBe(false)
+  })
+
+  it("compacts old tool outputs during transform under context debt", async () => {
+    const hook = createContextWindowMonitorHook(ctx as never)
+    const sessionID = "ses_transform_tool_compact"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 650000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const messages = [
+      createTransformMessage({
+        sessionID,
+        role: "assistant",
+        id: "msg_tool_old",
+        toolPart: {
+          id: "tool_1",
+          sessionID,
+          messageID: "msg_tool_old",
+          type: "tool",
+          tool: "bash",
+          state: {
+            status: "completed",
+            output: "x".repeat(2400),
+          },
+        },
+      }),
+      ...Array.from({ length: 54 }, (_, index) =>
+        createTransformMessage({
+          sessionID,
+          role: index % 2 === 0 ? "user" : "assistant",
+          text: `message_${index}`,
+          id: `msg_tail_${index}`,
+        })
+      ),
+    ]
+
+    const output = { messages }
+    await hook["experimental.chat.messages.transform"]?.({}, output as never)
+
+    const transformedToolPart = output.messages[0].parts.find((part) => part.type === "tool")
+    expect(transformedToolPart?.state?.output).toBe("[Labforge compacted stale tool output]")
+  })
+
+  it("injects compression directive into the latest user message when context debt is severe", async () => {
+    const hook = createContextWindowMonitorHook(ctx as never)
+    const sessionID = "ses_transform_directive"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 760000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const messages = [
+      createTransformMessage({
+        sessionID,
+        role: "assistant",
+        text: "older assistant context",
+        id: "msg_assistant_old",
+      }),
+      createTransformMessage({
+        sessionID,
+        role: "user",
+        text: "继续推进当前分析",
+        id: "msg_user_latest",
+      }),
+    ]
+
+    const output = { messages }
+    await hook["experimental.chat.messages.transform"]?.({}, output as never)
+
+    expect(output.messages[1].parts.length).toBe(2)
+    expect(String(output.messages[1].parts[0].text)).toContain("[Labforge Compression Directive]")
+    expect(String(output.messages[1].parts[0].text)).toContain("Severe context debt detected")
+  })
+
+  it("injects bio-specific compression directive for bio sessions", async () => {
+    const hook = createContextWindowMonitorHook(ctx as never)
+    const sessionID = "ses_transform_directive_bio"
+
+    await hook.event({
+      event: {
+        type: "message.updated",
+        properties: {
+          info: {
+            role: "assistant",
+            sessionID,
+            providerID: "openai",
+            modelID: "gpt-5.4",
+            finish: true,
+            tokens: {
+              input: 760000,
+              output: 1000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    })
+
+    const messages = [
+      createTransformMessage({
+        sessionID,
+        role: "assistant",
+        agent: "生信总控官",
+        text: "older bio context",
+        id: "msg_bio_assistant_old",
+      }),
+      createTransformMessage({
+        sessionID,
+        role: "user",
+        agent: "生信总控官",
+        text: "继续推进当前分析",
+        id: "msg_bio_user_latest",
+      }),
+    ]
+
+    const output = { messages }
+    await hook["experimental.chat.messages.transform"]?.({}, output as never)
+
+    expect(String(output.messages[1].parts[0].text)).toContain("bioinformatics / academic")
+    expect(String(output.messages[1].parts[0].text)).toContain("Do NOT open a new modality")
   })
 
   it("should use 1M limit when model cache flag is enabled", async () => {
@@ -282,7 +635,8 @@ describe("context-window-monitor", () => {
     )
 
     //#then
-    expect(output.output).toBe("original")
+    expect(output.output).toContain("Compression guard L1")
+    expect(output.output).toContain("context-capsule.md")
   })
 
   it("should keep env var fallback when model cache flag is disabled", async () => {
@@ -321,6 +675,7 @@ describe("context-window-monitor", () => {
     )
 
     //#then
-    expect(output.output).toBe("original")
+    expect(output.output).toContain("Compression guard L1")
+    expect(output.output).toContain("context-capsule.md")
   })
 })

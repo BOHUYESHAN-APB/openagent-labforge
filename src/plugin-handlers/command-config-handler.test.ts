@@ -3,10 +3,11 @@ import * as builtinCommands from "../features/builtin-commands";
 import * as commandLoader from "../features/claude-code-command-loader";
 import * as skillLoader from "../features/opencode-skill-loader";
 import * as shared from "../shared";
+import * as sessionState from "../features/claude-code-session-state";
 import type { OhMyOpenCodeConfig } from "../config";
 import type { PluginComponents } from "./plugin-components-loader";
 import { applyCommandConfig } from "./command-config-handler";
-import { getAgentListDisplayName } from "../shared/agent-display-names";
+import { getRuntimeAgentName, setAgentDisplayLanguage } from "../shared/agent-display-names";
 
 function createPluginComponents(): PluginComponents {
   return {
@@ -42,6 +43,8 @@ describe("applyCommandConfig", () => {
   let logSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
+    setAgentDisplayLanguage("en");
+    sessionState._resetForTesting();
     loadBuiltinCommandsSpy = spyOn(builtinCommands, "loadBuiltinCommands").mockReturnValue({});
     loadUserCommandsSpy = spyOn(commandLoader, "loadUserCommands").mockResolvedValue({});
     loadProjectCommandsSpy = spyOn(commandLoader, "loadProjectCommands").mockResolvedValue({});
@@ -64,6 +67,8 @@ describe("applyCommandConfig", () => {
   });
 
   afterEach(() => {
+    setAgentDisplayLanguage("en");
+    sessionState._resetForTesting();
     loadBuiltinCommandsSpy.mockRestore();
     loadUserCommandsSpy.mockRestore();
     loadProjectCommandsSpy.mockRestore();
@@ -120,7 +125,7 @@ describe("applyCommandConfig", () => {
     expect(commandConfig["agents-global-skill"]?.description).toContain("Agents global skill");
   });
 
-  test("remaps Atlas command agents to the list display name used by runtime agent lookup", async () => {
+  test("remaps Atlas command agents to the runtime agent name used by command routing", async () => {
     loadBuiltinCommandsSpy.mockReturnValue({
       "start-work": {
         name: "start-work",
@@ -139,7 +144,32 @@ describe("applyCommandConfig", () => {
     });
 
     const commandConfig = config.command as Record<string, { agent?: string }>;
-    expect(commandConfig["start-work"]?.agent).toBe(getAgentListDisplayName("atlas"));
+    expect(commandConfig["start-work"]?.agent).toBe(getRuntimeAgentName("atlas"));
+  });
+
+  test("prefers the registered runtime atlas name over a synthesized display name", async () => {
+    setAgentDisplayLanguage("zh");
+    sessionState.registerAgentName("执行官 (计划执行)");
+
+    loadBuiltinCommandsSpy.mockReturnValue({
+      "start-work": {
+        name: "start-work",
+        description: "(builtin) Start work",
+        template: "template",
+        agent: "atlas",
+      },
+    } as any);
+    const config: Record<string, unknown> = { command: {} };
+
+    await applyCommandConfig({
+      config,
+      pluginConfig: createPluginConfig(),
+      ctx: { directory: "/tmp" },
+      pluginComponents: createPluginComponents(),
+    });
+
+    const commandConfig = config.command as Record<string, { agent?: string }>;
+    expect(commandConfig["start-work"]?.agent).toBe("执行官 (计划执行)");
   });
 
   test("logs a warning when an external skill plugin is detected and Claude skills are enabled", async () => {

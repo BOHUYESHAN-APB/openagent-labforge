@@ -7,6 +7,7 @@ import { STOP_CONTINUATION_TEMPLATE } from "./templates/stop-continuation"
 import { REFACTOR_TEMPLATE } from "./templates/refactor"
 import { START_WORK_TEMPLATE } from "./templates/start-work"
 import { HANDOFF_TEMPLATE } from "./templates/handoff"
+import { COMPRESS_CONTEXT_TEMPLATE } from "./templates/compress-context"
 import { CHECKPOINT_TEMPLATE } from "./templates/checkpoint"
 import { CHECKPOINT_RESUME_TEMPLATE } from "./templates/checkpoint-resume"
 import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
@@ -30,6 +31,22 @@ function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
 ): Record<BuiltinCommandName, Omit<CommandDefinition, "name">> {
   return {
+  "compress-context": {
+    description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",
+    template: `<command-instruction>
+${COMPRESS_CONTEXT_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+    argumentHint: "[status|auto|l1|l2|l3]",
+  },
   checkpoint: {
     description: "(builtin) Create a repo-local light/heavy checkpoint for same-session recovery or cross-session continuation",
     template: `<command-instruction>

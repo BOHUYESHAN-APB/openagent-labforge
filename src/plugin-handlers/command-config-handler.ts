@@ -1,5 +1,6 @@
 import type { OhMyOpenCodeConfig } from "../config";
-import { getAgentListDisplayName } from "../shared/agent-display-names";
+import { getRuntimeAgentName } from "../shared/agent-display-names";
+import { resolveRegisteredAgentName } from "../features/claude-code-session-state";
 import {
   loadUserCommands,
   loadProjectCommands,
@@ -114,7 +115,9 @@ export async function applyCommandConfig(params: {
 function remapCommandAgentFields(commands: Record<string, Record<string, unknown>>): void {
   for (const cmd of Object.values(commands)) {
     if (cmd?.agent && typeof cmd.agent === "string") {
-      cmd.agent = getAgentListDisplayName(cmd.agent);
+      cmd.agent =
+        resolveRegisteredAgentName(cmd.agent) ??
+        getRuntimeAgentName(cmd.agent);
     }
   }
 }

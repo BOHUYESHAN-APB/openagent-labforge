@@ -1,5 +1,6 @@
 import { initConfigContext } from "./cli/config-manager/config-context"
 import type { Plugin } from "@opencode-ai/plugin"
+import packageJson from "../package.json" with { type: "json" }
 
 import type { HookName } from "./config"
 
@@ -26,6 +27,7 @@ type DisposeHookCarrier = {
 }
 
 let activePluginDispose: (() => Promise<void>) | undefined
+const VERSION = packageJson.version
 
 const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
   await activePluginDispose?.()
@@ -34,6 +36,8 @@ const OpenAgentLabforgePlugin: Plugin = async (ctx) => {
   initConfigContext("opencode", null)
   log("[OpenAgentLabforgePlugin] ENTRY - plugin loading", {
     directory: ctx.directory,
+    version: VERSION,
+    module_url: import.meta.url,
   })
 
   injectServerAuthIntoClient(ctx.client)

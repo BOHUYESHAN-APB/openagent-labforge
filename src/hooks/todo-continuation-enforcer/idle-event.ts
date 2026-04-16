@@ -439,6 +439,28 @@ export async function handleSessionIdle(args: {
       return
     }
 
+    if (isAutonomous && latestCompletionPosture.kind === "external_wait") {
+      if (
+        reconciledRuntimeState?.last_terminal_message_signature === latestCompletionPosture.signature ||
+        state.lastHandledCompletionSignature === latestCompletionPosture.signature
+      ) {
+        sessionStateStore.resetContinuationProgress(sessionID)
+        log(`[${HOOK_NAME}] External-wait completion already handled`, {
+          sessionID,
+          signature: latestCompletionPosture.signature,
+        })
+        return
+      }
+
+      markBatchTerminalStop("Autonomous wave paused because only user-owned or external pending work remains.")
+      sessionStateStore.resetContinuationProgress(sessionID)
+      log(`[${HOOK_NAME}] Autonomous session paused on external/user-owned pending work`, {
+        sessionID,
+        signature: latestCompletionPosture.signature,
+      })
+      return
+    }
+
     if (
       isAutonomous &&
       interactionMode === "batch" &&

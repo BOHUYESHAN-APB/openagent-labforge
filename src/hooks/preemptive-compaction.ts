@@ -1,5 +1,7 @@
 import { log } from "../shared/logger"
 import type { OhMyOpenCodeConfig } from "../config"
+import { getSessionAgent } from "../features/claude-code-session-state"
+import { getAgentConfigKey } from "../shared/agent-display-names"
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
 const DEFAULT_ACTUAL_LIMIT = 200_000
@@ -33,6 +35,12 @@ interface CachedCompactionState {
   tokens: TokenInfo
 }
 
+function formatCompactTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}K`
+  return String(tokens)
+}
+
 function withTimeout<TValue>(
   promise: Promise<TValue>,
   timeoutMs: number,
@@ -55,6 +63,52 @@ function withTimeout<TValue>(
 
 function isAnthropicProvider(providerID: string): boolean {
   return providerID === "anthropic" || providerID === "google-vertex-anthropic"
+}
+
+function inferContextLimit(providerID: string, modelID: string, modelCacheState?: ModelCacheStateLike): number {
+  if (modelID) {
+    const cached = modelCacheState?.modelContextLimitsCache?.get(`${providerID}/${modelID}`)
+    if (cached && cached > 0) return cached
+  }
+  if (isAnthropicProvider(providerID)) {
+    return getAnthropicActualLimit(modelCacheState)
+  }
+
+  const normalized = `${providerID}/${modelID}`.toLowerCase()
+  if (normalized.includes("gpt-5.4") || normalized.includes("gemini-2.5-pro") || normalized.includes("gemini-3")) {
+    return 1_000_000
+  }
+  if (normalized.includes("gpt-5.3") || normalized.includes("claude-sonnet-4.6")) {
+    return 400_000
+  }
+  return DEFAULT_ACTUAL_LIMIT
+}
+
+function isBioSession(sessionID: string): boolean {
+  const agent = getSessionAgent(sessionID)
+  const key = getAgentConfigKey(agent ?? "")
+  return key === "bio-autopilot" ||
+    key === "bio-orchestrator" ||
+    key === "bio-methodologist" ||
+    key === "bio-pipeline-operator" ||
+    key === "paper-evidence-synthesizer" ||
+    key === "wet-lab-designer"
+}
+
+function getPreemptiveCompactionThreshold(args: {
+  sessionID: string
+  actualLimit: number
+}): number {
+  const { sessionID, actualLimit } = args
+  const bio = isBioSession(sessionID)
+
+  if (actualLimit >= 900_000) {
+    return bio ? 260_000 / actualLimit : 300_000 / actualLimit
+  }
+  if (actualLimit >= 350_000) {
+    return bio ? 0.50 : 0.58
+  }
+  return PREEMPTIVE_COMPACTION_THRESHOLD
 }
 
 type PluginInput = {
@@ -92,18 +146,17 @@ export function createPreemptiveCompactionHook(
     const cached = tokenCache.get(sessionID)
     if (!cached) return
 
-    const modelSpecificLimit = !isAnthropicProvider(cached.providerID)
-      ? modelCacheState?.modelContextLimitsCache?.get(`${cached.providerID}/${cached.modelID}`)
-      : undefined
-    const actualLimit = isAnthropicProvider(cached.providerID)
-      ? getAnthropicActualLimit(modelCacheState)
-      : modelSpecificLimit ?? DEFAULT_ACTUAL_LIMIT
+    const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
 
     const lastTokens = cached.tokens
     const totalInputTokens = (lastTokens?.input ?? 0) + (lastTokens?.cache?.read ?? 0)
     const usageRatio = totalInputTokens / actualLimit
+    const threshold = getPreemptiveCompactionThreshold({
+      sessionID,
+      actualLimit,
+    })
 
-    if (usageRatio < PREEMPTIVE_COMPACTION_THRESHOLD) return
+    if (usageRatio < threshold) return
 
     const modelID = cached.modelID
     if (!modelID) return
@@ -118,6 +171,17 @@ export function createPreemptiveCompactionHook(
         modelID
       )
 
+      await ctx.client.tui
+        .showToast({
+          body: {
+            title: "Auto Compact",
+            message: `Summarizing session to reduce context debt (${formatCompactTokens(totalInputTokens)}/${formatCompactTokens(actualLimit)})...`,
+            variant: "warning",
+            duration: 3000,
+          },
+        })
+        .catch(() => {})
+
       await withTimeout(
         ctx.client.session.summarize({
           path: { id: sessionID },
@@ -129,8 +193,41 @@ export function createPreemptiveCompactionHook(
       )
 
       compactedSessions.add(sessionID)
+
+      log("[preemptive-compaction] Native session summarize requested", {
+        sessionID,
+        sourceProviderID: cached.providerID,
+        sourceModelID: modelID,
+        targetProviderID,
+        targetModelID,
+        totalInputTokens,
+        actualLimit,
+        usageRatio,
+        threshold,
+      })
+
+      await ctx.client.tui
+        .showToast({
+          body: {
+            title: "Auto Compact",
+            message: `Session summarized (${targetProviderID}/${targetModelID}). Context counter should drop now.`,
+            variant: "success",
+            duration: 5000,
+          },
+        })
+        .catch(() => {})
     } catch (error) {
       log("[preemptive-compaction] Compaction failed", { sessionID, error: String(error) })
+      await ctx.client.tui
+        .showToast({
+          body: {
+            title: "Auto Compact Failed",
+            message: "Compaction failed. Keep working from the current context or switch to a fresh session with /checkpoint-resume.",
+            variant: "error",
+            duration: 7000,
+          },
+        })
+        .catch(() => {})
     } finally {
       compactionInProgress.delete(sessionID)
     }

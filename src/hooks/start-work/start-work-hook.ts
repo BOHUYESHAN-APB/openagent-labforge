@@ -21,7 +21,7 @@ import {
 } from "../../features/claude-code-session-state"
 import {
   getAgentConfigKey,
-  getAgentDisplayName,
+  getRuntimeAgentName,
 } from "../../shared/agent-display-names"
 import { START_WORK_TEMPLATE } from "../../features/builtin-commands/templates/start-work"
 import { detectWorktreePath } from "./worktree-detector"
@@ -168,8 +168,7 @@ export function createStartWorkHook(ctx: PluginInput) {
           : isAgentRegistered("atlas")
             ? "atlas"
             : "sisyphus"
-      const activeAgentDisplayName = getAgentDisplayName(activeAgent)
-      const resolvedActiveAgentName = resolveRegisteredAgentName(activeAgent) ?? activeAgentDisplayName
+      const resolvedActiveAgentName = resolveRegisteredAgentName(activeAgent) ?? getRuntimeAgentName(activeAgent)
       updateSessionAgent(input.sessionID, activeAgent)
       const outputMessage = output as StartWorkHookOutput & { message?: Record<string, unknown> }
       if (outputMessage.message) {

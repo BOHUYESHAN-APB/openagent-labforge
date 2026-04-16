@@ -1,5 +1,5 @@
 import { log } from "../../shared/logger"
-import { SYSTEM_DIRECTIVE_PREFIX } from "../../shared/system-directive"
+import { containsSystemDirectivePrefix } from "../../shared/system-directive"
 import { isCallerOrchestrator } from "../../shared/session-utils"
 import type { PluginInput } from "@opencode-ai/plugin"
 import { HOOK_NAME } from "./hook-name"
@@ -44,7 +44,7 @@ export function createToolExecuteBeforeHandler(input: {
     // Check task - inject single-task directive
     if (toolInput.tool === "task") {
       const prompt = toolOutput.args.prompt as string | undefined
-      if (prompt && !prompt.includes(SYSTEM_DIRECTIVE_PREFIX)) {
+      if (prompt && !containsSystemDirectivePrefix(prompt)) {
         toolOutput.args.prompt = `<system-reminder>${SINGLE_TASK_DIRECTIVE}</system-reminder>\n` + prompt
         log(`[${HOOK_NAME}] Injected single-task directive to task`, {
           sessionID: toolInput.sessionID,
