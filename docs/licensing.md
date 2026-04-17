@@ -3,8 +3,15 @@
 This repository contains mixed provenance:
 
 1. Upstream-derived code (from oh-my-openagent / oh-my-opencode lineage, with original upstream descriptions retained where appropriate)
-2. New repository additions (workflows/docs/features by this derivative project)
+2. New repository additions after commit `2d1addad32aeaec7381bd5502977393000bcc27a` (workflows/docs/features/code by this project)
 3. Third-party integrations (especially MCP servers)
+
+## Current Boundary Policy
+
+- Post-boundary newly added original code is licensed under Apache-2.0.
+- Post-boundary newly added original code copyright belongs to OpenAgent Labforge maintainers/contributors.
+- Pre-boundary upstream-derived code keeps its source license boundary until replaced by refactor.
+- Full refactor transition plan is tracked in `REFACTOR_APACHE2_PLAN.md`.
 
 ## Canonical Files
 

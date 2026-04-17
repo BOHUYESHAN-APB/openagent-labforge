@@ -24,19 +24,19 @@ The plugin is now centered on:
 - repo-local runtime workflow memory under `.opencode/openagent-labforge/`
 - local-first development and installation
 
-## Protocol Compatibility
+## Licensing and Copyright Strategy (Refactor Transition)
 
-New code in this fork follows the upstream plugin protocol surface wherever
-possible and extends it rather than replacing it casually.
+Starting from commit `2d1addad32aeaec7381bd5502977393000bcc27a`, new code in this
+repository is governed as follows:
 
-The current rule is:
+- Copyright for newly added original code belongs to OpenAgent Labforge
+  maintainers/contributors.
+- Newly added original code is licensed under Apache-2.0.
+- Historical upstream-derived code remains under its source license boundary
+  until it is replaced through refactor.
 
-- keep upstream-compatible config and injection behavior
-- keep upstream-style agent / MCP / command / skill registration surfaces
-- carry forward the original plugin contract before adding fork-specific behavior
-- document deliberate divergences instead of silently changing protocol shape
-
-This reduces drift and keeps future upstream sync work tractable.
+This repository has started a full refactor program to converge the forward code
+path to Apache-2.0. See [REFACTOR_APACHE2_PLAN.md](REFACTOR_APACHE2_PLAN.md).
 
 ## Current Model Recommendation
 

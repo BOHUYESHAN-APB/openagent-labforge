@@ -4,6 +4,7 @@ Portions of this software are licensed as follows:
 
 - All third party components incorporated into the upstream-derived software are licensed under the original license
   provided by the owner of the applicable component.
+- New original code added after commit 2d1addad32aeaec7381bd5502977393000bcc27a is licensed under Apache-2.0.
 - Content outside of the above mentioned files or restrictions is available under the "Sustainable Use
   License" as defined below.
 

@@ -25,7 +25,7 @@ To avoid ambiguity:
 
 1. Upstream-derived portions remain subject to upstream license terms.
 2. Third-party components/integrations retain their own original licenses.
-3. New documentation/configuration/orchestration additions in this repository are managed under this repository's declared licensing boundary and attribution records.
+3. New original code added after commit `2d1addad32aeaec7381bd5502977393000bcc27a` is managed under Apache-2.0 with repository attribution records.
 
 For operational attribution context, also see:
 - `LICENSE.md`
