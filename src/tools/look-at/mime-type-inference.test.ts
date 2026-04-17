@@ -29,6 +29,16 @@ describe("mime type inference", () => {
     expect(mime).toBe("image/heic")
   })
 
+  test("infers docx from file extension", () => {
+    const mime = inferMimeTypeFromFilePath("/tmp/paper.docx")
+    expect(mime).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+  })
+
+  test("infers pptx from file extension", () => {
+    const mime = inferMimeTypeFromFilePath("/tmp/slides.pptx")
+    expect(mime).toBe("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+  })
+
   test("extracts raw base64 data from data URL", () => {
     const base64 = extractBase64Data("data:image/png;base64,abc123")
     expect(base64).toBe("abc123")

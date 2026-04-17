@@ -237,12 +237,35 @@ Gemini 说明：
 - `/workflow-reset`
 - `/focus-chat`
 
+原生 TUI 设置入口命令：
+
+- `/ol-settings`
+- `/ol-settings-image-bus`
+
 它们的实际用途是：
 
 - `/stop-continuation`：停止当前会话的 continuation 机制
 - `/todo-clear`：清掉旧 todo 和当前 session 的执行残留
 - `/workflow-reset`：清掉当前 session / project 绑定的 workflow 状态，方便重新开始
 - `/focus-chat`：把当前会话拉回普通问答模式，压住旧执行状态继续干扰
+- `/ol-settings`：直接打开插件自己的原生 TUI 设置面
+- `/ol-settings-image-bus`：直接打开同一套 TUI 设置里的 image_bus 二级页面
+- image_bus 页面负责：
+  - API 服务商与模型
+  - 普通绘图 / 科研绘图路由
+  - 中转 / 代理 `generate_endpoint`
+  - 上下文记忆 `context_memory`
+
+补充说明：
+
+- 这两个设置命令不再通过 chat template / 提示词注入实现。
+- 在 TUI 里，插件现在会注册自己的原生命令与 slash 入口。
+- 如果用户手打 raw `/ol-settings` 消息，插件会做兜底拦截，避免把命令文本直接喂给模型。
+
+作用域说明：
+
+- 上述 `/` 命令主要面向 OpenCode TUI 的 slash / command UI
+- 不是 PowerShell 命令，不能在终端直接执行
 
 这组命令存在的原因很现实：
 
@@ -353,6 +376,31 @@ checkpoint 层级目前是：
 - `article-writer`：公众技术写作
 - `scientific-writer`：科研 / 同行向技术写作
 - `multimodal-looker`：PDF / 图片 / 图表理解
+
+### Multimodal-Looker 的定义与边界
+
+核心目的：
+
+- 最大化对图片、图表、截图、文档嵌图的语义理解能力
+- 给主 agent 返回“提取后的结论”，而不是把主会话拖进重多模态解析
+- 通过子会话隔离复杂视觉上下文，降低主会话压力
+
+主要输入路径：
+
+- `look_at(file_path=..., goal=...)`：本地单文件多模态解析
+- `look_at(file_path=<目录>, goal=...)`：目录多图批量解析
+- `look_at(file_path=<docx/pptx>, goal=...)`：文档内嵌图片解包后语义解析
+
+边界（它不负责的事情）：
+
+- 不替代普通文本/代码的逐字读取流程
+- 不承担文档编辑器角色
+- 不是独立的图像生成后端
+
+调度规则：
+
+- 任务目标是图像语义（图表含义、截图解释、插图位置建议）时，优先路由到 `multimodal-looker`
+- 任务目标是字面文本/代码提取时，优先 `read` 与仓库证据工具
 
 ### 生物信息学体系
 
@@ -569,6 +617,67 @@ bun pm pack
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 
+### TUI 设置入口（统一，终端模式）
+
+如果你在本仓库开发环境里测试 CLI，请使用：
+
+```bash
+bun run src/cli/index.ts settings
+```
+
+兼容旧入口（仍支持）：
+
+```bash
+bun run src/cli/index.ts configure
+```
+
+当前图像总线设置入口：
+
+```bash
+bun run src/cli/index.ts settings --image-bus
+```
+
+常用检查命令：
+
+```bash
+bun run src/cli/index.ts settings --help
+bun run src/cli/index.ts configure --help
+```
+
+Google 中转/代理端点配置示例：
+
+```jsonc
+{
+  "image_bus": {
+    "enabled": true,
+    "context_memory": {
+      "enabled": true,
+      "carry_prompt_context": true,
+      "max_history_turns": 5,
+      "include_provider_decision_trace": false
+    },
+    "providers": {
+      "google_nano_banana": {
+        "enabled": true,
+        "base_url": "https://relay.example.com",
+        "generate_endpoint": "/proxy/google/{model}/images",
+        "api_key_env": "GOOGLE_API_KEY",
+        "model": "nano-banana-2"
+      }
+    }
+  }
+}
+```
+
+`generate_endpoint` 同时支持：
+
+- 相对路径（会与 `base_url` 组合）
+- 完整 URL（直接使用）
+
+并支持 `{model}` 占位符替换。
+
+`context_memory` 用于控制图像生成相关上下文在多轮对话中的携带策略。
+
 ### 可直接复制到 OpenCode 的安装提示词
 
 如果你想让 OpenCode 自己去克隆仓库、构建插件、并把本地插件路径接进配置，可以直接把下面这段提示词贴进一个新的 OpenCode 会话：
@@ -642,6 +751,12 @@ https://github.com/BOHUYESHAN-APB/openagent-labforge.git
 - ComfyUI 兼容后端
 - 生成图片后再交给主模型复审的可选链路
 
+图像生成功能接入状态（当前）：
+
+- 已列入后续里程碑
+- 正在收集各平台 API 接入需求与参数结构
+- 在外部 API 合同稳定前，插件默认继续保持 SVG-first 回退策略
+
 ## 协作说明
 
 维护者说明：
@@ -654,6 +769,8 @@ https://github.com/BOHUYESHAN-APB/openagent-labforge.git
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 - [docs/guide/orchestration.md](docs/guide/orchestration.md)
+- [docs/guide/subagent-orchestration.md](docs/guide/subagent-orchestration.md)
+- [docs/guide/subagent-orchestration.zh-cn.md](docs/guide/subagent-orchestration.zh-cn.md)
 - [docs/guide/bio-skills.md](docs/guide/bio-skills.md)
 - [docs/guide/bio-paper-autonomous-flow-v1.md](docs/guide/bio-paper-autonomous-flow-v1.md)
 - [docs/reference/configuration.md](docs/reference/configuration.md)

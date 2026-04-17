@@ -46,6 +46,10 @@ export function createPluginInterface(args: {
       hooks,
     }),
 
+    "command.execute.before": async (input, output) => {
+      await hooks.autoSlashCommand?.["command.execute.before"]?.(input, output)
+    },
+
     "experimental.chat.messages.transform": createMessagesTransformHandler({
       hooks,
     }),

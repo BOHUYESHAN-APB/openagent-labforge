@@ -38,6 +38,7 @@ The last point matters operationally: if a delegated task cannot be inspected in
 - `tech-scout` - cross-source ecosystem scans
 - `article-writer` - public-facing technical prose
 - `scientific-writer` - peer-facing scientific prose
+- `multimodal-looker` - visual semantic analysis (PDF / image / figure)
 
 ---
 
@@ -85,6 +86,18 @@ Why:
 
 - `article-writer` -> broad/public technical communication
 - `scientific-writer` -> peer-facing scientific or research-style writing
+
+### Use `multimodal-looker` when
+
+- the main question is visual semantics, not literal text retrieval
+- you need interpretation of figures, charts, screenshots, or embedded media in office files
+- you need image meaning that can drive placement decisions in reports/papers
+
+Do not use `multimodal-looker` as:
+
+- a replacement for plain-text/code exact reads
+- a document editing path
+- an image generation backend
 
 ---
 
@@ -136,5 +149,10 @@ For high-trust work sessions:
 - execute via `task` for inspectable child sessions
 - keep specialist prompts narrow and evidence-oriented
 - avoid treating every search/analyze request as a reason to launch many agents
+
+For image-generation planning:
+
+- keep generation capability configuration-gated until backend APIs are finalized
+- keep SVG-first fallback active while provider API requirements are still being collected
 
 That gives the best tradeoff between transparency, controllability, and throughput.

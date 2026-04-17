@@ -1,5 +1,9 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, test, mock } from "bun:test"
 import type { ToolContext } from "@opencode-ai/plugin/tool"
+import JSZip from "jszip"
 import { normalizeArgs, validateArgs, createLookAt } from "./tools"
 
 describe("look-at tool", () => {
@@ -251,6 +255,192 @@ describe("look-at tool", () => {
   })
 
   describe("createLookAt model passthrough", () => {
+    test("supports directory path by sending multiple local image files", async () => {
+      let promptBody: any
+      const tempDirectory = await mkdtemp(join(tmpdir(), "look-at-dir-test-"))
+      const pngPath = join(tempDirectory, "crop.png")
+      const jpgPath = join(tempDirectory, "chart.jpg")
+      const txtPath = join(tempDirectory, "note.txt")
+
+      await writeFile(pngPath, Buffer.from("89504e470d0a1a0a", "hex"))
+      await writeFile(jpgPath, Buffer.from("ffd8ffe0", "hex"))
+      await writeFile(txtPath, "ignore me")
+
+      const mockClient = {
+        app: {
+          agents: async () => ({ data: [] }),
+        },
+        session: {
+          get: async () => ({ data: { directory: "/project" } }),
+          create: async () => ({ data: { id: "ses_directory_images" } }),
+          prompt: async (input: any) => {
+            promptBody = input.body
+            return { data: {} }
+          },
+          messages: async () => ({
+            data: [
+              {
+                info: { role: "assistant", time: { created: 1 } },
+                parts: [{ type: "text", text: "ok" }],
+              },
+            ],
+          }),
+        },
+      }
+
+      const tool = createLookAt({
+        client: mockClient,
+        directory: "/project",
+      } as any)
+
+      const toolContext: ToolContext = {
+        sessionID: "parent-session",
+        messageID: "parent-message",
+        agent: "sisyphus",
+        directory: "/project",
+        worktree: "/project",
+        abort: new AbortController().signal,
+        metadata: () => {},
+        ask: async () => {},
+      }
+
+      try {
+        await tool.execute(
+          { file_path: tempDirectory, goal: "pick best image for abstract" },
+          toolContext,
+        )
+      } finally {
+        await rm(tempDirectory, { recursive: true, force: true })
+      }
+
+      expect(promptBody.parts).toBeArray()
+      expect(promptBody.parts.length).toBe(3)
+      expect(promptBody.parts[1].type).toBe("file")
+      expect(promptBody.parts[1].url).toStartWith("file://")
+      expect(promptBody.parts[2].type).toBe("file")
+      expect(promptBody.parts[2].url).toStartWith("file://")
+      expect(promptBody.parts[0].text).toContain("Directory scan included 2 image(s).")
+    })
+
+    test("extracts embedded images from docx and forwards them as file parts", async () => {
+      let promptBody: any
+      const tempDirectory = await mkdtemp(join(tmpdir(), "look-at-docx-test-"))
+      const docxPath = join(tempDirectory, "paper.docx")
+
+      const zip = new JSZip()
+      zip.file("word/document.xml", "<w:document/>")
+      zip.file("word/media/image1.png", Buffer.from("89504e470d0a1a0a", "hex"))
+      const docxBytes = await zip.generateAsync({ type: "nodebuffer" })
+      await writeFile(docxPath, docxBytes)
+
+      const mockClient = {
+        app: {
+          agents: async () => ({ data: [] }),
+        },
+        session: {
+          get: async () => ({ data: { directory: "/project" } }),
+          create: async () => ({ data: { id: "ses_docx_images" } }),
+          prompt: async (input: any) => {
+            promptBody = input.body
+            return { data: {} }
+          },
+          messages: async () => ({
+            data: [
+              {
+                info: { role: "assistant", time: { created: 1 } },
+                parts: [{ type: "text", text: "ok" }],
+              },
+            ],
+          }),
+        },
+      }
+
+      const tool = createLookAt({
+        client: mockClient,
+        directory: "/project",
+      } as any)
+
+      const toolContext: ToolContext = {
+        sessionID: "parent-session",
+        messageID: "parent-message",
+        agent: "sisyphus",
+        directory: "/project",
+        worktree: "/project",
+        abort: new AbortController().signal,
+        metadata: () => {},
+        ask: async () => {},
+      }
+
+      try {
+        await tool.execute(
+          { file_path: docxPath, goal: "extract figure meaning and placement hints" },
+          toolContext,
+        )
+      } finally {
+        await rm(tempDirectory, { recursive: true, force: true })
+      }
+
+      expect(promptBody.parts).toBeArray()
+      expect(promptBody.parts.length).toBeGreaterThanOrEqual(3)
+      expect(promptBody.parts[1].mime).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+      expect(promptBody.parts.some((part: any) => part.mime === "image/png")).toBeTrue()
+      expect(promptBody.parts[0].text).toContain("Embedded images extracted: 1.")
+    })
+
+    test("sends local file_path as file:// multimodal file part", async () => {
+      let promptBody: any
+
+      const mockClient = {
+        app: {
+          agents: async () => ({ data: [] }),
+        },
+        session: {
+          get: async () => ({ data: { directory: "/project" } }),
+          create: async () => ({ data: { id: "ses_local_file_path" } }),
+          prompt: async (input: any) => {
+            promptBody = input.body
+            return { data: {} }
+          },
+          messages: async () => ({
+            data: [
+              {
+                info: { role: "assistant", time: { created: 1 } },
+                parts: [{ type: "text", text: "ok" }],
+              },
+            ],
+          }),
+        },
+      }
+
+      const tool = createLookAt({
+        client: mockClient,
+        directory: "/project",
+      } as any)
+
+      const toolContext: ToolContext = {
+        sessionID: "parent-session",
+        messageID: "parent-message",
+        agent: "sisyphus",
+        directory: "/project",
+        worktree: "/project",
+        abort: new AbortController().signal,
+        metadata: () => {},
+        ask: async () => {},
+      }
+
+      await tool.execute(
+        { file_path: "/test/local-image.png", goal: "analyze image" },
+        toolContext,
+      )
+
+      expect(promptBody.parts).toBeArray()
+      expect(promptBody.parts[1]).toBeObject()
+      expect(promptBody.parts[1].type).toBe("file")
+      expect(promptBody.parts[1].mime).toBe("image/png")
+      expect(promptBody.parts[1].url).toStartWith("file://")
+      expect(promptBody.parts[1].filename).toBe("local-image.png")
+    })
+
     // given multimodal-looker agent has resolved model info
     // when LookAt tool executed
     // then model info should be passed to sync prompt

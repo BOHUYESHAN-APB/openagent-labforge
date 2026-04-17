@@ -71,6 +71,8 @@ export function inferMimeTypeFromFilePath(filePath: string): string {
     ".ogg": "audio/ogg",
     ".flac": "audio/flac",
     ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ".txt": "text/plain",
     ".csv": "text/csv",
     ".md": "text/md",

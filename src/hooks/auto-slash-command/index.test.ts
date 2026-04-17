@@ -151,6 +151,30 @@ describe("createAutoSlashCommandHook", () => {
       // then should not modify
       expect(output.parts[0].text).toBe(originalText)
     })
+
+    it("should NOT trigger for ol-settings command", async () => {
+      const hook = createAutoSlashCommandHook()
+      const sessionID = `test-session-ol-settings-${Date.now()}`
+      const input = createMockInput(sessionID)
+      const output = createMockOutput("/ol-settings")
+      const originalText = output.parts[0].text
+
+      await hook["chat.message"](input, output)
+
+      expect(output.parts[0].text).toBe(originalText)
+    })
+
+    it("should NOT trigger for ol-settings-image-bus command", async () => {
+      const hook = createAutoSlashCommandHook()
+      const sessionID = `test-session-ol-settings-image-bus-${Date.now()}`
+      const input = createMockInput(sessionID)
+      const output = createMockOutput("/ol-settings-image-bus")
+      const originalText = output.parts[0].text
+
+      await hook["chat.message"](input, output)
+
+      expect(output.parts[0].text).toBe(originalText)
+    })
   })
 
   describe("already processed", () => {

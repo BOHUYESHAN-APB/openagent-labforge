@@ -23,6 +23,7 @@ export { sessionExists } from "./session-manager/storage"
 
 export { interactive_bash, startBackgroundCheck as startTmuxCheck } from "./interactive-bash"
 export { createSkillMcpTool } from "./skill-mcp"
+export { createImageGenerateTool } from "./image-generate"
 
 import {
   createBackgroundOutput,

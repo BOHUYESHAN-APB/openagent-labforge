@@ -3,6 +3,7 @@ import { install } from "./install"
 import { run } from "./run"
 import { getLocalVersion } from "./get-local-version"
 import { doctor } from "./doctor"
+import { configure } from "./configure"
 import { createMcpOAuthCommand } from "./mcp-oauth"
 import type { InstallArgs } from "./types"
 import type { RunOptions } from "./run"
@@ -167,6 +168,44 @@ Examples:
       json: options.json ?? false,
     }
     const exitCode = await doctor(doctorOptions)
+    process.exit(exitCode)
+  })
+
+program
+  .command("configure")
+  .description("Open interactive configuration wizard for advanced plugin settings")
+  .option("--image-bus", "Configure image bus providers and API key env references")
+  .addHelpText("after", `
+Examples:
+  $ bunx openagent-labforge configure
+  $ bunx openagent-labforge configure --image-bus
+
+This command is useful when OpenCode GUI pages are hard to extend.
+It writes plugin settings directly to your openagent-labforge config.
+Without --image-bus, it also configures:
+  - Context guard threshold preset (aggressive|balanced|conservative)
+  - Bio agent visibility
+`)
+  .action(async (options) => {
+    const exitCode = await configure({ imageBusOnly: options.imageBus ?? false })
+    process.exit(exitCode)
+  })
+
+program
+  .command("settings")
+  .description("Unified settings entry (recommended). Opens interactive configuration wizard")
+  .option("--image-bus", "Configure image bus providers and API key env references")
+  .addHelpText("after", `
+Examples:
+  $ bunx openagent-labforge settings
+  $ bunx openagent-labforge settings --image-bus
+
+This is the standardized entry for plugin settings pages.
+By default it runs unified wizard pages (image bus + context guard + bio visibility).
+Use --image-bus to limit changes to image_bus only.
+`)
+  .action(async (options) => {
+    const exitCode = await configure({ imageBusOnly: options.imageBus ?? false })
     process.exit(exitCode)
   })
 

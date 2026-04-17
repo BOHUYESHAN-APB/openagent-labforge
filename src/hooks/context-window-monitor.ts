@@ -1,4 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
+import type { OhMyOpenCodeConfig } from "../config"
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { log } from "../shared/logger"
@@ -8,13 +9,14 @@ import {
   resolveCompressionProfile,
 } from "./context-window-monitor-directive"
 import { writeAutoCompressionCheckpoint } from "./context-window-monitor-checkpoint"
+import {
+  getContextGuardNoticeLevel,
+  resolveContextGuardProfile,
+} from "./context-guard-threshold-profile"
 
 const ANTHROPIC_DISPLAY_LIMIT = 1_000_000
 const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000
 const CONTEXT_WARNING_THRESHOLD = 0.70
-const LABFORGE_NOTICE_THRESHOLD = 0.45
-const LABFORGE_FUSE_THRESHOLD = 0.60
-const LABFORGE_SEVERE_THRESHOLD = 0.72
 const DEFAULT_MODEL_CONTEXT_LIMIT = 200_000
 
 type ModelCacheStateLike = {
@@ -97,25 +99,6 @@ function buildProgressBar(ratio: number): string {
   const width = 30
   const filled = Math.max(0, Math.min(width, Math.round(ratio * width)))
   return `${"#".repeat(filled)}${".".repeat(width - filled)}`
-}
-
-function getNoticeLevel(ratio: number, totalTokens: number, contextLimit: number): 0 | 1 | 2 | 3 {
-  if (contextLimit >= 900_000) {
-    if (totalTokens >= 550_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-    if (totalTokens >= 320_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-    if (totalTokens >= 220_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
-    return 0
-  }
-  if (contextLimit >= 350_000) {
-    if (totalTokens >= 300_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-    if (totalTokens >= 220_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-    if (totalTokens >= 150_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
-    return 0
-  }
-  if (ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-  if (ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-  if (ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
-  return 0
 }
 
 function getRuntimeCapsulePath(directory: string, sessionID: string): string {
@@ -202,6 +185,7 @@ function writeCompressionState(args: {
 function buildLabforgeCompressionNotice(args: {
   level: number
   profile: "engineering" | "bio"
+  thresholdProfile: "conservative" | "balanced" | "aggressive"
   ratio: number
   totalInputTokens: number
   cacheReadTokens: number
@@ -215,6 +199,7 @@ function buildLabforgeCompressionNotice(args: {
   const {
     level,
     profile,
+    thresholdProfile,
     ratio,
     totalInputTokens,
     cacheReadTokens,
@@ -245,13 +230,15 @@ function buildLabforgeCompressionNotice(args: {
 │${buildProgressBar(ratio)}│
 ▣ Compression guard L${level} (${(ratio * 100).toFixed(1)}% of ${formatCompactTokens(limit)})
 → Profile: ${profile}
+→ Threshold preset: ${thresholdProfile}
 → Topic: ${topic}
 → Action: ${action}
 ${removedTokens > 0 || compactedToolOutputs > 0 || removedMessages > 0
     ? `→ Pruned: -${formatCompactTokens(removedTokens)} stale, ${removedMessages} messages, ${compactedToolOutputs} tool outputs compacted`
     : "→ Pruned: -0 stale, 0 messages, 0 tool outputs compacted"}
 → Files: ${files.join(", ")}
-${checkpointPath ? `→ Checkpoint: ${checkpointPath}` : "→ Checkpoint: pending"}`
+${checkpointPath ? `→ Checkpoint: ${checkpointPath}` : "→ Checkpoint: pending"}
+→ Tune guard: run /ol-settings and choose Context Guard preset.`
 }
 
 async function showLabforgeCompressionToast(ctx: PluginInput, args: {
@@ -391,7 +378,11 @@ function applyMicroPrune(messages: MessageWithParts[], level: number): Compressi
 export function createContextWindowMonitorHook(
   ctx: PluginInput,
   modelCacheState?: ModelCacheStateLike,
+  pluginConfig?: Pick<OhMyOpenCodeConfig, "experimental">,
 ) {
+  const contextGuardProfile = resolveContextGuardProfile(
+    pluginConfig?.experimental?.context_guard_profile,
+  )
   const remindedSessions = new Set<string>()
   const labforgeNoticeLevels = new Map<string, number>()
   const labforgeTransformNoticeLevels = new Map<string, number>()
@@ -412,7 +403,12 @@ export function createContextWindowMonitorHook(
     const totalInputTokens = (lastTokens?.input ?? 0) + (lastTokens?.cache?.read ?? 0)
     const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
     const actualUsagePercentage = totalInputTokens / actualLimit
-    const noticeLevel = getNoticeLevel(actualUsagePercentage, totalInputTokens, actualLimit)
+    const noticeLevel = getContextGuardNoticeLevel({
+      ratio: actualUsagePercentage,
+      totalTokens: totalInputTokens,
+      contextLimit: actualLimit,
+      profile: contextGuardProfile,
+    })
 
     if (noticeLevel > 0 && noticeLevel > (labforgeNoticeLevels.get(sessionID) ?? 0)) {
       labforgeNoticeLevels.set(sessionID, noticeLevel)
@@ -461,6 +457,7 @@ export function createContextWindowMonitorHook(
       output.output += `\n\n${buildLabforgeCompressionNotice({
         level: noticeLevel,
         profile,
+        thresholdProfile: contextGuardProfile,
         ratio: actualUsagePercentage,
         totalInputTokens,
         cacheReadTokens: lastTokens.cache?.read ?? 0,
@@ -571,7 +568,12 @@ export function createContextWindowMonitorHook(
 
     const totalInputTokens = (cached.tokens.input ?? 0) + (cached.tokens.cache?.read ?? 0)
     const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
-    const level = getNoticeLevel(totalInputTokens / actualLimit, totalInputTokens, actualLimit)
+    const level = getContextGuardNoticeLevel({
+      ratio: totalInputTokens / actualLimit,
+      totalTokens: totalInputTokens,
+      contextLimit: actualLimit,
+      profile: contextGuardProfile,
+    })
     if (level < 1) return
 
     const stats = applyMicroPrune(messages, level)

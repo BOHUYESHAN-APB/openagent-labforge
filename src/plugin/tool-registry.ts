@@ -15,6 +15,7 @@ import {
   createSkillTool,
   createRecallTool,
   createBatchTool,
+  createImageGenerateTool,
   createGrepTools,
   createGlobTools,
   createAstGrepTools,
@@ -127,6 +128,12 @@ export function createToolRegistry(args: {
     pluginsEnabled: pluginConfig.claude_code?.plugins ?? true,
     enabledPluginsOverride: pluginConfig.claude_code?.plugins_override,
   })
+
+  // Hard activation gate: when image_bus.enabled is not true, keep the module silent.
+  const activeImageBusConfig = pluginConfig.image_bus?.enabled === true
+    ? pluginConfig.image_bus
+    : undefined
+
   const skillTool = createSkillTool({
     commands,
     getSkills: skillContext.getMergedSkills,
@@ -134,7 +141,7 @@ export function createToolRegistry(args: {
     getSessionID: getSessionIDForMcp,
     directory: ctx.directory,
     gitMasterConfig: pluginConfig.git_master,
-    imageBusConfig: pluginConfig.image_bus,
+    imageBusConfig: activeImageBusConfig,
   })
 
   const taskSystemEnabled = pluginConfig.experimental?.task_system ?? false
@@ -166,6 +173,7 @@ export function createToolRegistry(args: {
     batch: createBatchTool(ctx),
     skill_mcp: skillMcpTool,
     skill: skillTool,
+    ...(activeImageBusConfig ? { image_generate: createImageGenerateTool({ imageBusConfig: activeImageBusConfig }) } : {}),
     interactive_bash,
     ...taskToolsRecord,
     ...hashlineToolsRecord,

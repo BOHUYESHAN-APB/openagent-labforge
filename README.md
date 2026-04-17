@@ -305,6 +305,11 @@ Current cleanup commands:
 - `/workflow-reset`
 - `/focus-chat`
 
+Native TUI settings commands:
+
+- `/ol-settings`
+- `/ol-settings-image-bus`
+
 Practical intent:
 
 - `/stop-continuation` stops continuation mechanisms for the current session
@@ -313,6 +318,24 @@ Practical intent:
   execution run
 - `/focus-chat` returns the current session to ordinary chat mode and suppresses
   stale execution carry-over
+- `/ol-settings` opens the plugin's native TUI settings surface
+- `/ol-settings-image-bus` opens the image_bus subpage inside that same TUI
+  settings flow
+- the image_bus page is where relay/proxy URL fields like `generate_endpoint`,
+  provider selection, scientific/general routing, and context-memory controls
+  belong
+
+Additional clarification:
+
+- these settings commands are no longer implemented as chat template injections
+- in TUI, the plugin now registers its own native slash/command UI entrypoints
+- manual raw `/ol-settings` messages are intercepted as a safety fallback so the
+  command text does not leak to the model
+
+Scope clarification:
+
+- slash commands above are intended for OpenCode TUI slash/command UI
+- they are not shell commands and should not be executed in PowerShell
 
 This matters because old todo/workflow state can otherwise leak into later
 conversations and make semi-automatic sessions feel heavy or misdirected.
@@ -429,6 +452,31 @@ yet provide a first-class checkpoint flow.
 - `article-writer`: public technical writing
 - `scientific-writer`: research-facing technical writing
 - `multimodal-looker`: PDF / image / figure understanding
+
+### Multimodal-Looker definition and boundary
+
+Purpose:
+
+- maximize semantic understanding of visual/document media
+- return extraction-oriented findings to the main agent
+- reduce main-session context pressure by isolating heavy multimodal reads
+
+Primary input path:
+
+- `look_at(file_path=..., goal=...)` for local media files
+- `look_at(file_path=<directory>, goal=...)` for multi-image folders
+- `look_at(file_path=<docx/pptx>, goal=...)` for embedded-media extraction and review
+
+Boundary (what it is not):
+
+- not the default path for plain source/text file literal reading
+- not a document editor
+- not a standalone image-generation backend
+
+Operational rule:
+
+- if the task is visual semantics (figures, diagrams, screenshot meaning, placement hints), route to `multimodal-looker`
+- if the task is literal text/code content extraction, prefer `read`/repo evidence tools first
 
 ### Bioinformatics stack
 
@@ -725,6 +773,68 @@ Then follow:
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 
+### TUI settings entry (unified, terminal mode)
+
+When you are developing inside this repository, use:
+
+```bash
+bun run src/cli/index.ts settings
+```
+
+Back-compat entry (still supported):
+
+```bash
+bun run src/cli/index.ts configure
+```
+
+Current image-bus focused flow:
+
+```bash
+bun run src/cli/index.ts settings --image-bus
+```
+
+Useful command checks:
+
+```bash
+bun run src/cli/index.ts settings --help
+bun run src/cli/index.ts configure --help
+```
+
+Google relay/proxy endpoint configuration example:
+
+```jsonc
+{
+  "image_bus": {
+    "enabled": true,
+    "context_memory": {
+      "enabled": true,
+      "carry_prompt_context": true,
+      "max_history_turns": 5,
+      "include_provider_decision_trace": false
+    },
+    "providers": {
+      "google_nano_banana": {
+        "enabled": true,
+        "base_url": "https://relay.example.com",
+        "generate_endpoint": "/proxy/google/{model}/images",
+        "api_key_env": "GOOGLE_API_KEY",
+        "model": "nano-banana-2"
+      }
+    }
+  }
+}
+```
+
+`generate_endpoint` supports both:
+
+- relative paths (joined with `base_url`)
+- full URLs (used as-is)
+
+It also supports `{model}` placeholder substitution.
+
+`context_memory` controls how much image-generation context is carried across
+chat turns.
+
 ### OpenCode install prompt
 
 If you want OpenCode itself to clone this repository, build it, and wire the
@@ -798,6 +908,12 @@ Planned future image-bus targets include:
 - ComfyUI-compatible backends
 - optional generated-image review by the main model
 
+Image generation integration status (current):
+
+- planned for the next milestone window
+- API requirement collection for external generation platforms is still in progress
+- until provider API contracts are finalized, the plugin keeps SVG-first fallback behavior as the safe default
+
 ## Contribution Note
 
 Maintainer note:
@@ -812,6 +928,8 @@ Maintainer note:
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 - [docs/guide/orchestration.md](docs/guide/orchestration.md)
+- [docs/guide/subagent-orchestration.md](docs/guide/subagent-orchestration.md)
+- [docs/guide/subagent-orchestration.zh-cn.md](docs/guide/subagent-orchestration.zh-cn.md)
 - [docs/guide/bio-skills.md](docs/guide/bio-skills.md)
 - [docs/guide/bio-paper-autonomous-flow-v1.md](docs/guide/bio-paper-autonomous-flow-v1.md)
 - [docs/reference/configuration.md](docs/reference/configuration.md)

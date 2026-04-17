@@ -210,6 +210,9 @@ function formatImageBusSection(imageBusConfig?: ImageBusConfig): string | null {
     providerLines.push(
       `- google_nano_banana: ${googleProvider.model ?? "model-not-set"} @ ${googleProvider.base_url ?? "base_url-not-set"}`
     )
+    if (googleProvider.generate_endpoint) {
+      providerLines.push(`- google_nano_banana.generate_endpoint: ${googleProvider.generate_endpoint}`)
+    }
   }
 
   const comfyProvider = imageBusConfig.providers?.comfyui
@@ -217,6 +220,16 @@ function formatImageBusSection(imageBusConfig?: ImageBusConfig): string | null {
     providerLines.push(
       `- comfyui: ${comfyProvider.base_url ?? "base_url-not-set"}${comfyProvider.workflow_endpoint ? ` (${comfyProvider.workflow_endpoint})` : ""}`
     )
+  }
+
+  const stableDiffusionProvider = imageBusConfig.providers?.stable_diffusion
+  if (stableDiffusionProvider?.enabled) {
+    providerLines.push(
+      `- stable_diffusion: ${stableDiffusionProvider.model ?? "model-not-set"} @ ${stableDiffusionProvider.base_url ?? "base_url-not-set"}`
+    )
+    if (stableDiffusionProvider.txt2img_endpoint) {
+      providerLines.push(`- stable_diffusion.txt2img_endpoint: ${stableDiffusionProvider.txt2img_endpoint}`)
+    }
   }
 
   for (const customProvider of imageBusConfig.providers?.custom ?? []) {
@@ -234,6 +247,14 @@ function formatImageBusSection(imageBusConfig?: ImageBusConfig): string | null {
     `- enabled: \`true\``,
     `- review_with_main_model: \`${imageBusConfig.review_with_main_model === true}\``,
     `- default_output_format: \`${imageBusConfig.default_output_format ?? "svg"}\``,
+    `- context_memory.enabled: \`${imageBusConfig.context_memory?.enabled === true}\``,
+    `- context_memory.carry_prompt_context: \`${imageBusConfig.context_memory?.carry_prompt_context === true}\``,
+    `- context_memory.max_history_turns: \`${imageBusConfig.context_memory?.max_history_turns ?? 5}\``,
+    `- context_memory.include_provider_decision_trace: \`${imageBusConfig.context_memory?.include_provider_decision_trace === true}\``,
+    `- routing.strategy: \`${imageBusConfig.routing?.strategy ?? "local-first"}\``,
+    `- routing.force_google_for_scientific: \`${imageBusConfig.routing?.force_google_for_scientific === true}\``,
+    `- routing.allow_google_for_general: \`${imageBusConfig.routing?.allow_google_for_general === true}\``,
+    `- subscription.mode: \`${imageBusConfig.subscription?.mode ?? "self-managed"}\``,
     ...providerLines,
   ].join("\n")
 }

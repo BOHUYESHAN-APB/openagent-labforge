@@ -1,6 +1,9 @@
-import { basename } from "node:path"
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { basename, extname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
+import JSZip from "jszip"
 import { LOOK_AT_DESCRIPTION, MULTIMODAL_LOOKER_AGENT } from "./constants"
 import type { LookAtArgs } from "./types"
 import { log, promptSyncWithModelSuggestionRetry } from "../../shared"
@@ -20,6 +23,154 @@ import {
   convertBase64ImageToJpeg,
   cleanupConvertedImage,
 } from "./image-converter"
+
+type FilePart = { type: "file"; mime: string; url: string; filename: string }
+
+const MAX_FILE_PARTS = 20
+
+const IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".bmp",
+  ".tiff",
+  ".tif",
+  ".heic",
+  ".heif",
+  ".cr2",
+  ".crw",
+  ".nef",
+  ".nrw",
+  ".arw",
+  ".sr2",
+  ".srf",
+  ".pef",
+  ".orf",
+  ".raw",
+  ".raf",
+  ".dng",
+  ".psd",
+  ".svg",
+  ".avif",
+])
+
+const OFFICE_MEDIA_PREFIX: Record<string, string> = {
+  ".docx": "word/media/",
+  ".pptx": "ppt/media/",
+}
+
+async function isDirectoryPath(filePath: string): Promise<boolean> {
+  try {
+    const fileStats = await stat(filePath)
+    return fileStats.isDirectory()
+  } catch {
+    return false
+  }
+}
+
+function isOfficeDocumentPath(filePath: string): boolean {
+  const extension = extname(filePath).toLowerCase()
+  return extension === ".docx" || extension === ".pptx"
+}
+
+async function collectImageFilesFromDirectory(directoryPath: string, maxCount = MAX_FILE_PARTS): Promise<string[]> {
+  const collected: string[] = []
+  const pendingDirectories: string[] = [directoryPath]
+
+  while (pendingDirectories.length > 0 && collected.length < maxCount) {
+    const currentDirectory = pendingDirectories.pop()
+    if (!currentDirectory) {
+      break
+    }
+
+    const entries = await readdir(currentDirectory, { withFileTypes: true })
+    for (const entry of entries) {
+      if (collected.length >= maxCount) {
+        break
+      }
+
+      const fullPath = join(currentDirectory, entry.name)
+      if (entry.isDirectory()) {
+        pendingDirectories.push(fullPath)
+        continue
+      }
+
+      const extension = extname(entry.name).toLowerCase()
+      if (IMAGE_EXTENSIONS.has(extension)) {
+        collected.push(fullPath)
+      }
+    }
+  }
+
+  return collected
+}
+
+async function createFilePartFromPath(filePath: string, tempFilesToCleanup: string[]): Promise<FilePart> {
+  let mimeType = inferMimeTypeFromFilePath(filePath)
+  let actualFilePath = filePath
+
+  if (needsConversion(mimeType)) {
+    try {
+      const convertedPath = convertImageToJpeg(filePath, mimeType)
+      tempFilesToCleanup.push(convertedPath)
+      actualFilePath = convertedPath
+      mimeType = "image/jpeg"
+    } catch (conversionError) {
+      const failedConversionPath = getTemporaryConversionPath(conversionError)
+      if (failedConversionPath) {
+        tempFilesToCleanup.push(failedConversionPath)
+      }
+      const message = conversionError instanceof Error ? conversionError.message : String(conversionError)
+      throw new Error(`Failed to convert image format for '${filePath}': ${message}`)
+    }
+  }
+
+  return {
+    type: "file",
+    mime: mimeType,
+    url: pathToFileURL(actualFilePath).href,
+    filename: basename(actualFilePath),
+  }
+}
+
+async function extractEmbeddedMediaFromOfficeFile(filePath: string): Promise<{ embeddedImagePaths: string[]; tempDirectory: string | null }> {
+  const extension = extname(filePath).toLowerCase()
+  const mediaPrefix = OFFICE_MEDIA_PREFIX[extension]
+  if (!mediaPrefix) {
+    return { embeddedImagePaths: [], tempDirectory: null }
+  }
+
+  const fileData = await readFile(filePath)
+  const zip = await JSZip.loadAsync(fileData)
+  const mediaEntries = Object.values(zip.files)
+    .filter((entry) => !entry.dir && entry.name.startsWith(mediaPrefix))
+    .slice(0, MAX_FILE_PARTS)
+
+  if (mediaEntries.length === 0) {
+    return { embeddedImagePaths: [], tempDirectory: null }
+  }
+
+  const tempDirectory = await mkdtemp(join(tmpdir(), "look-at-office-media-"))
+  const embeddedImagePaths: string[] = []
+
+  for (const entry of mediaEntries) {
+    const bytes = await entry.async("nodebuffer")
+    const outputPath = join(tempDirectory, basename(entry.name))
+    await writeFile(outputPath, bytes)
+
+    const mimeType = inferMimeTypeFromFilePath(outputPath)
+    if (mimeType.startsWith("image/")) {
+      embeddedImagePaths.push(outputPath)
+    }
+  }
+
+  return {
+    embeddedImagePaths,
+    tempDirectory,
+  }
+}
 
 function getTemporaryConversionPath(error: unknown): string | null {
   if (!(error instanceof Error)) {
@@ -64,15 +215,15 @@ export function createLookAt(ctx: PluginInput): ToolDefinition {
       const imageData = args.image_data
       const filePath = args.file_path
 
-      let mimeType: string
-      let filePart: { type: "file"; mime: string; url: string; filename: string }
-      let tempFilePath: string | null = null
-      let tempConversionPath: string | null = null
+      let fileParts: FilePart[] = []
+      let promptTargetDescription = isBase64Input ? "image" : "file"
+      const sourceNotes: string[] = []
       let tempFilesToCleanup: string[] = []
+      const tempDirectoriesToCleanup: string[] = []
 
       try {
         if (imageData) {
-          mimeType = inferMimeTypeFromBase64(imageData)
+          const mimeType = inferMimeTypeFromBase64(imageData)
           
           let finalBase64Data = extractBase64Data(imageData)
           let finalMimeType = mimeType
@@ -91,47 +242,56 @@ export function createLookAt(ctx: PluginInput): ToolDefinition {
             }
           }
           
-          filePart = {
+          fileParts = [{
             type: "file",
             mime: finalMimeType,
             url: `data:${finalMimeType};base64,${finalBase64Data}`,
             filename: `clipboard-image.${finalMimeType.split("/")[1] || "png"}`,
-          }
+          }]
         } else if (filePath) {
-        mimeType = inferMimeTypeFromFilePath(filePath)
-        
-        let actualFilePath = filePath
-        if (needsConversion(mimeType)) {
-          log(`[look_at] Detected unsupported format: ${mimeType}, converting to JPEG...`)
-          try {
-            tempFilePath = convertImageToJpeg(filePath, mimeType)
-            tempConversionPath = tempFilePath
-            actualFilePath = tempFilePath
-            mimeType = "image/jpeg"
-            log(`[look_at] Conversion successful: ${tempFilePath}`)
-          } catch (conversionError) {
-            const failedConversionPath = getTemporaryConversionPath(conversionError)
-            if (failedConversionPath) {
-              tempConversionPath = failedConversionPath
+          if (await isDirectoryPath(filePath)) {
+            const imagePaths = await collectImageFilesFromDirectory(filePath)
+            if (imagePaths.length === 0) {
+              return `Error: No supported image files found in directory '${filePath}'.`
             }
-            log(`[look_at] Conversion failed: ${conversionError}`)
-            return `Error: Failed to convert image format. ${conversionError}`
+
+            fileParts = await Promise.all(
+              imagePaths.map((imagePath) => createFilePartFromPath(imagePath, tempFilesToCleanup)),
+            )
+            promptTargetDescription = `${fileParts.length} images from directory`
+            sourceNotes.push(`Directory scan included ${fileParts.length} image(s).`)
+          } else {
+            const primaryPart = await createFilePartFromPath(filePath, tempFilesToCleanup)
+            fileParts = [primaryPart]
+
+            if (isOfficeDocumentPath(filePath)) {
+              const { embeddedImagePaths, tempDirectory } = await extractEmbeddedMediaFromOfficeFile(filePath)
+              if (tempDirectory) {
+                tempDirectoriesToCleanup.push(tempDirectory)
+              }
+              if (embeddedImagePaths.length > 0) {
+                const embeddedParts = await Promise.all(
+                  embeddedImagePaths.map((imagePath) => createFilePartFromPath(imagePath, tempFilesToCleanup)),
+                )
+                fileParts.push(...embeddedParts)
+                sourceNotes.push(`Embedded images extracted: ${embeddedParts.length}.`)
+              }
+            }
           }
+        } else {
+          return "Error: Must provide either 'file_path' or 'image_data'."
         }
 
-        filePart = {
-          type: "file",
-          mime: mimeType,
-          url: pathToFileURL(actualFilePath).href,
-          filename: basename(actualFilePath),
+        if (fileParts.length === 0) {
+          return "Error: No analyzable media content found."
         }
-      } else {
-        return "Error: Must provide either 'file_path' or 'image_data'."
-      }
 
-      const prompt = `Analyze this ${isBase64Input ? "image" : "file"} and extract the requested information.
+      const prompt = `Analyze this ${promptTargetDescription} and extract the requested information.
 
 Goal: ${args.goal}
+
+Source context:
+${sourceNotes.length > 0 ? sourceNotes.join("\n") : "No extra context."}
 
 Provide ONLY the extracted information that matches the goal.
 Be thorough on what was requested, concise on everything else.
@@ -172,7 +332,7 @@ Original error: ${createResult.error}`
 
       const { agentModel, agentVariant } = await resolveMultimodalLookerAgentMetadata(ctx)
 
-      log(`[look_at] Sending prompt with ${isBase64Input ? "base64 image" : "file"} to session ${sessionID}`)
+      log(`[look_at] Sending prompt with ${fileParts.length} media part(s) to session ${sessionID}`)
       try {
         await promptSyncWithModelSuggestionRetry(ctx.client, {
           path: { id: sessionID },
@@ -186,7 +346,7 @@ Original error: ${createResult.error}`
             },
             parts: [
               { type: "text", text: prompt },
-              filePart,
+              ...fileParts,
             ],
             ...(agentModel ? { model: { providerID: agentModel.providerID, modelID: agentModel.modelID } } : {}),
             ...(agentVariant ? { variant: agentVariant } : {}),
@@ -223,14 +383,12 @@ Original error: ${createResult.error}`
         log(`[look_at] Unexpected error analyzing ${sourceDescription}:`, error)
         return `Error: Failed to analyze ${sourceDescription}: ${errorMessage}`
       } finally {
-        if (tempConversionPath) {
-          cleanupConvertedImage(tempConversionPath)
-        } else if (tempFilePath) {
-          cleanupConvertedImage(tempFilePath)
-        }
-        tempFilesToCleanup.forEach(file => {
+        tempFilesToCleanup.forEach((file) => {
           cleanupConvertedImage(file)
         })
+        await Promise.all(
+          tempDirectoriesToCleanup.map((directory) => rm(directory, { recursive: true, force: true }).catch(() => undefined)),
+        )
       }
     },
   })

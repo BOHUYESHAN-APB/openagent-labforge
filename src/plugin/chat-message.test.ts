@@ -39,6 +39,8 @@ function createMockHandlerArgs(overrides?: {
   shouldOverride?: boolean
   sessionMessages?: Array<{ info?: { agent?: string; role?: string } }>
   directory?: string
+  executeCommand?: (input: { body: { command: string } }) => Promise<unknown>
+  openHelp?: () => Promise<unknown>
 }) {
   const appliedSessions: string[] = []
   const toastCalls: Array<{ title: string; message: string }> = []
@@ -52,6 +54,12 @@ function createMockHandlerArgs(overrides?: {
           }),
         },
         tui: {
+          ...(overrides?.executeCommand
+            ? { executeCommand: overrides.executeCommand }
+            : {}),
+          ...(overrides?.openHelp
+            ? { openHelp: overrides.openHelp }
+            : {}),
           showToast: async ({ body }: { body: { title: string; message: string } }) => {
             toastCalls.push({ title: body.title, message: body.message })
           },
@@ -187,6 +195,167 @@ describe("createChatMessageHandler - TUI variant passthrough", () => {
     //#then
     expect(getSessionAgent(input.sessionID)).toBe("wase")
     expect(isUltraworkAutonomousSession(input.sessionID)).toBe(true)
+  })
+
+  test("does not intercept removed settings template payloads anymore", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({
+      type: "text",
+      text: "<command-instruction>\nOL_SETTINGS_ACTION:OPEN_PLUGIN_SETTINGS_PANEL\n</command-instruction>",
+    })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts).toHaveLength(1)
+    expect(args._toastCalls).toHaveLength(0)
+  })
+
+  test("does not intercept removed settings template payloads when extra text precedes them", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({
+      type: "text",
+      text: "a todo list might be necessary for this multi-step task.\n<command-instruction>\nOL_SETTINGS_ACTION:OPEN_PLUGIN_SETTINGS_PANEL\n</command-instruction>",
+    })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts).toHaveLength(1)
+  })
+
+  test("does not intercept removed settings template payloads with image-bus request metadata", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({
+      type: "text",
+      text: "<command-instruction>\nOL_SETTINGS_ACTION:OPEN_PLUGIN_SETTINGS_PANEL\n</command-instruction>\n<user-request>\nimage-bus\n</user-request>",
+    })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts).toHaveLength(1)
+  })
+
+  test("does not intercept removed image-bus template payloads anymore", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({
+      type: "text",
+      text: "<command-instruction>\nOL_SETTINGS_ACTION:OPEN_PLUGIN_SETTINGS_PANEL\n</command-instruction>\n<user-request>\nimage-bus\n</user-request>",
+    })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts).toHaveLength(1)
+  })
+
+  test("does not treat auto-slash wrapped legacy settings payloads as native UI commands", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({
+      type: "text",
+      text: `**Scope**: builtin
+
+---
+
+## Command Instructions
+
+<command-instruction>
+OL_SETTINGS_ACTION:OPEN_PLUGIN_SETTINGS_PANEL
+</command-instruction>
+
+<user-request>
+
+</user-request>
+</auto-slash-command>`,
+    })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts).toHaveLength(1)
+  })
+
+  test("opens native settings bridge when raw /ol-settings command is present", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "/ol-settings" })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBe(true)
+    expect(output.parts).toHaveLength(0)
+  })
+
+  test("reports native TUI guidance for raw /ol-settings without trying legacy host bridge commands", async () => {
+    const args = createMockHandlerArgs({
+      shouldOverride: false,
+    })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "/ol-settings" })
+
+    await handler(input, output)
+
+    expect(output.parts).toHaveLength(0)
+    expect(args._toastCalls[0]?.message).toContain("native TUI command UI")
+  })
+
+  test("opens the image-bus subpage when raw /ol-settings-image-bus command is present", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "/ol-settings-image-bus" })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBe(true)
+    expect(output.parts).toHaveLength(0)
+  })
+
+  test("does not intercept removed raw /settings alias", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "/settings" })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts[0]?.text).toContain("/settings")
+  })
+
+  test("does not intercept removed raw /settings-image-bus alias", async () => {
+    const args = createMockHandlerArgs({ shouldOverride: false })
+    const handler = createChatMessageHandler(args)
+    const input = createMockInput("sisyphus", { providerID: "openai", modelID: "gpt-5.3-codex" })
+    const output = createMockOutput()
+    output.parts.push({ type: "text", text: "/settings-image-bus" })
+
+    await handler(input, output)
+
+    expect(output.message["noReply"]).toBeUndefined()
+    expect(output.parts[0]?.text).toContain("/settings-image-bus")
   })
 
   test("does not inject autonomous user-update context on the first auto prompt", async () => {

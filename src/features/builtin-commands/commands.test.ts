@@ -32,6 +32,8 @@ describe("loadBuiltinCommands", () => {
     expect(commands["todo-clear"]).toBeDefined()
     expect(commands["workflow-reset"]).toBeDefined()
     expect(commands["focus-chat"]).toBeDefined()
+    expect(commands["ol-settings"]).toBeUndefined()
+    expect(commands["ol-settings-image-bus"]).toBeUndefined()
   })
 
   test("should exclude handoff when disabled", () => {
@@ -111,6 +113,8 @@ describe("loadBuiltinCommands", () => {
     expect(commands["workflow-reset"].template).toContain(WORKFLOW_RESET_TEMPLATE)
     expect(commands["focus-chat"]).toBeDefined()
     expect(commands["focus-chat"].template).toContain(FOCUS_CHAT_TEMPLATE)
+    expect(commands["ol-settings"]).toBeUndefined()
+    expect(commands["ol-settings-image-bus"]).toBeUndefined()
   })
 
   test("should route start-work to atlas when registered-agent mode is enabled and atlas exists", () => {

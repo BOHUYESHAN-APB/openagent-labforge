@@ -260,6 +260,14 @@ describe("skill tool - runtime workspace provisioning", () => {
       imageBusConfig: {
         enabled: true,
         review_with_main_model: true,
+        routing: {
+          strategy: "local-first",
+          force_google_for_scientific: true,
+          allow_google_for_general: false,
+        },
+        subscription: {
+          mode: "self-managed",
+        },
         providers: {
           google_nano_banana: {
             enabled: true,
@@ -281,11 +289,47 @@ describe("skill tool - runtime workspace provisioning", () => {
     expect(result).toContain("## Paper Cache")
     expect(result).toContain("## Image Bus")
     expect(result).toContain("nano-banana-2")
+    expect(result).toContain("routing.strategy: `local-first`")
+    expect(result).toContain("routing.force_google_for_scientific: `true`")
     expect(
       fs.existsSync(
         join(tempDir, ".opencode", "openagent-labforge", "runtime", "ses_paper_workspace", "papers", "manifest.json"),
       ),
     ).toBe(true)
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it("keeps image bus context silent when enabled is false even if provider fields exist", async () => {
+    const tempDir = fs.mkdtempSync(join(tmpdir(), "skill-workspace-paper-disabled-image-bus-"))
+    const loadedSkills = [createMockSkill("literature-synthesis")]
+    const tool = createSkillTool({
+      skills: loadedSkills,
+      directory: tempDir,
+      getSessionID: () => "ses_paper_workspace_disabled",
+      imageBusConfig: {
+        enabled: false,
+        review_with_main_model: true,
+        providers: {
+          google_nano_banana: {
+            enabled: true,
+            model: "nano-banana-2",
+            base_url: "https://example.invalid/google",
+          },
+        },
+      },
+    })
+
+    const result = await tool.execute(
+      {
+        name: "literature-synthesis",
+        user_message: 'paper_id=silent-case title="Silent Case"',
+      },
+      mockContext,
+    )
+
+    expect(result).not.toContain("## Image Bus")
+    expect(result).not.toContain("nano-banana-2")
 
     fs.rmSync(tempDir, { recursive: true, force: true })
   })

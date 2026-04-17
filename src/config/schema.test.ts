@@ -145,6 +145,58 @@ describe("disabled_mcps schema", () => {
   })
 })
 
+describe("image_bus routing/subscription schema", () => {
+  test("accepts routing policy and subscription settings", () => {
+    const config = {
+      image_bus: {
+        enabled: true,
+        routing: {
+          strategy: "local-first",
+          force_google_for_scientific: true,
+          allow_google_for_general: false,
+        },
+        subscription: {
+          mode: "self-managed",
+          plan_name: "google-banana-pro",
+        },
+        providers: {
+          google_nano_banana: {
+            enabled: true,
+            base_url: "https://relay.example.com",
+            generate_endpoint: "/proxy/google/{model}/images",
+            api_key_env: "GOOGLE_API_KEY",
+            model: "nano-banana-2",
+          },
+          stable_diffusion: {
+            enabled: true,
+            base_url: "http://127.0.0.1:7860",
+            txt2img_endpoint: "/sdapi/v1/txt2img",
+            api_key_env: "STABLE_DIFFUSION_API_KEY",
+            model: "sdxl",
+          },
+        },
+      },
+    }
+
+    const result = OhMyOpenCodeConfigSchema.safeParse(config)
+    expect(result.success).toBe(true)
+  })
+
+  test("rejects invalid routing strategy", () => {
+    const config = {
+      image_bus: {
+        enabled: true,
+        routing: {
+          strategy: "invalid-strategy",
+        },
+      },
+    }
+
+    const result = OhMyOpenCodeConfigSchema.safeParse(config)
+    expect(result.success).toBe(false)
+  })
+})
+
 describe("AgentOverrideConfigSchema", () => {
   describe("category field", () => {
     test("accepts category as optional string", () => {
@@ -832,6 +884,31 @@ describe("ExperimentalConfigSchema feature flags", () => {
   test("rejects invalid semantic_mode_hint values", () => {
     //#given
     const config = { semantic_mode_hint: "smart" }
+
+    //#when
+    const result = ExperimentalConfigSchema.safeParse(config)
+
+    //#then
+    expect(result.success).toBe(false)
+  })
+
+  test("accepts context_guard_profile enum", () => {
+    //#given
+    const config = { context_guard_profile: "balanced" as const }
+
+    //#when
+    const result = ExperimentalConfigSchema.safeParse(config)
+
+    //#then
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.context_guard_profile).toBe("balanced")
+    }
+  })
+
+  test("rejects invalid context_guard_profile values", () => {
+    //#given
+    const config = { context_guard_profile: "extreme" }
 
     //#when
     const result = ExperimentalConfigSchema.safeParse(config)

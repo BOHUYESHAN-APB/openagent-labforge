@@ -9,4 +9,6 @@ export const EXCLUDED_COMMANDS = new Set([
   "ralph-loop",
   "cancel-ralph",
   "ulw-loop",
+  "ol-settings",
+  "ol-settings-image-bus",
 ])

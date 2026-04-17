@@ -56,6 +56,7 @@ import { getAgentConfigKey } from "../shared/agent-display-names"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { clearPendingModelFallback, clearSessionFallbackChain } from "../hooks/model-fallback/hook"
+import { handleSettingsSurface } from "./settings-command"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -187,11 +188,17 @@ export function createChatMessageHandler(args: {
   const pluginContext = ctx as {
     client: {
       tui: {
+        executeCommand?: (input: {
+          body: {
+            command: string
+          }
+        }) => Promise<unknown>
+        openHelp?: () => Promise<unknown>
         showToast: (input: {
           body: {
             title: string
             message: string
-            variant: "warning"
+            variant: "warning" | "success" | "error" | "info"
             duration: number
           }
         }) => Promise<unknown>
@@ -209,6 +216,22 @@ export function createChatMessageHandler(args: {
     hooks.modelFallback !== undefined &&
     (pluginConfig.model_fallback ?? true)
 
+    const maybeOpenSettingsSurface = async (
+      output: ChatMessageHandlerOutput,
+      promptText: string,
+    ): Promise<boolean> => {
+      const result = await handleSettingsSurface({
+        tui: pluginContext.client.tui,
+        promptText,
+      })
+    if (!result.handled) {
+      return false
+    }
+    output.parts = []
+    output.message["noReply"] = true
+    return true
+  }
+
   return async (
     input: ChatMessageInput,
     output: ChatMessageHandlerOutput
@@ -220,6 +243,11 @@ export function createChatMessageHandler(args: {
       .filter((part) => part.type === "text" && typeof part.text === "string")
       .map((part) => part.text ?? "")
       .join("\n")
+
+    if (await maybeOpenSettingsSurface(output, outputText)) {
+      return
+    }
+
     const internalInitiatedPromptDetected = outputText.includes(OMO_INTERNAL_INITIATOR_MARKER)
 
     const previousSessionModel = getSessionModel(input.sessionID)
@@ -568,6 +596,13 @@ export function createChatMessageHandler(args: {
       })
     }
     await hooks.autoSlashCommand?.["chat.message"]?.(input, output)
+    const postSlashOutputText = output.parts
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => part.text ?? "")
+      .join("\n")
+    if (await maybeOpenSettingsSurface(output, postSlashOutputText)) {
+      return
+    }
     await hooks.compressContext?.["chat.message"]?.(input, output)
     const forceAgentModelRouting =
       pluginConfig.sisyphus_agent?.force_agent_model_routing ?? false

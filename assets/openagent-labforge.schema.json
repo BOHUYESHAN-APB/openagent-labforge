@@ -39,6 +39,62 @@
             "pdf"
           ]
         },
+        "context_memory": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "carry_prompt_context": {
+              "type": "boolean"
+            },
+            "max_history_turns": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "include_provider_decision_trace": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "routing": {
+          "type": "object",
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "local-first",
+                "balanced",
+                "google-first"
+              ]
+            },
+            "force_google_for_scientific": {
+              "type": "boolean"
+            },
+            "allow_google_for_general": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "subscription": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "self-managed",
+                "disabled"
+              ]
+            },
+            "plan_name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
         "providers": {
           "type": "object",
           "properties": {
@@ -49,6 +105,9 @@
                   "type": "boolean"
                 },
                 "base_url": {
+                  "type": "string"
+                },
+                "generate_endpoint": {
                   "type": "string"
                 },
                 "api_key_env": {
@@ -73,6 +132,27 @@
                   "type": "string"
                 },
                 "output_dir": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "stable_diffusion": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "base_url": {
+                  "type": "string"
+                },
+                "txt2img_endpoint": {
+                  "type": "string"
+                },
+                "api_key_env": {
+                  "type": "string"
+                },
+                "model": {
                   "type": "string"
                 }
               },
@@ -253,13 +333,23 @@
       "items": {
         "type": "string",
         "enum": [
+          "compress-context",
+          "checkpoint",
+          "checkpoint-resume",
           "init-deep",
           "ralph-loop",
           "ulw-loop",
           "cancel-ralph",
           "refactor",
           "start-work",
-          "stop-continuation"
+          "stop-continuation",
+          "remove-ai-slops",
+          "todo-clear",
+          "workflow-reset",
+          "focus-chat",
+          "ol-settings",
+          "ol-settings-image-bus",
+          "handoff"
         ]
       }
     },
@@ -4856,6 +4946,14 @@
         },
         "preemptive_compaction": {
           "type": "boolean"
+        },
+        "context_guard_profile": {
+          "type": "string",
+          "enum": [
+            "conservative",
+            "balanced",
+            "aggressive"
+          ]
         },
         "truncate_all_tool_outputs": {
           "type": "boolean"

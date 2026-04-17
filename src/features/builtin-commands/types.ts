@@ -15,6 +15,8 @@ export type BuiltinCommandName =
   | "todo-clear"
   | "workflow-reset"
   | "focus-chat"
+  | "ol-settings"
+  | "ol-settings-image-bus"
   | "handoff"
 
 export interface BuiltinCommandConfig {

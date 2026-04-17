@@ -1,9 +1,9 @@
 import * as fs from "node:fs"
 import { fileURLToPath } from "node:url"
 import type { OpencodeConfig } from "../types"
-import { PACKAGE_NAME } from "../constants"
 import { getConfigPaths } from "./config-paths"
 import { stripJsonComments } from "./jsonc-strip"
+import { findPackageJsonUp } from "./package-json-locator"
 
 export function isLocalDevMode(directory: string): boolean {
   return getLocalDevPath(directory) !== null
@@ -18,12 +18,20 @@ export function getLocalDevPath(directory: string): string | null {
       const plugins = config.plugin ?? []
 
       for (const entry of plugins) {
-        if (entry.startsWith("file://") && entry.includes(PACKAGE_NAME)) {
+        if (!entry.startsWith("file://")) {
+          continue
+        }
+
+        const localPath = (() => {
           try {
             return fileURLToPath(entry)
           } catch {
             return entry.replace("file://", "")
           }
+        })()
+
+        if (findPackageJsonUp(localPath)) {
+          return localPath
         }
       }
     } catch {

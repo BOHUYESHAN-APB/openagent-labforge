@@ -77,7 +77,7 @@ export function createSessionHooks(args: {
 
   const contextWindowMonitor = isHookEnabled("context-window-monitor")
     ? safeHook("context-window-monitor", () =>
-        createContextWindowMonitorHook(ctx, modelCacheState))
+        createContextWindowMonitorHook(ctx, modelCacheState, pluginConfig))
     : null
 
   const preemptiveCompaction =

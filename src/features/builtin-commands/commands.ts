@@ -29,7 +29,7 @@ function resolveStartWorkAgent(options?: LoadBuiltinCommandsOptions): "atlas" | 
 
 function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
-): Record<BuiltinCommandName, Omit<CommandDefinition, "name">> {
+): Record<string, Omit<CommandDefinition, "name">> {
   return {
   "compress-context": {
     description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",

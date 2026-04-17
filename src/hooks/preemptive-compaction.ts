@@ -2,6 +2,10 @@ import { log } from "../shared/logger"
 import type { OhMyOpenCodeConfig } from "../config"
 import { getSessionAgent } from "../features/claude-code-session-state"
 import { getAgentConfigKey } from "../shared/agent-display-names"
+import {
+  getContextGuardPreemptiveThreshold,
+  resolveContextGuardProfile,
+} from "./context-guard-threshold-profile"
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
 const DEFAULT_ACTUAL_LIMIT = 200_000
@@ -19,8 +23,6 @@ function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number 
     ? 1_000_000
     : DEFAULT_ACTUAL_LIMIT
 }
-
-const PREEMPTIVE_COMPACTION_THRESHOLD = 0.78
 
 interface TokenInfo {
   input: number
@@ -98,17 +100,14 @@ function isBioSession(sessionID: string): boolean {
 function getPreemptiveCompactionThreshold(args: {
   sessionID: string
   actualLimit: number
+  profile: "conservative" | "balanced" | "aggressive"
 }): number {
-  const { sessionID, actualLimit } = args
-  const bio = isBioSession(sessionID)
-
-  if (actualLimit >= 900_000) {
-    return bio ? 260_000 / actualLimit : 300_000 / actualLimit
-  }
-  if (actualLimit >= 350_000) {
-    return bio ? 0.50 : 0.58
-  }
-  return PREEMPTIVE_COMPACTION_THRESHOLD
+  const { sessionID, actualLimit, profile } = args
+  return getContextGuardPreemptiveThreshold({
+    actualLimit,
+    isBioSession: isBioSession(sessionID),
+    profile,
+  })
 }
 
 type PluginInput = {
@@ -132,6 +131,9 @@ export function createPreemptiveCompactionHook(
   pluginConfig: OhMyOpenCodeConfig,
   modelCacheState?: ModelCacheStateLike,
 ) {
+  const contextGuardProfile = resolveContextGuardProfile(
+    pluginConfig.experimental?.context_guard_profile,
+  )
   const compactionInProgress = new Set<string>()
   const compactedSessions = new Set<string>()
   const tokenCache = new Map<string, CachedCompactionState>()
@@ -154,6 +156,7 @@ export function createPreemptiveCompactionHook(
     const threshold = getPreemptiveCompactionThreshold({
       sessionID,
       actualLimit,
+      profile: contextGuardProfile,
     })
 
     if (usageRatio < threshold) return
@@ -204,6 +207,7 @@ export function createPreemptiveCompactionHook(
         actualLimit,
         usageRatio,
         threshold,
+        thresholdProfile: contextGuardProfile,
       })
 
       await ctx.client.tui
