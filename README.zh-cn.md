@@ -133,6 +133,10 @@ Gemini 说明：
 
 自动模式现在区分两个层级和两种交互风格：
 
+- 两套 auto 模式入口：
+  - 工程全自动：`wase`
+  - 生物信息学全自动：`bio-autopilot`
+
 - 层级：
   - `light`
   - `heavy`
@@ -144,11 +148,30 @@ Gemini 说明：
 
 - `light + batch`：适合较紧凑的一批一批执行，不强行扩成过大的 backlog
 - `heavy + continuous`：适合更长时间、多波次的持续推进，会更积极地触发 backlog 扩展、审查打回和继续执行
+- `heavy` 且处于 `plan` 阶段时，会先触发一次明确的规划引导：先走一次 planning task（例如 `task(subagent_type="prometheus", ...)`），再进入多 task / 多 agent 执行
+- `/start-work` 执行器选择遵循“auto 显式优先”规则：
+  - 已处于 auto 会话，或用户在请求中明确表达全自动意图时，自动切到 `wase`（工程）或 `bio-autopilot`（生信）
+  - 仅有 heavy 信号但用户并未表达 auto 意图时，不会强制切到全自动，仍走普通执行器路径（优先 `atlas`，回退 `sisyphus`）
+- auto 设计原则是“首条主输入 + 系统自驱”：
+  - 用户主要输入集中在第一条任务描述
+  - 后续以系统引导、auto review 与继续执行为主；用户仅在发现偏差时再追加指导
+  - 在 auto 会话里，若规划阶段已通过审查且尚未进入 tracked 执行，系统会自动完成一次 start-work 等价引导，让全自动执行器接管后续波次
 - `batch` 自动模式在 reviewed wave 被批准后，现在会干净停下，而不是默认继续滚到下一波
 - 已批准波次遗留的旧 todo，在用户开启新一轮时会优先按 stale 处理，不再轻易“回魂”
 - 如果模型一边说“这轮完成了”，一边又列出当前范围内明确的“下一步 / 下一波”工作，系统会把它识别为伪完成，并打回重建下一轮执行波次
 
 这些模式信息会被写入 repo-local 的 runtime workflow state。
+
+`light` / `heavy` 判定来源（不是只看一项）：
+
+- 计划文件规模信号：如 checklist 数量（较大的多任务计划更容易进 `heavy`）
+- 计划路径与正文语义信号：例如 migration、architecture、integration、validation、pipeline、bioinformatics 等关键词
+- 用户请求文本信号：`/start-work` 当前请求会参与判定；用户提示词中若出现多个重任务语义信号，会提高判定为 `heavy` 的概率
+
+可简化理解为：
+
+- 轻任务、短波次、低复杂度描述，通常判定 `light + batch`
+- 多阶段、多子系统、长链路执行描述，通常判定 `heavy + continuous`
 
 ### 新仓库 bootstrap 引导
 

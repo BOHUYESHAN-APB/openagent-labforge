@@ -9,6 +9,7 @@ import { setMainSession, subagentSessions, _resetForTesting } from "../../featur
 import { setUltraworkAutonomousSession } from "../../features/claude-code-session-state"
 import {
   ensureRuntimeWorkflowSession,
+  readBoulderState,
   updateRuntimeWorkflowManualBoundaries,
   updateRuntimeWorkflowReviewOutcome,
 } from "../../features/boulder-state"
@@ -523,6 +524,46 @@ describe("todo-continuation-enforcer", () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
+  test("heavy autonomous mode should bootstrap planner task first when runtime stage is plan", async () => {
+    const sessionID = "main-autonomous-heavy-plan-bootstrap"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-heavy-plan-bootstrap-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "heavy-bootstrap.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Heavy Bootstrap Plan\n\n- [ ] Task 1\n- [ ] Task 2\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "plan",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
+
+    const mockInput = createMockPluginInput(tempDir)
+    mockInput.client.session.todo = async () => ({ data: [
+      { id: "1", content: "Task 1", status: "in_progress", priority: "high" },
+      { id: "2", content: "Task 2", status: "pending", priority: "high" },
+    ]})
+
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    expect(promptCalls).toHaveLength(1)
+    expect(promptCalls[0].text).toContain("AUTONOMOUS HEAVY PLAN BOOTSTRAP")
+    expect(promptCalls[0].text).toContain("task(subagent_type=\"prometheus\"")
+    expect(promptCalls[0].text).not.toContain("AUTONOMOUS BACKLOG EXPANSION")
+
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
   test("light autonomous mode should continue the current batch instead of forcing backlog expansion", async () => {
     const sessionID = "main-autonomous-light-batch"
     const tempDir = mkdtempSync(join(tmpdir(), "todo-light-mode-"))
@@ -827,6 +868,46 @@ describe("todo-continuation-enforcer", () => {
     expect(promptCalls).toHaveLength(0)
 
     rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  test("autonomous plan-stage session should auto-bootstrap tracked execution after approved planning review", async () => {
+    const sessionID = "main-autonomous-auto-start-work-bootstrap"
+    const tempDir = mkdtempSync(join(tmpdir(), "todo-auto-start-work-"))
+    const planDir = join(tempDir, ".opencode", "openagent-labforge", "plans")
+    const planPath = join(planDir, "auto-plan.md")
+    mkdirSync(planDir, { recursive: true })
+    writeFileSync(planPath, "# Auto Plan\n\n- [ ] Task 1\n", "utf-8")
+
+    setMainSession(sessionID)
+    setUltraworkAutonomousSession(sessionID, true)
+    ensureRuntimeWorkflowSession({
+      directory: tempDir,
+      sessionId: sessionID,
+      activePlan: planPath,
+      activeAgent: "wase",
+      currentStage: "plan",
+      autoModeLevel: "heavy",
+      interactionMode: "continuous",
+    })
+
+    mockMessages = [
+      {
+        info: { id: "msg-approve", role: "assistant", agent: "wase", model: { providerID: "openai", modelID: "gpt-5.4" } },
+        parts: [{ type: "text", text: "[APPROVE]\nPlan is approved. Proceed to execution." }],
+      } as any,
+    ]
+
+    const mockInput = createMockPluginInput(tempDir)
+    const hook = createTodoContinuationEnforcer(mockInput, {})
+
+    await hook.handler({
+      event: { type: "session.idle", properties: { sessionID } },
+    })
+
+    const boulder = readBoulderState(tempDir)
+    expect(boulder?.active_plan).toBe(planPath)
+    expect(boulder?.agent).toBe("wase")
+    expect(boulder?.session_ids).toContain(sessionID)
   })
 
   test("terminal completion without approved review is rejected into a rework wave after the audit pass", async () => {

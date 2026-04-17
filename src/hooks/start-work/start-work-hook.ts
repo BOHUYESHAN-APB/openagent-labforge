@@ -1,4 +1,4 @@
-import { statSync } from "node:fs"
+import { readFileSync, statSync } from "node:fs"
 import type { PluginInput } from "@opencode-ai/plugin"
 import {
   appendRuntimeWorkflowNote,
@@ -15,6 +15,7 @@ import {
 import { log } from "../../shared/logger"
 import {
   getSessionAgent,
+  isUltraworkAutonomousSession,
   isAgentRegistered,
   resolveRegisteredAgentName,
   updateSessionAgent,
@@ -58,6 +59,117 @@ function findPlanByName(plans: string[], requestedName: string): string | null {
   if (exactMatch) return exactMatch
   const partialMatch = plans.find((p) => getPlanName(p).toLowerCase().includes(lowerName))
   return partialMatch || null
+}
+
+function countMarkdownCheckboxes(content: string): number {
+  return (content.match(/^\s*[-*]\s*\[[ xX]\]/gm) ?? []).length
+}
+
+function extractUserRequestText(promptText: string): string {
+  const match = promptText.match(/<user-request>\s*([\s\S]*?)\s*<\/user-request>/i)
+  return match?.[1]?.trim() ?? ""
+}
+
+function includesSignal(input: string, signals: string[]): boolean {
+  const normalized = input.toLowerCase()
+  return signals.some((signal) => normalized.includes(signal))
+}
+
+function readPlanContent(planPath: string | undefined): { content: string; checkboxCount: number } {
+  if (!planPath) {
+    return { content: "", checkboxCount: 0 }
+  }
+
+  try {
+    const content = readFileSync(planPath, "utf-8")
+    return {
+      content: content.toLowerCase(),
+      checkboxCount: countMarkdownCheckboxes(content),
+    }
+  } catch {
+    return { content: "", checkboxCount: 0 }
+  }
+}
+
+function shouldPreferAutonomousExecution(args: {
+  sessionID: string
+  userRequestText: string
+}): boolean {
+  const autoSignals = [
+    "ultrawork",
+    "ulw",
+    "autonomous",
+    "auto mode",
+    "full auto",
+    "fully autonomous",
+    "全自动",
+    "自动执行",
+    "自动模式",
+  ]
+  if (isUltraworkAutonomousSession(args.sessionID)) {
+    return true
+  }
+
+  return includesSignal(args.userRequestText, autoSignals)
+}
+
+function isBioScope(args: {
+  userRequestText: string
+  planPath?: string
+}): boolean {
+  const bioSignals = [
+    "bio",
+    "bioinformatics",
+    "rna",
+    "genome",
+    "proteomics",
+    "wet-lab",
+    "文献",
+    "生物",
+    "生信",
+    "组学",
+  ]
+  const plan = readPlanContent(args.planPath)
+  const mergedScope = `${args.userRequestText.toLowerCase()}\n${args.planPath?.toLowerCase() ?? ""}\n${plan.content}`
+  return includesSignal(mergedScope, bioSignals)
+}
+
+function resolveExecutionAgent(args: {
+  sessionID: string
+  currentSessionAgent: string | undefined
+  promptText: string
+  planPath?: string
+}): string {
+  const { sessionID, currentSessionAgent, promptText, planPath } = args
+  const currentSessionAgentKey = currentSessionAgent
+    ? getAgentConfigKey(currentSessionAgent)
+    : undefined
+
+  if (
+    currentSessionAgent &&
+    currentSessionAgentKey &&
+    currentSessionAgentKey !== "prometheus" &&
+    currentSessionAgentKey !== "atlas"
+  ) {
+    return currentSessionAgent
+  }
+
+  const userRequestText = extractUserRequestText(promptText)
+  const prefersAutonomous = shouldPreferAutonomousExecution({
+    sessionID,
+    userRequestText,
+  })
+
+  if (prefersAutonomous) {
+    if (isBioScope({ userRequestText, planPath }) && isAgentRegistered("bio-autopilot")) {
+      return "bio-autopilot"
+    }
+    if (isAgentRegistered("wase")) {
+      return "wase"
+    }
+  }
+
+  return isAgentRegistered("atlas") ? "atlas" : "sisyphus"
 }
 
 function createWorktreeActiveBlock(worktreePath: string): string {
@@ -157,19 +269,13 @@ export function createStartWorkHook(ctx: PluginInput) {
 
       log(`[${HOOK_NAME}] Processing start-work command`, { sessionID: input.sessionID })
       const currentSessionAgent = getSessionAgent(input.sessionID)
-      const currentSessionAgentKey = currentSessionAgent
-        ? getAgentConfigKey(currentSessionAgent)
-        : undefined
-      const activeAgent = currentSessionAgent
-        && currentSessionAgentKey
-        && currentSessionAgentKey !== "prometheus"
-        && currentSessionAgentKey !== "atlas"
-          ? currentSessionAgent
-          : isAgentRegistered("atlas")
-            ? "atlas"
-            : "sisyphus"
-      const resolvedActiveAgentName = resolveRegisteredAgentName(activeAgent) ?? getRuntimeAgentName(activeAgent)
-      updateSessionAgent(input.sessionID, activeAgent)
+      const defaultActiveAgent = resolveExecutionAgent({
+        sessionID: input.sessionID,
+        currentSessionAgent,
+        promptText,
+      })
+      const resolvedActiveAgentName = resolveRegisteredAgentName(defaultActiveAgent) ?? getRuntimeAgentName(defaultActiveAgent)
+      updateSessionAgent(input.sessionID, defaultActiveAgent)
       const outputMessage = output as StartWorkHookOutput & { message?: Record<string, unknown> }
       if (outputMessage.message) {
         outputMessage.message.agent = resolvedActiveAgentName
@@ -202,6 +308,12 @@ The requested plan "${getPlanName(matchedPlan)}" has been completed.
 All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
           } else {
             if (existingState) clearBoulderState(ctx.directory)
+            const activeAgent = resolveExecutionAgent({
+              sessionID: input.sessionID,
+              currentSessionAgent,
+              promptText,
+              planPath: matchedPlan,
+            })
             const newState = createBoulderState(matchedPlan, sessionId, activeAgent, worktreePath)
             writeBoulderState(ctx.directory, newState)
             const runtimeWorkflow = ensureRuntimeWorkflowSession({
@@ -211,6 +323,7 @@ All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
               activeAgent,
               worktreePath,
               currentStage: "plan",
+              userRequestText: promptText,
             })
             appendRuntimeWorkflowNote({
               directory: ctx.directory,
@@ -269,6 +382,12 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
         const progress = getPlanProgress(existingState.active_plan)
 
         if (!progress.isComplete) {
+          const activeAgent = resolveExecutionAgent({
+            sessionID: input.sessionID,
+            currentSessionAgent,
+            promptText,
+            planPath: existingState.active_plan,
+          })
           const effectiveWorktree = worktreePath ?? existingState.worktree_path
 
             const sessionAlreadyTracked = existingState.session_ids.includes(sessionId)
@@ -299,6 +418,7 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
             activeAgent,
             worktreePath: effectiveWorktree,
             currentStage: "plan",
+            userRequestText: promptText,
           })
           appendRuntimeWorkflowNote({
             directory: ctx.directory,
@@ -359,6 +479,12 @@ Use Prometheus to create a work plan first: /plan "your task"`
 All ${plans.length} plan(s) are complete. Create a new plan with: /plan "your task"`
         } else if (incompletePlans.length === 1) {
           const planPath = incompletePlans[0]
+          const activeAgent = resolveExecutionAgent({
+            sessionID: input.sessionID,
+            currentSessionAgent,
+            promptText,
+            planPath,
+          })
           const progress = getPlanProgress(planPath)
           const newState = createBoulderState(planPath, sessionId, activeAgent, worktreePath)
           writeBoulderState(ctx.directory, newState)
@@ -369,6 +495,7 @@ All ${plans.length} plan(s) are complete. Create a new plan with: /plan "your ta
             activeAgent,
             worktreePath,
             currentStage: "plan",
+            userRequestText: promptText,
           })
           appendRuntimeWorkflowNote({
             directory: ctx.directory,

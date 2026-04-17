@@ -69,6 +69,19 @@ Your current todo backlog is too shallow for autonomous execution.
 - Do not reply with "next I would..." prose while keeping the backlog short
 - Expand the backlog first, then continue execution`
 
+export const AUTONOMOUS_HEAVY_PLAN_BOOTSTRAP_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
+
+AUTONOMOUS HEAVY PLAN BOOTSTRAP.
+
+Heavy autonomous mode is active. Before broad implementation, perform one explicit planning pass through the task tool.
+
+- First, run exactly one planning-oriented task call before normal build execution:
+  \`task(subagent_type="prometheus", run_in_background=false, load_skills=[], description="Design execution workflow", prompt="Original user goal: ...\\nCurrent repository state: ...\\nCreate an actionable multi-wave plan with checkpoints and concrete delegation packets. Return a concise execution graph for follow-up task calls.")\`
+- Use the planner output to create a durable multi-wave todo graph for this heavy session
+- After that planning pass, continue with multi-agent execution via focused task calls
+- Do not skip directly to ad-hoc coding while the heavy plan graph is still shallow
+- If the planning task fails, report the blocker and retry with a tighter planning prompt before continuing`
+
 export const AUTONOMOUS_REVIEW_REWORK_PROMPT = `${createSystemDirective(SystemDirectiveTypes.TODO_CONTINUATION)}
 
 AUTONOMOUS REVIEW REWORK.

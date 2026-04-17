@@ -9,12 +9,15 @@ import {
   isUltraworkAutonomousSession,
   setUltraworkAutonomousSession,
   updateSessionAgent,
+  isAgentRegistered,
 } from "../../features/claude-code-session-state"
 import type { ToolPermission } from "../../features/hook-message-injector"
 import {
   markRuntimeWorkflowTerminalMessageHandled,
   reconcileRuntimeWorkflowTodoGraph,
   readBoulderState,
+  createBoulderState,
+  writeBoulderState,
   parseLatestAcceptanceReviewBlocker,
   parseLatestAcceptanceReviewOutcome,
   readRuntimeWorkflowState,
@@ -53,6 +56,7 @@ import { injectContinuationReplan } from "./continuation-injection"
 import { injectAutonomousBacklogExpansion } from "./continuation-injection"
 import { injectAutonomousCompletionAudit } from "./continuation-injection"
 import { injectAutonomousReviewRework } from "./continuation-injection"
+import { injectAutonomousHeavyPlanBootstrap } from "./continuation-injection"
 
 function extractLastRealUserAgent(messages: Array<{ info?: MessageInfo; parts?: Array<{ type?: string; text?: string }> }>): string | undefined {
   for (let index = messages.length - 1; index >= 0; index--) {
@@ -91,6 +95,29 @@ function extractLatestSessionAgent(
   }
 
   return undefined
+}
+
+function resolveAutoBootstrapAgent(args: {
+  rememberedSessionAgent?: string
+  latestSessionAgent?: string
+  runtimeActiveAgent?: string
+  runtimePlanPath?: string
+}): string {
+  const candidates = [args.latestSessionAgent, args.rememberedSessionAgent, args.runtimeActiveAgent]
+  for (const candidate of candidates) {
+    if (candidate && isAutonomousSessionAgent(candidate)) {
+      const key = getAgentConfigKey(candidate)
+      return key === "bio-orchestrator" ? "bio-autopilot" : key
+    }
+  }
+
+  const scope = `${args.runtimePlanPath ?? ""}`.toLowerCase()
+  const looksBio = /bio|bioinformatics|rna|genome|proteomics|wet-lab|生物|生信|组学/u.test(scope)
+  if (looksBio && isAgentRegistered("bio-autopilot")) {
+    return "bio-autopilot"
+  }
+
+  return isAgentRegistered("wase") ? "wase" : "sisyphus"
 }
 
 // Follow upstream continuation gating closely: compaction and stagnation are the
@@ -240,6 +267,41 @@ export async function handleSessionIdle(args: {
               : `Acceptance review rejected the current delivery. ${parsedReviewOutcome.blockingFindings.length} blocking finding(s) captured.`,
         })
       }
+    }
+
+    const shouldAutoBootstrapStartWork =
+      isAutonomous &&
+      !isTrackedBoulderSession &&
+      runtimeState?.current_stage === "plan" &&
+      parsedReviewOutcome?.verdict === "approve" &&
+      parsedReviewOutcome.signature !== state.lastAutoStartWorkReviewSignature
+
+    if (shouldAutoBootstrapStartWork && runtimeState?.active_plan) {
+      const autoAgent = resolveAutoBootstrapAgent({
+        rememberedSessionAgent,
+        latestSessionAgent,
+        runtimeActiveAgent: runtimeState.active_agent,
+        runtimePlanPath: runtimeState.active_plan,
+      })
+
+      const bootstrapState = createBoulderState(
+        runtimeState.active_plan,
+        sessionID,
+        autoAgent,
+        runtimeState.worktree_path,
+      )
+      writeBoulderState(ctx.directory, bootstrapState)
+      updateSessionAgent(sessionID, autoAgent)
+      setUltraworkAutonomousSession(sessionID, true)
+      state.lastAutoStartWorkReviewSignature = parsedReviewOutcome.signature
+
+      log(`[${HOOK_NAME}] Auto mode bootstrapped tracked execution after approved planning review`, {
+        sessionID,
+        activePlan: runtimeState.active_plan,
+        autoAgent,
+      })
+
+      return
     }
   } catch (error) {
     log(`[${HOOK_NAME}] Messages fetch failed, continuing`, { sessionID, error: String(error) })
@@ -720,6 +782,24 @@ export async function handleSessionIdle(args: {
   }
 
   if (isHeavyAutonomous) {
+    const shouldBootstrapHeavyPlan =
+      !state.heavyPlanBootstrapDone
+      && (reconciledRuntimeState?.current_stage ?? "plan") === "plan"
+    if (shouldBootstrapHeavyPlan) {
+      const injected = await injectAutonomousHeavyPlanBootstrap({
+        ctx,
+        sessionID,
+        backgroundManager,
+        skipAgents,
+        resolvedInfo,
+        sessionStateStore,
+        isContinuationStopped,
+      })
+      if (injected) {
+        return
+      }
+    }
+
     if (todos.length >= AUTONOMOUS_MIN_TODO_COUNT) {
       state.backlogExpansionCount = 0
       state.lastBacklogExpansionTodoCount = todos.length

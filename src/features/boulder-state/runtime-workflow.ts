@@ -52,6 +52,7 @@ function countMarkdownCheckboxes(content: string): number {
 
 function classifyRuntimeWorkflowMode(args: {
   activePlan: string
+  userRequestText?: string
 }): {
   autoModeLevel: RuntimeWorkflowAutoModeLevel
   interactionMode: RuntimeWorkflowInteractionMode
@@ -76,6 +77,10 @@ function classifyRuntimeWorkflowMode(args: {
     "validation",
   ]
   const haystackParts = [args.activePlan.toLowerCase()]
+  const userRequest = args.userRequestText?.trim() ?? ""
+  if (userRequest.length > 0) {
+    haystackParts.push(userRequest.toLowerCase())
+  }
   let checkboxCount = 0
 
   if (existsSync(args.activePlan)) {
@@ -90,14 +95,18 @@ function classifyRuntimeWorkflowMode(args: {
 
   const haystack = haystackParts.join("\n")
   const matchedSignals = heavySignals.filter((signal) => haystack.includes(signal))
-  const isHeavy = checkboxCount >= 8 || matchedSignals.length >= 2
+  const userRequestSignalCount =
+    userRequest.length > 0
+      ? heavySignals.filter((signal) => userRequest.toLowerCase().includes(signal)).length
+      : 0
+  const isHeavy = checkboxCount >= 8 || matchedSignals.length >= 2 || userRequestSignalCount >= 2
 
   return {
     autoModeLevel: isHeavy ? "heavy" : "light",
     interactionMode: isHeavy ? "continuous" : "batch",
     rationale: isHeavy
-      ? `Heavy mode selected from ${checkboxCount} checklist item(s) and signal(s): ${matchedSignals.join(", ") || "plan-size"}`
-      : `Light mode selected from ${checkboxCount} checklist item(s) and limited heavy-scope signals.`,
+      ? `Heavy mode selected from ${checkboxCount} checklist item(s), plan signal(s): ${matchedSignals.join(", ") || "plan-size"}, and user-request signal count: ${userRequestSignalCount}.`
+      : `Light mode selected from ${checkboxCount} checklist item(s), user-request signal count: ${userRequestSignalCount}, and limited heavy-scope signals.`,
   }
 }
 
@@ -665,6 +674,7 @@ export function ensureRuntimeWorkflowSession(args: {
   currentStage?: RuntimeWorkflowStage
   autoModeLevel?: RuntimeWorkflowAutoModeLevel
   interactionMode?: RuntimeWorkflowInteractionMode
+  userRequestText?: string
 }): { paths: RuntimeWorkflowPaths; state: RuntimeWorkflowState; excludeApplied: boolean } {
   const {
     directory,
@@ -675,10 +685,11 @@ export function ensureRuntimeWorkflowSession(args: {
     currentStage = "plan",
     autoModeLevel,
     interactionMode,
+    userRequestText,
   } = args
 
   const existing = readRuntimeWorkflowState(directory, sessionId)
-  const mode = classifyRuntimeWorkflowMode({ activePlan })
+  const mode = classifyRuntimeWorkflowMode({ activePlan, userRequestText })
   const resolvedAutoModeLevel =
     autoModeLevel ??
     existing?.auto_mode_level ??

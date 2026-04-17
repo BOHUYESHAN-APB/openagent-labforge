@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { tmpdir } from "node:os"
 import { randomUUID } from "node:crypto"
 
@@ -99,6 +99,24 @@ describe("runtime-workflow", () => {
     expect(typeof state.stage_anchor_hash).toBe("string")
     expect(typeof state.auto_mode_level).toBe("string")
     expect(typeof state.interaction_mode).toBe("string")
+  })
+
+  test("classifies heavy mode from user request signals even with a small checklist", () => {
+    const planPath = join(testDir, ".opencode", "openagent-labforge", "plans", "tiny-plan.md")
+    mkdirSync(dirname(planPath), { recursive: true })
+    writeFileSync(planPath, "# Tiny Plan\n\n- [ ] one\n- [ ] two\n", "utf-8")
+
+    ensureRuntimeWorkflowSession({
+      directory: testDir,
+      sessionId: "session-user-request-heavy",
+      activePlan: planPath,
+      currentStage: "plan",
+      userRequestText: "Please do an end-to-end integration migration with architecture validation and acceptance checks",
+    })
+
+    const state = readRuntimeWorkflowState(testDir, "session-user-request-heavy")
+    expect(state?.auto_mode_level).toBe("heavy")
+    expect(state?.interaction_mode).toBe("continuous")
   })
 
   test("marks runtime workflow as compacted and promotes capsule recovery", () => {

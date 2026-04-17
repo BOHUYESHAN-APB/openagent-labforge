@@ -173,6 +173,10 @@ spreading temporary state across multiple top-level directories.
 
 Autonomous flows now distinguish two levels and two interaction styles:
 
+- two auto mode entrypoints:
+  - engineering autonomous mode: `wase`
+  - bioinformatics autonomous mode: `bio-autopilot`
+
 - levels:
   - `light`
   - `heavy`
@@ -186,6 +190,22 @@ Current behavior:
   oversized backlog
 - `heavy + continuous` is for longer multi-wave execution and pushes backlog
   expansion, review routing, and continuation harder
+- in `heavy` mode at the `plan` stage, the flow now injects one explicit
+  planning bootstrap first (for example `task(subagent_type="prometheus", ...)`),
+  then proceeds to multi-task / multi-agent execution
+- `/start-work` follows an explicit-auto routing rule:
+  - if the session is already in auto mode, or the request explicitly asks for
+    autonomous execution, route to `wase` (engineering) or `bio-autopilot` (bio)
+  - heavy signals alone do not force autonomous executors; in non-auto intent
+    cases it keeps the standard executor path (`atlas`, fallback `sisyphus`)
+- autonomous mode follows a "first primary input + system-driven continuation"
+  principle:
+  - the user's main task intent is expected mostly in the first prompt
+  - subsequent waves are primarily driven by system guidance, auto review, and
+    continuation; user follow-up is for directional corrections
+  - in autonomous sessions, when planning is approved and tracked execution has
+    not started yet, the system now auto-bootstraps a start-work-equivalent
+    handoff so the autonomous executor continues execution waves directly
 - batch-mode autonomous sessions now stop cleanly after an approved reviewed
   wave instead of auto-rolling into another wave
 - stale todo graphs from a previously approved batch are treated as stale when a
@@ -195,6 +215,21 @@ Current behavior:
   execution wave instead of being accepted at face value
 
 Mode selection is runtime-scoped and stored in the repo-local workflow state.
+
+`light` vs `heavy` classification sources (not a single signal):
+
+- plan-size signals: checklist/task volume in the active plan file
+- plan path/content semantic signals: keywords such as migration,
+  architecture, integration, validation, pipeline, bioinformatics
+- user request text signals: the current `/start-work` request text is included;
+  prompts with multiple heavy-scope signals are more likely to classify as
+  `heavy`
+
+Practical shorthand:
+
+- compact scope and short-wave execution usually maps to `light + batch`
+- multi-stage, cross-subsystem, long-horizon execution usually maps to
+  `heavy + continuous`
 
 ### Fresh repo bootstrap
 

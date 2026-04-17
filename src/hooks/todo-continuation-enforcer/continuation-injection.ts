@@ -29,6 +29,7 @@ import { getAgentConfigKey, getRuntimeAgentName } from "../../shared/agent-displ
 import {
   AUTONOMOUS_BACKLOG_EXPANSION_PROMPT,
   AUTONOMOUS_REVIEW_REWORK_PROMPT,
+  AUTONOMOUS_HEAVY_PLAN_BOOTSTRAP_PROMPT,
   CONTINUATION_REPLAN_PROMPT,
   AUTONOMOUS_COMPLETION_AUDIT_PROMPT,
   AUTONOMOUS_CONTINUATION_PROMPT,
@@ -83,7 +84,7 @@ function buildWorkflowModeContext(args: {
     lines.push("- This session is in light autonomous mode: do not inflate the backlog unnecessarily; keep the current batch tight and reviewable.")
   } else if (autoModeLevel === "heavy") {
     lines.push("- This session is in heavy autonomous mode: maintain a durable multi-wave backlog and keep the execution graph explicit.")
-    lines.push("- If the backlog is shallow and no durable plan exists, call a planning specialist when available before continuing build execution.")
+    lines.push("- Before broad execution, run one explicit planning pass via task(subagent_type=\"prometheus\", ...) to shape a durable multi-wave task graph.")
     lines.push("- For genuinely broad work, 15-40 concrete todos is acceptable; avoid tiny 3-item plans for heavy mode.")
   }
 
@@ -750,6 +751,129 @@ ${buildWorkflowModeContext({
       injectionState.lastInjectedAt = Date.now()
       injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
     }
+  }
+}
+
+export async function injectAutonomousHeavyPlanBootstrap(args: {
+  ctx: PluginInput
+  sessionID: string
+  backgroundManager?: BackgroundManager
+  skipAgents?: string[]
+  resolvedInfo?: ResolvedMessageInfo
+  sessionStateStore: SessionStateStore
+  isContinuationStopped?: (sessionID: string) => boolean
+}): Promise<boolean> {
+  const {
+    ctx,
+    sessionID,
+    backgroundManager,
+    skipAgents = DEFAULT_SKIP_AGENTS,
+    resolvedInfo,
+    sessionStateStore,
+    isContinuationStopped,
+  } = args
+
+  const state = sessionStateStore.getExistingState(sessionID)
+  if (state?.isRecovering) return false
+  if (isContinuationStopped?.(sessionID)) return false
+
+  const hasRunningBgTasks = backgroundManager
+    ? backgroundManager.getTasksByParentSession(sessionID).some((task: { status: string }) => task.status === "running")
+    : false
+  if (hasRunningBgTasks) return false
+
+  let agentName = resolveAutonomousFallbackAgent({
+    directory: ctx.directory,
+    sessionID,
+    agentName: resolvedInfo?.agent,
+  })
+  let model = resolvedInfo?.model
+  let tools = resolvedInfo?.tools
+
+  if (!agentName || !model) {
+    let previousMessage = null
+    if (isSqliteBackend()) {
+      previousMessage = await findNearestMessageWithFieldsFromSDK(ctx.client, sessionID)
+    } else {
+      const messageDir = getMessageDir(sessionID)
+      previousMessage = messageDir ? findNearestMessageWithFields(messageDir) : null
+    }
+    agentName = agentName ?? previousMessage?.agent
+    model =
+      model ??
+      (previousMessage?.model?.providerID && previousMessage?.model?.modelID
+        ? {
+            providerID: previousMessage.model.providerID,
+            modelID: previousMessage.model.modelID,
+            ...(previousMessage.model.variant ? { variant: previousMessage.model.variant } : {}),
+          }
+        : undefined)
+    tools = tools ?? previousMessage?.tools
+  }
+  model = preferSessionLockedModel(sessionID, model)
+
+  if (agentName && skipAgents.some((agent) => getAgentConfigKey(agent) === getAgentConfigKey(agentName))) return false
+  if (!hasWritePermission(tools)) return false
+
+  const injectionState = sessionStateStore.getExistingState(sessionID)
+  if (injectionState) {
+    injectionState.inFlight = true
+    injectionState.heavyPlanBootstrapAttempts = (injectionState.heavyPlanBootstrapAttempts ?? 0) + 1
+  }
+  const runtimeAgentName = toRuntimeAgentName(agentName)
+
+  try {
+    const internalPromptAt = Date.now()
+    if (injectionState) {
+      injectionState.lastInternalPromptAt = internalPromptAt
+    }
+
+    const prompt = `${AUTONOMOUS_HEAVY_PLAN_BOOTSTRAP_PROMPT}
+
+${buildWorkflowModeContext({
+      directory: ctx.directory,
+      sessionID,
+      fallbackAutoModeLevel: "heavy",
+      fallbackInteractionMode: "continuous",
+    })}`
+
+    const inheritedTools = resolveInheritedPromptTools(sessionID, tools)
+
+    updateRuntimeWorkflowStage({
+      directory: ctx.directory,
+      sessionId: sessionID,
+      currentStage: "plan",
+      note: "Heavy autonomous planning bootstrap injected. Execute one explicit planning task pass before broad multi-agent build execution.",
+    })
+
+    await ctx.client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        ...(runtimeAgentName ? { agent: runtimeAgentName } : {}),
+        ...(model !== undefined ? { model } : {}),
+        ...(inheritedTools ? { tools: inheritedTools } : {}),
+        parts: [createInternalAgentTextPart(prompt.trim())],
+      },
+      query: { directory: ctx.directory },
+    })
+
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = internalPromptAt
+      injectionState.awaitingPostInjectionProgressCheck = true
+      injectionState.consecutiveFailures = 0
+      injectionState.heavyPlanBootstrapDone = true
+    }
+
+    return true
+  } catch (error) {
+    log(`[${HOOK_NAME}] Autonomous heavy plan bootstrap failed`, { sessionID, error: String(error) })
+    if (injectionState) {
+      injectionState.inFlight = false
+      injectionState.lastInjectedAt = Date.now()
+      injectionState.consecutiveFailures = (injectionState.consecutiveFailures ?? 0) + 1
+    }
+    return false
   }
 }
 

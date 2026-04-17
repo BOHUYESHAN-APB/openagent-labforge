@@ -51,6 +51,9 @@ export interface SessionState {
   completionAuditCount?: number
   backlogExpansionCount?: number
   lastBacklogExpansionTodoCount?: number
+  heavyPlanBootstrapDone?: boolean
+  heavyPlanBootstrapAttempts?: number
+  lastAutoStartWorkReviewSignature?: string
 }
 
 export interface MessageInfo {

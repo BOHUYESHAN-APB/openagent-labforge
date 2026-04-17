@@ -605,6 +605,119 @@ ${START_WORK_TEMPLATE}
       expect(output.message.agent).toBe("sisyphus")
       expect(readBoulderState(testDir)?.agent).toBe("sisyphus")
     })
+
+    test("should auto-switch to wase when start-work request explicitly asks autonomous execution", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("atlas")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.registerAgentName("wase")
+      sessionState.registerAgentName("prometheus")
+      sessionState.updateSessionAgent("ses-ultrawork-start-work", "prometheus")
+
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+      writeFileSync(join(plansDir, "auto-plan.md"), "# Plan\n- [ ] Task 1")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt({ userRequest: "auto-plan ultrawork" }) }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-ultrawork-start-work" },
+        output,
+      )
+
+      expect(output.message.agent).toBe("wase")
+      expect(sessionState.getSessionAgent("ses-ultrawork-start-work")).toBe("wase")
+    })
+
+    test("should auto-switch to bio-autopilot for bio-scoped autonomous start-work", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("atlas")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.registerAgentName("wase")
+      sessionState.registerAgentName("bio-autopilot")
+      sessionState.registerAgentName("prometheus")
+      sessionState.updateSessionAgent("ses-bio-autopilot-start-work", "prometheus")
+
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+      writeFileSync(join(plansDir, "bio-pipeline.md"), "# Bio Plan\n- [ ] Task 1")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt({ userRequest: "bio-pipeline 全自动 生信" }) }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-bio-autopilot-start-work" },
+        output,
+      )
+
+      expect(output.message.agent).toBe("bio-autopilot")
+      expect(sessionState.getSessionAgent("ses-bio-autopilot-start-work")).toBe("bio-autopilot")
+    })
+
+    test("should keep atlas for heavy plan signals when user did not request autonomous mode", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("atlas")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.registerAgentName("wase")
+      sessionState.registerAgentName("prometheus")
+      sessionState.updateSessionAgent("ses-heavy-plan-start-work", "prometheus")
+
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+      writeFileSync(
+        join(plansDir, "heavy-exec.md"),
+        "# Heavy migration architecture integration plan\n\n- [ ] t1\n- [ ] t2\n- [ ] t3\n- [ ] t4\n- [ ] t5\n- [ ] t6\n- [ ] t7\n- [ ] t8\n",
+      )
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt({ userRequest: "heavy-exec" }) }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-heavy-plan-start-work" },
+        output,
+      )
+
+      expect(output.message.agent).toBe("atlas")
+      expect(sessionState.getSessionAgent("ses-heavy-plan-start-work")).toBe("atlas")
+    })
+
+    test("should auto-switch to wase when session is already marked as ultrawork autonomous", async () => {
+      sessionState._resetForTesting()
+      sessionState.registerAgentName("atlas")
+      sessionState.registerAgentName("sisyphus")
+      sessionState.registerAgentName("wase")
+      sessionState.registerAgentName("prometheus")
+      sessionState.updateSessionAgent("ses-ultrawork-session-flag", "prometheus")
+      sessionState.setUltraworkAutonomousSession("ses-ultrawork-session-flag", true)
+
+      const plansDir = join(testDir, ".sisyphus", "plans")
+      mkdirSync(plansDir, { recursive: true })
+      writeFileSync(join(plansDir, "flagged-auto-plan.md"), "# Plan\n- [ ] Task 1")
+
+      const hook = createStartWorkHook(createMockPluginInput())
+      const output = {
+        message: {} as Record<string, unknown>,
+        parts: [{ type: "text", text: createStartWorkPrompt({ userRequest: "flagged-auto-plan" }) }],
+      }
+
+      await hook["chat.message"](
+        { sessionID: "ses-ultrawork-session-flag" },
+        output,
+      )
+
+      expect(output.message.agent).toBe("wase")
+      expect(sessionState.getSessionAgent("ses-ultrawork-session-flag")).toBe("wase")
+    })
   })
 
   describe("worktree support", () => {
