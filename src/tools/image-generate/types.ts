@@ -1,7 +1,7 @@
 import type { ImageBusConfig } from "../../config/schema/image-bus"
 
 export type ImageTaskType = "general" | "illustration" | "scientific"
-export type ProviderKind = "comfyui" | "google"
+export type ProviderKind = "comfyui" | "google" | "stable_diffusion"
 
 export interface ImageGenerateArgs {
   prompt: string

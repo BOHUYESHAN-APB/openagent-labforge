@@ -1,6 +1,7 @@
 import type { CommandDefinition } from "../claude-code-command-loader"
 import { isAgentRegistered } from "../claude-code-session-state"
 import type { BuiltinCommandName, BuiltinCommands } from "./types"
+import { normalizeBuiltinCommandName } from "./aliases"
 import { INIT_DEEP_TEMPLATE } from "./templates/init-deep"
 import { RALPH_LOOP_TEMPLATE, ULW_LOOP_TEMPLATE, CANCEL_RALPH_TEMPLATE } from "./templates/ralph-loop"
 import { STOP_CONTINUATION_TEMPLATE } from "./templates/stop-continuation"
@@ -31,7 +32,7 @@ function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
 ): Record<string, Omit<CommandDefinition, "name">> {
   return {
-  "compress-context": {
+  "ol-compress-context": {
     description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",
     template: `<command-instruction>
 ${COMPRESS_CONTEXT_TEMPLATE}
@@ -47,7 +48,7 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[status|auto|l1|l2|l3]",
   },
-  checkpoint: {
+  "ol-checkpoint": {
     description: "(builtin) Create a repo-local light/heavy checkpoint for same-session recovery or cross-session continuation",
     template: `<command-instruction>
 ${CHECKPOINT_TEMPLATE}
@@ -63,7 +64,7 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[light|heavy] [goal]",
   },
-  "checkpoint-resume": {
+  "ol-checkpoint-resume": {
     description: "(builtin) Resume or reload work from the latest or specified repo-local checkpoint",
     template: `<command-instruction>
 ${CHECKPOINT_RESUME_TEMPLATE}
@@ -79,7 +80,7 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[latest|session-id|checkpoint-path]",
   },
-  "init-deep": {
+  "ol-init-deep": {
     description: "(builtin) Initialize hierarchical AGENTS.md knowledge base",
     template: `<command-instruction>
 ${INIT_DEEP_TEMPLATE}
@@ -90,7 +91,7 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[--create-new] [--max-depth=N]",
   },
-   "ralph-loop": {
+   "ol-ralph-loop": {
      description: "(builtin) Start self-referential development loop until completion",
      template: `<command-instruction>
 ${RALPH_LOOP_TEMPLATE}
@@ -101,7 +102,7 @@ $ARGUMENTS
 </user-task>`,
      argumentHint: '"task description" [--completion-promise=TEXT] [--max-iterations=N] [--strategy=reset|continue]',
    },
-   "ulw-loop": {
+   "ol-ulw-loop": {
       description: "(builtin) Start ultrawork loop - continues until completion with ultrawork mode",
       template: `<command-instruction>
 ${ULW_LOOP_TEMPLATE}
@@ -112,13 +113,13 @@ $ARGUMENTS
 </user-task>`,
       argumentHint: '"task description" [--completion-promise=TEXT] [--strategy=reset|continue]',
     },
-  "cancel-ralph": {
+  "ol-cancel-ralph": {
     description: "(builtin) Cancel active Ralph Loop",
     template: `<command-instruction>
 ${CANCEL_RALPH_TEMPLATE}
 </command-instruction>`,
   },
-  refactor: {
+  "ol-refactor": {
     description:
       "(builtin) Intelligent refactoring command with LSP, AST-grep, architecture analysis, codemap, and TDD verification.",
     template: `<command-instruction>
@@ -126,7 +127,7 @@ ${REFACTOR_TEMPLATE}
 </command-instruction>`,
     argumentHint: "<refactoring-target> [--scope=<file|module|project>] [--strategy=<safe|aggressive>]",
   },
-  "start-work": {
+  "ol-start-work": {
     description: "(builtin) Start Sisyphus work session from Prometheus plan",
     agent: resolveStartWorkAgent(options),
     template: `<command-instruction>
@@ -143,13 +144,13 @@ $ARGUMENTS
 </user-request>`,
     argumentHint: "[plan-name]",
   },
-  "stop-continuation": {
+  "ol-stop-continuation": {
     description: "(builtin) Stop all continuation mechanisms (ralph loop, todo continuation, boulder) for this session",
     template: `<command-instruction>
 ${STOP_CONTINUATION_TEMPLATE}
 </command-instruction>`,
   },
-  "remove-ai-slops": {
+  "ol-remove-ai-slops": {
     description: "(builtin) Remove AI-generated code smells from branch changes and critically review the results",
     template: `<command-instruction>
 ${REMOVE_AI_SLOPS_TEMPLATE}
@@ -159,25 +160,25 @@ ${REMOVE_AI_SLOPS_TEMPLATE}
 $ARGUMENTS
 </user-request>`,
   },
-  "todo-clear": {
+  "ol-todo-clear": {
     description: "(builtin) Clear stale todos and session-level execution residue for the current session",
     template: `<command-instruction>
 ${TODO_CLEAR_TEMPLATE}
 </command-instruction>`,
   },
-  "workflow-reset": {
+  "ol-workflow-reset": {
     description: "(builtin) Reset current session/project execution workflow state before starting fresh",
     template: `<command-instruction>
 ${WORKFLOW_RESET_TEMPLATE}
 </command-instruction>`,
   },
-  "focus-chat": {
+  "ol-focus-chat": {
     description: "(builtin) Return the current session to ordinary chat mode and suppress stale execution carry-over",
     template: `<command-instruction>
 ${FOCUS_CHAT_TEMPLATE}
 </command-instruction>`,
   },
-  handoff: {
+  "ol-handoff": {
     description: "(builtin) Create a detailed context summary for continuing work in a new session",
     template: `<command-instruction>
 ${HANDOFF_TEMPLATE}
@@ -200,12 +201,20 @@ export function loadBuiltinCommands(
   disabledCommands?: BuiltinCommandName[],
   options?: LoadBuiltinCommandsOptions,
 ): BuiltinCommands {
-  const disabled = new Set(disabledCommands ?? [])
+  const disabled = new Set<string>(
+    (disabledCommands ?? []).reduce<string[]>((acc, name) => {
+      const canonical = normalizeBuiltinCommandName(name)
+      if (canonical) {
+        acc.push(canonical)
+      }
+      return acc
+    }, []),
+  )
   const commands: BuiltinCommands = {}
   const builtinCommandDefinitions = createBuiltinCommandDefinitions(options)
 
   for (const [name, definition] of Object.entries(builtinCommandDefinitions)) {
-    if (!disabled.has(name as BuiltinCommandName)) {
+    if (!disabled.has(name)) {
       const { argumentHint: _argumentHint, ...openCodeCompatible } = definition
       commands[name] = { ...openCodeCompatible, name } as CommandDefinition
     }

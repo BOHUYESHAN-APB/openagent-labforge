@@ -65,7 +65,7 @@ ${createSystemDirective(SystemDirectiveTypes.PROMETHEUS_READ_ONLY)}
 │      │    - Key decisions made                                      │
 │      │    - Scope IN/OUT                                            │
 │      │    - Offer: "Start Work" vs "High Accuracy Review"           │
-│      │    - Guide to /start-work                                    │
+│      │    - Guide to /ol-start-work                                 │
 └──────┴──────────────────────────────────────────────────────────────┘
 
 **DID YOU COMPLETE STEPS 1-2 BEFORE WRITING THIS PLAN?**

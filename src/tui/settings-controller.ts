@@ -11,10 +11,25 @@ import {
   updateScopeConfig,
   type SettingsScope,
 } from "./config-files"
+import {
+  DEFAULT_COMFYUI_BASE_URL,
+  DEFAULT_COMFYUI_WORKFLOW_ENDPOINT,
+  DEFAULT_GOOGLE_BASE_URL,
+  DEFAULT_STABLE_DIFFUSION_BASE_URL,
+  DEFAULT_STABLE_DIFFUSION_TXT2IMG_ENDPOINT,
+} from "./image-bus-defaults"
+import {
+  getContextGuardThresholdDisplay,
+  resolveContextGuardProfile,
+} from "../hooks/context-guard-threshold-profile"
 
 const SETTINGS_SCOPE_KEY = "openagent-labforge.settings.scope"
+const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
+const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
+const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "image-bus"
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus"
+type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
 
@@ -24,7 +39,7 @@ type EnumChoice<Value extends string> = {
   description?: string
 }
 
-function booleanLabel(value: boolean | undefined, trueLabel = "Enabled", falseLabel = "Disabled"): string {
+function booleanLabel(value: boolean | undefined, trueLabel = "✓ Enabled", falseLabel = "○ Disabled"): string {
   return value === true ? trueLabel : falseLabel
 }
 
@@ -33,16 +48,69 @@ function stringLabel(value: string | undefined, fallback = "Not set"): string {
   return trimmed && trimmed.length > 0 ? trimmed : fallback
 }
 
+function configuredOrDefaultLabel(value: string | undefined, defaultValue: string): string {
+  const trimmed = value?.trim()
+  if (trimmed && trimmed.length > 0) {
+    return trimmed
+  }
+  return `default: ${defaultValue}`
+}
+
 function numberLabel(value: number | undefined, fallback = "Not set"): string {
   return typeof value === "number" ? String(value) : fallback
 }
 
+function settingsPromptDescription(note: string): () => string {
+  return () => `${note} • Enter saves • Esc cancels`
+}
+
+function compactPathLabel(value: string, max = 44): string {
+  if (value.length <= max) return value
+  return `...${value.slice(-(max - 3))}`
+}
+
+function formatCompactTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(0)}K`
+  return String(tokens)
+}
+
+function summaryRow(
+  title: string,
+  description: string | undefined,
+  category: string,
+): TuiDialogSelectOption<string> {
+  return {
+    title,
+    value: `__section__${title.toLowerCase().replace(/\s+/g, "_")}`,
+    description,
+    category,
+    disabled: true,
+  }
+}
+
 export function createSettingsController(api: TuiPluginApi, directory: string) {
   let scope: SettingsScope = api.kv.get<SettingsScope>(SETTINGS_SCOPE_KEY, "project") === "user" ? "user" : "project"
+  let uiLanguage: UiLanguage = (() => {
+    const stored = api.kv.get<string | undefined>(SETTINGS_LANGUAGE_KEY, undefined)
+    if (stored === "zh" || stored === "en") {
+      return stored
+    }
+    const configLanguage = getNestedString(readEffectiveConfig(directory) as unknown as Record<string, unknown>, ["i18n", "language"])
+    return configLanguage?.toLowerCase().startsWith("zh") ? "zh" : "en"
+  })()
+
+  const text = (en: string, zh: string): string => uiLanguage === "zh" ? zh : en
+  const statusLabel = (value: boolean | undefined): string =>
+    booleanLabel(value, text("✓ Enabled", "✓ 启用"), text("○ Disabled", "○ 禁用"))
+  const stringValueLabel = (value: string | undefined, fallbackEn = "Not set", fallbackZh = "未设置"): string =>
+    stringLabel(value, text(fallbackEn, fallbackZh))
+  const numberValueLabel = (value: number | undefined, fallbackEn = "Not set", fallbackZh = "未设置"): string =>
+    numberLabel(value, text(fallbackEn, fallbackZh))
 
   const toast = (message: string, variant: "success" | "warning" | "error" | "info" = "success") => {
     api.ui.toast({
-      title: "OpenAgent Settings",
+      title: text("OpenAgent Settings", "OpenAgent 设置"),
       message,
       variant,
       duration: 2600,
@@ -56,6 +124,11 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
   const persistScope = (next: SettingsScope) => {
     scope = next
     api.kv.set(SETTINGS_SCOPE_KEY, next)
+  }
+
+  const persistLanguage = (next: UiLanguage) => {
+    uiLanguage = next
+    api.kv.set(SETTINGS_LANGUAGE_KEY, next)
   }
 
   const save = (mutate: (root: Record<string, unknown>) => void, successMessage: string, reopen: () => void) => {
@@ -78,6 +151,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     api.ui.dialog.replace(() =>
       api.ui.DialogPrompt({
         title: args.title,
+        description: settingsPromptDescription(text("Leave blank to clear", "留空表示清空")),
         value: args.value ?? "",
         placeholder: args.placeholder,
         onConfirm: (value) => {
@@ -101,13 +175,16 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     api.ui.dialog.replace(() =>
       api.ui.DialogPrompt({
         title: args.title,
+        description: settingsPromptDescription(
+          text(`Enter an integer between ${args.min} and ${args.max}`, `请输入 ${args.min} 到 ${args.max} 之间的整数`),
+        ),
         value: args.value !== undefined ? String(args.value) : "",
         placeholder: args.placeholder,
         onConfirm: (value) => {
           const trimmed = value.trim()
           const parsed = Number(trimmed)
           if (!Number.isInteger(parsed) || parsed < args.min || parsed > args.max) {
-            toast(`Enter an integer between ${args.min} and ${args.max}.`, "warning")
+            toast(text(`Enter an integer between ${args.min} and ${args.max}.`, `请输入 ${args.min} 到 ${args.max} 之间的整数。`), "warning")
             openNumberPrompt(args)
             return
           }
@@ -128,6 +205,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
         title: args.title,
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         current: args.current,
         options: [
           ...args.choices.map<TuiDialogSelectOption<Value>>((choice) => ({
@@ -136,9 +214,9 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             description: choice.description,
           })),
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "__back__" as Value,
-            description: "Return without changing this setting.",
+            description: text("Return without changing this setting.", "不修改当前设置并返回。"),
           },
         ],
         onSelect: (option) => {
@@ -163,22 +241,23 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect<string>({
         title: args.title,
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         current: args.current === undefined ? undefined : args.current ? "true" : "false",
         options: [
           {
             title: args.trueLabel,
             value: "true",
-            description: "Apply this setting now.",
+            description: text("Apply this setting now.", "立即应用这个设置。"),
           },
           {
             title: args.falseLabel,
             value: "false",
-            description: "Apply this setting now.",
+            description: text("Apply this setting now.", "立即应用这个设置。"),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "__back__",
-            description: "Return without changing this setting.",
+            description: text("Return without changing this setting.", "不修改当前设置并返回。"),
           },
         ],
         onSelect: (option) => {
@@ -195,23 +274,28 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
   const openScopeDialog = (onBack: () => void) => {
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Settings Scope",
+        title: text("Settings Scope", "设置作用域"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         current: scope,
         options: [
+          summaryRow(text("Current Scope", "当前作用域"), text("Choose where future edits are written.", "选择设置写入到哪里。"), text("Current", "当前")),
           {
-            title: "Project",
+            title: text("Project", "项目"),
             value: "project",
-            description: resolveScopeConfigPath("project", directory),
+            category: text("Targets", "目标"),
+            description: compactPathLabel(resolveScopeConfigPath("project", directory)),
           },
           {
-            title: "User",
+            title: text("User", "用户"),
             value: "user",
-            description: resolveScopeConfigPath("user", directory),
+            category: text("Targets", "目标"),
+            description: compactPathLabel(resolveScopeConfigPath("user", directory)),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "__back__",
-            description: "Return to the previous settings page.",
+            category: text("Navigation", "导航"),
+            description: text("Return to the previous settings page.", "返回上一层设置页。"),
           },
         ],
         onSelect: (option) => {
@@ -220,8 +304,52 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
           persistScope(option.value === "user" ? "user" : "project")
-          toast(`Settings scope switched to ${scope}.`, "info")
+          toast(text(`Settings scope switched to ${scope}.`, `设置作用域已切换为 ${scope}。`), "info")
           onBack()
+        },
+      })
+    )
+  }
+
+  const openLanguageDialog = (onBack: () => void) => {
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Language", "语言"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        current: uiLanguage,
+        options: [
+          summaryRow(text("Current Language", "当前语言"), text("Choose the settings UI language.", "选择设置界面语言。"), text("Current", "当前")),
+          {
+            title: text("English / 中文", "English / 英文"),
+            value: "en",
+            category: text("Languages", "语言"),
+            description: text("English interface", "英文界面"),
+          },
+          {
+            title: text("中文 / English", "中文 / English"),
+            value: "zh",
+            category: text("Languages", "语言"),
+            description: text("Chinese interface", "中文界面"),
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to the previous settings page.", "返回上一层设置页。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            onBack()
+            return
+          }
+          const nextLanguage = option.value === "zh" ? "zh" : "en"
+          persistLanguage(nextLanguage)
+          save(
+            (root) => setNestedValue(root, ["i18n", "language"], nextLanguage === "zh" ? "zh-CN" : "en"),
+            text("Updated settings language", "已更新设置语言"),
+            onBack,
+          )
         },
       })
     )
@@ -238,37 +366,45 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Google Nano Banana",
+        title: text("Google Nano Banana", "Google Nano Banana"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(text("Provider Status", "通道状态"), statusLabel(enabled), text("Current", "当前")),
           {
-            title: "Enabled",
+            title: text("Toggle Enabled", "切换启用"),
             value: "enabled",
-            description: booleanLabel(enabled),
+            category: text("Core", "核心"),
+            description: statusLabel(enabled),
           },
           {
-            title: "Base URL",
+            title: text("Set Base URL", "设置 Base URL"),
             value: "base_url",
-            description: stringLabel(baseUrl),
+            category: text("Fields", "字段"),
+            description: configuredOrDefaultLabel(baseUrl, DEFAULT_GOOGLE_BASE_URL),
           },
           {
-            title: "Generate Endpoint",
+            title: text("Set Generate Endpoint", "设置生成接口"),
             value: "endpoint",
-            description: stringLabel(endpoint),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(endpoint),
           },
           {
-            title: "API Key Env",
+            title: text("Set API Key Env", "设置 API Key 环境变量"),
             value: "api_key_env",
-            description: stringLabel(apiKeyEnv),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(apiKeyEnv),
           },
           {
-            title: "Model",
+            title: text("Set Model", "设置模型"),
             value: "model",
-            description: stringLabel(model),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(model),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus providers.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus providers.", "返回图片总线提供方页面。"),
           },
         ],
         onSelect: (option) => {
@@ -278,15 +414,15 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "enabled") {
             openBooleanDialog({
-              title: "Google Nano Banana",
+              title: text("Google Nano Banana", "Google Nano Banana"),
               current: enabled,
-              trueLabel: "Enable provider",
-              falseLabel: "Disable provider",
+              trueLabel: text("Enable provider", "启用提供方"),
+              falseLabel: text("Disable provider", "禁用提供方"),
               onBack: openGoogleProvider,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, [...basePath, "enabled"], value),
-                  "Updated Google Nano Banana enabled flag",
+                  text("Updated Google Nano Banana enabled flag", "已更新 Google Nano Banana 启用状态"),
                   openGoogleProvider,
                 ),
             })
@@ -295,22 +431,22 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
           const prompts = {
             base_url: {
-              title: "Google Nano Banana Base URL",
+              title: text("Google Nano Banana Base URL", "Google Nano Banana Base URL"),
               value: baseUrl,
               path: [...basePath, "base_url"],
             },
             endpoint: {
-              title: "Google Nano Banana Generate Endpoint",
+              title: text("Google Nano Banana Generate Endpoint", "Google Nano Banana 生成接口"),
               value: endpoint,
               path: [...basePath, "generate_endpoint"],
             },
             api_key_env: {
-              title: "Google Nano Banana API Key Env",
+              title: text("Google Nano Banana API Key Env", "Google Nano Banana API Key 环境变量"),
               value: apiKeyEnv,
               path: [...basePath, "api_key_env"],
             },
             model: {
-              title: "Google Nano Banana Model",
+              title: text("Google Nano Banana Model", "Google Nano Banana 模型"),
               value: model,
               path: [...basePath, "model"],
             },
@@ -320,12 +456,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           openStringPrompt({
             title: prompt.title,
             value: prompt.value,
-            placeholder: "Leave blank to clear",
+            placeholder: text("Leave blank to clear", "留空表示清空"),
             onCancel: openGoogleProvider,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, [...prompt.path], value),
-                `Updated ${prompt.title}`,
+                text(`Updated ${prompt.title}`, `已更新 ${prompt.title}`),
                 openGoogleProvider,
               ),
           })
@@ -340,36 +476,50 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const enabled = getNestedBoolean(config, [...basePath, "enabled"])
     const baseUrl = getNestedString(config, [...basePath, "base_url"])
     const endpoint = getNestedString(config, [...basePath, "workflow_endpoint"])
+    const apiKeyEnv = getNestedString(config, [...basePath, "api_key_env"])
     const outputDir = getNestedString(config, [...basePath, "output_dir"])
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "ComfyUI",
+        title: text("ComfyUI", "ComfyUI"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(text("Provider Status", "通道状态"), statusLabel(enabled), text("Current", "当前")),
           {
-            title: "Enabled",
+            title: text("Toggle Enabled", "切换启用"),
             value: "enabled",
-            description: booleanLabel(enabled),
+            category: text("Core", "核心"),
+            description: statusLabel(enabled),
           },
           {
-            title: "Base URL",
+            title: text("Set Base URL", "设置 Base URL"),
             value: "base_url",
-            description: stringLabel(baseUrl),
+            category: text("Fields", "字段"),
+            description: configuredOrDefaultLabel(baseUrl, DEFAULT_COMFYUI_BASE_URL),
           },
           {
-            title: "Workflow Endpoint",
+            title: text("Set Workflow Endpoint", "设置工作流接口"),
             value: "workflow_endpoint",
-            description: stringLabel(endpoint),
+            category: text("Fields", "字段"),
+            description: configuredOrDefaultLabel(endpoint, DEFAULT_COMFYUI_WORKFLOW_ENDPOINT),
           },
           {
-            title: "Output Directory",
+            title: text("Set API Key Env", "设置 API Key 环境变量"),
+            value: "api_key_env",
+            category: text("Fields", "字段"),
+            description: stringValueLabel(apiKeyEnv),
+          },
+          {
+            title: text("Set Output Directory", "设置输出目录"),
             value: "output_dir",
-            description: stringLabel(outputDir),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(outputDir),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus providers.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus providers.", "返回图片总线提供方页面。"),
           },
         ],
         onSelect: (option) => {
@@ -379,15 +529,15 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "enabled") {
             openBooleanDialog({
-              title: "ComfyUI",
+              title: text("ComfyUI", "ComfyUI"),
               current: enabled,
-              trueLabel: "Enable provider",
-              falseLabel: "Disable provider",
+              trueLabel: text("Enable provider", "启用提供方"),
+              falseLabel: text("Disable provider", "禁用提供方"),
               onBack: openComfyUiProvider,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, [...basePath, "enabled"], value),
-                  "Updated ComfyUI enabled flag",
+                  text("Updated ComfyUI enabled flag", "已更新 ComfyUI 启用状态"),
                   openComfyUiProvider,
                 ),
             })
@@ -396,17 +546,22 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
           const prompts = {
             base_url: {
-              title: "ComfyUI Base URL",
+              title: text("ComfyUI Base URL", "ComfyUI Base URL"),
               value: baseUrl,
               path: [...basePath, "base_url"],
             },
             workflow_endpoint: {
-              title: "ComfyUI Workflow Endpoint",
+              title: text("ComfyUI Workflow Endpoint", "ComfyUI 工作流接口"),
               value: endpoint,
               path: [...basePath, "workflow_endpoint"],
             },
+            api_key_env: {
+              title: text("ComfyUI API Key Env", "ComfyUI API Key 环境变量"),
+              value: apiKeyEnv,
+              path: [...basePath, "api_key_env"],
+            },
             output_dir: {
-              title: "ComfyUI Output Directory",
+              title: text("ComfyUI Output Directory", "ComfyUI 输出目录"),
               value: outputDir,
               path: [...basePath, "output_dir"],
             },
@@ -416,12 +571,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           openStringPrompt({
             title: prompt.title,
             value: prompt.value,
-            placeholder: "Leave blank to clear",
+            placeholder: text("Leave blank to clear", "留空表示清空"),
             onCancel: openComfyUiProvider,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, [...prompt.path], value),
-                `Updated ${prompt.title}`,
+                text(`Updated ${prompt.title}`, `已更新 ${prompt.title}`),
                 openComfyUiProvider,
               ),
           })
@@ -441,37 +596,45 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Stable Diffusion",
+        title: text("Stable Diffusion", "Stable Diffusion"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(text("Provider Status", "通道状态"), statusLabel(enabled), text("Current", "当前")),
           {
-            title: "Enabled",
+            title: text("Toggle Enabled", "切换启用"),
             value: "enabled",
-            description: booleanLabel(enabled),
+            category: text("Core", "核心"),
+            description: statusLabel(enabled),
           },
           {
-            title: "Base URL",
+            title: text("Set Base URL", "设置 Base URL"),
             value: "base_url",
-            description: stringLabel(baseUrl),
+            category: text("Fields", "字段"),
+            description: configuredOrDefaultLabel(baseUrl, DEFAULT_STABLE_DIFFUSION_BASE_URL),
           },
           {
-            title: "Txt2Img Endpoint",
+            title: text("Set Txt2Img Endpoint", "设置 Txt2Img 接口"),
             value: "txt2img_endpoint",
-            description: stringLabel(endpoint),
+            category: text("Fields", "字段"),
+            description: configuredOrDefaultLabel(endpoint, DEFAULT_STABLE_DIFFUSION_TXT2IMG_ENDPOINT),
           },
           {
-            title: "API Key Env",
+            title: text("Set API Key Env", "设置 API Key 环境变量"),
             value: "api_key_env",
-            description: stringLabel(apiKeyEnv),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(apiKeyEnv),
           },
           {
-            title: "Model",
+            title: text("Set Model", "设置模型"),
             value: "model",
-            description: stringLabel(model),
+            category: text("Fields", "字段"),
+            description: stringValueLabel(model),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus providers.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus providers.", "返回图片总线提供方页面。"),
           },
         ],
         onSelect: (option) => {
@@ -481,15 +644,15 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "enabled") {
             openBooleanDialog({
-              title: "Stable Diffusion",
+              title: text("Stable Diffusion", "Stable Diffusion"),
               current: enabled,
-              trueLabel: "Enable provider",
-              falseLabel: "Disable provider",
+              trueLabel: text("Enable provider", "启用提供方"),
+              falseLabel: text("Disable provider", "禁用提供方"),
               onBack: openStableDiffusionProvider,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, [...basePath, "enabled"], value),
-                  "Updated Stable Diffusion enabled flag",
+                  text("Updated Stable Diffusion enabled flag", "已更新 Stable Diffusion 启用状态"),
                   openStableDiffusionProvider,
                 ),
             })
@@ -498,22 +661,22 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
           const prompts = {
             base_url: {
-              title: "Stable Diffusion Base URL",
+              title: text("Stable Diffusion Base URL", "Stable Diffusion Base URL"),
               value: baseUrl,
               path: [...basePath, "base_url"],
             },
             txt2img_endpoint: {
-              title: "Stable Diffusion Txt2Img Endpoint",
+              title: text("Stable Diffusion Txt2Img Endpoint", "Stable Diffusion Txt2Img 接口"),
               value: endpoint,
               path: [...basePath, "txt2img_endpoint"],
             },
             api_key_env: {
-              title: "Stable Diffusion API Key Env",
+              title: text("Stable Diffusion API Key Env", "Stable Diffusion API Key 环境变量"),
               value: apiKeyEnv,
               path: [...basePath, "api_key_env"],
             },
             model: {
-              title: "Stable Diffusion Model",
+              title: text("Stable Diffusion Model", "Stable Diffusion 模型"),
               value: model,
               path: [...basePath, "model"],
             },
@@ -523,12 +686,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           openStringPrompt({
             title: prompt.title,
             value: prompt.value,
-            placeholder: "Leave blank to clear",
+            placeholder: text("Leave blank to clear", "留空表示清空"),
             onCancel: openStableDiffusionProvider,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, [...prompt.path], value),
-                `Updated ${prompt.title}`,
+                text(`Updated ${prompt.title}`, `已更新 ${prompt.title}`),
                 openStableDiffusionProvider,
               ),
           })
@@ -543,27 +706,33 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Image Bus Providers",
+        title: text("Image Bus Providers", "图片总线提供方"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(text("Provider Pages", "提供方页面"), text("Select a provider page to edit its fields.", "选择一个提供方页面进入详细配置。"), text("Current", "当前")),
           {
-            title: "Google Nano Banana",
+            title: text("Configure Google Nano Banana", "配置 Google Nano Banana"),
             value: "google_nano_banana",
+            category: text("Providers", "提供方"),
             description: describeProvider("google_nano_banana"),
           },
           {
-            title: "ComfyUI",
+            title: text("Configure ComfyUI", "配置 ComfyUI"),
             value: "comfyui",
+            category: text("Providers", "提供方"),
             description: describeProvider("comfyui"),
           },
           {
-            title: "Stable Diffusion",
+            title: text("Configure Stable Diffusion", "配置 Stable Diffusion"),
             value: "stable_diffusion",
+            category: text("Providers", "提供方"),
             description: describeProvider("stable_diffusion"),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus settings.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus settings.", "返回图片总线设置。"),
           },
         ],
         onSelect: (option) => {
@@ -585,6 +754,91 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
+  const openSubscription = () => {
+    const config = effectiveRecord()
+    const basePath = ["image_bus", "subscription"]
+    const mode = getNestedString(config, [...basePath, "mode"]) as "self-managed" | "disabled" | undefined
+    const planName = getNestedString(config, [...basePath, "plan_name"])
+
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Image Bus Subscription", "图片总线订阅"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Subscription", "当前订阅"),
+            `${stringValueLabel(mode, "disabled", "disabled")} • ${stringValueLabel(planName, "No plan label", "无套餐标签")}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Choose Subscription Mode", "选择订阅模式"),
+            value: "mode",
+            category: text("Core", "核心"),
+            description: stringValueLabel(mode, "disabled", "disabled"),
+          },
+          {
+            title: text("Set Plan Label", "设置套餐标签"),
+            value: "plan_name",
+            category: text("Fields", "字段"),
+            description: stringValueLabel(planName, "No plan label", "无套餐标签"),
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus settings.", "返回图片总线设置。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openImageBus()
+            return
+          }
+
+          if (option.value === "mode") {
+            openEnumDialog({
+              title: text("Subscription Mode", "订阅模式"),
+              current: mode,
+              choices: [
+                {
+                  title: text("Self Managed", "自管理"),
+                  value: "self-managed",
+                  description: text("Use your own paid provider or relay path.", "使用你自己的付费提供方或中转链路。"),
+                },
+                {
+                  title: text("Disabled", "禁用"),
+                  value: "disabled",
+                  description: text("Disable provider-subscription routing.", "禁用提供方订阅路由。"),
+                },
+              ],
+              onBack: openSubscription,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, [...basePath, "mode"], value),
+                  text("Updated image bus subscription mode", "已更新图片总线订阅模式"),
+                  openSubscription,
+                ),
+            })
+            return
+          }
+
+          openStringPrompt({
+            title: text("Image Bus Plan Label", "图片总线套餐标签"),
+            value: planName,
+            placeholder: text("google-banana-pro", "google-banana-pro"),
+            onCancel: openSubscription,
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, [...basePath, "plan_name"], value),
+                text("Updated image bus plan label", "已更新图片总线套餐标签"),
+                openSubscription,
+              ),
+          })
+        },
+      })
+    )
+  }
+
   const openContextMemory = () => {
     const config = effectiveRecord()
     const basePath = ["image_bus", "context_memory"]
@@ -595,32 +849,43 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Image Bus Context Memory",
+        title: text("Image Bus Context Memory", "图片总线上下文记忆"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(
+            text("Current Memory", "当前记忆状态"),
+            `${text("Enabled", "启用")}: ${statusLabel(enabled)} • ${text("Max turns", "最大轮数")}: ${numberValueLabel(maxTurns)}`,
+            text("Current", "当前"),
+          ),
           {
-            title: "Enabled",
+            title: text("Toggle Enabled", "切换启用"),
             value: "enabled",
-            description: booleanLabel(enabled),
+            category: text("Core", "核心"),
+            description: statusLabel(enabled),
           },
           {
-            title: "Carry Prompt Context",
+            title: text("Toggle Prompt Carryover", "切换 Prompt 续带"),
             value: "carry_prompt_context",
-            description: booleanLabel(carryPrompt),
+            category: text("Core", "核心"),
+            description: statusLabel(carryPrompt),
           },
           {
-            title: "Max History Turns",
+            title: text("Set Max History Turns", "设置最大历史轮数"),
             value: "max_history_turns",
-            description: numberLabel(maxTurns),
+            category: text("Core", "核心"),
+            description: numberValueLabel(maxTurns),
           },
           {
-            title: "Decision Trace",
+            title: text("Toggle Decision Trace", "切换决策轨迹"),
             value: "include_provider_decision_trace",
-            description: booleanLabel(trace),
+            category: text("Advanced", "高级"),
+            description: statusLabel(trace),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus settings.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus settings.", "返回图片总线设置。"),
           },
         ],
         onSelect: (option) => {
@@ -630,36 +895,36 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "max_history_turns") {
             openNumberPrompt({
-              title: "Max History Turns",
+              title: text("Max History Turns", "最大历史轮数"),
               value: maxTurns,
-              placeholder: "0-20",
+              placeholder: text("0-20", "0-20"),
               min: 0,
               max: 20,
               onCancel: openContextMemory,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, [...basePath, "max_history_turns"], value),
-                  "Updated Image Bus context memory history length",
+                  text("Updated Image Bus context memory history length", "已更新图片总线上下文记忆轮数"),
                   openContextMemory,
                 ),
             })
             return
           }
           openBooleanDialog({
-            title: "Image Bus Context Memory",
+            title: text("Image Bus Context Memory", "图片总线上下文记忆"),
             current:
               option.value === "enabled"
                 ? enabled
                 : option.value === "carry_prompt_context"
                   ? carryPrompt
                   : trace,
-            trueLabel: "Enable",
-            falseLabel: "Disable",
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
             onBack: openContextMemory,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, [...basePath, option.value], value),
-                `Updated ${option.value.replaceAll("_", " ")}`,
+                text(`Updated ${option.value.replaceAll("_", " ")}`, `已更新 ${option.value.replaceAll("_", " ")}`),
                 openContextMemory,
               ),
           })
@@ -681,27 +946,33 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "Image Bus Routing",
+        title: text("Image Bus Routing", "图片总线路由"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
+          summaryRow(text("Current Strategy", "当前策略"), stringValueLabel(strategy, "balanced", "balanced"), text("Current", "当前")),
           {
-            title: "Strategy",
+            title: text("Choose Strategy", "选择策略"),
             value: "strategy",
-            description: stringLabel(strategy, "balanced"),
+            category: text("Core", "核心"),
+            description: stringValueLabel(strategy, "balanced", "balanced"),
           },
           {
-            title: "Force Google For Scientific",
+            title: text("Toggle Scientific Google Route", "切换科研 Google 路由"),
             value: "force_google_for_scientific",
-            description: booleanLabel(forceScientific),
+            category: text("Advanced", "高级"),
+            description: statusLabel(forceScientific),
           },
           {
-            title: "Allow Google For General",
+            title: text("Toggle General Google Route", "切换通用 Google 路由"),
             value: "allow_google_for_general",
-            description: booleanLabel(allowGeneral),
+            category: text("Advanced", "高级"),
+            description: statusLabel(allowGeneral),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to Image Bus settings.",
+            category: text("Navigation", "导航"),
+            description: text("Return to Image Bus settings.", "返回图片总线设置。"),
           },
         ],
         onSelect: (option) => {
@@ -711,45 +982,45 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "strategy") {
             openEnumDialog({
-              title: "Image Bus Routing Strategy",
+              title: text("Image Bus Routing Strategy", "图片总线路由策略"),
               current: strategy,
               choices: [
                 {
-                  title: "Local First",
+                  title: text("Local First", "本地优先"),
                   value: "local-first",
-                  description: "Prefer local ComfyUI/Stable Diffusion when possible.",
+                  description: text("Prefer local ComfyUI/Stable Diffusion when possible.", "优先使用本地 ComfyUI / Stable Diffusion。"),
                 },
                 {
-                  title: "Balanced",
+                  title: text("Balanced", "均衡"),
                   value: "balanced",
-                  description: "Use local and Google providers more evenly.",
+                  description: text("Use local and Google providers more evenly.", "更均衡地使用本地与 Google 提供方。"),
                 },
                 {
-                  title: "Google First",
+                  title: text("Google First", "Google 优先"),
                   value: "google-first",
-                  description: "Prioritize Google Nano Banana whenever available.",
+                  description: text("Prioritize Google Nano Banana whenever available.", "只要可用就优先使用 Google Nano Banana。"),
                 },
               ],
               onBack: openRouting,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, [...basePath, "strategy"], value),
-                  "Updated Image Bus routing strategy",
+                  text("Updated Image Bus routing strategy", "已更新图片总线路由策略"),
                   openRouting,
                 ),
             })
             return
           }
           openBooleanDialog({
-            title: "Image Bus Routing",
+            title: text("Image Bus Routing", "图片总线路由"),
             current: option.value === "force_google_for_scientific" ? forceScientific : allowGeneral,
-            trueLabel: "Enable",
-            falseLabel: "Disable",
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
             onBack: openRouting,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, [...basePath, option.value], value),
-                `Updated ${option.value.replaceAll("_", " ")}`,
+                text(`Updated ${option.value.replaceAll("_", " ")}`, `已更新 ${option.value.replaceAll("_", " ")}`),
                 openRouting,
               ),
           })
@@ -771,47 +1042,64 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     api.ui.dialog.setSize("xlarge")
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "OpenAgent Image Bus Settings",
+        title: text("OpenAgent Image Bus Settings", "OpenAgent 图片总线设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
         options: [
+          summaryRow(text("Current Scope", "当前作用域"), `${scope} • ${compactPathLabel(scopePath())}`, text("Current", "当前")),
+          summaryRow(text("Current Core State", "当前核心状态"), `${text("Image bus", "图片总线")}: ${booleanLabel(enabled)} • ${text("Review", "复核")}: ${booleanLabel(reviewWithMainModel)}`, text("Current", "当前")),
           {
-            title: "Scope",
+            title: text("Scope", "作用域"),
             value: "scope",
-            description: `${scope} • ${scopePath()}`,
+            category: "Core",
+            description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
           {
-            title: "Enabled",
+            title: text("Toggle Image Bus", "切换图片总线"),
             value: "enabled",
+            category: "Core",
             description: booleanLabel(enabled),
           },
           {
-            title: "Review With Main Model",
+            title: text("Toggle Main-Model Review", "切换主模型复核"),
             value: "review_with_main_model",
+            category: "Core",
             description: booleanLabel(reviewWithMainModel),
           },
           {
-            title: "Default Output Format",
+            title: text("Choose Output Format", "选择输出格式"),
             value: "default_output_format",
+            category: "Core",
             description: stringLabel(defaultOutputFormat, "svg"),
           },
           {
-            title: "Context Memory",
+            title: text("Configure Context Memory", "配置上下文记忆"),
             value: "context_memory",
-            description: "Configure carry-over prompt memory and history length.",
+            category: "Advanced",
+            description: text("Prompt carryover, history turns, and trace options.", "Prompt 续带、历史轮数和决策轨迹。"),
           },
           {
-            title: "Routing",
+            title: text("Configure Routing", "配置路由策略"),
             value: "routing",
-            description: "Choose provider routing strategy and Google routing rules.",
+            category: "Advanced",
+            description: text("Strategy plus scientific/general Google routing rules.", "策略与科研/通用 Google 路由规则。"),
           },
           {
-            title: "Providers",
+            title: text("Configure Subscription", "配置订阅信息"),
+            value: "subscription",
+            category: "Advanced",
+            description: text("Subscription mode and plan label for paid image routing.", "付费图片路由的订阅模式和套餐标签。"),
+          },
+          {
+            title: text("Configure Providers", "配置通道提供方"),
             value: "providers",
-            description: "Configure Google Nano Banana, ComfyUI, and Stable Diffusion.",
+            category: "Advanced",
+            description: text("Google Nano Banana, ComfyUI, and Stable Diffusion.", "Google、ComfyUI 与 Stable Diffusion。"),
           },
           {
-            title: "Back",
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to the main settings page.",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
           },
         ],
         onSelect: (option) => {
@@ -831,39 +1119,43 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             openRouting()
             return
           }
+          if (option.value === "subscription") {
+            openSubscription()
+            return
+          }
           if (option.value === "providers") {
             openProviders()
             return
           }
           if (option.value === "default_output_format") {
             openEnumDialog({
-              title: "Default Output Format",
+              title: text("Default Output Format", "默认输出格式"),
               current: defaultOutputFormat,
               choices: [
-                { title: "SVG", value: "svg" },
-                { title: "PNG", value: "png" },
-                { title: "PDF", value: "pdf" },
+                { title: text("SVG", "SVG"), value: "svg" },
+                { title: text("PNG", "PNG"), value: "png" },
+                { title: text("PDF", "PDF"), value: "pdf" },
               ],
               onBack: openImageBus,
               onConfirm: (value) =>
                 save(
                   (root) => setNestedValue(root, ["image_bus", "default_output_format"], value),
-                  "Updated Image Bus default output format",
+                  text("Updated Image Bus default output format", "已更新图片总线默认输出格式"),
                   openImageBus,
                 ),
             })
             return
           }
           openBooleanDialog({
-            title: "Image Bus",
+            title: text("Image Bus", "图片总线"),
             current: option.value === "enabled" ? enabled : reviewWithMainModel,
-            trueLabel: "Enable",
-            falseLabel: "Disable",
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
             onBack: openImageBus,
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, ["image_bus", option.value], value),
-                `Updated image bus ${option.value.replaceAll("_", " ")}`,
+                text(`Updated image bus ${option.value.replaceAll("_", " ")}`, `已更新图片总线 ${option.value.replaceAll("_", " ")}`),
                 openImageBus,
               ),
           })
@@ -874,38 +1166,39 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
   const openGeneral = () => {
     const config = effective()
-    const configRecord = config as unknown as Record<string, unknown>
-    const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"]) as
-      | "conservative"
-      | "balanced"
-      | "aggressive"
-      | undefined
     const bioVisible = isBioAgentsVisible(config)
 
-    api.ui.dialog.setSize("large")
+    api.ui.dialog.setSize("xlarge")
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "OpenAgent General Settings",
+        title: text("OpenAgent General Settings", "OpenAgent 通用设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
         options: [
+          summaryRow(text("Current Scope", "当前作用域"), `${scope} • ${compactPathLabel(scopePath())}`, text("Current", "当前")),
+          summaryRow(text("Current General State", "当前通用状态"), `${text("Bio agents", "生信代理")}: ${bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")}`, text("Current", "当前")),
           {
-            title: "Scope",
+            title: text("Scope", "作用域"),
             value: "scope",
-            description: `${scope} • ${scopePath()}`,
+            category: text("Core", "核心"),
+            description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
           {
-            title: "Context Guard Profile",
-            value: "context_guard_profile",
-            description: stringLabel(profile, "balanced"),
-          },
-          {
-            title: "Bio Agents Visibility",
+            title: text("Toggle Bio Agent Visibility", "切换生信代理显示"),
             value: "bio_agents_visible",
-            description: bioVisible ? "Visible" : "Hidden",
+            category: text("Core", "核心"),
+            description: bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏"),
           },
           {
-            title: "Back",
+            title: text("Language", "语言"),
+            value: "language",
+            category: text("Core", "核心"),
+            description: uiLanguage === "zh" ? "中文" : "English",
+          },
+          {
+            title: text("Back", "返回"),
             value: "back",
-            description: "Return to the main settings page.",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
           },
         ],
         onSelect: (option) => {
@@ -917,47 +1210,20 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             openScopeDialog(openGeneral)
             return
           }
-          if (option.value === "context_guard_profile") {
-            openEnumDialog({
-              title: "Context Guard Profile",
-              current: profile,
-              choices: [
-                {
-                  title: "Conservative",
-                  value: "conservative",
-                  description: "Later reminders and later auto-compaction.",
-                },
-                {
-                  title: "Balanced",
-                  value: "balanced",
-                  description: "Current recommended default.",
-                },
-                {
-                  title: "Aggressive",
-                  value: "aggressive",
-                  description: "Earlier reminders and earlier auto-compaction.",
-                },
-              ],
-              onBack: openGeneral,
-              onConfirm: (value) =>
-                save(
-                  (root) => setNestedValue(root, ["experimental", "context_guard_profile"], value),
-                  "Updated context guard profile",
-                  openGeneral,
-                ),
-            })
+          if (option.value === "language") {
+            openLanguageDialog(openGeneral)
             return
           }
           openBooleanDialog({
-            title: "Bio Agents Visibility",
+            title: text("Bio Agents Visibility", "生信代理显示"),
             current: bioVisible,
-            trueLabel: "Show bio agents",
-            falseLabel: "Hide bio agents",
+            trueLabel: text("Show bio agents", "显示生信代理"),
+            falseLabel: text("Hide bio agents", "隐藏生信代理"),
             onBack: openGeneral,
             onConfirm: (value) =>
               save(
                 (root) => setBioAgentsVisible(root, value),
-                "Updated bio agent visibility",
+                text("Updated bio agent visibility", "已更新生信代理显示状态"),
                 openGeneral,
               ),
           })
@@ -966,9 +1232,262 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
+  const openRuntime = () => {
+    const config = effectiveRecord()
+    const profile = getNestedString(config, ["experimental", "context_guard_profile"]) as
+      | "conservative"
+      | "balanced"
+      | "aggressive"
+      | undefined
+    const preemptiveCompaction = getNestedBoolean(config, ["experimental", "preemptive_compaction"])
+    const strictModelPriority = getNestedBoolean(config, ["experimental", "strict_user_model_priority"])
+    const thresholdProfile = resolveContextGuardProfile(profile)
+    const thresholds = getContextGuardThresholdDisplay({
+      profile: thresholdProfile,
+      overrides: (config["experimental"] as Record<string, unknown> | undefined)?.["context_guard_thresholds"] as never,
+    })
+
+    api.ui.dialog.setSize("xlarge")
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("OpenAgent Runtime Settings", "OpenAgent 运行时设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Runtime State", "当前运行状态"),
+            `${text("Context guard", "上下文防护")}: ${stringLabel(profile, "balanced")} • ${text("Compaction", "压缩")}: ${booleanLabel(preemptiveCompaction)} • ${text("Model lock", "模型锁定")}: ${booleanLabel(strictModelPriority)}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Choose Context Guard Profile", "选择上下文防护档位"),
+            value: "context_guard_profile",
+            category: text("Core", "核心"),
+            description: stringLabel(profile, "balanced"),
+          },
+          {
+            title: text("Toggle Preemptive Compaction", "切换预压缩"),
+            value: "preemptive_compaction",
+            category: text("Core", "核心"),
+            description: booleanLabel(preemptiveCompaction),
+          },
+          {
+            title: text("Toggle Strict User Model Priority", "切换严格用户模型优先"),
+            value: "strict_user_model_priority",
+            category: text("Advanced", "高级"),
+            description: booleanLabel(strictModelPriority),
+          },
+          {
+            title: text("Configure L1/L2/L3 Thresholds", "配置 L1/L2/L3 阈值"),
+            value: "thresholds",
+            category: text("Advanced", "高级"),
+            description: `1M: ${formatCompactTokens(thresholds.oneMillion.l1Tokens)}/${formatCompactTokens(thresholds.oneMillion.l2Tokens)}/${formatCompactTokens(thresholds.oneMillion.l3Tokens)} • 400K: ${formatCompactTokens(thresholds.fourHundredK.l1Tokens)}/${formatCompactTokens(thresholds.fourHundredK.l2Tokens)}/${formatCompactTokens(thresholds.fourHundredK.l3Tokens)}`,
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("root")
+            return
+          }
+          if (option.value === "context_guard_profile") {
+            openEnumDialog({
+              title: text("Context Guard Profile", "上下文防护档位"),
+              current: profile,
+              choices: [
+                {
+                  title: text("Conservative", "保守"),
+                  value: "conservative",
+                  description: text("Later reminders and later auto-compaction.", "更晚提醒，更晚自动压缩。"),
+                },
+                {
+                  title: text("Balanced", "均衡"),
+                  value: "balanced",
+                  description: text("Current recommended default.", "当前推荐默认值。"),
+                },
+                {
+                  title: text("Aggressive", "激进"),
+                  value: "aggressive",
+                  description: text("Earlier reminders and earlier auto-compaction.", "更早提醒，更早自动压缩。"),
+                },
+              ],
+              onBack: openRuntime,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "context_guard_profile"], value),
+                    text("Updated context guard profile", "已更新上下文防护档位"),
+                    openRuntime,
+                  ),
+            })
+            return
+          }
+          if (option.value === "thresholds") {
+            openContextGuardThresholds()
+            return
+          }
+
+          const current =
+            option.value === "preemptive_compaction"
+              ? preemptiveCompaction
+              : strictModelPriority
+
+          openBooleanDialog({
+            title: option.value === "preemptive_compaction"
+              ? text("Preemptive Compaction", "预压缩")
+              : text("Strict User Model Priority", "严格用户模型优先"),
+            current,
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
+            onBack: openRuntime,
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, ["experimental", option.value], value),
+                `Updated ${option.value.replaceAll("_", " ")}`,
+                openRuntime,
+              ),
+          })
+        },
+      })
+    )
+  }
+
+  const openContextGuardThresholdBucket = (bucketKey: "one_million" | "four_hundred_k") => {
+    const config = effectiveRecord()
+    const profile = resolveContextGuardProfile(
+      getNestedString(config, ["experimental", "context_guard_profile"]) as
+        | "conservative"
+        | "balanced"
+        | "aggressive"
+        | undefined,
+    )
+    const thresholds = getContextGuardThresholdDisplay({
+      profile,
+      overrides: (config["experimental"] as Record<string, unknown> | undefined)?.["context_guard_thresholds"] as never,
+    })
+    const bucket = bucketKey === "one_million" ? thresholds.oneMillion : thresholds.fourHundredK
+    const title = bucketKey === "one_million" ? "1M Context Thresholds" : "400K Context Thresholds"
+
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text(title, bucketKey === "one_million" ? "1M 上下文阈值" : "400K 上下文阈值"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Thresholds", "当前阈值"),
+            `L1 ${formatCompactTokens(bucket.l1Tokens)} • L2 ${formatCompactTokens(bucket.l2Tokens)} • L3 ${formatCompactTokens(bucket.l3Tokens)}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Set L1 Threshold", "设置 L1 阈值"),
+            value: "l1_tokens",
+            category: text("Core", "核心"),
+            description: formatCompactTokens(bucket.l1Tokens),
+          },
+          {
+            title: text("Set L2 Threshold", "设置 L2 阈值"),
+            value: "l2_tokens",
+            category: text("Core", "核心"),
+            description: formatCompactTokens(bucket.l2Tokens),
+          },
+          {
+            title: text("Set L3 Threshold", "设置 L3 阈值"),
+            value: "l3_tokens",
+            category: text("Core", "核心"),
+            description: formatCompactTokens(bucket.l3Tokens),
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to threshold groups.", "返回阈值分组页面。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openContextGuardThresholds()
+            return
+          }
+
+          openNumberPrompt({
+            title: text(`${title} ${option.value.toUpperCase()}`, `${bucketKey === "one_million" ? "1M" : "400K"} ${option.value.toUpperCase()}`),
+            value: option.value === "l1_tokens" ? bucket.l1Tokens : option.value === "l2_tokens" ? bucket.l2Tokens : bucket.l3Tokens,
+            placeholder: text("Enter token threshold", "输入 token 阈值"),
+            min: 1,
+            max: 2_000_000,
+            onCancel: () => openContextGuardThresholdBucket(bucketKey),
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, ["experimental", "context_guard_thresholds", bucketKey, option.value], value),
+                text(`Updated ${title} ${option.value}`, `已更新 ${bucketKey === "one_million" ? "1M" : "400K"} ${option.value}`),
+                () => openContextGuardThresholdBucket(bucketKey),
+              ),
+          })
+        },
+      })
+    )
+  }
+
+  const openContextGuardThresholds = () => {
+    const config = effectiveRecord()
+    const profile = resolveContextGuardProfile(
+      getNestedString(config, ["experimental", "context_guard_profile"]) as
+        | "conservative"
+        | "balanced"
+        | "aggressive"
+        | undefined,
+    )
+    const thresholds = getContextGuardThresholdDisplay({
+      profile,
+      overrides: (config["experimental"] as Record<string, unknown> | undefined)?.["context_guard_thresholds"] as never,
+    })
+
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Context Guard Thresholds", "上下文防护阈值"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(text("Preset Base", "当前基准"), `${text("Profile", "档位")}: ${profile}`, text("Current", "当前")),
+          {
+            title: text("Configure 1M Context Thresholds", "配置 1M 上下文阈值"),
+            value: "one_million",
+            category: text("Profiles", "配置组"),
+            description: `L1 ${formatCompactTokens(thresholds.oneMillion.l1Tokens)} • L2 ${formatCompactTokens(thresholds.oneMillion.l2Tokens)} • L3 ${formatCompactTokens(thresholds.oneMillion.l3Tokens)}`,
+          },
+          {
+            title: text("Configure 400K Context Thresholds", "配置 400K 上下文阈值"),
+            value: "four_hundred_k",
+            category: text("Profiles", "配置组"),
+            description: `L1 ${formatCompactTokens(thresholds.fourHundredK.l1Tokens)} • L2 ${formatCompactTokens(thresholds.fourHundredK.l2Tokens)} • L3 ${formatCompactTokens(thresholds.fourHundredK.l3Tokens)}`,
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to runtime settings.", "返回运行时设置。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRuntime()
+            return
+          }
+          openContextGuardThresholdBucket(option.value as "one_million" | "four_hundred_k")
+        },
+      })
+    )
+  }
+
   const openRoot = (entry: SettingsEntry = "root") => {
     if (entry === "general") {
       openGeneral()
+      return
+    }
+    if (entry === "runtime") {
+      openRuntime()
       return
     }
     if (entry === "image-bus") {
@@ -980,26 +1499,45 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const configRecord = config as unknown as Record<string, unknown>
     const imageBusEnabled = getNestedBoolean(configRecord, ["image_bus", "enabled"])
     const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"])
+    const preemptiveCompaction = getNestedBoolean(configRecord, ["experimental", "preemptive_compaction"])
+    const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
 
     api.ui.dialog.setSize("xlarge")
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: "OpenAgent Labforge Settings",
+        title: text("OpenAgent Labforge Settings", "OpenAgent Labforge 设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
         options: [
+          summaryRow(text("Current Scope", "当前作用域"), `${scope} • ${compactPathLabel(scopePath())}`, text("Current", "当前")),
           {
-            title: "Scope",
+            title: text("Scope", "作用域"),
             value: "scope",
-            description: `${scope} • ${scopePath()}`,
+            category: text("Core", "核心"),
+            description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
           {
-            title: "General",
+            title: text("Language", "语言"),
+            value: "language",
+            category: text("Core", "核心"),
+            description: uiLanguage === "zh" ? "中文" : "English",
+          },
+          {
+            title: text("General Settings", "通用设置"),
             value: "general",
-            description: `Context guard: ${stringLabel(profile, "balanced")} • Bio agents: ${isBioAgentsVisible(config) ? "visible" : "hidden"}`,
+            category: text("Pages", "页面"),
+            description: `${text("Bio agents", "生信代理")}: ${isBioAgentsVisible(config) ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")}`,
           },
           {
-            title: "Image Bus",
+            title: text("Runtime Settings", "运行时设置"),
+            value: "runtime",
+            category: text("Pages", "页面"),
+            description: `${text("Context guard", "上下文防护")}: ${stringLabel(profile, "balanced")} • ${text("Compaction", "压缩")}: ${booleanLabel(preemptiveCompaction)} • ${text("Model lock", "模型锁定")}: ${booleanLabel(strictModelPriority)}`,
+          },
+          {
+            title: text("Image Bus Settings", "图片总线设置"),
             value: "image-bus",
-            description: `Image routing: ${booleanLabel(imageBusEnabled)} • Configure Google Nano Banana, ComfyUI, and Stable Diffusion.`,
+            category: text("Pages", "页面"),
+            description: `${text("Image bus", "图片总线")}: ${booleanLabel(imageBusEnabled)} • ${text("Routing and provider settings", "路由与通道配置")}`,
           },
         ],
         onSelect: (option) => {
@@ -1007,8 +1545,16 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             openScopeDialog(openRoot)
             return
           }
+          if (option.value === "language") {
+            openLanguageDialog(openRoot)
+            return
+          }
           if (option.value === "general") {
             openGeneral()
+            return
+          }
+          if (option.value === "runtime") {
+            openRuntime()
             return
           }
           openImageBus()
@@ -1019,5 +1565,19 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
 
   return {
     openRoot,
+    getLanguage: () => uiLanguage,
+    describeCommand(command: "settings" | "image-bus-settings") {
+      if (command === "settings") {
+        return {
+          title: text("OpenAgent Settings", "OpenAgent 设置"),
+          description: text("Open the native OpenAgent Labforge settings dialog.", "打开 OpenAgent Labforge 原生设置面板。"),
+        }
+      }
+
+      return {
+        title: text("OpenAgent Image Bus Settings", "OpenAgent 图片总线设置"),
+        description: text("Open the Image Bus page inside OpenAgent Labforge settings.", "直接打开 OpenAgent 设置中的图片总线页面。"),
+      }
+    },
   }
 }

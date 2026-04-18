@@ -13,4 +13,4 @@ Expected effect:
 5. clear project boulder state if this session is attached to the active work session
 
 After this command, the current session should no longer auto-resume old execution waves.
-If the user wants to restart tracked execution later, they should use \`/start-work\` again.`
+If the user wants to restart tracked execution later, they should use \`/ol-start-work\` again.`

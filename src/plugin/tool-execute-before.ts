@@ -17,6 +17,10 @@ import { resolveSessionAgent } from "./session-agent-resolver"
 import { parseRalphLoopArguments } from "../hooks/ralph-loop/command-arguments"
 import { ULTRAWORK_VERIFICATION_PROMISE } from "../hooks/ralph-loop/constants"
 import { readState, writeState } from "../hooks/ralph-loop/storage"
+import {
+  buildBuiltinCommandPattern,
+  normalizeBuiltinCommandName,
+} from "../features/builtin-commands/aliases"
 
 import type { CreatedHooks } from "../create-hooks"
 
@@ -166,11 +170,11 @@ export function createToolExecuteBeforeHandler(args: {
 
     if (hooks.ralphLoop && input.tool === "skill") {
       const rawName = typeof output.args.name === "string" ? output.args.name : undefined
-      const command = rawName?.replace(/^\//, "").toLowerCase()
+      const command = normalizeBuiltinCommandName(rawName)
       const sessionID = input.sessionID || getMainSessionID()
 
-      if (command === "ralph-loop" && sessionID) {
-        const rawArgs = rawName?.replace(/^\/?(ralph-loop)\s*/i, "") || ""
+      if (command === "ol-ralph-loop" && sessionID) {
+        const rawArgs = rawName?.replace(buildBuiltinCommandPattern("ol-ralph-loop"), "") || ""
         const parsedArguments = parseRalphLoopArguments(rawArgs)
 
         hooks.ralphLoop.startLoop(sessionID, parsedArguments.prompt, {
@@ -178,10 +182,10 @@ export function createToolExecuteBeforeHandler(args: {
           completionPromise: parsedArguments.completionPromise,
           strategy: parsedArguments.strategy,
         })
-      } else if (command === "cancel-ralph" && sessionID) {
+      } else if (command === "ol-cancel-ralph" && sessionID) {
         hooks.ralphLoop.cancelLoop(sessionID)
-      } else if (command === "ulw-loop" && sessionID) {
-        const rawArgs = rawName?.replace(/^\/?(ulw-loop)\s*/i, "") || ""
+      } else if (command === "ol-ulw-loop" && sessionID) {
+        const rawArgs = rawName?.replace(buildBuiltinCommandPattern("ol-ulw-loop"), "") || ""
         const parsedArguments = parseRalphLoopArguments(rawArgs)
 
         hooks.ralphLoop.startLoop(sessionID, parsedArguments.prompt, {
@@ -195,22 +199,22 @@ export function createToolExecuteBeforeHandler(args: {
 
     if (input.tool === "skill") {
       const rawName = typeof output.args.name === "string" ? output.args.name : undefined
-      const command = rawName?.replace(/^\//, "").toLowerCase()
+      const command = normalizeBuiltinCommandName(rawName)
       const sessionID = input.sessionID || getMainSessionID()
 
-      if (command === "stop-continuation" && sessionID) {
+      if (command === "ol-stop-continuation" && sessionID) {
         stopContinuationForSession(sessionID)
         log("[stop-continuation] All continuation mechanisms stopped", {
           sessionID,
         })
-      } else if (command === "todo-clear" && sessionID) {
+      } else if (command === "ol-todo-clear" && sessionID) {
         stopContinuationForSession(sessionID)
         const cleared = await clearSessionTodos(sessionID)
         log("[todo-clear] Cleared session todo state", {
           sessionID,
           cleared,
         })
-      } else if (command === "workflow-reset" && sessionID) {
+      } else if (command === "ol-workflow-reset" && sessionID) {
         stopContinuationForSession(sessionID)
         const cleared = await clearSessionTodos(sessionID)
         resetWorkflowForSession(sessionID)
@@ -218,7 +222,7 @@ export function createToolExecuteBeforeHandler(args: {
           sessionID,
           clearedTodos: cleared,
         })
-      } else if (command === "focus-chat" && sessionID) {
+      } else if (command === "ol-focus-chat" && sessionID) {
         stopContinuationForSession(sessionID)
         const cleared = await clearSessionTodos(sessionID)
         resetWorkflowForSession(sessionID)

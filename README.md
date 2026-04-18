@@ -193,7 +193,7 @@ Current behavior:
 - in `heavy` mode at the `plan` stage, the flow now injects one explicit
   planning bootstrap first (for example `task(subagent_type="prometheus", ...)`),
   then proceeds to multi-task / multi-agent execution
-- `/start-work` follows an explicit-auto routing rule:
+- `/ol-start-work` follows an explicit-auto routing rule:
   - if the session is already in auto mode, or the request explicitly asks for
     autonomous execution, route to `wase` (engineering) or `bio-autopilot` (bio)
   - heavy signals alone do not force autonomous executors; in non-auto intent
@@ -221,7 +221,7 @@ Mode selection is runtime-scoped and stored in the repo-local workflow state.
 - plan-size signals: checklist/task volume in the active plan file
 - plan path/content semantic signals: keywords such as migration,
   architecture, integration, validation, pipeline, bioinformatics
-- user request text signals: the current `/start-work` request text is included;
+- user request text signals: the current `/ol-start-work` request text is included;
   prompts with multiple heavy-scope signals are more likely to classify as
   `heavy`
 
@@ -300,10 +300,10 @@ residue from older sessions.
 
 Current cleanup commands:
 
-- `/stop-continuation`
-- `/todo-clear`
-- `/workflow-reset`
-- `/focus-chat`
+- `/ol-stop-continuation`
+- `/ol-todo-clear`
+- `/ol-workflow-reset`
+- `/ol-focus-chat`
 
 Native TUI settings commands:
 
@@ -312,11 +312,11 @@ Native TUI settings commands:
 
 Practical intent:
 
-- `/stop-continuation` stops continuation mechanisms for the current session
-- `/todo-clear` clears stale todos and session-level execution residue
-- `/workflow-reset` clears current session workflow state before a fresh tracked
+- `/ol-stop-continuation` stops continuation mechanisms for the current session
+- `/ol-todo-clear` clears stale todos and session-level execution residue
+- `/ol-workflow-reset` clears current session workflow state before a fresh tracked
   execution run
-- `/focus-chat` returns the current session to ordinary chat mode and suppresses
+- `/ol-focus-chat` returns the current session to ordinary chat mode and suppresses
   stale execution carry-over
 - `/ol-settings` opens the plugin's native TUI settings surface
 - `/ol-settings-image-bus` opens the image_bus subpage inside that same TUI
@@ -354,16 +354,16 @@ indefinitely.
 
 Current checkpoint commands:
 
-- `/handoff`
-- `/compress-context`
-- `/checkpoint`
-- `/checkpoint-resume`
+- `/ol-handoff`
+- `/ol-compress-context`
+- `/ol-checkpoint`
+- `/ol-checkpoint-resume`
 
 Practical intent:
 
-- `/handoff` creates an inline continuation summary for manual copy/paste into a
+- `/ol-handoff` creates an inline continuation summary for manual copy/paste into a
   new session
-- `/compress-context` is a runtime context-management command for the CURRENT
+- `/ol-compress-context` is a runtime context-management command for the CURRENT
   session:
   - `status`: inspect current compression state
   - `auto`: choose the appropriate level automatically
@@ -372,28 +372,28 @@ Practical intent:
   - `l2`: reinforce repo-local runtime memory for the same session
   - `l3`: prepare a heavy cross-session checkpoint without automatically
     switching sessions
-- `/checkpoint` writes an explicit repo-local checkpoint under
+- `/ol-checkpoint` writes an explicit repo-local checkpoint under
   `.opencode/openagent-labforge/checkpoints/`:
   - `light` (default): compact same-session or short handoff recovery anchor
   - `heavy`: high-fidelity cross-session handoff anchor for long-running work
-- `/checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
+- `/ol-checkpoint-resume` loads the latest or specified checkpoint and rebuilds the
   next execution wave in the current session
 
 Command split:
 
-- `/compress-context` is operational compression and runtime-memory management
-- `/checkpoint` is an explicit durable handoff artifact
-- `/compress-context` may refresh auto-checkpoint files under
+- `/ol-compress-context` is operational compression and runtime-memory management
+- `/ol-checkpoint` is an explicit durable handoff artifact
+- `/ol-compress-context` may refresh auto-checkpoint files under
   `.opencode/openagent-labforge/checkpoints/auto/`, but it does NOT replace an
-  explicit `/checkpoint` when the user wants a deliberate human-reviewed handoff
-- `/compress-context` and `/checkpoint` intentionally share part of the same
+  explicit `/ol-checkpoint` when the user wants a deliberate human-reviewed handoff
+- `/ol-compress-context` and `/ol-checkpoint` intentionally share part of the same
   checkpoint-writing runtime to avoid duplicated logic, but they are still
   different products:
   - auto checkpoint (`checkpoints/auto/`): operational recovery artifacts from
     compression flow
   - explicit checkpoint (`checkpoints/latest.md` and `checkpoints/by-session/*`):
     deliberate handoff artifacts for human-reviewed continuation
-- `/checkpoint-resume` can recover from both, preferring explicit checkpoint
+- `/ol-checkpoint-resume` can recover from both, preferring explicit checkpoint
   files first, then auto-checkpoint fallback
 
 Compression levels:
@@ -419,10 +419,10 @@ Session-switch policy:
 - Compression and checkpoint creation are separate from session switching.
 - Automatic L3 can prepare heavy artifacts, but switching sessions should still
   be user-confirmed.
-- Manual `/compress-context l3` means the user explicitly requested heavy
+- Manual `/ol-compress-context l3` means the user explicitly requested heavy
   preparation; no extra consent is needed for preparation itself.
 - If UI latency or context debt is already hurting execution quality, create a
-  heavy checkpoint and continue in a fresh session via `/checkpoint-resume`.
+  heavy checkpoint and continue in a fresh session via `/ol-checkpoint-resume`.
 
 Checkpoint files now also carry compact execution posture, not just prose
 summary:
@@ -846,9 +846,9 @@ Clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git into a local work
 
 Requirements:
 1. Use Bun, not npm or yarn, for this repository.
-2. Run the minimum required install/build steps so the plugin produces dist/index.js successfully.
-3. Update %USERPROFILE%\.config\opencode\opencode.json so the plugin array contains the local file plugin entry:
-   file:///ABSOLUTE/PATH/TO/openagent-labforge/dist/index.js
+2. Run the minimum required install/build steps so the plugin produces both dist/index.js and dist/tui/index.js successfully.
+3. Update both %USERPROFILE%\.config\opencode\opencode.json and %USERPROFILE%\.config\opencode\tui.jsonc so the plugin array contains the local file plugin entry pointing at the package root:
+   file:///ABSOLUTE/PATH/TO/openagent-labforge
 4. Preserve any existing useful plugins already in the plugin array unless they are duplicate old entries for this same plugin.
 5. If an old npm-installed entry for openagent-labforge or oh-my-opencode exists, replace it with the local file entry instead of keeping duplicates.
 6. Do not overwrite unrelated provider or model config.
@@ -856,6 +856,7 @@ Requirements:
    - the clone path
    - the exact build command(s) you ran
    - the final plugin array from opencode.json
+   - the final plugin array from tui.jsonc
    - whether an OpenCode Desktop restart is required
 
 If Bun is missing, stop and tell me exactly what to install first.
@@ -863,8 +864,8 @@ If Bun is missing, stop and tell me exactly what to install first.
 
 For users who only want to clear stale session residue rather than reinstall:
 
-- run `/focus-chat` to return the current session to ordinary chat mode
-- run `/workflow-reset` if the session still carries old execution state
+- run `/ol-focus-chat` to return the current session to ordinary chat mode
+- run `/ol-workflow-reset` if the session still carries old execution state
 
 ## Reference Repos
 

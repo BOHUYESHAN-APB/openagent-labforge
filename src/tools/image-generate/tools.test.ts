@@ -137,4 +137,31 @@ describe("image-generate tool", () => {
       }
     }
   })
+
+  test("falls back to stable diffusion when comfyui is unavailable for local-first general tasks", async () => {
+    const capture: { url?: string; init?: RequestInit } = {}
+    const tool = createImageGenerateTool({
+      fetchFn: createMockFetch({ ok: true, status: 200, body: { request_id: "sd-1", output_url: "http://127.0.0.1:7860/out.png" } }, capture),
+      imageBusConfig: {
+        enabled: true,
+        routing: {
+          strategy: "local-first",
+          force_google_for_scientific: true,
+          allow_google_for_general: false,
+        },
+        providers: {
+          comfyui: {
+            enabled: false,
+          },
+          stable_diffusion: {
+            enabled: true,
+          },
+        },
+      },
+    })
+
+    const result = await tool.execute({ prompt: "poster draft", task_type: "general" } as never)
+    expect(result).toContain('"provider": "stable_diffusion"')
+    expect(capture.url).toBe("http://127.0.0.1:7860/sdapi/v1/txt2img")
+  })
 })

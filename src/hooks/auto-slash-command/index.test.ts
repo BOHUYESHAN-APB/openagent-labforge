@@ -331,7 +331,7 @@ describe("createAutoSlashCommandHook", () => {
 
       //#then
       expect(output.parts[0].text).toContain("<auto-slash-command>")
-      expect(output.parts[0].text).toContain("/ralph-loop Command")
+      expect(output.parts[0].text).toContain("/ol-ralph-loop Command")
     })
 
     it("should pass command arguments correctly", async () => {

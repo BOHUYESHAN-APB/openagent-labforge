@@ -192,4 +192,21 @@ describe("auto-slash command executor plugin dispatch", () => {
     expect(result.replacementText).not.toContain("$ARGUMENTS")
     expect(result.replacementText).not.toContain("${user_message}")
   })
+
+  it("resolves legacy builtin command names through canonical ol-prefixed aliases", async () => {
+    const result = await executeSlashCommand(
+      {
+        command: "checkpoint-resume",
+        args: "latest",
+        raw: "/checkpoint-resume latest",
+      },
+      {
+        skills: [],
+        pluginsEnabled: true,
+      },
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.replacementText).toContain("# /ol-checkpoint-resume Command")
+  })
 })

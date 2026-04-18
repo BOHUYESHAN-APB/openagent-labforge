@@ -1,12 +1,25 @@
 import { z } from "zod"
 import { DynamicContextPruningConfigSchema } from "./dynamic-context-pruning"
 
+const ContextGuardThresholdBucketSchema = z.object({
+  l1_tokens: z.number().int().positive().optional(),
+  l2_tokens: z.number().int().positive().optional(),
+  l3_tokens: z.number().int().positive().optional(),
+})
+
+const ContextGuardThresholdOverridesSchema = z.object({
+  one_million: ContextGuardThresholdBucketSchema.optional(),
+  four_hundred_k: ContextGuardThresholdBucketSchema.optional(),
+})
+
 export const ExperimentalConfigSchema = z.object({
   aggressive_truncation: z.boolean().optional(),
   auto_resume: z.boolean().optional(),
   preemptive_compaction: z.boolean().optional(),
   /** Labforge context guard threshold preset: conservative | balanced | aggressive */
   context_guard_profile: z.enum(["conservative", "balanced", "aggressive"]).optional(),
+  /** Optional explicit L1/L2/L3 token thresholds overriding the selected context guard preset. */
+  context_guard_thresholds: ContextGuardThresholdOverridesSchema.optional(),
   /** Truncate all tool outputs, not just whitelisted tools (default: false). Tool output truncator is enabled by default - disable via disabled_hooks. */
   truncate_all_tool_outputs: z.boolean().optional(),
   /** Dynamic context pruning configuration */

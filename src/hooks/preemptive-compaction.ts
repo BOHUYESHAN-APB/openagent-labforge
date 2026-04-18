@@ -101,12 +101,25 @@ function getPreemptiveCompactionThreshold(args: {
   sessionID: string
   actualLimit: number
   profile: "conservative" | "balanced" | "aggressive"
+  overrides?: {
+    one_million?: {
+      l1_tokens?: number
+      l2_tokens?: number
+      l3_tokens?: number
+    }
+    four_hundred_k?: {
+      l1_tokens?: number
+      l2_tokens?: number
+      l3_tokens?: number
+    }
+  }
 }): number {
-  const { sessionID, actualLimit, profile } = args
+  const { sessionID, actualLimit, profile, overrides } = args
   return getContextGuardPreemptiveThreshold({
     actualLimit,
     isBioSession: isBioSession(sessionID),
     profile,
+    overrides,
   })
 }
 
@@ -134,6 +147,7 @@ export function createPreemptiveCompactionHook(
   const contextGuardProfile = resolveContextGuardProfile(
     pluginConfig.experimental?.context_guard_profile,
   )
+  const contextGuardThresholdOverrides = pluginConfig.experimental?.context_guard_thresholds
   const compactionInProgress = new Set<string>()
   const compactedSessions = new Set<string>()
   const tokenCache = new Map<string, CachedCompactionState>()
@@ -157,6 +171,7 @@ export function createPreemptiveCompactionHook(
       sessionID,
       actualLimit,
       profile: contextGuardProfile,
+      overrides: contextGuardThresholdOverrides,
     })
 
     if (usageRatio < threshold) return
@@ -226,7 +241,7 @@ export function createPreemptiveCompactionHook(
         .showToast({
           body: {
             title: "Auto Compact Failed",
-            message: "Compaction failed. Keep working from the current context or switch to a fresh session with /checkpoint-resume.",
+            message: "Compaction failed. Keep working from the current context or switch to a fresh session with /ol-checkpoint-resume.",
             variant: "error",
             duration: 7000,
           },

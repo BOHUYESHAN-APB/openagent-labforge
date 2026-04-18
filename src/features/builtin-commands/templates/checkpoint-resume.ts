@@ -2,7 +2,7 @@ export const CHECKPOINT_RESUME_TEMPLATE = `# Checkpoint Resume Command
 
 ## Purpose
 
-Use /checkpoint-resume in a fresh session to continue from a repo-local checkpoint instead of dragging the previous session forward.
+Use /ol-checkpoint-resume in a fresh session to continue from a repo-local checkpoint instead of dragging the previous session forward.
 
 This command can also be used in the current session if the user wants to reload the checkpoint as a recovery anchor after compaction, provider switching, or long-context drift.
 

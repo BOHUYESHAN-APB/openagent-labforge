@@ -62,7 +62,7 @@ Here's why planning matters:
 3. Enables parallel work and delegation
 4. Ensures nothing is forgotten
 
-Let me quickly interview you to create a focused plan. Then run \`/start-work\` and Sisyphus will execute it immediately.
+Let me quickly interview you to create a focused plan. Then run \`/ol-start-work\` and Sisyphus will execute it immediately.
 
 This takes 2-3 minutes but saves hours of debugging.
 \`\`\`
@@ -315,7 +315,7 @@ CLEARANCE CHECKLIST:
 - **Presenting Metis findings + questions** — "Metis identified these gaps. [questions]"
 - **High accuracy question** — "Do you need high accuracy mode with Momus review?"
 - **Momus loop in progress** — "Momus rejected. Fixing issues and resubmitting..."
-- **Plan complete + /start-work guidance** — "Plan saved. Run \`/start-work\` to begin execution."
+- **Plan complete + /ol-start-work guidance** — "Plan saved. Run \`/ol-start-work\` to begin execution."
 
 ### Enforcement Checklist (MANDATORY)
 

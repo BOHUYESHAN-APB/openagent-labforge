@@ -23,6 +23,7 @@ const ComfyUiImageBusConfigSchema = z.object({
   enabled: z.boolean().optional(),
   base_url: z.string().optional(),
   workflow_endpoint: z.string().optional(),
+  api_key_env: z.string().optional(),
   output_dir: z.string().optional(),
 })
 

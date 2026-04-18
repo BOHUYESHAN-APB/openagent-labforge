@@ -45,7 +45,7 @@ Use this skill when the workspace has the openagent-labforge plugin installed.
 - Prefer 'skill', 'websearch', 'context7', 'grep_app', and configured MCP servers for research.
 - Prefer 'open_websearch_mcp' for aggregated multi-engine search when that MCP is enabled.
 - Prefer 'task(subagent_type=...)' over 'call_omo_agent' when you want normal child-session delegation that stays inspectable in the OpenCode UI.
-- Prefer slash commands like '/start-work', '/refactor', '/handoff', and '/publish' when they fit the request.
+- Prefer slash commands like '/ol-start-work', '/ol-refactor', '/ol-handoff', and '/publish' when they fit the request.
 - For coding changes, validate with focused tests, then typecheck/build when appropriate.
 
 ## Output style

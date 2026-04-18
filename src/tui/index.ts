@@ -11,9 +11,9 @@ const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
 
   api.command.register(() => [
     {
-      title: "OpenAgent Settings",
+      title: controller.describeCommand("settings").title,
       value: OPEN_SETTINGS_COMMAND,
-      description: "Open the native OpenAgent Labforge settings dialog.",
+      description: controller.describeCommand("settings").description,
       category: "OpenAgent Labforge",
       slash: {
         name: "ol-settings",
@@ -21,9 +21,9 @@ const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
       onSelect: () => controller.openRoot("root"),
     },
     {
-      title: "OpenAgent Image Bus Settings",
+      title: controller.describeCommand("image-bus-settings").title,
       value: OPEN_IMAGE_BUS_COMMAND,
-      description: "Open the Image Bus page inside OpenAgent Labforge settings.",
+      description: controller.describeCommand("image-bus-settings").description,
       category: "OpenAgent Labforge",
       slash: {
         name: "ol-settings-image-bus",

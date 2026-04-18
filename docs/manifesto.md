@@ -117,7 +117,7 @@ The output should be consistent. Not random, not surprising, not "creative" in w
 ### Continuous
 
 Work should survive interruptions:
-- Session crashes? Resume with `/start-work`
+- Session crashes? Resume with `/ol-start-work`
 - Need to step away? Progress is tracked
 - Multi-day project? Context is preserved
 

@@ -147,7 +147,7 @@ Gemini 说明：
 - `light + batch`：适合较紧凑的一批一批执行，不强行扩成过大的 backlog
 - `heavy + continuous`：适合更长时间、多波次的持续推进，会更积极地触发 backlog 扩展、审查打回和继续执行
 - `heavy` 且处于 `plan` 阶段时，会先触发一次明确的规划引导：先走一次 planning task（例如 `task(subagent_type="prometheus", ...)`），再进入多 task / 多 agent 执行
-- `/start-work` 执行器选择遵循“auto 显式优先”规则：
+- `/ol-start-work` 执行器选择遵循“auto 显式优先”规则：
   - 已处于 auto 会话，或用户在请求中明确表达全自动意图时，自动切到 `wase`（工程）或 `bio-autopilot`（生信）
   - 仅有 heavy 信号但用户并未表达 auto 意图时，不会强制切到全自动，仍走普通执行器路径（优先 `atlas`，回退 `sisyphus`）
 - auto 设计原则是“首条主输入 + 系统自驱”：
@@ -164,7 +164,7 @@ Gemini 说明：
 
 - 计划文件规模信号：如 checklist 数量（较大的多任务计划更容易进 `heavy`）
 - 计划路径与正文语义信号：例如 migration、architecture、integration、validation、pipeline、bioinformatics 等关键词
-- 用户请求文本信号：`/start-work` 当前请求会参与判定；用户提示词中若出现多个重任务语义信号，会提高判定为 `heavy` 的概率
+- 用户请求文本信号：`/ol-start-work` 当前请求会参与判定；用户提示词中若出现多个重任务语义信号，会提高判定为 `heavy` 的概率
 
 可简化理解为：
 
@@ -232,10 +232,10 @@ Gemini 说明：
 
 现在内置了一组用于清理旧执行残留的斜杠命令：
 
-- `/stop-continuation`
-- `/todo-clear`
-- `/workflow-reset`
-- `/focus-chat`
+- `/ol-stop-continuation`
+- `/ol-todo-clear`
+- `/ol-workflow-reset`
+- `/ol-focus-chat`
 
 原生 TUI 设置入口命令：
 
@@ -244,10 +244,10 @@ Gemini 说明：
 
 它们的实际用途是：
 
-- `/stop-continuation`：停止当前会话的 continuation 机制
-- `/todo-clear`：清掉旧 todo 和当前 session 的执行残留
-- `/workflow-reset`：清掉当前 session / project 绑定的 workflow 状态，方便重新开始
-- `/focus-chat`：把当前会话拉回普通问答模式，压住旧执行状态继续干扰
+- `/ol-stop-continuation`：停止当前会话的 continuation 机制
+- `/ol-todo-clear`：清掉旧 todo 和当前 session 的执行残留
+- `/ol-workflow-reset`：清掉当前 session / project 绑定的 workflow 状态，方便重新开始
+- `/ol-focus-chat`：把当前会话拉回普通问答模式，压住旧执行状态继续干扰
 - `/ol-settings`：直接打开插件自己的原生 TUI 设置面
 - `/ol-settings-image-bus`：直接打开同一套 TUI 设置里的 image_bus 二级页面
 - image_bus 页面负责：
@@ -287,39 +287,39 @@ Gemini 说明：
 
 当前 checkpoint 命令：
 
-- `/handoff`
-- `/compress-context`
-- `/checkpoint`
-- `/checkpoint-resume`
+- `/ol-handoff`
+- `/ol-compress-context`
+- `/ol-checkpoint`
+- `/ol-checkpoint-resume`
 
 它们的用途是：
 
-- `/handoff`：生成一份可直接复制到新会话里的上下文摘要
-- `/compress-context`：管理当前会话的运行时压缩，而不是做人类交接用 checkpoint
+- `/ol-handoff`：生成一份可直接复制到新会话里的上下文摘要
+- `/ol-compress-context`：管理当前会话的运行时压缩，而不是做人类交接用 checkpoint
   - `status`：查看当前压缩状态
   - `auto`：自动选择压缩层级
   - `l1`：请求原生 OpenCode 风格 summarize / compaction，并只展示简短摘要
   - `l2`：加强 repo-local 的同会话运行时记忆
   - `l3`：准备重型跨会话 checkpoint，但不会自动切会话
-- `/checkpoint`：显式写入 repo-local checkpoint，路径位于
+- `/ol-checkpoint`：显式写入 repo-local checkpoint，路径位于
   `.opencode/openagent-labforge/checkpoints/`
   - `light`（默认）：用于同会话恢复或短接力
   - `heavy`：用于跨会话高保真接力
-- `/checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
+- `/ol-checkpoint-resume`：在新会话或当前会话中读取最近一次 checkpoint，并重建下一轮执行计划
 
 这几个命令的边界现在明确是：
 
-- `/compress-context`：运行时压缩和上下文治理
-- `/checkpoint`：显式、可审阅、可交接的耐久 handoff
-- `/compress-context` 可能会刷新
+- `/ol-compress-context`：运行时压缩和上下文治理
+- `/ol-checkpoint`：显式、可审阅、可交接的耐久 handoff
+- `/ol-compress-context` 可能会刷新
   `.opencode/openagent-labforge/checkpoints/auto/`
-  下的 auto checkpoint，但它不等同于用户显式执行 `/checkpoint`
-- `/compress-context` 与 `/checkpoint` 会复用一部分 checkpoint 落盘逻辑，
+  下的 auto checkpoint，但它不等同于用户显式执行 `/ol-checkpoint`
+- `/ol-compress-context` 与 `/ol-checkpoint` 会复用一部分 checkpoint 落盘逻辑，
   用来减少重复代码；但两者语义仍然分离：
   - auto checkpoint（`checkpoints/auto/`）：压缩流程的运行时恢复产物
   - explicit checkpoint（`checkpoints/latest.md`、`checkpoints/by-session/*`）：
     面向人工审阅和明确交接的耐久产物
-- `/checkpoint-resume` 可同时恢复两类文件，优先 explicit checkpoint，
+- `/ol-checkpoint-resume` 可同时恢复两类文件，优先 explicit checkpoint，
   不存在时再回退到 auto checkpoint
 
 压缩层级目前是：
@@ -341,9 +341,9 @@ checkpoint 层级目前是：
 
 - 压缩/写 checkpoint 与切会话是两件事，默认分离。
 - 自动 L3 可以自动准备 heavy 产物，但切会话应保持用户确认。
-- 手动 `/compress-context l3` 视为用户已明确要求重型准备，准备阶段不再二次确认。
+- 手动 `/ol-compress-context l3` 视为用户已明确要求重型准备，准备阶段不再二次确认。
 - 当上下文债务和 UI 卡顿已经影响执行质量时，应优先写 heavy checkpoint，
-  然后用 `/checkpoint-resume` 在新会话续跑。
+  然后用 `/ol-checkpoint-resume` 在新会话续跑。
 
 现在 checkpoint 不只是带一段摘要，还会带一小份结构化工程姿态：
 
@@ -691,16 +691,17 @@ https://github.com/BOHUYESHAN-APB/openagent-labforge.git
 要求：
 1. 先把仓库克隆到本地一个合适的工作目录。
 2. 这个仓库统一使用 Bun，不要用 npm 或 yarn。
-3. 运行最少必要的安装与构建命令，确保最终成功生成 dist/index.js。
-4. 修改 %USERPROFILE%\.config\opencode\opencode.json：
-   - 把插件数组里加入本地文件插件：
-     file:///ABSOLUTE/PATH/TO/openagent-labforge/dist/index.js
+3. 运行最少必要的安装与构建命令，确保最终成功生成 dist/index.js 和 dist/tui/index.js。
+4. 修改 %USERPROFILE%\.config\opencode\opencode.json 和 %USERPROFILE%\.config\opencode\tui.jsonc：
+   - 把插件数组里加入指向仓库根目录的本地文件插件：
+     file:///ABSOLUTE/PATH/TO/openagent-labforge
    - 如果已经有旧的 openagent-labforge 或 oh-my-opencode npm 安装项，替换为本地文件项，不要保留重复项。
    - 不要覆盖其他无关 provider、model 或已有插件配置。
 5. 最后把下面这些结果展示出来：
    - 仓库克隆路径
    - 实际执行的构建命令
    - opencode.json 最终 plugin 数组
+   - tui.jsonc 最终 plugin 数组
    - 是否需要重启 OpenCode Desktop
 
 如果系统缺少 Bun，就不要硬做，直接告诉我该先安装什么。
@@ -708,8 +709,8 @@ https://github.com/BOHUYESHAN-APB/openagent-labforge.git
 
 如果你只是想清掉旧会话里的残留状态，而不是重新安装插件：
 
-- 用 `/focus-chat` 把当前会话切回普通问答
-- 如果残留还比较重，再用 `/workflow-reset`
+- 用 `/ol-focus-chat` 把当前会话切回普通问答
+- 如果残留还比较重，再用 `/ol-workflow-reset`
 
 ## 本地参考仓
 

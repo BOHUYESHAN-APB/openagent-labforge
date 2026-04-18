@@ -1,0 +1,5 @@
+export const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com"
+export const DEFAULT_COMFYUI_BASE_URL = "http://127.0.0.1:8188"
+export const DEFAULT_COMFYUI_WORKFLOW_ENDPOINT = "/prompt"
+export const DEFAULT_STABLE_DIFFUSION_BASE_URL = "http://127.0.0.1:7860"
+export const DEFAULT_STABLE_DIFFUSION_TXT2IMG_ENDPOINT = "/sdapi/v1/txt2img"

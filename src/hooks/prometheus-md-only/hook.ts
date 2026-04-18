@@ -56,7 +56,7 @@ export function createPrometheusMdOnlyHook(ctx: PluginInput) {
          throw new Error(
            `[${HOOK_NAME}] ${getAgentDisplayName("prometheus")} can only write/edit .md files inside .opencode/openagent-labforge/ directory. ` +
            `Attempted to modify: ${filePath}. ` +
-           `${getAgentDisplayName("prometheus")} is a READ-ONLY planner. Use /start-work to execute the plan. ` +
+           `${getAgentDisplayName("prometheus")} is a READ-ONLY planner. Use /ol-start-work to execute the plan. ` +
            `APOLOGIZE TO THE USER, REMIND OF YOUR PLAN WRITING PROCESSES, TELL USER WHAT YOU WILL GOING TO DO AS THE PROCESS, WRITE THE PLAN`
          )
        }

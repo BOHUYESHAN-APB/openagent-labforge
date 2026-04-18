@@ -167,6 +167,12 @@ describe("image_bus routing/subscription schema", () => {
             api_key_env: "GOOGLE_API_KEY",
             model: "nano-banana-2",
           },
+          comfyui: {
+            enabled: true,
+            base_url: "http://127.0.0.1:8188",
+            workflow_endpoint: "/prompt",
+            api_key_env: "COMFYUI_API_KEY",
+          },
           stable_diffusion: {
             enabled: true,
             base_url: "http://127.0.0.1:7860",
@@ -194,6 +200,29 @@ describe("image_bus routing/subscription schema", () => {
 
     const result = OhMyOpenCodeConfigSchema.safeParse(config)
     expect(result.success).toBe(false)
+  })
+
+  test("accepts explicit context guard threshold overrides", () => {
+    const config = {
+      experimental: {
+        context_guard_profile: "balanced",
+        context_guard_thresholds: {
+          one_million: {
+            l1_tokens: 210000,
+            l2_tokens: 310000,
+            l3_tokens: 510000,
+          },
+          four_hundred_k: {
+            l1_tokens: 140000,
+            l2_tokens: 210000,
+            l3_tokens: 290000,
+          },
+        },
+      },
+    }
+
+    const result = OhMyOpenCodeConfigSchema.safeParse(config)
+    expect(result.success).toBe(true)
   })
 })
 

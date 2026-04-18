@@ -2,7 +2,7 @@ export const REFACTOR_TEMPLATE = `# Intelligent Refactor Command
 
 ## Usage
 \`\`\`
-/refactor <refactoring-target> [--scope=<file|module|project>] [--strategy=<safe|aggressive>]
+/ol-refactor <refactoring-target> [--scope=<file|module|project>] [--strategy=<safe|aggressive>]
 
 Arguments:
   refactoring-target: What to refactor. Can be:

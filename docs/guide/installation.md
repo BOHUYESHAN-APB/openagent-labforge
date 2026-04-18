@@ -72,6 +72,55 @@ Current plugin package identity:
 }
 ```
 
+For OpenCode versions that separate server and TUI plugin registration, mirror the
+same plugin entry into:
+
+- `opencode.json(c)` for server hooks/tools/commands
+- `tui.json(c)` for TUI slash commands and TUI UI surfaces
+
+Example:
+
+```json
+// opencode.json or opencode.jsonc
+{
+  "plugin": ["@bohuyeshan/openagent-labforge-core"]
+}
+```
+
+```json
+// tui.json or tui.jsonc
+{
+  "plugin": ["@bohuyeshan/openagent-labforge-core"]
+}
+```
+
+## Local development registration
+
+For local development, prefer a file plugin entry that points at the package
+root, not `dist/index.js`.
+
+Recommended:
+
+```json
+{
+  "plugin": ["file:///ABSOLUTE/PATH/TO/openagent-labforge"]
+}
+```
+
+And mirror the same file entry into `tui.json(c)`:
+
+```json
+{
+  "plugin": ["file:///ABSOLUTE/PATH/TO/openagent-labforge"]
+}
+```
+
+Compatibility note:
+
+- `file:///ABSOLUTE/PATH/TO/openagent-labforge/dist/index.js` is now treated as a
+  legacy local-dev path and is kept compatible for older setups
+- but the root-directory file entry is the authoritative path going forward
+
 ## Recommended companion plugins
 
 Strongly recommended alongside this plugin:

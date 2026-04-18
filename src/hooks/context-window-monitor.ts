@@ -383,6 +383,7 @@ export function createContextWindowMonitorHook(
   const contextGuardProfile = resolveContextGuardProfile(
     pluginConfig?.experimental?.context_guard_profile,
   )
+  const contextGuardThresholdOverrides = pluginConfig?.experimental?.context_guard_thresholds
   const remindedSessions = new Set<string>()
   const labforgeNoticeLevels = new Map<string, number>()
   const labforgeTransformNoticeLevels = new Map<string, number>()
@@ -408,6 +409,7 @@ export function createContextWindowMonitorHook(
       totalTokens: totalInputTokens,
       contextLimit: actualLimit,
       profile: contextGuardProfile,
+      overrides: contextGuardThresholdOverrides,
     })
 
     if (noticeLevel > 0 && noticeLevel > (labforgeNoticeLevels.get(sessionID) ?? 0)) {
@@ -573,6 +575,7 @@ export function createContextWindowMonitorHook(
       totalTokens: totalInputTokens,
       contextLimit: actualLimit,
       profile: contextGuardProfile,
+      overrides: contextGuardThresholdOverrides,
     })
     if (level < 1) return
 

@@ -2,6 +2,13 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool"
 import type { ImageBusConfig } from "../../config/schema/image-bus"
 import { IMAGE_GENERATE_DESCRIPTION } from "./constants"
 import type { ImageGenerateArgs, ImageGenerateResult, ImageGenerateToolOptions, ImageTaskType, ProviderKind } from "./types"
+import {
+  DEFAULT_COMFYUI_BASE_URL,
+  DEFAULT_COMFYUI_WORKFLOW_ENDPOINT,
+  DEFAULT_GOOGLE_BASE_URL,
+  DEFAULT_STABLE_DIFFUSION_BASE_URL,
+  DEFAULT_STABLE_DIFFUSION_TXT2IMG_ENDPOINT,
+} from "../../tui/image-bus-defaults"
 
 function resolveProviderOrder(args: {
   taskType: ImageTaskType
@@ -18,30 +25,30 @@ function resolveProviderOrder(args: {
   const allowGoogleForGeneral = routing?.allow_google_for_general === true
 
   if (args.taskType === "scientific" && forceGoogleForScientific) {
-    return ["google", "comfyui"]
+    return ["google", "comfyui", "stable_diffusion"]
   }
 
   if (strategy === "google-first") {
     if (args.taskType === "general" && !allowGoogleForGeneral) {
-      return ["comfyui"]
+      return ["comfyui", "stable_diffusion"]
     }
-    return ["google", "comfyui"]
+    return ["google", "comfyui", "stable_diffusion"]
   }
 
   if (strategy === "balanced") {
     if (args.taskType === "scientific") {
-      return ["google", "comfyui"]
+      return ["google", "comfyui", "stable_diffusion"]
     }
     if (args.taskType === "general" && !allowGoogleForGeneral) {
-      return ["comfyui"]
+      return ["comfyui", "stable_diffusion"]
     }
-    return ["comfyui", "google"]
+    return ["comfyui", "stable_diffusion", "google"]
   }
 
   if (args.taskType === "general" && !allowGoogleForGeneral) {
-    return ["comfyui"]
+    return ["comfyui", "stable_diffusion"]
   }
-  return ["comfyui", "google"]
+  return ["comfyui", "stable_diffusion", "google"]
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -78,18 +85,21 @@ async function callComfyUi(args: {
   if (!args.config?.enabled) {
     throw new Error("ComfyUI provider is not enabled")
   }
-  const baseUrl = args.config.base_url?.trim()
-  if (!baseUrl) {
-    throw new Error("ComfyUI base_url is missing")
-  }
+  const baseUrl = args.config.base_url?.trim() || DEFAULT_COMFYUI_BASE_URL
 
-  const endpoint = args.config.workflow_endpoint?.trim() || "/prompt"
+  const endpoint = args.config.workflow_endpoint?.trim() || DEFAULT_COMFYUI_WORKFLOW_ENDPOINT
   const url = `${normalizeBaseUrl(baseUrl)}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+  const apiKeyEnv = args.config.api_key_env?.trim()
+  const apiKey = apiKeyEnv ? process.env[apiKeyEnv] : undefined
+  if (apiKeyEnv && !apiKey) {
+    throw new Error(`Environment variable ${apiKeyEnv} is not set`)
+  }
 
   const response = await args.fetchFn(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}`, "x-api-key": apiKey } : {}),
     },
     body: JSON.stringify({
       prompt: args.request.prompt,
@@ -113,6 +123,56 @@ async function callComfyUi(args: {
   }
 }
 
+async function callStableDiffusion(args: {
+  fetchFn: typeof fetch
+  config: NonNullable<ImageBusConfig["providers"]>["stable_diffusion"]
+  request: ImageGenerateArgs
+  outputFormat: "svg" | "png" | "pdf"
+}): Promise<ImageGenerateResult> {
+  if (!args.config?.enabled) {
+    throw new Error("Stable Diffusion provider is not enabled")
+  }
+  const baseUrl = args.config.base_url?.trim() || DEFAULT_STABLE_DIFFUSION_BASE_URL
+  const endpoint = args.config.txt2img_endpoint?.trim() || DEFAULT_STABLE_DIFFUSION_TXT2IMG_ENDPOINT
+  const url = `${normalizeBaseUrl(baseUrl)}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+
+  const apiKeyEnv = args.config.api_key_env?.trim()
+  const apiKey = apiKeyEnv ? process.env[apiKeyEnv] : undefined
+  if (apiKeyEnv && !apiKey) {
+    throw new Error(`Environment variable ${apiKeyEnv} is not set`)
+  }
+
+  const response = await args.fetchFn(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}`, "x-api-key": apiKey } : {}),
+    },
+    body: JSON.stringify({
+      prompt: args.request.prompt,
+      steps: 24,
+      cfg_scale: 7,
+      width: 1024,
+      height: 1024,
+      output_format: args.outputFormat,
+      reference_images: args.request.reference_images ?? [],
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Stable Diffusion request failed: HTTP ${response.status}`)
+  }
+
+  const data = await response.json() as Record<string, unknown>
+  return {
+    provider: "stable_diffusion",
+    status: "completed",
+    request_id: typeof data.request_id === "string" ? data.request_id : undefined,
+    output_url: typeof data.output_url === "string" ? data.output_url : undefined,
+    raw: data,
+  }
+}
+
 async function callGoogle(args: {
   fetchFn: typeof fetch
   config: NonNullable<ImageBusConfig["providers"]>["google_nano_banana"]
@@ -122,10 +182,7 @@ async function callGoogle(args: {
   if (!args.config?.enabled) {
     throw new Error("Google provider is not enabled")
   }
-  const baseUrl = args.config.base_url?.trim()
-  if (!baseUrl) {
-    throw new Error("Google provider base_url is missing")
-  }
+  const baseUrl = args.config.base_url?.trim() || DEFAULT_GOOGLE_BASE_URL
 
   const apiKeyEnv = args.config.api_key_env?.trim()
   if (!apiKeyEnv) {
@@ -188,7 +245,7 @@ export function createImageGenerateTool(options: ImageGenerateToolOptions): Tool
     args: {
       prompt: tool.schema.string().describe("Image generation prompt"),
       task_type: tool.schema.enum(["general", "illustration", "scientific"]).optional().describe("Task category for routing policy"),
-      provider: tool.schema.enum(["comfyui", "google"]).optional().describe("Optional provider override"),
+      provider: tool.schema.enum(["comfyui", "google", "stable_diffusion"]).optional().describe("Optional provider override"),
       output_format: tool.schema.enum(["svg", "png", "pdf"]).optional().describe("Optional output format override"),
       reference_images: tool.schema.array(tool.schema.string()).optional().describe("Optional reference image URLs or local file paths"),
     },
@@ -213,6 +270,15 @@ export function createImageGenerateTool(options: ImageGenerateToolOptions): Tool
             const result = await callComfyUi({
               fetchFn,
               config: imageBusConfig.providers?.comfyui,
+              request: args,
+              outputFormat,
+            })
+            return JSON.stringify(result, null, 2)
+          }
+          if (provider === "stable_diffusion") {
+            const result = await callStableDiffusion({
+              fetchFn,
+              config: imageBusConfig.providers?.stable_diffusion,
               request: args,
               outputFormat,
             })

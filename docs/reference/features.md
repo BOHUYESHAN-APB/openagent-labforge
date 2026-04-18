@@ -193,10 +193,10 @@ Current intended behavior:
 
 Current built-in cleanup commands:
 
-- `/stop-continuation`
-- `/todo-clear`
-- `/workflow-reset`
-- `/focus-chat`
+- `/ol-stop-continuation`
+- `/ol-todo-clear`
+- `/ol-workflow-reset`
+- `/ol-focus-chat`
 
 These commands are intended to remove stale execution residue from older
 sessions so ordinary chat can continue without old todo/workflow interference.

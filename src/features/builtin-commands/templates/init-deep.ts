@@ -1,13 +1,13 @@
-export const INIT_DEEP_TEMPLATE = `# /init-deep
+export const INIT_DEEP_TEMPLATE = `# /ol-init-deep
 
 Generate hierarchical AGENTS.md files. Root + complexity-scored subdirectories.
 
 ## Usage
 
 \`\`\`
-/init-deep                      # Update mode: modify existing + create new where warranted
-/init-deep --create-new         # Read existing → remove all → regenerate from scratch
-/init-deep --max-depth=2        # Limit directory depth (default: 3)
+/ol-init-deep                      # Update mode: modify existing + create new where warranted
+/ol-init-deep --create-new         # Read existing → remove all → regenerate from scratch
+/ol-init-deep --max-depth=2        # Limit directory depth (default: 3)
 \`\`\`
 
 ---

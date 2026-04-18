@@ -24,27 +24,27 @@ describe("loadBuiltinCommands", () => {
     const commands = loadBuiltinCommands(disabledCommands)
 
     //#then
-    expect(commands.checkpoint).toBeDefined()
-    expect(commands["checkpoint-resume"]).toBeDefined()
-    expect(commands["compress-context"]).toBeDefined()
-    expect(commands.handoff).toBeDefined()
-    expect(commands.handoff.name).toBe("handoff")
-    expect(commands["todo-clear"]).toBeDefined()
-    expect(commands["workflow-reset"]).toBeDefined()
-    expect(commands["focus-chat"]).toBeDefined()
+    expect(commands["ol-checkpoint"]).toBeDefined()
+    expect(commands["ol-checkpoint-resume"]).toBeDefined()
+    expect(commands["ol-compress-context"]).toBeDefined()
+    expect(commands["ol-handoff"]).toBeDefined()
+    expect(commands["ol-handoff"].name).toBe("ol-handoff")
+    expect(commands["ol-todo-clear"]).toBeDefined()
+    expect(commands["ol-workflow-reset"]).toBeDefined()
+    expect(commands["ol-focus-chat"]).toBeDefined()
     expect(commands["ol-settings"]).toBeUndefined()
     expect(commands["ol-settings-image-bus"]).toBeUndefined()
   })
 
   test("should exclude handoff when disabled", () => {
     //#given
-    const disabledCommands: BuiltinCommandName[] = ["handoff"]
+    const disabledCommands: BuiltinCommandName[] = ["ol-handoff"]
 
     //#when
     const commands = loadBuiltinCommands(disabledCommands)
 
     //#then
-    expect(commands.handoff).toBeUndefined()
+    expect(commands["ol-handoff"]).toBeUndefined()
   })
 
   test("should include handoff template content in command template", () => {
@@ -54,7 +54,7 @@ describe("loadBuiltinCommands", () => {
     const commands = loadBuiltinCommands()
 
     //#then
-    expect(commands.handoff.template).toContain(HANDOFF_TEMPLATE)
+    expect(commands["ol-handoff"].template).toContain(HANDOFF_TEMPLATE)
   })
 
   test("should include session context variables in handoff template", () => {
@@ -64,9 +64,9 @@ describe("loadBuiltinCommands", () => {
     const commands = loadBuiltinCommands()
 
     //#then
-    expect(commands.handoff.template).toContain("$SESSION_ID")
-    expect(commands.handoff.template).toContain("$TIMESTAMP")
-    expect(commands.handoff.template).toContain("$ARGUMENTS")
+    expect(commands["ol-handoff"].template).toContain("$SESSION_ID")
+    expect(commands["ol-handoff"].template).toContain("$TIMESTAMP")
+    expect(commands["ol-handoff"].template).toContain("$ARGUMENTS")
   })
 
   test("should have correct description for handoff", () => {
@@ -76,43 +76,43 @@ describe("loadBuiltinCommands", () => {
     const commands = loadBuiltinCommands()
 
     //#then
-    expect(commands.handoff.description).toContain("context summary")
+    expect(commands["ol-handoff"].description).toContain("context summary")
   })
 
   test("should include checkpoint commands with template content", () => {
     const commands = loadBuiltinCommands()
 
-    expect(commands["compress-context"]).toBeDefined()
-    expect(commands["compress-context"].template).toContain(COMPRESS_CONTEXT_TEMPLATE)
-    expect(commands["compress-context"].template).toContain("$SESSION_ID")
-    expect(commands["compress-context"].template).toContain("$TIMESTAMP")
-    expect(commands["compress-context"].template).toContain("$ARGUMENTS")
-    expect(commands.checkpoint).toBeDefined()
-    expect(commands["checkpoint-resume"]).toBeDefined()
-    expect(commands.checkpoint.template).toContain(CHECKPOINT_TEMPLATE)
-    expect(commands["checkpoint-resume"].template).toContain(CHECKPOINT_RESUME_TEMPLATE)
-    expect(commands.checkpoint.template).toContain("$SESSION_ID")
-    expect(commands.checkpoint.template).toContain("$TIMESTAMP")
-    expect(commands["checkpoint-resume"].template).toContain("$ARGUMENTS")
+    expect(commands["ol-compress-context"]).toBeDefined()
+    expect(commands["ol-compress-context"].template).toContain(COMPRESS_CONTEXT_TEMPLATE)
+    expect(commands["ol-compress-context"].template).toContain("$SESSION_ID")
+    expect(commands["ol-compress-context"].template).toContain("$TIMESTAMP")
+    expect(commands["ol-compress-context"].template).toContain("$ARGUMENTS")
+    expect(commands["ol-checkpoint"]).toBeDefined()
+    expect(commands["ol-checkpoint-resume"]).toBeDefined()
+    expect(commands["ol-checkpoint"].template).toContain(CHECKPOINT_TEMPLATE)
+    expect(commands["ol-checkpoint-resume"].template).toContain(CHECKPOINT_RESUME_TEMPLATE)
+    expect(commands["ol-checkpoint"].template).toContain("$SESSION_ID")
+    expect(commands["ol-checkpoint"].template).toContain("$TIMESTAMP")
+    expect(commands["ol-checkpoint-resume"].template).toContain("$ARGUMENTS")
   })
 
   test("should include remove-ai-slops command for upstream command compatibility", () => {
     const commands = loadBuiltinCommands()
 
-    expect(commands["remove-ai-slops"]).toBeDefined()
-    expect(commands["remove-ai-slops"].template).toContain(REMOVE_AI_SLOPS_TEMPLATE)
-    expect(commands["remove-ai-slops"].description).toContain("AI-generated code smells")
+    expect(commands["ol-remove-ai-slops"]).toBeDefined()
+    expect(commands["ol-remove-ai-slops"].template).toContain(REMOVE_AI_SLOPS_TEMPLATE)
+    expect(commands["ol-remove-ai-slops"].description).toContain("AI-generated code smells")
   })
 
   test("should include session cleanup commands", () => {
     const commands = loadBuiltinCommands()
 
-    expect(commands["todo-clear"]).toBeDefined()
-    expect(commands["todo-clear"].template).toContain(TODO_CLEAR_TEMPLATE)
-    expect(commands["workflow-reset"]).toBeDefined()
-    expect(commands["workflow-reset"].template).toContain(WORKFLOW_RESET_TEMPLATE)
-    expect(commands["focus-chat"]).toBeDefined()
-    expect(commands["focus-chat"].template).toContain(FOCUS_CHAT_TEMPLATE)
+    expect(commands["ol-todo-clear"]).toBeDefined()
+    expect(commands["ol-todo-clear"].template).toContain(TODO_CLEAR_TEMPLATE)
+    expect(commands["ol-workflow-reset"]).toBeDefined()
+    expect(commands["ol-workflow-reset"].template).toContain(WORKFLOW_RESET_TEMPLATE)
+    expect(commands["ol-focus-chat"]).toBeDefined()
+    expect(commands["ol-focus-chat"].template).toContain(FOCUS_CHAT_TEMPLATE)
     expect(commands["ol-settings"]).toBeUndefined()
     expect(commands["ol-settings-image-bus"]).toBeUndefined()
   })
@@ -122,7 +122,7 @@ describe("loadBuiltinCommands", () => {
 
     const commands = loadBuiltinCommands([], { useRegisteredAgents: true })
 
-    expect(commands["start-work"].agent).toBe("atlas")
+    expect(commands["ol-start-work"].agent).toBe("atlas")
   })
 
   test("should route start-work to sisyphus when registered-agent mode is enabled and atlas is unavailable", () => {
@@ -130,7 +130,7 @@ describe("loadBuiltinCommands", () => {
 
     const commands = loadBuiltinCommands([], { useRegisteredAgents: true })
 
-    expect(commands["start-work"].agent).toBe("sisyphus")
+    expect(commands["ol-start-work"].agent).toBe("sisyphus")
   })
 })
 

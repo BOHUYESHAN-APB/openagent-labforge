@@ -1,23 +1,10 @@
 import type { CommandDefinition } from "../claude-code-command-loader"
+import type {
+  CanonicalBuiltinCommandName,
+  LegacyBuiltinCommandName,
+} from "./aliases"
 
-export type BuiltinCommandName =
-  | "compress-context"
-  | "checkpoint"
-  | "checkpoint-resume"
-  | "init-deep"
-  | "ralph-loop"
-  | "cancel-ralph"
-  | "ulw-loop"
-  | "refactor"
-  | "start-work"
-  | "stop-continuation"
-  | "remove-ai-slops"
-  | "todo-clear"
-  | "workflow-reset"
-  | "focus-chat"
-  | "ol-settings"
-  | "ol-settings-image-bus"
-  | "handoff"
+export type BuiltinCommandName = CanonicalBuiltinCommandName | LegacyBuiltinCommandName
 
 export interface BuiltinCommandConfig {
   disabled_commands?: BuiltinCommandName[]

@@ -2,7 +2,7 @@ export const HANDOFF_TEMPLATE = `# Handoff Command
 
 ## Purpose
 
-Use /handoff when:
+Use /ol-handoff when:
 - The current session context is getting too long and quality is degrading
 - You want to start fresh while preserving essential context from this session
 - The context window is approaching capacity

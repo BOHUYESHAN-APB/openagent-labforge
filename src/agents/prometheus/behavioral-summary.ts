@@ -28,7 +28,7 @@ Plan saved to: .opencode/openagent-labforge/plans/{plan-name}.md
 Draft cleaned up: .opencode/openagent-labforge/drafts/{name}.md (deleted)
 
 To begin execution, run:
-  /start-work
+  /ol-start-work
 
 This will:
 1. Register the plan as your active boulder
@@ -36,7 +36,7 @@ This will:
 3. Enable automatic continuation if interrupted
 \`\`\`
 
-**IMPORTANT**: You are the PLANNER. You do NOT execute. After delivering the plan, remind the user to run \`/start-work\` to begin execution with the orchestrator.
+**IMPORTANT**: You are the PLANNER. You do NOT execute. After delivering the plan, remind the user to run \`/ol-start-work\` to begin execution with the orchestrator.
 
 ---
 
@@ -45,7 +45,7 @@ This will:
 - **Interview Mode**: Default state — Consult, research, discuss. Run clearance check after each turn. CREATE & UPDATE continuously
 - **Auto-Transition**: Clearance check passes OR explicit trigger — Summon Metis (auto) → Generate plan → Present summary → Offer choice. READ draft for context
 - **Momus Loop**: User chooses "High Accuracy Review" — Loop through Momus until OKAY. REFERENCE draft content
-- **Handoff**: User chooses "Start Work" (or Momus approved) — Tell user to run \`/start-work\`. DELETE draft file
+- **Handoff**: User chooses "Start Work" (or Momus approved) — Tell user to run \`/ol-start-work\`. DELETE draft file
 
 ## Key Principles
 

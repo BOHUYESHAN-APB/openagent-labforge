@@ -131,6 +131,9 @@
                 "workflow_endpoint": {
                   "type": "string"
                 },
+                "api_key_env": {
+                  "type": "string"
+                },
                 "output_dir": {
                   "type": "string"
                 }
@@ -331,25 +334,51 @@
     "disabled_commands": {
       "type": "array",
       "items": {
-        "type": "string",
-        "enum": [
-          "compress-context",
-          "checkpoint",
-          "checkpoint-resume",
-          "init-deep",
-          "ralph-loop",
-          "ulw-loop",
-          "cancel-ralph",
-          "refactor",
-          "start-work",
-          "stop-continuation",
-          "remove-ai-slops",
-          "todo-clear",
-          "workflow-reset",
-          "focus-chat",
-          "ol-settings",
-          "ol-settings-image-bus",
-          "handoff"
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "ol-compress-context",
+              "ol-checkpoint",
+              "ol-checkpoint-resume",
+              "ol-init-deep",
+              "ol-ralph-loop",
+              "ol-ulw-loop",
+              "ol-cancel-ralph",
+              "ol-refactor",
+              "ol-start-work",
+              "ol-stop-continuation",
+              "ol-remove-ai-slops",
+              "ol-todo-clear",
+              "ol-workflow-reset",
+              "ol-focus-chat",
+              "ol-settings",
+              "ol-settings-image-bus",
+              "ol-handoff"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "compress-context",
+              "checkpoint",
+              "checkpoint-resume",
+              "init-deep",
+              "ralph-loop",
+              "ulw-loop",
+              "cancel-ralph",
+              "refactor",
+              "start-work",
+              "stop-continuation",
+              "remove-ai-slops",
+              "todo-clear",
+              "workflow-reset",
+              "focus-chat",
+              "ol-settings",
+              "ol-settings-image-bus",
+              "handoff"
+            ]
+          }
         ]
       }
     },
@@ -4954,6 +4983,54 @@
             "balanced",
             "aggressive"
           ]
+        },
+        "context_guard_thresholds": {
+          "type": "object",
+          "properties": {
+            "one_million": {
+              "type": "object",
+              "properties": {
+                "l1_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "l2_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "l3_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "additionalProperties": false
+            },
+            "four_hundred_k": {
+              "type": "object",
+              "properties": {
+                "l1_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "l2_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "l3_tokens": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         },
         "truncate_all_tool_outputs": {
           "type": "boolean"

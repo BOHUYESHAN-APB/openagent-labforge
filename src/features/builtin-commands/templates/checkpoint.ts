@@ -2,7 +2,7 @@ export const CHECKPOINT_TEMPLATE = `# Checkpoint Command
 
 ## Purpose
 
-Use /checkpoint when:
+Use /ol-checkpoint when:
 - you want a durable stage memory snapshot without trusting the current chat history alone
 - you reached a meaningful milestone and want a clean recovery point
 - you may continue in this session, a fresh session, or multiple sessions later

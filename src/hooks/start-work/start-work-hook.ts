@@ -329,7 +329,7 @@ All ${progress.total} tasks are done. Create a new plan with: /plan "your task"`
               directory: ctx.directory,
               sessionId,
               stage: "plan",
-              content: "Execution session started from /start-work. Read the active plan and prepare the first implementation wave.",
+              content: "Execution session started from /ol-start-work. Read the active plan and prepare the first implementation wave.",
             })
             runtimeWorkflowBlock = createRuntimeWorkflowBlock({
               ...runtimeWorkflow.paths,
@@ -424,7 +424,7 @@ No incomplete plans available. Create a new plan with: /plan "your task"`
             directory: ctx.directory,
             sessionId,
             stage: "plan",
-            content: "Execution session resumed from /start-work. Re-read the active plan and continue from the next unfinished item.",
+            content: "Execution session resumed from /ol-start-work. Re-read the active plan and continue from the next unfinished item.",
           })
           runtimeWorkflowBlock = createRuntimeWorkflowBlock({
             ...runtimeWorkflow.paths,

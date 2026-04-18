@@ -1,5 +1,18 @@
 export type ContextGuardProfile = "conservative" | "balanced" | "aggressive"
 
+export type ContextGuardThresholdOverrides = {
+  one_million?: {
+    l1_tokens?: number
+    l2_tokens?: number
+    l3_tokens?: number
+  }
+  four_hundred_k?: {
+    l1_tokens?: number
+    l2_tokens?: number
+    l3_tokens?: number
+  }
+}
+
 type ContextGuardPreset = {
   noticeRatio: number
   fuseRatio: number
@@ -93,14 +106,62 @@ export function resolveContextGuardProfile(
   return "balanced"
 }
 
+function applyThresholdOverrides(
+  preset: ContextGuardPreset,
+  overrides?: ContextGuardThresholdOverrides,
+): ContextGuardPreset {
+  if (!overrides) {
+    return preset
+  }
+
+  return {
+    ...preset,
+    oneMillion: {
+      ...preset.oneMillion,
+      ...(overrides.one_million?.l1_tokens ? { l1Tokens: overrides.one_million.l1_tokens } : {}),
+      ...(overrides.one_million?.l2_tokens ? { l2Tokens: overrides.one_million.l2_tokens } : {}),
+      ...(overrides.one_million?.l3_tokens ? { l3Tokens: overrides.one_million.l3_tokens } : {}),
+    },
+    fourHundredK: {
+      ...preset.fourHundredK,
+      ...(overrides.four_hundred_k?.l1_tokens ? { l1Tokens: overrides.four_hundred_k.l1_tokens } : {}),
+      ...(overrides.four_hundred_k?.l2_tokens ? { l2Tokens: overrides.four_hundred_k.l2_tokens } : {}),
+      ...(overrides.four_hundred_k?.l3_tokens ? { l3Tokens: overrides.four_hundred_k.l3_tokens } : {}),
+    },
+  }
+}
+
+export function getContextGuardThresholdDisplay(args: {
+  profile: ContextGuardProfile
+  overrides?: ContextGuardThresholdOverrides
+}): {
+  oneMillion: { l1Tokens: number; l2Tokens: number; l3Tokens: number }
+  fourHundredK: { l1Tokens: number; l2Tokens: number; l3Tokens: number }
+} {
+  const preset = applyThresholdOverrides(PRESETS[args.profile], args.overrides)
+  return {
+    oneMillion: {
+      l1Tokens: preset.oneMillion.l1Tokens,
+      l2Tokens: preset.oneMillion.l2Tokens,
+      l3Tokens: preset.oneMillion.l3Tokens,
+    },
+    fourHundredK: {
+      l1Tokens: preset.fourHundredK.l1Tokens,
+      l2Tokens: preset.fourHundredK.l2Tokens,
+      l3Tokens: preset.fourHundredK.l3Tokens,
+    },
+  }
+}
+
 export function getContextGuardNoticeLevel(args: {
   ratio: number
   totalTokens: number
   contextLimit: number
   profile: ContextGuardProfile
+  overrides?: ContextGuardThresholdOverrides
 }): 0 | 1 | 2 | 3 {
-  const { ratio, totalTokens, contextLimit, profile } = args
-  const preset = PRESETS[profile]
+  const { ratio, totalTokens, contextLimit, profile, overrides } = args
+  const preset = applyThresholdOverrides(PRESETS[profile], overrides)
 
   if (contextLimit >= 900_000) {
     if (totalTokens >= preset.oneMillion.l3Tokens || ratio >= preset.severeRatio) return 3
@@ -126,9 +187,10 @@ export function getContextGuardPreemptiveThreshold(args: {
   actualLimit: number
   isBioSession: boolean
   profile: ContextGuardProfile
+  overrides?: ContextGuardThresholdOverrides
 }): number {
-  const { actualLimit, isBioSession, profile } = args
-  const preset = PRESETS[profile]
+  const { actualLimit, isBioSession, profile, overrides } = args
+  const preset = applyThresholdOverrides(PRESETS[profile], overrides)
 
   if (actualLimit >= 900_000) {
     return (isBioSession

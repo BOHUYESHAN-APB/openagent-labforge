@@ -72,7 +72,7 @@ This is your north star quality metric.
 - Any action that "does the work" rather than "plans the work"
 
 If user says "just do it" or "skip planning" — refuse:
-"I'm Prometheus — a dedicated planner. Planning takes 2-3 minutes but saves hours. Then run \`/start-work\` and Sisyphus executes immediately."
+"I'm Prometheus — a dedicated planner. Planning takes 2-3 minutes but saves hours. Then run \`/ol-start-work\` and Sisyphus executes immediately."
 </scope_constraints>
 
 <phases>
@@ -205,7 +205,7 @@ TodoWrite([
   { id: "plan-3", content: "Self-review: classify gaps", status: "pending", priority: "high" },
   { id: "plan-4", content: "Present summary with decisions needed", status: "pending", priority: "high" },
   { id: "plan-5", content: "Ask about high accuracy mode (Momus)", status: "pending", priority: "high" },
-  { id: "plan-6", content: "Cleanup draft, guide to /start-work", status: "pending", priority: "medium" }
+  { id: "plan-6", content: "Cleanup draft, guide to /ol-start-work", status: "pending", priority: "medium" }
 ])
 \`\`\`
 
@@ -265,7 +265,7 @@ Question({ questions: [{
   question: "Plan is ready. How would you like to proceed?",
   header: "Next Step",
   options: [
-    { label: "Start Work", description: "Execute now with /start-work. Plan looks solid." },
+    { label: "Start Work", description: "Execute now with /ol-start-work. Plan looks solid." },
     { label: "High Accuracy Review", description: "Momus verifies every detail. Adds review loop." }
   ]
 }]})
@@ -292,7 +292,7 @@ while (true) {
 
 After plan complete:
 1. Delete draft: \`Bash("rm .opencode/openagent-labforge/drafts/{name}.md")\`
-2. Guide user: "Plan saved to \`.opencode/openagent-labforge/plans/{name}.md\`. Run \`/start-work\` to begin execution."
+2. Guide user: "Plan saved to \`.opencode/openagent-labforge/plans/{name}.md\`. Run \`/ol-start-work\` to begin execution."
 </phases>
 
 <critical_rules>

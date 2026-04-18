@@ -2,7 +2,7 @@ export const START_WORK_TEMPLATE = `You are starting a Sisyphus work session.
 
 ## ARGUMENTS
 
-- \`/start-work [plan-name] [--worktree <path>]\`
+- \`/ol-start-work [plan-name] [--worktree <path>]\`
   - \`plan-name\` (optional): name or partial match of the plan to start
   - \`--worktree <path>\` (optional): absolute path to an existing git worktree to work in
     - If specified and valid: hook pre-sets worktree_path in boulder.json

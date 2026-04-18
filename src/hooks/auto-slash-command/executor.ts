@@ -10,6 +10,7 @@ import {
   discoverPluginCommandDefinitions,
 } from "../../shared"
 import { loadBuiltinCommands } from "../../features/builtin-commands"
+import { normalizeBuiltinCommandName } from "../../features/builtin-commands/aliases"
 import type { CommandFrontmatter } from "../../features/claude-code-command-loader/types"
 import { isMarkdownFile } from "../../shared/file-utils"
 import { discoverAllSkills, type LoadedSkill, type LazyContentLoader } from "../../features/opencode-skill-loader"
@@ -164,9 +165,19 @@ async function discoverAllCommands(options?: ExecutorOptions): Promise<CommandIn
 
 async function findCommand(commandName: string, options?: ExecutorOptions): Promise<CommandInfo | null> {
   const allCommands = await discoverAllCommands(options)
-  return allCommands.find(
+  const direct = allCommands.find(
     (cmd) => cmd.name.toLowerCase() === commandName.toLowerCase()
   ) ?? null
+  if (direct) {
+    return direct
+  }
+
+  const canonical = normalizeBuiltinCommandName(commandName)
+  if (!canonical) {
+    return null
+  }
+
+  return allCommands.find((cmd) => cmd.name.toLowerCase() === canonical.toLowerCase()) ?? null
 }
 
 async function formatCommandTemplate(cmd: CommandInfo, args: string): Promise<string> {

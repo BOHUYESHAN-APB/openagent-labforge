@@ -19,7 +19,7 @@ export const RALPH_LOOP_TEMPLATE = `You are starting a Ralph Loop - a self-refer
 
 1. **Completion**: Output your completion promise tag when fully complete
 2. **Max Iterations**: Loop stops automatically at limit
-3. **Cancel**: User runs \`/cancel-ralph\` command
+3. **Cancel**: User runs \`/ol-cancel-ralph\` command
 
 ## Your Task
 
@@ -47,7 +47,7 @@ export const ULW_LOOP_TEMPLATE = `You are starting an ULTRAWORK Loop - a self-re
 ## Exit Conditions
 
 1. **Verified Completion**: Oracle verifies the result and the system confirms it
-2. **Cancel**: User runs \`/cancel-ralph\`
+2. **Cancel**: User runs \`/ol-cancel-ralph\`
 
 ## Your Task
 

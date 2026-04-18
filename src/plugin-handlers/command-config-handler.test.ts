@@ -127,8 +127,8 @@ describe("applyCommandConfig", () => {
 
   test("remaps Atlas command agents to the runtime agent name used by command routing", async () => {
     loadBuiltinCommandsSpy.mockReturnValue({
-      "start-work": {
-        name: "start-work",
+      "ol-start-work": {
+        name: "ol-start-work",
         description: "(builtin) Start work",
         template: "template",
         agent: "atlas",
@@ -144,7 +144,7 @@ describe("applyCommandConfig", () => {
     });
 
     const commandConfig = config.command as Record<string, { agent?: string }>;
-    expect(commandConfig["start-work"]?.agent).toBe(getRuntimeAgentName("atlas"));
+    expect(commandConfig["ol-start-work"]?.agent).toBe(getRuntimeAgentName("atlas"));
   });
 
   test("prefers the registered runtime atlas name over a synthesized display name", async () => {
@@ -152,8 +152,8 @@ describe("applyCommandConfig", () => {
     sessionState.registerAgentName("执行官 (计划执行)");
 
     loadBuiltinCommandsSpy.mockReturnValue({
-      "start-work": {
-        name: "start-work",
+      "ol-start-work": {
+        name: "ol-start-work",
         description: "(builtin) Start work",
         template: "template",
         agent: "atlas",
@@ -169,7 +169,7 @@ describe("applyCommandConfig", () => {
     });
 
     const commandConfig = config.command as Record<string, { agent?: string }>;
-    expect(commandConfig["start-work"]?.agent).toBe("执行官 (计划执行)");
+    expect(commandConfig["ol-start-work"]?.agent).toBe("执行官 (计划执行)");
   });
 
   test("logs a warning when an external skill plugin is detected and Claude skills are enabled", async () => {
