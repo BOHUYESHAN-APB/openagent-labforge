@@ -28,7 +28,7 @@ const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
 const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
 const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "runtime" | "image-bus"
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard"
 type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
@@ -60,8 +60,8 @@ function numberLabel(value: number | undefined, fallback = "Not set"): string {
   return typeof value === "number" ? String(value) : fallback
 }
 
-function settingsPromptDescription(note: string): () => string {
-  return () => `${note} • Enter saves • Esc cancels`
+function settingsPromptDescription(note: string): string {
+  return note
 }
 
 function compactPathLabel(value: string, max = 44): string {
@@ -148,18 +148,19 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     onConfirm: (value: string | undefined) => void
     onCancel: () => void
   }) => {
-    api.ui.dialog.replace(() =>
-      api.ui.DialogPrompt({
-        title: args.title,
-        description: settingsPromptDescription(text("Leave blank to clear", "留空表示清空")),
-        value: args.value ?? "",
-        placeholder: args.placeholder,
-        onConfirm: (value) => {
-          const trimmed = value.trim()
-          args.onConfirm(trimmed.length > 0 ? trimmed : undefined)
-        },
-        onCancel: args.onCancel,
-      })
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogPrompt({
+          title: args.title,
+          value: args.value ?? "",
+          placeholder: args.placeholder ?? text("Leave blank to clear", "留空表示清空"),
+          onConfirm: (value) => {
+            const trimmed = value.trim()
+            args.onConfirm(trimmed.length > 0 ? trimmed : undefined)
+          },
+          onCancel: args.onCancel,
+        }),
+      args.onCancel,
     )
   }
 
@@ -172,26 +173,93 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     onConfirm: (value: number) => void
     onCancel: () => void
   }) => {
-    api.ui.dialog.replace(() =>
-      api.ui.DialogPrompt({
-        title: args.title,
-        description: settingsPromptDescription(
-          text(`Enter an integer between ${args.min} and ${args.max}`, `请输入 ${args.min} 到 ${args.max} 之间的整数`),
-        ),
-        value: args.value !== undefined ? String(args.value) : "",
-        placeholder: args.placeholder,
-        onConfirm: (value) => {
-          const trimmed = value.trim()
-          const parsed = Number(trimmed)
-          if (!Number.isInteger(parsed) || parsed < args.min || parsed > args.max) {
-            toast(text(`Enter an integer between ${args.min} and ${args.max}.`, `请输入 ${args.min} 到 ${args.max} 之间的整数。`), "warning")
-            openNumberPrompt(args)
-            return
-          }
-          args.onConfirm(parsed)
-        },
-        onCancel: args.onCancel,
-      })
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogPrompt({
+          title: args.title,
+          value: args.value !== undefined ? String(args.value) : "",
+          placeholder: args.placeholder ?? text(`${args.min}-${args.max}`, `${args.min}-${args.max}`),
+          onConfirm: (value) => {
+            const trimmed = value.trim()
+            const parsed = Number(trimmed)
+            if (!Number.isInteger(parsed) || parsed < args.min || parsed > args.max) {
+              toast(text(`Enter an integer between ${args.min} and ${args.max}.`, `请输入 ${args.min} 到 ${args.max} 之间的整数。`), "warning")
+              openNumberPrompt(args)
+              return
+            }
+            args.onConfirm(parsed)
+          },
+          onCancel: args.onCancel,
+        }),
+      args.onCancel,
+    )
+  }
+
+  const openTokenPrompt = (args: {
+    title: string
+    value: number | undefined
+    placeholder?: string
+    min: number
+    max: number
+    onConfirm: (value: number) => void
+    onCancel: () => void
+  }) => {
+    // Helper function to parse K/M units
+    const parseTokenValue = (input: string): number | null => {
+      const trimmed = input.trim().toUpperCase()
+
+      // Try K suffix (e.g., "200K" -> 200000)
+      const kMatch = trimmed.match(/^(\d+(?:\.\d+)?)K$/)
+      if (kMatch) {
+        return Math.round(parseFloat(kMatch[1]) * 1000)
+      }
+
+      // Try M suffix (e.g., "1.5M" -> 1500000)
+      const mMatch = trimmed.match(/^(\d+(?:\.\d+)?)M$/)
+      if (mMatch) {
+        return Math.round(parseFloat(mMatch[1]) * 1_000_000)
+      }
+
+      // Try plain number
+      const num = Number(trimmed)
+      if (!isNaN(num) && Number.isInteger(num)) {
+        return num
+      }
+
+      return null
+    }
+
+    // Helper function to format number for display
+    const formatTokenValue = (value: number): string => {
+      if (value >= 1_000_000 && value % 1_000_000 === 0) {
+        return `${value / 1_000_000}M`
+      }
+      if (value >= 1_000 && value % 1_000 === 0) {
+        return `${value / 1_000}K`
+      }
+      return String(value)
+    }
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogPrompt({
+          title: args.title,
+          value: args.value !== undefined ? formatTokenValue(args.value) : "",
+          placeholder: args.placeholder ?? text("e.g., 200K, 1.5M, or 150000", "例如：200K、1.5M 或 150000"),
+          onConfirm: (value) => {
+            const parsed = parseTokenValue(value)
+            if (parsed === null || parsed < args.min || parsed > args.max) {
+              const minFormatted = formatTokenValue(args.min)
+              const maxFormatted = formatTokenValue(args.max)
+              toast(text(`Enter a valid token count between ${minFormatted} and ${maxFormatted}.`, `请输入 ${minFormatted} 到 ${maxFormatted} 之间的有效 token 数量。`), "warning")
+              openTokenPrompt(args)
+              return
+            }
+            args.onConfirm(parsed)
+          },
+          onCancel: args.onCancel,
+        }),
+      args.onCancel,
     )
   }
 
@@ -1029,6 +1097,145 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
+  const openAgentDisplay = () => {
+    const config = effectiveRecord()
+    const displayMode = getNestedString(config, ["agent_display", "agent_display_mode"]) as "minimal" | "standard" | undefined
+    const bioEnabled = getNestedBoolean(config, ["agent_display", "enable_domains", "bioinformatics"])
+    const engEnabled = getNestedBoolean(config, ["agent_display", "enable_domains", "engineering"])
+    const hideUpstream = getNestedBoolean(config, ["agent_display", "hide_upstream_commands"])
+
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Agent Display Settings", "Agent 显示设置"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Agent Display Status", "Agent 显示状态"),
+            `${text("Mode", "模式")}: ${displayMode || "minimal"} • ${text("Bio", "生信")}: ${booleanLabel(bioEnabled !== false)} • ${text("Eng", "工程")}: ${booleanLabel(engEnabled !== false)}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Scope", "作用域"),
+            value: "scope",
+            category: text("Core", "核心"),
+            description: `${scope} • ${compactPathLabel(scopePath())}`,
+          },
+          {
+            title: text("Display Mode", "显示模式"),
+            value: "display_mode",
+            category: text("Core", "核心"),
+            description: `${displayMode || "minimal"} (${displayMode === "standard" ? "8" : "6"} agents)`,
+          },
+          {
+            title: text("Bioinformatics Domain", "生物信息学领域"),
+            value: "bio_domain",
+            category: text("Domains", "领域"),
+            description: booleanLabel(bioEnabled !== false, text("✓ Enabled", "✓ 启用"), text("○ Disabled", "○ 禁用")),
+          },
+          {
+            title: text("Engineering Domain", "工程领域"),
+            value: "eng_domain",
+            category: text("Domains", "领域"),
+            description: booleanLabel(engEnabled !== false, text("✓ Enabled", "✓ 启用"), text("○ Disabled", "○ 禁用")),
+          },
+          {
+            title: text("Hide Upstream Commands", "隐藏上游命令"),
+            value: "hide_upstream",
+            category: text("Advanced", "高级"),
+            description: booleanLabel(hideUpstream !== false, text("✓ Hidden (plan, build)", "✓ 隐藏 (plan, build)"), text("○ Visible (plan, build)", "○ 可见 (plan, build)")),
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("root")
+            return
+          }
+          if (option.value === "scope") {
+            openScopeDialog(openAgentDisplay)
+            return
+          }
+          if (option.value === "display_mode") {
+            openEnumDialog({
+              title: text("Agent Display Mode", "Agent 显示模式"),
+              current: displayMode || "minimal",
+              choices: [
+                {
+                  title: text("Minimal (6 agents)", "精简 (6 个)"),
+                  value: "minimal",
+                  description: text("Core agents: sisyphus, prometheus, orchestrator, wase, atlas, bio-autopilot", "核心 agents：智能调度、任务规划、智能编排、全自动执行、计划执行、生信全自动"),
+                },
+                {
+                  title: text("Standard (8 agents)", "标准 (8 个)"),
+                  value: "standard",
+                  description: text("Minimal + hephaestus (deep), bio-pipeline-operator (bio execution)", "精简 + 深度开发、生信流程"),
+                },
+              ],
+              onBack: openAgentDisplay,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["agent_display", "agent_display_mode"], value),
+                  text("Updated agent display mode", "已更新 agent 显示模式"),
+                  openAgentDisplay,
+                ),
+            })
+            return
+          }
+          if (option.value === "bio_domain") {
+            openBooleanDialog({
+              title: text("Bioinformatics Domain", "生物信息学领域"),
+              current: bioEnabled !== false,
+              trueLabel: text("✓ Enabled", "✓ 启用"),
+              falseLabel: text("○ Disabled", "○ 禁用"),
+              onBack: openAgentDisplay,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["agent_display", "enable_domains", "bioinformatics"], value),
+                  text("Updated bioinformatics domain", "已更新生物信息学领域"),
+                  openAgentDisplay,
+                ),
+            })
+            return
+          }
+          if (option.value === "eng_domain") {
+            openBooleanDialog({
+              title: text("Engineering Domain", "工程领域"),
+              current: engEnabled !== false,
+              trueLabel: text("✓ Enabled", "✓ 启用"),
+              falseLabel: text("○ Disabled", "○ 禁用"),
+              onBack: openAgentDisplay,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["agent_display", "enable_domains", "engineering"], value),
+                  text("Updated engineering domain", "已更新工程领域"),
+                  openAgentDisplay,
+                ),
+            })
+            return
+          }
+          openBooleanDialog({
+            title: text("Hide Upstream Commands", "隐藏上游命令"),
+            current: hideUpstream !== false,
+            trueLabel: text("✓ Hidden (plan, build)", "✓ 隐藏 (plan, build)"),
+            falseLabel: text("○ Visible (plan, build)", "○ 可见 (plan, build)"),
+            onBack: openAgentDisplay,
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, ["agent_display", "hide_upstream_commands"], value),
+                text("Updated upstream commands visibility", "已更新上游命令可见性"),
+                openAgentDisplay,
+              ),
+          })
+        },
+      })
+    )
+  }
+
   const openImageBus = () => {
     const config = effectiveRecord()
     const enabled = getNestedBoolean(config, ["image_bus", "enabled"])
@@ -1050,49 +1257,49 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           {
             title: text("Scope", "作用域"),
             value: "scope",
-            category: "Core",
+            category: text("Core", "核心"),
             description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
           {
             title: text("Toggle Image Bus", "切换图片总线"),
             value: "enabled",
-            category: "Core",
-            description: booleanLabel(enabled),
+            category: text("Core", "核心"),
+            description: statusLabel(enabled),
           },
           {
             title: text("Toggle Main-Model Review", "切换主模型复核"),
             value: "review_with_main_model",
-            category: "Core",
-            description: booleanLabel(reviewWithMainModel),
+            category: text("Core", "核心"),
+            description: statusLabel(reviewWithMainModel),
           },
           {
             title: text("Choose Output Format", "选择输出格式"),
             value: "default_output_format",
-            category: "Core",
-            description: stringLabel(defaultOutputFormat, "svg"),
+            category: text("Core", "核心"),
+            description: stringValueLabel(defaultOutputFormat, "svg", "svg"),
           },
           {
             title: text("Configure Context Memory", "配置上下文记忆"),
             value: "context_memory",
-            category: "Advanced",
+            category: text("Advanced", "高级"),
             description: text("Prompt carryover, history turns, and trace options.", "Prompt 续带、历史轮数和决策轨迹。"),
           },
           {
             title: text("Configure Routing", "配置路由策略"),
             value: "routing",
-            category: "Advanced",
+            category: text("Advanced", "高级"),
             description: text("Strategy plus scientific/general Google routing rules.", "策略与科研/通用 Google 路由规则。"),
           },
           {
             title: text("Configure Subscription", "配置订阅信息"),
             value: "subscription",
-            category: "Advanced",
+            category: text("Advanced", "高级"),
             description: text("Subscription mode and plan label for paid image routing.", "付费图片路由的订阅模式和套餐标签。"),
           },
           {
             title: text("Configure Providers", "配置通道提供方"),
             value: "providers",
-            category: "Advanced",
+            category: text("Advanced", "高级"),
             description: text("Google Nano Banana, ComfyUI, and Stable Diffusion.", "Google、ComfyUI 与 Stable Diffusion。"),
           },
           {
@@ -1175,7 +1382,11 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
         placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
         options: [
           summaryRow(text("Current Scope", "当前作用域"), `${scope} • ${compactPathLabel(scopePath())}`, text("Current", "当前")),
-          summaryRow(text("Current General State", "当前通用状态"), `${text("Bio agents", "生信代理")}: ${bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")}`, text("Current", "当前")),
+          summaryRow(
+            text("⚠️ Deprecated Setting", "⚠️ 已废弃的设置"),
+            text("Use 'Agent Display Settings' instead for better control", "请使用 'Agent 显示设置' 以获得更好的控制"),
+            text("Notice", "提示")
+          ),
           {
             title: text("Scope", "作用域"),
             value: "scope",
@@ -1183,10 +1394,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
           {
-            title: text("Toggle Bio Agent Visibility", "切换生信代理显示"),
+            title: text("Toggle Bio Agent Visibility (Deprecated)", "切换生信代理显示（已废弃）"),
             value: "bio_agents_visible",
-            category: text("Core", "核心"),
-            description: bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏"),
+            category: text("Legacy", "旧版"),
+            description: `${bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")} • ${text("Use Agent Display Settings instead", "请使用 Agent 显示设置")}`,
           },
           {
             title: text("Language", "语言"),
@@ -1259,22 +1470,28 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             text("Current", "当前"),
           ),
           {
+            title: text("Open Context Guard Settings", "打开上下文防护设置"),
+            value: "open_context_guard",
+            category: text("Pages", "页面"),
+            description: text("Configure context guard profiles and thresholds in detail", "详细配置上下文防护预设和阈值"),
+          },
+          {
             title: text("Choose Context Guard Profile", "选择上下文防护档位"),
             value: "context_guard_profile",
             category: text("Core", "核心"),
-            description: stringLabel(profile, "balanced"),
+            description: stringValueLabel(profile, "balanced", "balanced"),
           },
           {
             title: text("Toggle Preemptive Compaction", "切换预压缩"),
             value: "preemptive_compaction",
             category: text("Core", "核心"),
-            description: booleanLabel(preemptiveCompaction),
+            description: statusLabel(preemptiveCompaction),
           },
           {
             title: text("Toggle Strict User Model Priority", "切换严格用户模型优先"),
             value: "strict_user_model_priority",
             category: text("Advanced", "高级"),
-            description: booleanLabel(strictModelPriority),
+            description: statusLabel(strictModelPriority),
           },
           {
             title: text("Configure L1/L2/L3 Thresholds", "配置 L1/L2/L3 阈值"),
@@ -1292,6 +1509,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
         onSelect: (option) => {
           if (option.value === "back") {
             openRoot("root")
+            return
+          }
+          if (option.value === "open_context_guard") {
+            openContextGuard()
             return
           }
           if (option.value === "context_guard_profile") {
@@ -1355,7 +1576,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
-  const openContextGuardThresholdBucket = (bucketKey: "one_million" | "four_hundred_k") => {
+  const openContextGuardThresholdBucket = (bucketKey: "one_million" | "four_hundred_k" | "two_hundred_k") => {
     const config = effectiveRecord()
     const profile = resolveContextGuardProfile(
       getNestedString(config, ["experimental", "context_guard_profile"]) as
@@ -1368,12 +1589,25 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       profile,
       overrides: (config["experimental"] as Record<string, unknown> | undefined)?.["context_guard_thresholds"] as never,
     })
-    const bucket = bucketKey === "one_million" ? thresholds.oneMillion : thresholds.fourHundredK
-    const title = bucketKey === "one_million" ? "1M Context Thresholds" : "400K Context Thresholds"
+    const bucket = bucketKey === "one_million"
+      ? thresholds.oneMillion
+      : bucketKey === "four_hundred_k"
+        ? thresholds.fourHundredK
+        : (thresholds.twoHundredK ?? { l1Tokens: 110_000, l2Tokens: 140_000, l3Tokens: 150_000 })
+    const title = bucketKey === "one_million"
+      ? "1M Context Thresholds"
+      : bucketKey === "four_hundred_k"
+        ? "400K Context Thresholds"
+        : "200K Context Thresholds"
+    const titleZh = bucketKey === "one_million"
+      ? "1M 上下文阈值"
+      : bucketKey === "four_hundred_k"
+        ? "400K 上下文阈值"
+        : "200K 上下文阈值"
 
     api.ui.dialog.replace(() =>
       api.ui.DialogSelect({
-        title: text(title, bucketKey === "one_million" ? "1M 上下文阈值" : "400K 上下文阈值"),
+        title: text(title, titleZh),
         placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
         options: [
           summaryRow(
@@ -1412,17 +1646,17 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
 
-          openNumberPrompt({
-            title: text(`${title} ${option.value.toUpperCase()}`, `${bucketKey === "one_million" ? "1M" : "400K"} ${option.value.toUpperCase()}`),
+          openTokenPrompt({
+            title: text(`${title} ${option.value.toUpperCase()}`, `${titleZh} ${option.value.toUpperCase()}`),
             value: option.value === "l1_tokens" ? bucket.l1Tokens : option.value === "l2_tokens" ? bucket.l2Tokens : bucket.l3Tokens,
-            placeholder: text("Enter token threshold", "输入 token 阈值"),
+            placeholder: text("e.g., 200K, 1.5M", "例如：200K、1.5M"),
             min: 1,
             max: 2_000_000,
             onCancel: () => openContextGuardThresholdBucket(bucketKey),
             onConfirm: (value) =>
               save(
                 (root) => setNestedValue(root, ["experimental", "context_guard_thresholds", bucketKey, option.value], value),
-                text(`Updated ${title} ${option.value}`, `已更新 ${bucketKey === "one_million" ? "1M" : "400K"} ${option.value}`),
+                text(`Updated ${title} ${option.value}`, `已更新 ${titleZh} ${option.value}`),
                 () => openContextGuardThresholdBucket(bucketKey),
               ),
           })
@@ -1464,18 +1698,151 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             description: `L1 ${formatCompactTokens(thresholds.fourHundredK.l1Tokens)} • L2 ${formatCompactTokens(thresholds.fourHundredK.l2Tokens)} • L3 ${formatCompactTokens(thresholds.fourHundredK.l3Tokens)}`,
           },
           {
+            title: text("Configure 200K Context Thresholds", "配置 200K 上下文阈值"),
+            value: "two_hundred_k",
+            category: text("Profiles", "配置组"),
+            description: `L1 ${formatCompactTokens(thresholds.twoHundredK?.l1Tokens ?? 110_000)} • L2 ${formatCompactTokens(thresholds.twoHundredK?.l2Tokens ?? 140_000)} • L3 ${formatCompactTokens(thresholds.twoHundredK?.l3Tokens ?? 150_000)}`,
+          },
+          {
             title: text("Back", "返回"),
             value: "back",
             category: text("Navigation", "导航"),
-            description: text("Return to runtime settings.", "返回运行时设置。"),
+            description: text("Return to context guard settings.", "返回上下文防护设置。"),
           },
         ],
         onSelect: (option) => {
           if (option.value === "back") {
-            openRuntime()
+            openContextGuard()
             return
           }
-          openContextGuardThresholdBucket(option.value as "one_million" | "four_hundred_k")
+          openContextGuardThresholdBucket(option.value as "one_million" | "four_hundred_k" | "two_hundred_k")
+        },
+      })
+    )
+  }
+
+  const openContextGuard = () => {
+    const config = effectiveRecord()
+    const profile = getNestedString(config, ["experimental", "context_guard_profile"]) as
+      | "conservative"
+      | "conservative-plus"
+      | "balanced"
+      | "balanced-plus"
+      | "aggressive"
+      | "aggressive-plus"
+      | undefined
+    const preemptiveCompaction = getNestedBoolean(config, ["experimental", "preemptive_compaction"])
+    const thresholdProfile = resolveContextGuardProfile(profile)
+    const thresholds = getContextGuardThresholdDisplay({
+      profile: thresholdProfile,
+      overrides: (config["experimental"] as Record<string, unknown> | undefined)?.["context_guard_thresholds"] as never,
+    })
+
+    api.ui.dialog.setSize("xlarge")
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Context Guard Settings", "上下文防护设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Context Guard State", "当前上下文防护状态"),
+            `${text("Profile", "预设")}: ${stringLabel(profile, "balanced")} • ${text("Preemptive compaction", "预防性压缩")}: ${booleanLabel(preemptiveCompaction)}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Choose Context Guard Profile", "选择上下文防护预设"),
+            value: "context_guard_profile",
+            category: text("Core", "核心"),
+            description: stringValueLabel(profile, "balanced", "balanced"),
+          },
+          {
+            title: text("Toggle Preemptive Compaction", "切换预防性压缩"),
+            value: "preemptive_compaction",
+            category: text("Core", "核心"),
+            description: statusLabel(preemptiveCompaction),
+          },
+          {
+            title: text("Configure L1/L2/L3 Thresholds", "配置 L1/L2/L3 阈值"),
+            value: "thresholds",
+            category: text("Advanced", "高级"),
+            description: `1M: ${formatCompactTokens(thresholds.oneMillion.l1Tokens)}/${formatCompactTokens(thresholds.oneMillion.l2Tokens)}/${formatCompactTokens(thresholds.oneMillion.l3Tokens)} • 400K: ${formatCompactTokens(thresholds.fourHundredK.l1Tokens)}/${formatCompactTokens(thresholds.fourHundredK.l2Tokens)}/${formatCompactTokens(thresholds.fourHundredK.l3Tokens)} • 200K: ${formatCompactTokens(thresholds.twoHundredK?.l1Tokens ?? 110_000)}/${formatCompactTokens(thresholds.twoHundredK?.l2Tokens ?? 140_000)}/${formatCompactTokens(thresholds.twoHundredK?.l3Tokens ?? 150_000)}`,
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("root")
+            return
+          }
+          if (option.value === "context_guard_profile") {
+            openEnumDialog({
+              title: text("Context Guard Profile", "上下文防护预设"),
+              current: profile,
+              choices: [
+                {
+                  title: text("Conservative", "保守"),
+                  value: "conservative",
+                  description: text("Later reminders, later auto-compaction. For 1M/400K/200K models.", "更晚提醒，更晚自动压缩。适用于 1M/400K/200K 模型。"),
+                },
+                {
+                  title: text("Conservative Plus", "保守 Plus"),
+                  value: "conservative-plus",
+                  description: text("Conservative +30K headroom. For 256K (Kimi) models.", "保守 +30K 余量。适用于 256K (Kimi) 模型。"),
+                },
+                {
+                  title: text("Balanced", "均衡"),
+                  value: "balanced",
+                  description: text("Recommended default. For 1M/400K/200K models.", "推荐默认值。适用于 1M/400K/200K 模型。"),
+                },
+                {
+                  title: text("Balanced Plus", "均衡 Plus"),
+                  value: "balanced-plus",
+                  description: text("Balanced +30K headroom. For 256K (Kimi) models.", "均衡 +30K 余量。适用于 256K (Kimi) 模型。"),
+                },
+                {
+                  title: text("Aggressive", "激进"),
+                  value: "aggressive",
+                  description: text("Earlier reminders, earlier auto-compaction. For 1M/400K/200K models.", "更早提醒，更早自动压缩。适用于 1M/400K/200K 模型。"),
+                },
+                {
+                  title: text("Aggressive Plus", "激进 Plus"),
+                  value: "aggressive-plus",
+                  description: text("Aggressive +30K headroom. For 256K (Kimi) models.", "激进 +30K 余量。适用于 256K (Kimi) 模型。"),
+                },
+              ],
+              onBack: openContextGuard,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "context_guard_profile"], value),
+                  text("Updated context guard profile", "已更新上下文防护预设"),
+                  openContextGuard,
+                ),
+            })
+            return
+          }
+          if (option.value === "thresholds") {
+            openContextGuardThresholds()
+            return
+          }
+
+          openBooleanDialog({
+            title: text("Preemptive Compaction", "预防性压缩"),
+            current: preemptiveCompaction,
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
+            onBack: openContextGuard,
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, ["experimental", "preemptive_compaction"], value),
+                text("Updated preemptive compaction", "已更新预防性压缩"),
+                openContextGuard,
+              ),
+          })
         },
       })
     )
@@ -1494,10 +1861,19 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       openImageBus()
       return
     }
+    if (entry === "agent-display") {
+      openAgentDisplay()
+      return
+    }
+    if (entry === "context-guard") {
+      openContextGuard()
+      return
+    }
 
     const config = effective()
     const configRecord = config as unknown as Record<string, unknown>
     const imageBusEnabled = getNestedBoolean(configRecord, ["image_bus", "enabled"])
+    const agentDisplayMode = getNestedString(configRecord, ["agent_display", "agent_display_mode"])
     const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"])
     const preemptiveCompaction = getNestedBoolean(configRecord, ["experimental", "preemptive_compaction"])
     const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
@@ -1525,13 +1901,25 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             title: text("General Settings", "通用设置"),
             value: "general",
             category: text("Pages", "页面"),
-            description: `${text("Bio agents", "生信代理")}: ${isBioAgentsVisible(config) ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")}`,
+            description: text("General configuration options", "通用配置选项"),
           },
           {
             title: text("Runtime Settings", "运行时设置"),
             value: "runtime",
             category: text("Pages", "页面"),
             description: `${text("Context guard", "上下文防护")}: ${stringLabel(profile, "balanced")} • ${text("Compaction", "压缩")}: ${booleanLabel(preemptiveCompaction)} • ${text("Model lock", "模型锁定")}: ${booleanLabel(strictModelPriority)}`,
+          },
+          {
+            title: text("Agent Display Settings", "Agent 显示设置"),
+            value: "agent-display",
+            category: text("Pages", "页面"),
+            description: `${text("Mode", "模式")}: ${stringLabel(agentDisplayMode, "minimal")} • ${text("Agent visibility and domain control", "Agent 可见性与领域控制")}`,
+          },
+          {
+            title: text("Context Guard Settings", "上下文防护设置"),
+            value: "context-guard",
+            category: text("Pages", "页面"),
+            description: `${text("Profile", "预设")}: ${stringLabel(profile, "balanced")} • ${text("Preemptive compaction", "预防性压缩")}: ${booleanLabel(preemptiveCompaction)} • ${text("Multi-tier threshold control", "多档阈值控制")}`,
           },
           {
             title: text("Image Bus Settings", "图片总线设置"),
@@ -1555,6 +1943,14 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "runtime") {
             openRuntime()
+            return
+          }
+          if (option.value === "agent-display") {
+            openAgentDisplay()
+            return
+          }
+          if (option.value === "context-guard") {
+            openContextGuard()
             return
           }
           openImageBus()

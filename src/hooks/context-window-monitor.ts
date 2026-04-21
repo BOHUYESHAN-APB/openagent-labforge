@@ -1,6 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { OhMyOpenCodeConfig } from "../config"
-import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { log } from "../shared/logger"
 import { createSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
@@ -12,7 +12,26 @@ import { writeAutoCompressionCheckpoint } from "./context-window-monitor-checkpo
 import {
   getContextGuardNoticeLevel,
   resolveContextGuardProfile,
+  type ContextGuardProfile,
+  type ContextGuardThresholdOverrides,
 } from "./context-guard-threshold-profile"
+import { writeFileAtomically, writeJSONAtomically } from "../shared/write-file-atomically"
+
+const PRESETS = {
+  conservative: { twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 } },
+  "conservative-plus": { twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 } },
+  balanced: { twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 } },
+  "balanced-plus": { twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 } },
+  aggressive: { twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 } },
+  "aggressive-plus": { twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 } },
+}
+
+function applyThresholdOverrides(
+  preset: typeof PRESETS[keyof typeof PRESETS],
+  _overrides?: ContextGuardThresholdOverrides,
+) {
+  return preset
+}
 
 const ANTHROPIC_DISPLAY_LIMIT = 1_000_000
 const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000
@@ -137,10 +156,7 @@ function writeLocalContextCapsule(args: {
   ].join("\n")
 
   try {
-    if (!existsSync(dirname(path))) {
-      mkdirSync(dirname(path), { recursive: true })
-    }
-    writeFileSync(path, content, "utf-8")
+    writeFileAtomically(path, content, "utf-8")
     return Math.ceil(content.length / 4)
   } catch {
     return 0
@@ -174,10 +190,7 @@ function writeCompressionState(args: {
   }
 
   try {
-    if (!existsSync(dirname(path))) {
-      mkdirSync(dirname(path), { recursive: true })
-    }
-    writeFileSync(path, JSON.stringify(payload, null, 2), "utf-8")
+    writeJSONAtomically(path, payload)
   } catch {
   }
 }
@@ -185,7 +198,7 @@ function writeCompressionState(args: {
 function buildLabforgeCompressionNotice(args: {
   level: number
   profile: "engineering" | "bio"
-  thresholdProfile: "conservative" | "balanced" | "aggressive"
+  thresholdProfile: ContextGuardProfile
   ratio: number
   totalInputTokens: number
   cacheReadTokens: number
@@ -324,12 +337,39 @@ function injectCompressionDirective(messages: MessageWithParts[], sessionID: str
   lastUserMessage.parts.splice(textPartIndex, 0, syntheticPart)
 }
 
-function applyMicroPrune(messages: MessageWithParts[], level: number): CompressionTransformStats {
+function getKeepRecentMessages(
+  level: number,
+  contextLimit: number,
+  profile: ContextGuardProfile,
+  overrides?: ContextGuardThresholdOverrides,
+): number {
+  const preset = applyThresholdOverrides(PRESETS[profile], overrides)
+
+  // 200K 档位使用配置的保留消息数
+  if (contextLimit >= 180_000 && contextLimit < 350_000) {
+    if (level >= 3) return preset.twoHundredK.keepRecentMessagesL3
+    if (level >= 2) return preset.twoHundredK.keepRecentMessagesL2
+    return preset.twoHundredK.keepRecentMessagesL1
+  }
+
+  // 其他档位使用默认值（保持不变）
+  if (level >= 3) return 28
+  if (level >= 2) return 48
+  return 72
+}
+
+function applyMicroPrune(
+  messages: MessageWithParts[],
+  level: number,
+  contextLimit: number,
+  profile: ContextGuardProfile,
+  overrides?: ContextGuardThresholdOverrides,
+): CompressionTransformStats {
   if (level < 1) {
     return { removedTokens: 0, removedMessages: 0, compactedToolOutputs: 0 }
   }
 
-  const keepRecentMessages = level >= 3 ? 28 : level >= 2 ? 48 : 72
+  const keepRecentMessages = getKeepRecentMessages(level, contextLimit, profile, overrides)
   const preserveStart = Math.max(0, messages.length - keepRecentMessages)
   const result: MessageWithParts[] = []
   let removedTokens = 0
@@ -579,7 +619,7 @@ export function createContextWindowMonitorHook(
     })
     if (level < 1) return
 
-    const stats = applyMicroPrune(messages, level)
+    const stats = applyMicroPrune(messages, level, actualLimit, contextGuardProfile, contextGuardThresholdOverrides)
     lastTransformStats.set(sessionID, stats)
     const profile = resolveCompressionProfile(messages)
     sessionProfiles.set(sessionID, profile)

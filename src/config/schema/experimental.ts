@@ -10,14 +10,22 @@ const ContextGuardThresholdBucketSchema = z.object({
 const ContextGuardThresholdOverridesSchema = z.object({
   one_million: ContextGuardThresholdBucketSchema.optional(),
   four_hundred_k: ContextGuardThresholdBucketSchema.optional(),
+  two_hundred_k: ContextGuardThresholdBucketSchema.optional(),
 })
 
 export const ExperimentalConfigSchema = z.object({
   aggressive_truncation: z.boolean().optional(),
   auto_resume: z.boolean().optional(),
   preemptive_compaction: z.boolean().optional(),
-  /** Labforge context guard threshold preset: conservative | balanced | aggressive */
-  context_guard_profile: z.enum(["conservative", "balanced", "aggressive"]).optional(),
+  /** Labforge context guard threshold preset: conservative | balanced | aggressive | conservative-plus | balanced-plus | aggressive-plus */
+  context_guard_profile: z.enum([
+    "conservative",
+    "conservative-plus",
+    "balanced",
+    "balanced-plus",
+    "aggressive",
+    "aggressive-plus",
+  ]).optional(),
   /** Optional explicit L1/L2/L3 token thresholds overriding the selected context guard preset. */
   context_guard_thresholds: ContextGuardThresholdOverridesSchema.optional(),
   /** Truncate all tool outputs, not just whitelisted tools (default: false). Tool output truncator is enabled by default - disable via disabled_hooks. */

@@ -31,51 +31,59 @@ export function resolveAgentDisplayLanguage(configLanguage?: string): AgentDispl
 }
 
 const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
-  sisyphus: "Sisyphus (Ultraworker)",
-  wase: "WASE (Autonomous Ultrawork)",
-  hephaestus: "Hephaestus (Deep Agent)",
-  prometheus: "Prometheus (Plan Builder)",
-  atlas: "Atlas (Plan Executor)",
-  "sisyphus-junior": "Sisyphus-Junior",
-  metis: "Metis (Plan Consultant)",
-  momus: "Momus (Plan Critic)",
-  oracle: "oracle",
-  librarian: "librarian",
-  explore: "explore",
-  "github-scout": "GitHub-Scout",
-  "tech-scout": "Tech-Scout",
-  "article-writer": "article-writer",
-  "scientific-writer": "scientific-writer",
-  "bio-orchestrator": "bio-orchestrator",
-  "multimodal-looker": "multimodal-looker",
-  "bio-methodologist": "bio-methodologist",
-  "wet-lab-designer": "wet-lab-designer",
-  "bio-pipeline-operator": "bio-pipeline-operator",
-  "paper-evidence-synthesizer": "paper-evidence-synthesizer",
+  sisyphus: "Task Dispatcher",
+  wase: "Auto Executor",
+  hephaestus: "Deep Executor",
+  prometheus: "Task Planner",
+  atlas: "Plan Executor",
+  "sisyphus-junior": "Dispatcher Assistant",
+  metis: "Plan Advisor",
+  momus: "Plan Critic",
+  oracle: "Architect",
+  librarian: "Doc Expert",
+  explore: "Code Explorer",
+  "github-scout": "GitHub Scout",
+  "tech-scout": "Tech Scout",
+  "article-writer": "Article Writer",
+  "scientific-writer": "Scientific Writer",
+  orchestrator: "Smart Router",
+  "bio-orchestrator": "Bio Coordinator",
+  "engineering-orchestrator": "Eng Coordinator",
+  "bio-planner": "Bio Planner",
+  "bio-autopilot": "Bio Auto Executor",
+  "multimodal-looker": "Multimodal Analyzer",
+  "bio-methodologist": "Bio Methodologist",
+  "wet-lab-designer": "Wet-Lab Designer",
+  "bio-pipeline-operator": "Bio Executor",
+  "paper-evidence-synthesizer": "Paper Synthesizer",
 }
 
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
-  sisyphus: "总调度器 (超脑)",
-  wase: "哇塞 (全自动超脑)",
-  hephaestus: "代码工匠 (深度)",
-  prometheus: "规划师 (计划构建)",
-  atlas: "执行官 (计划执行)",
+  sisyphus: "任务调度器",
+  wase: "自动执行器",
+  hephaestus: "深度执行器",
+  prometheus: "任务规划器",
+  atlas: "计划执行器",
   "sisyphus-junior": "调度助手",
-  metis: "顾问 (计划咨询)",
-  momus: "质检官 (计划批判)",
-  oracle: "研判官",
-  librarian: "资料官",
-  explore: "探索者",
-  "github-scout": "GitHub 侦察官",
-  "tech-scout": "前沿技术侦察官",
-  "article-writer": "文章写作官",
-  "scientific-writer": "科研写作官",
-  "bio-orchestrator": "生信总控官",
-  "multimodal-looker": "多模态观察者",
-  "bio-methodologist": "生信方法官",
-  "wet-lab-designer": "湿实验设计官",
-  "bio-pipeline-operator": "生信执行官",
-  "paper-evidence-synthesizer": "论文证据整合官",
+  metis: "规划顾问",
+  momus: "计划审查",
+  oracle: "架构师",
+  librarian: "文档专家",
+  explore: "代码探索器",
+  "github-scout": "GitHub 搜索",
+  "tech-scout": "技术调研",
+  "article-writer": "文章写作",
+  "scientific-writer": "科研写作",
+  orchestrator: "智能路由器",
+  "bio-orchestrator": "生信协调器",
+  "engineering-orchestrator": "工程协调器",
+  "bio-planner": "生信规划器",
+  "bio-autopilot": "生信自动执行器",
+  "multimodal-looker": "多模态分析器",
+  "bio-methodologist": "生信方法学家",
+  "wet-lab-designer": "湿实验设计师",
+  "bio-pipeline-operator": "生信执行器",
+  "paper-evidence-synthesizer": "文献综合器",
 }
 
 export const AGENT_DISPLAY_NAMES: Record<string, string> = AGENT_DISPLAY_NAMES_EN
@@ -84,12 +92,24 @@ const AGENT_LIST_SORT_PREFIXES: Record<string, string> = {
   atlas: "\u200B",
 }
 
+// Regex to strip invisible characters (ZWSP, ZWNJ, ZWJ, ZWNBSP)
+const INVISIBLE_AGENT_CHARACTERS_REGEX = /[\u200B\u200C\u200D\uFEFF]/g
+
 function getLanguageDisplayMap(): Record<string, string> {
   return currentLanguage === "zh" ? AGENT_DISPLAY_NAMES_ZH : AGENT_DISPLAY_NAMES_EN
 }
 
+/**
+ * Strip invisible characters from agent names.
+ * Used to normalize agent names before comparison to prevent ZWSP-prefixed
+ * display names from breaking exact-match lookups.
+ */
+export function stripInvisibleAgentCharacters(agentName: string): string {
+  return agentName.replace(INVISIBLE_AGENT_CHARACTERS_REGEX, "")
+}
+
 function stripAgentListSortPrefix(agentName: string): string {
-  return agentName.replace(/^\u200B+/, "")
+  return stripInvisibleAgentCharacters(agentName)
 }
 
 /**

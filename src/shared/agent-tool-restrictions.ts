@@ -1,3 +1,5 @@
+import { getAgentConfigKey, stripInvisibleAgentCharacters } from "./agent-display-names"
+
 /**
  * Agent tool restrictions for session.prompt calls.
  * OpenCode SDK's session.prompt `tools` parameter expects boolean values.
@@ -74,16 +76,17 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
 }
 
 export function getAgentToolRestrictions(agentName: string): Record<string, boolean> {
-  const configKey = getAgentConfigKey(agentName)
+  const stripped = stripInvisibleAgentCharacters(agentName)
+  const configKey = getAgentConfigKey(stripped)
   return AGENT_RESTRICTIONS[configKey]
     ?? Object.entries(AGENT_RESTRICTIONS).find(([key]) => key.toLowerCase() === configKey.toLowerCase())?.[1]
     ?? {}
 }
 
 export function hasAgentToolRestrictions(agentName: string): boolean {
-  const configKey = getAgentConfigKey(agentName)
+  const stripped = stripInvisibleAgentCharacters(agentName)
+  const configKey = getAgentConfigKey(stripped)
   const restrictions = AGENT_RESTRICTIONS[configKey]
     ?? Object.entries(AGENT_RESTRICTIONS).find(([key]) => key.toLowerCase() === configKey.toLowerCase())?.[1]
   return restrictions !== undefined && Object.keys(restrictions).length > 0
 }
-import { getAgentConfigKey } from "./agent-display-names"

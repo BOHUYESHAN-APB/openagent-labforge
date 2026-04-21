@@ -19,6 +19,7 @@ import {
   isAgentRegistered,
   resolveRegisteredAgentName,
   updateSessionAgent,
+  getSessionUserModel,
 } from "../../features/claude-code-session-state"
 import {
   getAgentConfigKey,

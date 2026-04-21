@@ -8,10 +8,6 @@
   "bin": {
     "openagent-labforge": "bin/openagent-labforge.js"
   },
-  "oc-plugin": [
-    "server",
-    "tui"
-  ],
   "files": [
     "dist",
     "bin",

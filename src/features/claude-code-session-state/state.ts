@@ -46,7 +46,20 @@ export function isAgentRegistered(name: string): boolean {
 }
 
 export function resolveRegisteredAgentName(name: string): string | undefined {
-  return registeredAgentNameMap.get(normalizeRegisteredAgentName(name))
+  const normalizedName = normalizeRegisteredAgentName(name)
+  const directMatch = registeredAgentNameMap.get(normalizedName)
+  if (directMatch !== undefined) return directMatch
+
+  // Resolve legacy/capitalized agent names (e.g. "Sisyphus (Ultraworker)")
+  // to their config key, then look up the registered name for that key.
+  const configKey = getAgentConfigKey(name)
+  const normalizedConfigKey = normalizeRegisteredAgentName(configKey)
+  if (normalizedConfigKey !== normalizedName) {
+    const aliasMatch = registeredAgentNameMap.get(normalizedConfigKey)
+    if (aliasMatch !== undefined) return aliasMatch
+  }
+
+  return undefined
 }
 
 /** @internal For testing only */
@@ -55,6 +68,7 @@ export function _resetForTesting(): void {
   subagentSessions.clear()
   syncSubagentSessions.clear()
   sessionAgentMap.clear()
+  sessionUserModelMap.clear()
   registeredAgentNames.clear()
   registeredAgentNameMap.clear()
   ultraworkAutonomousSessionMap.clear()
@@ -63,6 +77,7 @@ export function _resetForTesting(): void {
 }
 
 const sessionAgentMap = new Map<string, string>()
+const sessionUserModelMap = new Map<string, string>()
 const ultraworkAutonomousSessionMap = new Map<string, boolean>()
 const AUTONOMOUS_SESSION_AGENT_KEYS = new Set(["wase", "bio-autopilot", "bio-orchestrator"])
 
@@ -104,9 +119,31 @@ export function getSessionAgent(sessionID: string): string | undefined {
 
 export function clearSessionAgent(sessionID: string): void {
   sessionAgentMap.delete(sessionID)
+  sessionUserModelMap.delete(sessionID)
   ultraworkAutonomousSessionMap.delete(sessionID)
   clearAutonomousUserTurnState(sessionID)
   clearSessionBootstrapMode(sessionID)
+}
+
+/**
+ * Set user-selected model for a session (from UI model picker)
+ */
+export function setSessionUserModel(sessionID: string, model: string): void {
+  sessionUserModelMap.set(sessionID, model)
+}
+
+/**
+ * Get user-selected model for a session
+ */
+export function getSessionUserModel(sessionID: string): string | undefined {
+  return sessionUserModelMap.get(sessionID)
+}
+
+/**
+ * Clear user-selected model for a session
+ */
+export function clearSessionUserModel(sessionID: string): void {
+  sessionUserModelMap.delete(sessionID)
 }
 
 export function setUltraworkAutonomousSession(

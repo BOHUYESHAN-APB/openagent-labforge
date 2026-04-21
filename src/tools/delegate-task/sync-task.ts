@@ -136,10 +136,13 @@ Agent: ${agentToUse}${args.category ? ` (category: ${args.category})` : ""}
 
 ---
 
+<subagent_output session_id="${sessionID}" agent="${agentToUse}">
 ${result.textContent || "(No text output)"}
+</subagent_output>
 
 <task_metadata>
 session_id: ${sessionID}
+agent: ${agentToUse}
 </task_metadata>`
     } finally {
       if (toastManager && taskId !== undefined) {

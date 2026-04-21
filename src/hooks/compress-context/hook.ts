@@ -1,5 +1,5 @@
 import type { PluginInput } from "@opencode-ai/plugin"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { OhMyOpenCodeConfig } from "../../config"
 import { getSessionAgent } from "../../features/claude-code-session-state"
@@ -9,6 +9,9 @@ import { log } from "../../shared/logger"
 import { getSessionModel } from "../../shared/session-model-state"
 import { writeAutoCompressionCheckpoint } from "../context-window-monitor-checkpoint"
 import { resolveCompactionModel } from "../shared/compaction-model-resolver"
+import { writeFileAtomically, writeJSONAtomically } from "../../shared/write-file-atomically"
+import { getContextGuardNoticeLevel, resolveContextGuardProfile } from "../context-guard-threshold-profile"
+import { isTokenLimitError } from "../../shared/token-limit-error-detector"
 
 export const HOOK_NAME = "compress-context" as const
 
@@ -48,6 +51,7 @@ const COMPRESS_CONTEXT_MARKER = "You are handling a manual context compression c
 const BIO_AGENT_KEYS = new Set([
   "bio-autopilot",
   "bio-orchestrator",
+  "bio-planner",
   "bio-methodologist",
   "bio-pipeline-operator",
   "paper-evidence-synthesizer",
@@ -140,8 +144,7 @@ function writeLocalContextCapsule(args: {
     "",
   ].join("\n")
 
-  ensureParent(path)
-  writeFileSync(path, content, "utf-8")
+  writeFileAtomically(path, content, "utf-8")
 }
 
 function writeCompressionSnapshot(args: {
@@ -174,14 +177,30 @@ function writeCompressionSnapshot(args: {
     updated_at: new Date().toISOString(),
   }
 
-  ensureParent(path)
-  writeFileSync(path, JSON.stringify(payload, null, 2), "utf-8")
+  writeJSONAtomically(path, payload)
 }
 
-function chooseAppliedMode(snapshot: CompressionSnapshot | null): Exclude<CompressionMode, "auto"> {
+function chooseAppliedMode(
+  snapshot: CompressionSnapshot | null,
+  pluginConfig: OhMyOpenCodeConfig,
+): Exclude<CompressionMode, "auto"> {
   if (!snapshot) return "l1"
-  if (snapshot.carried_tokens >= 550_000 || snapshot.level >= 3) return "l3"
-  if (snapshot.level >= 2 || snapshot.carried_tokens >= 320_000) return "l2"
+
+  const profile = resolveContextGuardProfile(pluginConfig.experimental?.context_guard_profile)
+  const overrides = pluginConfig.experimental?.context_guard_thresholds
+
+  const level = getContextGuardNoticeLevel({
+    ratio: snapshot.usage_ratio,
+    totalTokens: snapshot.carried_tokens,
+    contextLimit: snapshot.context_limit,
+    profile,
+    overrides,
+  })
+
+  // 映射 level 到 mode
+  if (level >= 3) return "l3"
+  if (level >= 2) return "l2"
+  if (level >= 1) return "l1"
   return "l1"
 }
 
@@ -205,6 +224,27 @@ function buildCompressionResultPrompt(result: CompressionResult): string {
     ...(result.checkpointPath ? [`- Auto checkpoint: ${result.checkpointPath}`] : ["- Auto checkpoint: none"]),
     `- Note: ${result.note}`,
     "",
+  ]
+
+  // Add L3 user confirmation guidance
+  if (result.appliedMode === "l3" && result.checkpointPath) {
+    lines.push(
+      "## ⚠️ Session Handoff Recommendation",
+      "",
+      "L3 compression has created a heavy checkpoint for session handoff.",
+      "",
+      "**Your Options**:",
+      "1. **Continue in current session** - May experience degraded performance as context grows",
+      "2. **Start fresh session** (Recommended) - Use `/ol-checkpoint-resume` to continue from checkpoint",
+      "",
+      `**Checkpoint Location**: \`${result.checkpointPath}\``,
+      "",
+      "**Note**: Session handoff is optional. You can continue working here, but starting fresh usually provides better performance for long-running tasks.",
+      "",
+    )
+  }
+
+  lines.push(
     "## Command Split",
     "- `/ol-compress-context` manages operational compression for the current session.",
     "- `/ol-checkpoint` writes an explicit durable handoff artifact for later recovery or cross-session continuation.",
@@ -212,7 +252,7 @@ function buildCompressionResultPrompt(result: CompressionResult): string {
     "</system-reminder>",
     "",
     "Reply concisely with the result and the practical next recommendation only.",
-  ]
+  )
 
   return lines.join("\n")
 }
@@ -231,7 +271,7 @@ export function createCompressContextHook(
 
       const requestedMode = normalizeRequestedMode(extractUserRequest(promptText))
       const snapshot = readCompressionSnapshot(ctx.directory, input.sessionID)
-      const appliedMode = requestedMode === "auto" ? chooseAppliedMode(snapshot) : requestedMode
+      const appliedMode = requestedMode === "auto" ? chooseAppliedMode(snapshot, pluginConfig) : requestedMode
       const currentAgent = input.agent ?? getSessionAgent(input.sessionID)
       const profile = inferProfile(currentAgent)
       const currentModel = input.model ?? getSessionModel(input.sessionID)
@@ -310,12 +350,24 @@ export function createCompressContextHook(
         } catch (error) {
           nativeSummarize = "failed"
           summarizeError = error instanceof Error ? error.message : String(error)
-          log("[compress-context] Manual native summarize failed", {
-            sessionID: input.sessionID,
-            requestedMode,
-            appliedMode,
-            error: summarizeError,
-          })
+
+          // Provide specific guidance for token limit errors
+          if (isTokenLimitError(error)) {
+            summarizeError = `Token limit exceeded: ${summarizeError}`
+            log("[compress-context] Manual native summarize failed - token limit", {
+              sessionID: input.sessionID,
+              requestedMode,
+              appliedMode,
+              error: summarizeError,
+            })
+          } else {
+            log("[compress-context] Manual native summarize failed", {
+              sessionID: input.sessionID,
+              requestedMode,
+              appliedMode,
+              error: summarizeError,
+            })
+          }
         }
       }
 
@@ -326,7 +378,7 @@ export function createCompressContextHook(
             ? "L1 requested native compaction plus visible summary files."
             : appliedMode === "l2"
               ? "L2 refreshed local runtime memory and a light same-session auto checkpoint."
-              : "L3 refreshed local runtime memory and prepared a heavy cross-session checkpoint without switching sessions automatically."
+              : "L3 created heavy checkpoint for session handoff. User should decide whether to continue in current session or start fresh with /ol-checkpoint-resume (recommended for best performance)."
 
       const replacementText = buildCompressionResultPrompt({
         requestedMode,

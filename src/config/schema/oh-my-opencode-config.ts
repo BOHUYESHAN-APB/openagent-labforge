@@ -2,6 +2,7 @@ import { z } from "zod"
 import { AnyMcpNameSchema } from "../../mcp/types"
 import { BuiltinAgentNameSchema, BuiltinSkillNameSchema } from "./agent-names"
 import { AgentOverridesSchema } from "./agent-overrides"
+import { AgentDisplayConfigSchema } from "./agent-display"
 import { BabysittingConfigSchema } from "./babysitting"
 import { BackgroundTaskConfigSchema } from "./background-task"
 import { BrowserAutomationConfigSchema } from "./browser-automation"
@@ -74,6 +75,8 @@ export const OhMyOpenCodeConfigSchema = z.object({
   tmux: TmuxConfigSchema.optional(),
   sisyphus: SisyphusConfigSchema.optional(),
   start_work: StartWorkConfigSchema.optional(),
+  /** Agent display configuration (minimal/standard/full modes, domain switches) */
+  agent_display: AgentDisplayConfigSchema.optional(),
   /** Migration history to prevent re-applying migrations (e.g., model version upgrades) */
   _migrations: z.array(z.string()).optional(),
 })

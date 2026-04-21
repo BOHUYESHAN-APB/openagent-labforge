@@ -111,19 +111,35 @@ export function migrateConfigFile(
   }
 
   if (needsWrite) {
+    const newContent = JSON.stringify(copy, null, 2) + "\n"
+
+    // Compare with existing file content to skip backup when unchanged.
+    // The config may still need an in-memory migration even if the file
+    // content is identical (e.g. removing a deleted hook from disabled_hooks
+    // results in content that was already written by a prior migration).
+    let existingContent: string | undefined
+    try {
+      existingContent = fs.readFileSync(configPath, "utf-8")
+    } catch {
+      // File may not exist yet
+    }
+    const contentChanged = existingContent !== newContent
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
     const backupPath = `${configPath}.bak.${timestamp}`
     let backupSucceeded = false
-    try {
-      fs.copyFileSync(configPath, backupPath)
-      backupSucceeded = true
-    } catch {
-      // Original file may not exist yet — skip backup
+    if (contentChanged) {
+      try {
+        fs.copyFileSync(configPath, backupPath)
+        backupSucceeded = true
+      } catch {
+        // Original file may not exist yet — skip backup
+      }
     }
 
     let writeSucceeded = false
     try {
-      fs.writeFileSync(configPath, JSON.stringify(copy, null, 2) + "\n", "utf-8")
+      fs.writeFileSync(configPath, newContent, "utf-8")
       writeSucceeded = true
     } catch (err) {
       log(`Failed to write migrated config to ${configPath}:`, err)

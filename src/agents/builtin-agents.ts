@@ -1,6 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { BuiltinAgentName, AgentOverrides, AgentFactory, AgentPromptMetadata } from "./types"
 import type { CategoriesConfig, GitMasterConfig } from "../config/schema"
+import type { AgentDisplayConfig } from "../config/schema/agent-display"
 import type { LoadedSkill } from "../features/opencode-skill-loader/types"
 import type { BrowserAutomationProvider } from "../config/schema"
 import { createSisyphusAgent } from "./sisyphus"
@@ -15,6 +16,10 @@ import { createArticleWriterAgent, ARTICLE_WRITER_PROMPT_METADATA } from "./arti
 import { createScientificWriterAgent, SCIENTIFIC_WRITER_PROMPT_METADATA } from "./scientific-writer"
 import { createBioAutopilotAgent, BIO_AUTOPILOT_PROMPT_METADATA } from "./bio-autopilot"
 import { createBioOrchestratorAgent, BIO_ORCHESTRATOR_PROMPT_METADATA } from "./bio-orchestrator"
+import { createOrchestratorAgent, ORCHESTRATOR_PROMPT_METADATA } from "./orchestrator"
+import { createEngineeringOrchestratorAgent, ENGINEERING_ORCHESTRATOR_PROMPT_METADATA } from "./engineering-orchestrator"
+import { createBioPlannerAgent, BIO_PLANNER_PROMPT_METADATA } from "./bio-planner"
+import { filterAgentsByDisplayMode } from "./agent-filter"
 import { createMultimodalLookerAgent, MULTIMODAL_LOOKER_PROMPT_METADATA } from "./multimodal-looker"
 import {
   createBioMethodologistAgent,
@@ -66,7 +71,10 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   "article-writer": createArticleWriterAgent,
   "scientific-writer": createScientificWriterAgent,
   "bio-autopilot": createBioAutopilotAgent,
+  orchestrator: createOrchestratorAgent,
   "bio-orchestrator": createBioOrchestratorAgent,
+  "engineering-orchestrator": createEngineeringOrchestratorAgent,
+  "bio-planner": createBioPlannerAgent,
   "multimodal-looker": createMultimodalLookerAgent,
   "bio-methodologist": createBioMethodologistAgent,
   "wet-lab-designer": createWetLabDesignerAgent,
@@ -93,7 +101,10 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   "article-writer": ARTICLE_WRITER_PROMPT_METADATA,
   "scientific-writer": SCIENTIFIC_WRITER_PROMPT_METADATA,
   "bio-autopilot": BIO_AUTOPILOT_PROMPT_METADATA,
+  orchestrator: ORCHESTRATOR_PROMPT_METADATA,
   "bio-orchestrator": BIO_ORCHESTRATOR_PROMPT_METADATA,
+  "engineering-orchestrator": ENGINEERING_ORCHESTRATOR_PROMPT_METADATA,
+  "bio-planner": BIO_PLANNER_PROMPT_METADATA,
   "multimodal-looker": MULTIMODAL_LOOKER_PROMPT_METADATA,
   "bio-methodologist": BIO_METHODOLOGIST_PROMPT_METADATA,
   "wet-lab-designer": WET_LAB_DESIGNER_PROMPT_METADATA,
@@ -118,7 +129,8 @@ export async function createBuiltinAgents(
   uiSelectedModel?: string,
   disabledSkills?: Set<string>,
   useTaskSystem = false,
-  disableOmoEnv = false
+  disableOmoEnv = false,
+  agentDisplayConfig?: AgentDisplayConfig,  // 新增参数
 ): Promise<Record<string, AgentConfig>> {
 
   const connectedProviders = readConnectedProvidersCache()
@@ -262,5 +274,20 @@ export async function createBuiltinAgents(
     result["atlas"] = atlasConfig
   }
 
-  return result
+  // 应用 agent 显示模式过滤（使用默认配置）
+  const defaultConfig: AgentDisplayConfig = {
+    agent_display_mode: "minimal",
+    enable_domains: {
+      bioinformatics: true,
+      engineering: true,
+    },
+    hide_upstream_commands: {
+      plan: true,
+      build: true,
+    },
+    disabled_agents: [],
+    enabled_agents: [],
+  }
+
+  return filterAgentsByDisplayMode(result, agentDisplayConfig ?? defaultConfig)
 }

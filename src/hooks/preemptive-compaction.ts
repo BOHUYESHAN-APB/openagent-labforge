@@ -5,7 +5,9 @@ import { getAgentConfigKey } from "../shared/agent-display-names"
 import {
   getContextGuardPreemptiveThreshold,
   resolveContextGuardProfile,
+  type ContextGuardProfile,
 } from "./context-guard-threshold-profile"
+import { isTokenLimitError } from "../shared/token-limit-error-detector"
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
 const DEFAULT_ACTUAL_LIMIT = 200_000
@@ -91,6 +93,7 @@ function isBioSession(sessionID: string): boolean {
   const key = getAgentConfigKey(agent ?? "")
   return key === "bio-autopilot" ||
     key === "bio-orchestrator" ||
+    key === "bio-planner" ||
     key === "bio-methodologist" ||
     key === "bio-pipeline-operator" ||
     key === "paper-evidence-synthesizer" ||
@@ -100,7 +103,7 @@ function isBioSession(sessionID: string): boolean {
 function getPreemptiveCompactionThreshold(args: {
   sessionID: string
   actualLimit: number
-  profile: "conservative" | "balanced" | "aggressive"
+  profile: ContextGuardProfile
   overrides?: {
     one_million?: {
       l1_tokens?: number
@@ -236,17 +239,36 @@ export function createPreemptiveCompactionHook(
         })
         .catch(() => {})
     } catch (error) {
-      log("[preemptive-compaction] Compaction failed", { sessionID, error: String(error) })
-      await ctx.client.tui
-        .showToast({
-          body: {
-            title: "Auto Compact Failed",
-            message: "Compaction failed. Keep working from the current context or switch to a fresh session with /ol-checkpoint-resume.",
-            variant: "error",
-            duration: 7000,
-          },
-        })
-        .catch(() => {})
+      // Mark as compacted even on failure to prevent infinite retry loop
+      compactedSessions.add(sessionID)
+
+      const errorMessage = String(error)
+      log("[preemptive-compaction] Compaction failed", { sessionID, error: errorMessage })
+
+      // Provide specific guidance for token limit errors
+      if (isTokenLimitError(error)) {
+        await ctx.client.tui
+          .showToast({
+            body: {
+              title: "Auto Compact Failed - Token Limit",
+              message: "Context window limit exceeded. Use /ol-checkpoint to save progress and start fresh, or /ol-checkpoint-resume to continue from a previous checkpoint.",
+              variant: "error",
+              duration: 10000,
+            },
+          })
+          .catch(() => {})
+      } else {
+        await ctx.client.tui
+          .showToast({
+            body: {
+              title: "Auto Compact Failed",
+              message: "Compaction failed. Keep working from the current context or switch to a fresh session with /ol-checkpoint-resume.",
+              variant: "error",
+              duration: 7000,
+            },
+          })
+          .catch(() => {})
+      }
     } finally {
       compactionInProgress.delete(sessionID)
     }

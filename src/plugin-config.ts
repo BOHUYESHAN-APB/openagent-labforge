@@ -12,6 +12,7 @@ import {
   migrateLegacyConfigFile,
 } from "./shared";
 import { LEGACY_CONFIG_BASENAME } from "./shared/plugin-identity";
+import { stripBOM } from "./shared/strip-bom";
 
 const PARTIAL_STRING_ARRAY_KEYS = new Set([
   "disabled_mcps",
@@ -74,7 +75,8 @@ export function loadConfigFromPath(
   try {
     if (fs.existsSync(configPath)) {
       const content = fs.readFileSync(configPath, "utf-8");
-      const rawConfig = parseJsonc<Record<string, unknown>>(content);
+      const stripped = stripBOM(content);
+      const rawConfig = parseJsonc<Record<string, unknown>>(stripped);
 
       migrateConfigFile(configPath, rawConfig);
 

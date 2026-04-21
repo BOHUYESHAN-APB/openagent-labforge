@@ -16,8 +16,9 @@ import {
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
 import { buildAgentIdentitySection } from "./dynamic-agent-prompt-builder"
+import { SUBAGENT_OUTPUT_HANDLING_CAPABILITY } from "./subagent-output-handling"
 
-const MODE: AgentMode = "all"
+const MODE: AgentMode = "subagent"
 
 export const BIO_ORCHESTRATOR_PROMPT_METADATA: AgentPromptMetadata = {
   category: "specialist",
@@ -97,7 +98,7 @@ Required final framing:
 - what is directly supported
 - what is inferred with caution
 - what still needs validation
-\n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
+\n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${SUBAGENT_OUTPUT_HANDLING_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
     permission: {
       question: "allow",
       call_omo_agent: "deny",

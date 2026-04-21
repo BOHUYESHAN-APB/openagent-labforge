@@ -135,6 +135,7 @@ export async function applyAgentConfig(params: {
     disabledSkills,
     useTaskSystem,
     disableOmoEnv,
+    params.pluginConfig.agent_display,  // 传递 agent_display 配置
   );
 
   const disabledAgentNames = new Set(
@@ -149,10 +150,25 @@ export async function applyAgentConfig(params: {
   const isSisyphusEnabled = params.pluginConfig.sisyphus_agent?.disabled !== true;
   const builderEnabled =
     params.pluginConfig.sisyphus_agent?.default_builder_enabled ?? false;
+
+  // 读取新配置
+  const agentDisplayConfig = params.pluginConfig.agent_display;
+  const hideUpstreamPlan = agentDisplayConfig?.hide_upstream_commands?.plan ?? true;
+  const hideUpstreamBuild = agentDisplayConfig?.hide_upstream_commands?.build ?? true;
+
+  // 兼容旧配置
   const plannerEnabled = params.pluginConfig.sisyphus_agent?.planner_enabled ?? true;
   const replacePlan = params.pluginConfig.sisyphus_agent?.replace_plan ?? false;
   const hijackBuild = params.pluginConfig.sisyphus_agent?.hijack_build ?? false;
-  const shouldDemotePlan = plannerEnabled && replacePlan;
+
+  // 新架构：prometheus 始终启用（作为核心规划 agent）
+  // 即使用户设置了 planner_enabled: false，也会启用（因为我们使用了新的过滤机制）
+  const shouldEnablePrometheus = true;
+
+  // 合并逻辑：新配置优先
+  const shouldHidePlan = hideUpstreamPlan || (plannerEnabled && replacePlan);
+  const shouldHideBuild = hideUpstreamBuild || hijackBuild;
+  const shouldDemotePlan = shouldHidePlan;
   const configuredDefaultAgent = getConfiguredDefaultAgent(params.config);
 
   if (isSisyphusEnabled && builtinAgents.sisyphus) {
@@ -188,7 +204,7 @@ export async function applyAgentConfig(params: {
       agentConfig["OpenCode-Builder"] = override ? { ...base, ...override } : base;
     }
 
-    if (plannerEnabled) {
+    if (shouldEnablePrometheus) {
       const prometheusOverride = params.pluginConfig.agents?.["prometheus"] as
         | (Record<string, unknown> & { prompt_append?: string })
         | undefined;
@@ -205,8 +221,8 @@ export async function applyAgentConfig(params: {
       ? Object.fromEntries(
           Object.entries(configAgent)
             .filter(([key]) => {
-              if (key === "build" && hijackBuild) return false;
-              if (key === "plan" && shouldDemotePlan) return false;
+              if (key === "build" && shouldHideBuild) return false;
+              if (key === "plan" && shouldHidePlan) return false;
               if (key in builtinAgents) return false;
               return true;
             })
@@ -254,8 +270,8 @@ export async function applyAgentConfig(params: {
       ...filterDisabledAgents(filteredProjectAgents),
       ...filterDisabledAgents(filteredPluginAgents),
       ...filteredConfigAgents,
-      ...(hijackBuild ? { build: { ...migratedBuild, mode: "subagent", hidden: true } } : {}),
-      ...(planDemoteConfig ? { plan: planDemoteConfig } : {}),
+      ...(shouldHideBuild ? { build: { ...migratedBuild, mode: "subagent", hidden: true } } : {}),
+      ...(shouldHidePlan ? { plan: planDemoteConfig } : {}),
     };
   } else {
     const protectedBuiltinAgentNames = createProtectedAgentNameSet(

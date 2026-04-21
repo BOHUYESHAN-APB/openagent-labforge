@@ -4,6 +4,7 @@ import { PROMETHEUS_PLAN_GENERATION } from "./plan-generation"
 import { PROMETHEUS_HIGH_ACCURACY_MODE } from "./high-accuracy-mode"
 import { PROMETHEUS_PLAN_TEMPLATE } from "./plan-template"
 import { PROMETHEUS_BEHAVIORAL_SUMMARY } from "./behavioral-summary"
+import { PROMETHEUS_INTELLIGENT_ROUTING } from "./intelligent-routing"
 import { getGptPrometheusPrompt } from "./gpt"
 import { getGeminiPrometheusPrompt } from "./gemini"
 import { isGptModel, isGeminiModel } from "../types"
@@ -14,6 +15,7 @@ import { ENGINEERING_PLANNING_CAPABILITY } from "../engineering-capability"
  * Assembled from modular sections for maintainability.
  */
 export const PROMETHEUS_SYSTEM_PROMPT = `${PROMETHEUS_IDENTITY_CONSTRAINTS}
+${PROMETHEUS_INTELLIGENT_ROUTING}
 ${PROMETHEUS_INTERVIEW_MODE}
 ${PROMETHEUS_PLAN_GENERATION}
 ${PROMETHEUS_HIGH_ACCURACY_MODE}

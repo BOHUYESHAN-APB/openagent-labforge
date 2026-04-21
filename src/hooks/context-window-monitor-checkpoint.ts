@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import {
   getRuntimeWorkflowPaths,
   markRuntimeWorkflowCheckpoint,
   readRuntimeWorkflowState,
 } from "../features/boulder-state"
+import { writeFileAtomically, writeJSONAtomically } from "../shared/write-file-atomically"
 
 type CompressionProfile = "engineering" | "bio"
 
@@ -182,12 +183,9 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     compression_level: level,
   }
 
-  ensureParent(markdownPath)
-  writeFileSync(markdownPath, markdown, "utf-8")
-  ensureParent(bySessionPath)
-  writeFileSync(bySessionPath, markdown, "utf-8")
-  ensureParent(metadataPath)
-  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), "utf-8")
+  writeFileAtomically(markdownPath, markdown, "utf-8")
+  writeFileAtomically(bySessionPath, markdown, "utf-8")
+  writeJSONAtomically(metadataPath, metadata)
 
   return { markdownPath, metadataPath }
 }

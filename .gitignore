@@ -4,6 +4,7 @@
 !.sisyphus/rules/
 node_modules/
 Future/**
+.claude
 
 # Build output
 dist/

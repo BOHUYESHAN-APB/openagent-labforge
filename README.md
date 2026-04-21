@@ -62,6 +62,45 @@ Gemini note:
 
 ## Context Window Recommendation
 
+**⚠️ IMPORTANT: Context Guard System v2.0 is now available**
+
+This plugin now includes an advanced multi-tier context guard system optimized for different model context sizes. See [Context Guard Implementation Guide](./CONTEXT_GUARD_IMPLEMENTATION.md) ([中文版](./CONTEXT_GUARD_IMPLEMENTATION_ZH.md)) for details.
+
+### Quick Start
+
+**For 200K models (Claude Haiku, etc.)**: Use `balanced` preset
+**For 256K models (Kimi, etc.)**: Use `balanced-plus` preset  
+**For 400K+ models**: Use `balanced` or `aggressive` preset
+
+Configure in `.opencode/openagent-labforge.jsonc`:
+```jsonc
+{
+  "experimental": {
+    "context_guard_profile": "balanced",  // or "balanced-plus" for 256K
+    "preemptive_compaction": true
+  }
+}
+```
+
+Access settings: Type `/ol-settings` → Runtime Settings → Context Guard Settings
+
+### Context Window Tiers
+
+The plugin automatically adjusts compression thresholds based on model context:
+
+- **200K tier** (180K-350K): Optimized for 200K and 256K models
+  - Balanced preset: L1@110K, L2@140K, L3@150K
+  - Avoids 150K+ issues (1/3 of 200K models have problems after 150K)
+  - Plus presets add 30K headroom for 256K models
+  
+- **400K tier** (350K-900K): For 400K models
+  - Balanced preset: L1@150K, L2@220K, L3@300K
+  
+- **1M tier** (900K+): For 1M+ models
+  - Balanced preset: L1@220K, L2@320K, L3@550K
+
+### Legacy Recommendation (Pre-v2.0)
+
 For the best results, prefer models that can stably provide more than 400K
 context.
 
