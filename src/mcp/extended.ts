@@ -75,14 +75,36 @@ export const paper_search_mcp: LocalMcpConfig = {
   // The documented console-script launcher has proven unreliable in this
   // Windows/OpenCode environment. Use the module entrypoint and enable
   // native TLS for uv's package fetch path.
+  //
+  // Network access requirements:
+  // - PubMed: requires access to pubmed.ncbi.nlm.nih.gov
+  // - BioRxiv: requires access to biorxiv.org
+  // - Google Scholar: requires access to scholar.google.com
+  //
+  // If you're behind a firewall or in a region with restricted access,
+  // you may need to configure proxy settings via environment variables:
+  // - HTTP_PROXY / HTTPS_PROXY for proxy server
+  // - NO_PROXY for exceptions
+  //
+  // Disabled by default due to network access requirements.
+  // Enable if you have unrestricted access to academic websites or proper proxy.
   command: ["uvx", "--native-tls", "--from", "paper-search-mcp", "python", "-m", "paper_search_mcp.server"],
-  enabled: true,
+  enabled: false,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
+  // Uncomment and configure if you need proxy access:
+  // environment: {
+  //   HTTP_PROXY: "http://your-proxy:port",
+  //   HTTPS_PROXY: "http://your-proxy:port",
+  // },
 }
 
 export const semantic_scholar_fastmcp: LocalMcpConfig = {
   type: "local",
-  command: ["uvx", "--native-tls", "semantic-scholar-fastmcp"],
-  enabled: false,
+  // NOTE:
+  // Pin to fastmcp < 3 for stability (fastmcp 3.0 has breaking changes)
+  // Use --no-http to disable HTTP bridge and avoid port conflicts
+  // This MCP provides rich academic paper search results via Semantic Scholar API
+  command: ["uvx", "--native-tls", "--from", "semantic-scholar-fastmcp<3.0", "semantic-scholar-fastmcp", "--no-http"],
+  enabled: true,
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 }
