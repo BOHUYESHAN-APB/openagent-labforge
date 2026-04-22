@@ -14,6 +14,10 @@ export function transformMcpServer(
   const expanded = expandEnvVarsInObject(server)
   const serverType = expanded.type ?? "stdio"
 
+  // Respect the disabled field from the original config
+  // Default to enabled if not explicitly disabled
+  const enabled = expanded.disabled !== true
+
   if (serverType === "http" || serverType === "sse") {
     if (!expanded.url) {
       throw new Error(
@@ -24,7 +28,7 @@ export function transformMcpServer(
     const config: McpRemoteConfig = {
       type: "remote",
       url: expanded.url,
-      enabled: true,
+      enabled,
     }
 
     if (expanded.headers && Object.keys(expanded.headers).length > 0) {
@@ -50,7 +54,7 @@ export function transformMcpServer(
   const config: McpLocalConfig = {
     type: "local",
     command: commandArray,
-    enabled: true,
+    enabled,
   }
 
   if (expanded.env && Object.keys(expanded.env).length > 0) {

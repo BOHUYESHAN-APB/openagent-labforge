@@ -281,6 +281,132 @@ Gemini 说明：
 - 旧 todo / 旧 batch 状态继续干扰当前会话
 - 长会话或长审查波次之后需要明显收口
 
+### 上下文压缩优化
+
+**v2.1 新增**：上下文压缩系统已大幅增强，压缩率提升、版本管理完善、用户控制增强。
+
+#### 压缩效果提升
+
+| 级别 | 优化前 | 优化后 | 提升幅度 |
+|------|--------|--------|---------|
+| L1 | 5-10% | 15-20% | +100% |
+| L2 | 15-25% | 30-40% | +60% |
+| L3 | 30-40% | 40-50% | +25% |
+
+#### 新增功能
+
+- **L1 压缩指令**：L1 现在会注入轻量模型指令（之前没有）
+- **Checkpoint 版本管理**：保留最近 5 个全局版本和 3 个会话版本
+- **提前触发 Preemptive**：从 90% 提前到 80% 使用率（10% 安全缓冲）
+- **压缩历史记录**：追踪最近 50 次压缩事件及压缩率
+- **手动压缩命令**：`/ol-compress` 和 `/ol-compression-stats`
+
+#### 配置选项
+
+在 `.opencode/openagent-labforge.jsonc` 中添加：
+
+```jsonc
+{
+  "experimental": {
+    "context_compression": {
+      "micro_prune_threshold": 500,           // 工具输出压缩阈值（100-5000）
+      "enable_duplicate_detection": true,     // 检测重复内容
+      "enable_error_stack_compression": true  // 压缩长错误堆栈
+    },
+    "checkpoint_retention": {
+      "global_keep_count": 5,          // 保留最近 N 个全局 checkpoint
+      "per_session_keep_count": 3,     // 保留最近 N 个会话 checkpoint
+      "session_expiry_days": 7,        // 删除 N 天前的旧会话
+      "auto_cleanup": false            // 启用自动清理
+    },
+    "preemptive_compaction_config": {
+      "buffer_ratio": 0.10,      // L3 前的安全缓冲（1%-20%）
+      "timeout_ms": 120000,      // 压缩超时时间（30s-300s）
+      "retry_on_failure": false  // 压缩失败时重试
+    }
+  }
+}
+```
+
+#### 手动压缩命令
+
+**`/ol-compress [level]`** - 手动触发上下文压缩
+
+参数：
+- `auto`（默认）：根据使用率自动选择级别
+  - 使用率 < 60%：应用 L1（micro-prune + 指令）
+  - 使用率 60-75%：应用 L2（micro-prune + light checkpoint）
+  - 使用率 > 75%：应用 L3（micro-prune + heavy checkpoint）
+- `light` / `l1`：强制 L1 压缩
+- `medium` / `l2`：强制 L2 压缩
+- `heavy` / `l3`：强制 L3 压缩
+- `preemptive`：触发原生 session.summarize()
+
+别名：`/compress`
+
+**`/ol-compression-stats [filter]`** - 查看压缩历史和统计
+
+参数：
+- 无参数：显示完整统计
+- `l1` / `l2` / `l3`：按压缩级别过滤
+- `recent`：只显示最近 10 条事件
+
+别名：`/compression-stats`
+
+输出示例：
+```
+Compression Statistics for Session abc123
+================================================
+
+Current State:
+- Carried Tokens: 550000 / 1000000 (55%)
+- Current Level: L3
+- Last Updated: 2026-04-22T12:00:00Z
+
+Compression History (26 events):
+
+By Level:
+- L1: 15 events, avg compression: 6.8%
+- L2: 8 events, avg compression: 12.9%
+- L3: 3 events, avg compression: 14.5%
+
+By Action:
+- Micro-prune: 15 events
+- Checkpoint: 11 events
+- Preemptive: 0 events
+
+Total Tokens Removed: 285000
+Time Range: 2026-04-22T10:00:00Z to 2026-04-22T12:00:00Z
+
+Recent Events (last 5):
+1. [2026-04-22T12:00:00Z] L3 checkpoint: removed 80000 tokens (14.5%)
+2. [2026-04-22T11:30:00Z] L2 checkpoint: removed 60000 tokens (13.2%)
+...
+```
+
+#### Checkpoint 版本管理
+
+Checkpoint 文件现在支持版本化和滚动保留：
+
+```
+.opencode/openagent-labforge/checkpoints/auto/
+├── latest.md                    # 最新版本（向后兼容）
+├── latest.meta.json
+├── history/
+│   ├── checkpoint-001.md        # 全局历史（保留最近 5 个）
+│   ├── checkpoint-002.md
+│   └── checkpoint-005.md
+└── by-session/
+    └── <session-id>/
+        ├── checkpoint-001.md    # 会话历史（保留最近 3 个）
+        └── checkpoint-003.md
+```
+
+优势：
+- 可以回退到之前的 checkpoint 版本
+- 自动清理防止磁盘爆满
+- 会话过期自动删除 N 天前的旧会话
+
 ### Checkpoint 接力命令
 
 现在也内置了一组面向长任务接力的 checkpoint 命令，用来避免把同一个会话无限拉长。

@@ -385,6 +385,132 @@ The current cleanup commands are especially useful after:
 - carrying old todos into a fresh user wave
 - recovering from a long or over-continued reviewed batch
 
+### Context compression optimization
+
+**New in v2.1**: The context compression system has been significantly enhanced with improved compression ratios, version management, and user control.
+
+#### Compression improvements
+
+| Level | Before | After | Improvement |
+|-------|--------|-------|-------------|
+| L1 | 5-10% | 15-20% | +100% |
+| L2 | 15-25% | 30-40% | +60% |
+| L3 | 30-40% | 40-50% | +25% |
+
+#### New features
+
+- **L1 compression directives**: L1 now injects lightweight model instructions (previously had none)
+- **Checkpoint versioning**: Keeps last 5 global versions and 3 per-session versions
+- **Earlier preemptive trigger**: Moved from 90% to 80% usage (10% safety buffer)
+- **Compression history**: Tracks last 50 compression events with ratios
+- **Manual compression commands**: `/ol-compress` and `/ol-compression-stats`
+
+#### Configuration
+
+Add to `.opencode/openagent-labforge.jsonc`:
+
+```jsonc
+{
+  "experimental": {
+    "context_compression": {
+      "micro_prune_threshold": 500,           // Tool output compression threshold (100-5000)
+      "enable_duplicate_detection": true,     // Detect duplicate content
+      "enable_error_stack_compression": true  // Compress long error stacks
+    },
+    "checkpoint_retention": {
+      "global_keep_count": 5,          // Keep last N global checkpoints
+      "per_session_keep_count": 3,     // Keep last N per-session checkpoints
+      "session_expiry_days": 7,        // Delete sessions older than N days
+      "auto_cleanup": false            // Enable automatic cleanup
+    },
+    "preemptive_compaction_config": {
+      "buffer_ratio": 0.10,      // Safety buffer before L3 (1%-20%)
+      "timeout_ms": 120000,      // Compression timeout (30s-300s)
+      "retry_on_failure": false  // Retry on compression failure
+    }
+  }
+}
+```
+
+#### Manual compression commands
+
+**`/ol-compress [level]`** - Manually trigger context compression
+
+Parameters:
+- `auto` (default): Automatically choose level based on usage
+  - Usage < 60%: Apply L1 (micro-prune + directives)
+  - Usage 60-75%: Apply L2 (micro-prune + light checkpoint)
+  - Usage > 75%: Apply L3 (micro-prune + heavy checkpoint)
+- `light` / `l1`: Force L1 compression
+- `medium` / `l2`: Force L2 compression
+- `heavy` / `l3`: Force L3 compression
+- `preemptive`: Trigger native session.summarize()
+
+Alias: `/compress`
+
+**`/ol-compression-stats [filter]`** - View compression history and statistics
+
+Parameters:
+- No parameter: Show complete statistics
+- `l1` / `l2` / `l3`: Filter by compression level
+- `recent`: Show only recent 10 events
+
+Alias: `/compression-stats`
+
+Example output:
+```
+Compression Statistics for Session abc123
+================================================
+
+Current State:
+- Carried Tokens: 550000 / 1000000 (55%)
+- Current Level: L3
+- Last Updated: 2026-04-22T12:00:00Z
+
+Compression History (26 events):
+
+By Level:
+- L1: 15 events, avg compression: 6.8%
+- L2: 8 events, avg compression: 12.9%
+- L3: 3 events, avg compression: 14.5%
+
+By Action:
+- Micro-prune: 15 events
+- Checkpoint: 11 events
+- Preemptive: 0 events
+
+Total Tokens Removed: 285000
+Time Range: 2026-04-22T10:00:00Z to 2026-04-22T12:00:00Z
+
+Recent Events (last 5):
+1. [2026-04-22T12:00:00Z] L3 checkpoint: removed 80000 tokens (14.5%)
+2. [2026-04-22T11:30:00Z] L2 checkpoint: removed 60000 tokens (13.2%)
+...
+```
+
+#### Checkpoint versioning
+
+Checkpoint files are now versioned with rolling retention:
+
+```
+.opencode/openagent-labforge/checkpoints/auto/
+├── latest.md                    # Latest version (backward compatible)
+├── latest.meta.json
+├── history/
+│   ├── checkpoint-001.md        # Global history (keeps last 5)
+│   ├── checkpoint-002.md
+│   └── checkpoint-005.md
+└── by-session/
+    └── <session-id>/
+        ├── checkpoint-001.md    # Per-session history (keeps last 3)
+        └── checkpoint-003.md
+```
+
+Benefits:
+- Can revert to previous checkpoint versions
+- Automatic cleanup prevents disk bloat
+- Session expiry removes old sessions after N days
+
 ### Checkpoint handoff commands
 
 The fork now also includes repo-local checkpoint commands for long-running work
