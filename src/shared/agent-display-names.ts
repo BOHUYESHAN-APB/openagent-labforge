@@ -33,7 +33,7 @@ export function resolveAgentDisplayLanguage(configLanguage?: string): AgentDispl
 const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
   sisyphus: "Smart Assistant",
   prometheus: "Task Planner",
-  executor: "Plan Router",
+  executor: "Plan Executor",
   wase: "Engineering Auto",
   atlas: "Quick Dev",
   hephaestus: "Deep Dev",
@@ -65,7 +65,7 @@ const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   sisyphus: "智能助手",
   prometheus: "任务规划",
-  executor: "计划路由",
+  executor: "计划执行",
   wase: "工程全自动",
   atlas: "快速开发",
   hephaestus: "深度开发",

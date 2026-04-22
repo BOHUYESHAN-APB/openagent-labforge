@@ -1429,12 +1429,8 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             category: text("Core", "核心"),
             description: `${scope} • ${compactPathLabel(scopePath())}`,
           },
-          {
-            title: text("Toggle Bio Agent Visibility (Deprecated)", "切换生信代理显示（已废弃）"),
-            value: "bio_agents_visible",
-            category: text("Legacy", "旧版"),
-            description: `${bioVisible ? text("✓ Visible", "✓ 显示") : text("○ Hidden", "○ 隐藏")} • ${text("Use Agent Display Settings instead", "请使用 Agent 显示设置")}`,
-          },
+          // 旧的 bio_agents_visible 选项已移除
+          // 用户应该使用 Agent Display Settings -> Enable Bioinformatics Domain
           {
             title: text("Language", "语言"),
             value: "language",
@@ -1461,19 +1457,8 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             openLanguageDialog(openGeneral)
             return
           }
-          openBooleanDialog({
-            title: text("Bio Agents Visibility", "生信代理显示"),
-            current: bioVisible,
-            trueLabel: text("Show bio agents", "显示生信代理"),
-            falseLabel: text("Hide bio agents", "隐藏生信代理"),
-            onBack: openGeneral,
-            onConfirm: (value) =>
-              save(
-                (root) => setBioAgentsVisible(root, value),
-                text("Updated bio agent visibility", "已更新生信代理显示状态"),
-                openGeneral,
-              ),
-          })
+          // 旧的 bio_agents_visible 处理逻辑已移除
+          // 用户应该使用 /ol-settings -> Agent Display -> Enable Bioinformatics Domain
         },
       })
     )

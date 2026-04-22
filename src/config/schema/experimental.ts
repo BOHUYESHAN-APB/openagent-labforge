@@ -48,6 +48,8 @@ export const ExperimentalConfigSchema = z.object({
   strict_user_model_priority: z.boolean().optional(),
   /** Semantic mode hint injection policy for keyword detector: off | suggest | enforce */
   semantic_mode_hint: z.enum(["off", "suggest", "enforce"]).optional(),
+  /** Custom context limits for models (e.g., { "deepseek/deepseek-chat": 128000, "openai/gpt-4": 128000 }) */
+  model_context_limits: z.record(z.string(), z.number().int().positive()).optional(),
   /** Swarm agent configuration */
   swarm: z.object({
     /** Enable swarm mode (default: false) */

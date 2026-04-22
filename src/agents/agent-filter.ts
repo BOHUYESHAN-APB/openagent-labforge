@@ -1,6 +1,7 @@
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentDisplayConfig } from "../config/schema/agent-display"
 import { AGENT_DISPLAY_PRESETS, DOMAIN_AGENTS } from "../config/schema/agent-display"
+import { log } from "../shared/logger"
 
 /**
  * Filter agents based on display mode configuration
@@ -27,19 +28,38 @@ export function filterAgentsByDisplayMode(
     allowedAgents.push(...DOMAIN_AGENTS.bioinformatics);
   }
 
+  log("[agent-filter] Display mode:", mode);
+  log("[agent-filter] Enable bio:", enableBio);
+  log("[agent-filter] Allowed agents:", allowedAgents);
+  log("[agent-filter] Input agents:", Object.keys(agents));
+
   // 过滤 agent
-  return Object.fromEntries(
+  const filtered = Object.fromEntries(
     Object.entries(agents).filter(([name, agentConfig]) => {
       // 检查是否在允许列表中
-      if (!allowedAgents.includes(name)) return false;
+      if (!allowedAgents.includes(name)) {
+        log(`[agent-filter] Filtered out ${name}: not in allowed list`);
+        return false;
+      }
 
       // 检查细粒度控制
-      if (config.disabled_agents?.includes(name)) return false;
+      if (config.disabled_agents?.includes(name)) {
+        log(`[agent-filter] Filtered out ${name}: in disabled_agents`);
+        return false;
+      }
       if (config.enabled_agents && config.enabled_agents.length > 0) {
-        if (!config.enabled_agents.includes(name)) return false;
+        if (!config.enabled_agents.includes(name)) {
+          log(`[agent-filter] Filtered out ${name}: not in enabled_agents`);
+          return false;
+        }
       }
 
       return true;
     })
   );
+
+  log("[agent-filter] Filtered agents:", Object.keys(filtered));
+  log("[agent-filter] Total count:", Object.keys(filtered).length);
+
+  return filtered;
 }

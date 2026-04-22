@@ -113,7 +113,7 @@ function isAnthropicProvider(providerID: string): boolean {
   return providerID === "anthropic" || providerID === "google-vertex-anthropic"
 }
 
-function inferContextLimit(providerID: string, modelID: string | undefined, modelCacheState?: ModelCacheStateLike): number {
+function inferContextLimit(providerID: string, modelID: string | undefined, modelCacheState?: ModelCacheStateLike): number | null {
   if (modelID) {
     const cached = modelCacheState?.modelContextLimitsCache?.get(`${providerID}/${modelID}`)
     if (cached && cached > 0) return cached
@@ -122,14 +122,9 @@ function inferContextLimit(providerID: string, modelID: string | undefined, mode
     return getAnthropicActualLimit(modelCacheState)
   }
 
-  const normalized = `${providerID}/${modelID ?? ""}`.toLowerCase()
-  if (normalized.includes("gpt-5.4") || normalized.includes("gemini-2.5-pro") || normalized.includes("gemini-3")) {
-    return 1_000_000
-  }
-  if (normalized.includes("gpt-5.3") || normalized.includes("claude-sonnet-4.6")) {
-    return 400_000
-  }
-  return DEFAULT_MODEL_CONTEXT_LIMIT
+  // 无法确定上下文限制 - 返回 null
+  // 避免错误地将 1M 模型限制为 200K
+  return null
 }
 
 function formatCompactTokens(tokens: number): string {
@@ -479,8 +474,16 @@ export function createContextWindowMonitorHook(
     if (!cached) return
 
     const lastTokens = cached.tokens
+    // 计算实际输入 tokens = 未命中缓存 + 命中缓存
+    // 这才是真正占用上下文窗口的 tokens
     const totalInputTokens = (lastTokens?.input ?? 0) + (lastTokens?.cache?.read ?? 0)
     const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
+
+    // 如果无法确定上下文限制，跳过警告
+    if (!actualLimit) {
+      return
+    }
+
     const actualUsagePercentage = totalInputTokens / actualLimit
     const noticeLevel = getContextGuardNoticeLevel({
       ratio: actualUsagePercentage,
@@ -648,6 +651,12 @@ export function createContextWindowMonitorHook(
 
     const totalInputTokens = (cached.tokens.input ?? 0) + (cached.tokens.cache?.read ?? 0)
     const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
+
+    // 如果无法确定上下文限制，跳过处理
+    if (!actualLimit) {
+      return
+    }
+
     const level = getContextGuardNoticeLevel({
       ratio: totalInputTokens / actualLimit,
       totalTokens: totalInputTokens,

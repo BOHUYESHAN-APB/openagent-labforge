@@ -52,6 +52,20 @@ type ContextGuardPreset = {
     keepRecentMessagesL2: number
     keepRecentMessagesL3: number
   }
+  oneHundredSeventyK: {
+    l1Tokens: number
+    l2Tokens: number
+    l3Tokens: number
+    preemptiveEngineeringRatio: number
+    preemptiveBioRatio: number
+  }
+  oneHundredTwentyEightK: {
+    l1Tokens: number
+    l2Tokens: number
+    l3Tokens: number
+    preemptiveEngineeringRatio: number
+    preemptiveBioRatio: number
+  }
   defaultPreemptiveRatio: number
 }
 
@@ -84,6 +98,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL2: 80,
       keepRecentMessagesL3: 50,
     },
+    oneHundredSeventyK: {
+      l1Tokens: 85_000,
+      l2Tokens: 110_000,
+      l3Tokens: 125_000,
+      preemptiveEngineeringRatio: 0.72,
+      preemptiveBioRatio: 0.64,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 60_000,
+      l2Tokens: 80_000,
+      l3Tokens: 95_000,
+      preemptiveEngineeringRatio: 0.74,
+      preemptiveBioRatio: 0.66,
+    },
     defaultPreemptiveRatio: 0.82,
   },
   balanced: {
@@ -113,6 +141,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL1: 100,
       keepRecentMessagesL2: 70,
       keepRecentMessagesL3: 40,
+    },
+    oneHundredSeventyK: {
+      l1Tokens: 90_000,
+      l2Tokens: 115_000,
+      l3Tokens: 130_000,
+      preemptiveEngineeringRatio: 0.68,
+      preemptiveBioRatio: 0.60,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 65_000,
+      l2Tokens: 85_000,
+      l3Tokens: 100_000,
+      preemptiveEngineeringRatio: 0.70,
+      preemptiveBioRatio: 0.62,
     },
     defaultPreemptiveRatio: 0.78,
   },
@@ -144,6 +186,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL2: 60,
       keepRecentMessagesL3: 35,
     },
+    oneHundredSeventyK: {
+      l1Tokens: 95_000,
+      l2Tokens: 120_000,
+      l3Tokens: 135_000,
+      preemptiveEngineeringRatio: 0.64,
+      preemptiveBioRatio: 0.56,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 70_000,
+      l2Tokens: 90_000,
+      l3Tokens: 105_000,
+      preemptiveEngineeringRatio: 0.66,
+      preemptiveBioRatio: 0.58,
+    },
     defaultPreemptiveRatio: 0.72,
   },
   "conservative-plus": {
@@ -173,6 +229,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL1: 110,
       keepRecentMessagesL2: 80,
       keepRecentMessagesL3: 50,
+    },
+    oneHundredSeventyK: {
+      l1Tokens: 95_000,
+      l2Tokens: 120_000,
+      l3Tokens: 135_000,
+      preemptiveEngineeringRatio: 0.76,
+      preemptiveBioRatio: 0.69,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 70_000,
+      l2Tokens: 90_000,
+      l3Tokens: 105_000,
+      preemptiveEngineeringRatio: 0.78,
+      preemptiveBioRatio: 0.71,
     },
     defaultPreemptiveRatio: 0.82,
   },
@@ -204,6 +274,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL2: 70,
       keepRecentMessagesL3: 40,
     },
+    oneHundredSeventyK: {
+      l1Tokens: 100_000,
+      l2Tokens: 125_000,
+      l3Tokens: 140_000,
+      preemptiveEngineeringRatio: 0.72,
+      preemptiveBioRatio: 0.65,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 75_000,
+      l2Tokens: 95_000,
+      l3Tokens: 110_000,
+      preemptiveEngineeringRatio: 0.74,
+      preemptiveBioRatio: 0.67,
+    },
     defaultPreemptiveRatio: 0.78,
   },
   "aggressive-plus": {
@@ -233,6 +317,20 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       keepRecentMessagesL1: 90,
       keepRecentMessagesL2: 60,
       keepRecentMessagesL3: 35,
+    },
+    oneHundredSeventyK: {
+      l1Tokens: 105_000,
+      l2Tokens: 130_000,
+      l3Tokens: 145_000,
+      preemptiveEngineeringRatio: 0.68,
+      preemptiveBioRatio: 0.60,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 80_000,
+      l2Tokens: 100_000,
+      l3Tokens: 115_000,
+      preemptiveEngineeringRatio: 0.70,
+      preemptiveBioRatio: 0.62,
     },
     defaultPreemptiveRatio: 0.72,
   },
@@ -346,7 +444,23 @@ export function getContextGuardNoticeLevel(args: {
     return 0
   }
 
-  // 默认档位 (< 180K)
+  // 173K 档位 (165K - 180K, GitHub Copilot models)
+  if (contextLimit >= 165_000) {
+    if (totalTokens >= preset.oneHundredSeventyK.l3Tokens || ratio >= preset.severeRatio) return 3
+    if (totalTokens >= preset.oneHundredSeventyK.l2Tokens || ratio >= preset.fuseRatio) return 2
+    if (totalTokens >= preset.oneHundredSeventyK.l1Tokens || ratio >= preset.noticeRatio) return 1
+    return 0
+  }
+
+  // 128K 档位 (120K - 165K, GitHub Copilot models)
+  if (contextLimit >= 120_000) {
+    if (totalTokens >= preset.oneHundredTwentyEightK.l3Tokens || ratio >= preset.severeRatio) return 3
+    if (totalTokens >= preset.oneHundredTwentyEightK.l2Tokens || ratio >= preset.fuseRatio) return 2
+    if (totalTokens >= preset.oneHundredTwentyEightK.l1Tokens || ratio >= preset.noticeRatio) return 1
+    return 0
+  }
+
+  // 默认档位 (< 120K)
   if (ratio >= preset.severeRatio) return 3
   if (ratio >= preset.fuseRatio) return 2
   if (ratio >= preset.noticeRatio) return 1
@@ -383,6 +497,20 @@ export function getContextGuardPreemptiveThreshold(args: {
       : preset.twoHundredK.preemptiveEngineeringRatio
   }
 
-  // 默认档位 (< 180K)
+  // 173K 档位 (165K - 180K, GitHub Copilot models)
+  if (actualLimit >= 165_000) {
+    return isBioSession
+      ? preset.oneHundredSeventyK.preemptiveBioRatio
+      : preset.oneHundredSeventyK.preemptiveEngineeringRatio
+  }
+
+  // 128K 档位 (120K - 165K, GitHub Copilot models)
+  if (actualLimit >= 120_000) {
+    return isBioSession
+      ? preset.oneHundredTwentyEightK.preemptiveBioRatio
+      : preset.oneHundredTwentyEightK.preemptiveEngineeringRatio
+  }
+
+  // 默认档位 (< 120K)
   return preset.defaultPreemptiveRatio
 }

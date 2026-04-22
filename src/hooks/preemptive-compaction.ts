@@ -4,10 +4,16 @@ import { getSessionAgent } from "../features/claude-code-session-state"
 import { getAgentConfigKey } from "../shared/agent-display-names"
 import {
   getContextGuardPreemptiveThreshold,
+  getContextGuardNoticeLevel,
   resolveContextGuardProfile,
   type ContextGuardProfile,
 } from "./context-guard-threshold-profile"
 import { isTokenLimitError } from "../shared/token-limit-error-detector"
+import {
+  registerContextSwitch,
+  getBufferedThreshold,
+  clearSwitchBuffer,
+} from "./context-switch-buffer"
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
 const DEFAULT_ACTUAL_LIMIT = 200_000
@@ -17,6 +23,9 @@ type ModelCacheStateLike = {
   anthropicContext1MEnabled: boolean
   modelContextLimitsCache?: Map<string, number>
 }
+
+// 全局配置引用，用于读取用户自定义的模型上下文限制
+let pluginConfigRef: OhMyOpenCodeConfig | undefined
 
 function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number {
   return (modelCacheState?.anthropicContext1MEnabled ?? false) ||
@@ -37,6 +46,7 @@ interface CachedCompactionState {
   providerID: string
   modelID: string
   tokens: TokenInfo
+  contextLimit?: number | null // Track context limit for switch detection (null = unknown)
 }
 
 function formatCompactTokens(tokens: number): string {
@@ -69,23 +79,39 @@ function isAnthropicProvider(providerID: string): boolean {
   return providerID === "anthropic" || providerID === "google-vertex-anthropic"
 }
 
-function inferContextLimit(providerID: string, modelID: string, modelCacheState?: ModelCacheStateLike): number {
-  if (modelID) {
-    const cached = modelCacheState?.modelContextLimitsCache?.get(`${providerID}/${modelID}`)
-    if (cached && cached > 0) return cached
-  }
-  if (isAnthropicProvider(providerID)) {
-    return getAnthropicActualLimit(modelCacheState)
+function inferContextLimit(providerID: string, modelID: string, modelCacheState?: ModelCacheStateLike): number | null {
+  const fullModelID = `${providerID}/${modelID}`
+
+  // 1. 优先：用户自定义配置（允许手动覆盖，用于特殊情况）
+  if (pluginConfigRef?.experimental?.model_context_limits) {
+    const customLimit = pluginConfigRef.experimental.model_context_limits[fullModelID]
+    if (customLimit && customLimit > 0) {
+      log("[preemptive-compaction] Using user custom limit:", { fullModelID, limit: customLimit })
+      return customLimit
+    }
   }
 
-  const normalized = `${providerID}/${modelID}`.toLowerCase()
-  if (normalized.includes("gpt-5.4") || normalized.includes("gemini-2.5-pro") || normalized.includes("gemini-3")) {
-    return 1_000_000
+  // 2. OpenCode API 缓存（主要数据源 - 完全信任 OpenCode 的适配）
+  // OpenCode 对官方服务商的适配很积极且准确，直接使用其检测结果
+  if (modelID) {
+    const apiLimit = modelCacheState?.modelContextLimitsCache?.get(fullModelID)
+    if (apiLimit && apiLimit > 0) {
+      log("[preemptive-compaction] Using OpenCode API limit:", { fullModelID, limit: apiLimit })
+      return apiLimit
+    }
   }
-  if (normalized.includes("gpt-5.3") || normalized.includes("claude-sonnet-4.6")) {
-    return 400_000
+
+  // 3. 特殊处理：Anthropic（1M context 开关）
+  if (isAnthropicProvider(providerID)) {
+    const anthropicLimit = getAnthropicActualLimit(modelCacheState)
+    log("[preemptive-compaction] Using Anthropic limit:", { fullModelID, limit: anthropicLimit })
+    return anthropicLimit
   }
-  return DEFAULT_ACTUAL_LIMIT
+
+  // 4. 无法确定上下文限制 - 返回 null，禁用自动压缩
+  // 避免错误地将 1M 模型限制为 200K
+  log("[preemptive-compaction] ⚠️ Cannot determine context limit, auto-compaction disabled:", { fullModelID })
+  return null
 }
 
 function isBioSession(sessionID: string): boolean {
@@ -147,6 +173,9 @@ export function createPreemptiveCompactionHook(
   pluginConfig: OhMyOpenCodeConfig,
   modelCacheState?: ModelCacheStateLike,
 ) {
+  // 保存配置引用，供 inferContextLimit 使用
+  pluginConfigRef = pluginConfig
+
   const contextGuardProfile = resolveContextGuardProfile(
     pluginConfig.experimental?.context_guard_profile,
   )
@@ -167,15 +196,65 @@ export function createPreemptiveCompactionHook(
 
     const actualLimit = inferContextLimit(cached.providerID, cached.modelID, modelCacheState)
 
+    // 如果无法确定上下文限制，禁用自动压缩并提示用户
+    if (!actualLimit) {
+      log("[preemptive-compaction] Auto-compaction disabled: context limit unknown", {
+        sessionID,
+        providerID: cached.providerID,
+        modelID: cached.modelID,
+      })
+
+      // 只在第一次检测到时提示用户（避免重复提示）
+      if (!compactedSessions.has(sessionID)) {
+        compactedSessions.add(sessionID) // 标记为已提示
+        await ctx.client.tui
+          .showToast({
+            body: {
+              title: "Context Limit Unknown",
+              message: `Cannot determine context limit for ${cached.providerID}/${cached.modelID}. Auto-compaction disabled. Configure in experimental.model_context_limits if needed.`,
+              variant: "info",
+              duration: 8000,
+            },
+          })
+          .catch(() => {})
+      }
+      return
+    }
+
+    // Detect context switch
+    if (cached.contextLimit && cached.contextLimit !== actualLimit) {
+      registerContextSwitch(sessionID, cached.contextLimit, actualLimit)
+      log("[preemptive-compaction] Context switch detected", {
+        sessionID,
+        previousLimit: cached.contextLimit,
+        newLimit: actualLimit,
+      })
+    }
+
     const lastTokens = cached.tokens
+    // 计算实际输入 tokens = 未命中缓存 + 命中缓存
+    // 这才是真正占用上下文窗口的 tokens
     const totalInputTokens = (lastTokens?.input ?? 0) + (lastTokens?.cache?.read ?? 0)
     const usageRatio = totalInputTokens / actualLimit
-    const threshold = getPreemptiveCompactionThreshold({
+
+    // Get current warning level
+    const currentLevel = getContextGuardNoticeLevel({
+      ratio: usageRatio,
+      totalTokens: totalInputTokens,
+      contextLimit: actualLimit,
+      profile: contextGuardProfile,
+      overrides: contextGuardThresholdOverrides,
+    })
+
+    const baseThreshold = getPreemptiveCompactionThreshold({
       sessionID,
       actualLimit,
       profile: contextGuardProfile,
       overrides: contextGuardThresholdOverrides,
     })
+
+    // Apply buffered threshold during context switch
+    const threshold = getBufferedThreshold(sessionID, baseThreshold, currentLevel)
 
     if (usageRatio < threshold) return
 
@@ -214,6 +293,9 @@ export function createPreemptiveCompactionHook(
       )
 
       compactedSessions.add(sessionID)
+
+      // Clear switch buffer after successful compaction
+      clearSwitchBuffer(sessionID)
 
       log("[preemptive-compaction] Native session summarize requested", {
         sessionID,
@@ -300,10 +382,26 @@ export function createPreemptiveCompactionHook(
       if (!info || info.role !== "assistant" || !info.finish) return
       if (!info.sessionID || !info.providerID || !info.tokens) return
 
+      // 详细记录 token 数据，用于调试
+      log("[preemptive-compaction] Token data received:", {
+        sessionID: info.sessionID,
+        providerID: info.providerID,
+        modelID: info.modelID,
+        tokens: {
+          input: info.tokens.input,
+          output: info.tokens.output,
+          reasoning: info.tokens.reasoning,
+          cache_read: info.tokens.cache?.read,
+          cache_write: info.tokens.cache?.write,
+        },
+        calculated_total_input: info.tokens.input + (info.tokens.cache?.read ?? 0),
+      })
+
       tokenCache.set(info.sessionID, {
         providerID: info.providerID,
         modelID: info.modelID ?? "",
         tokens: info.tokens,
+        contextLimit: inferContextLimit(info.providerID, info.modelID ?? "", modelCacheState),
       })
       compactedSessions.delete(info.sessionID)
     }
