@@ -33,8 +33,9 @@ export function resolveCompressionProfile(messages: MessageWithParts[]): Compres
 export function buildCompressionDirectiveText(args: {
   level: number
   profile: CompressionProfile
+  ratio?: number
 }): string {
-  const { level, profile } = args
+  const { level, profile, ratio } = args
   const header = `${createSystemDirective(SystemDirectiveTypes.CONTEXT_WINDOW_MONITOR)}
 [Labforge Compression Directive]`
 
@@ -55,12 +56,22 @@ export function buildCompressionDirectiveText(args: {
 - If the current checkpoint closes cleanly, prepare a checkpoint and ask whether to continue in a fresh session.`
     }
 
-    return `${header}
+    if (level === 2) {
+      return `${header}
 - Profile: bioinformatics / academic
 - Context debt is rising.
 - Keep the current biological checkpoint narrow and reviewable.
 - Do not reopen old literature or evidence branches unless they are directly required for the active checkpoint.
 - Prefer local notes and durable result files over repeating long scientific context in chat.`
+    }
+
+    // L1 for bio
+    return `${header}
+- Profile: bioinformatics / academic
+- Context usage is rising${ratio ? ` (${Math.round(ratio * 100)}%)` : ""}.
+- Keep responses concise and focused on the current checkpoint.
+- Prefer file references and local notes over inline content.
+- Avoid repeating previous literature or evidence context unnecessarily.`
   }
 
   if (level >= 3) {
@@ -74,10 +85,20 @@ export function buildCompressionDirectiveText(args: {
 - If the current wave closes cleanly, prepare a checkpoint and ask whether to continue in a fresh session.`
   }
 
-  return `${header}
+  if (level === 2) {
+    return `${header}
 - Profile: engineering
 - Context debt is rising.
 - Keep the current wave narrow and reviewable.
 - Avoid reopening old branches unless they directly unblock the active checkpoint.
 - Prefer runtime memory and concrete files over replaying long history in chat.`
+  }
+
+  // L1 for engineering
+  return `${header}
+- Profile: engineering
+- Context usage is rising${ratio ? ` (${Math.round(ratio * 100)}%)` : ""}.
+- Keep responses concise and focused on the current task.
+- Prefer file references over inline code blocks.
+- Avoid repeating previous context unnecessarily.`
 }

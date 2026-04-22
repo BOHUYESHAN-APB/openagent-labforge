@@ -142,13 +142,15 @@ function getPreemptiveCompactionThreshold(args: {
       l3_tokens?: number
     }
   }
+  bufferRatio?: number
 }): number {
-  const { sessionID, actualLimit, profile, overrides } = args
+  const { sessionID, actualLimit, profile, overrides, bufferRatio } = args
   return getContextGuardPreemptiveThreshold({
     actualLimit,
     isBioSession: isBioSession(sessionID),
     profile,
     overrides,
+    bufferRatio,
   })
 }
 
@@ -251,6 +253,7 @@ export function createPreemptiveCompactionHook(
       actualLimit,
       profile: contextGuardProfile,
       overrides: contextGuardThresholdOverrides,
+      bufferRatio: pluginConfig.experimental?.preemptive_compaction_config?.buffer_ratio,
     })
 
     // Apply buffered threshold during context switch
@@ -288,8 +291,8 @@ export function createPreemptiveCompactionHook(
           body: { providerID: targetProviderID, modelID: targetModelID, auto: true } as never,
           query: { directory: ctx.directory },
         }),
-        PREEMPTIVE_COMPACTION_TIMEOUT_MS,
-        `Compaction summarize timed out after ${PREEMPTIVE_COMPACTION_TIMEOUT_MS}ms`,
+        pluginConfig.experimental?.preemptive_compaction_config?.timeout_ms ?? PREEMPTIVE_COMPACTION_TIMEOUT_MS,
+        `Compaction summarize timed out after ${pluginConfig.experimental?.preemptive_compaction_config?.timeout_ms ?? PREEMPTIVE_COMPACTION_TIMEOUT_MS}ms`,
       )
 
       compactedSessions.add(sessionID)

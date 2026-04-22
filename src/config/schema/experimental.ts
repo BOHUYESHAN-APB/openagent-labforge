@@ -75,6 +75,35 @@ export const ExperimentalConfigSchema = z.object({
     /** Specialist fallback models */
     specialist_fallback_models: z.array(z.string()).optional(),
   }).optional(),
+  /** Context compression configuration */
+  context_compression: z.object({
+    /** Micro-pruning threshold for tool output compression in characters (default: 500) */
+    micro_prune_threshold: z.number().int().min(100).max(5000).optional(),
+    /** Enable duplicate content detection (default: true) */
+    enable_duplicate_detection: z.boolean().optional(),
+    /** Enable error stack compression (default: true) */
+    enable_error_stack_compression: z.boolean().optional(),
+  }).optional(),
+  /** Checkpoint retention configuration */
+  checkpoint_retention: z.object({
+    /** Number of global checkpoints to keep (default: 5, 0 = unlimited) */
+    global_keep_count: z.number().int().min(0).max(100).optional(),
+    /** Number of checkpoints to keep per session (default: 3, 0 = unlimited) */
+    per_session_keep_count: z.number().int().min(0).max(50).optional(),
+    /** Session expiry in days (default: 0 = never expire, cleanup disabled by default) */
+    session_expiry_days: z.number().int().min(0).max(365).optional(),
+    /** Enable automatic cleanup of old sessions (default: false) */
+    auto_cleanup: z.boolean().optional(),
+  }).optional(),
+  /** Preemptive compaction configuration */
+  preemptive_compaction_config: z.object({
+    /** Buffer ratio before L3 threshold to trigger preemptive compaction (default: 0.10 = 10%) */
+    buffer_ratio: z.number().min(0.01).max(0.20).optional(),
+    /** Timeout in milliseconds for compaction operation (default: 120000) */
+    timeout_ms: z.number().int().min(30000).max(300000).optional(),
+    /** Retry on failure (default: false) */
+    retry_on_failure: z.boolean().optional(),
+  }).optional(),
 })
 
 export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>

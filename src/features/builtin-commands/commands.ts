@@ -16,6 +16,8 @@ import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
 import { SWARM_START_TEMPLATE } from "./templates/swarm-start"
+import { COMPRESSION_STATS_TEMPLATE } from "./templates/compression-stats"
+import { MANUAL_COMPRESS_TEMPLATE } from "./templates/manual-compress"
 
 export interface LoadBuiltinCommandsOptions {
   useRegisteredAgents?: boolean
@@ -36,6 +38,38 @@ function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
 ): Record<string, Omit<CommandDefinition, "name">> {
   const commands: Record<string, Omit<CommandDefinition, "name">> = {
+  "ol-compress": {
+    description: "(builtin) Manually trigger context compression for the current session",
+    template: `<command-instruction>
+${MANUAL_COMPRESS_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+    argumentHint: "[auto|light|medium|heavy|preemptive]",
+  },
+  "ol-compression-stats": {
+    description: "(builtin) View compression history and statistics for the current session",
+    template: `<command-instruction>
+${COMPRESSION_STATS_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+    argumentHint: "[filter]",
+  },
   "ol-compress-context": {
     description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",
     template: `<command-instruction>

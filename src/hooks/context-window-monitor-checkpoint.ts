@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, rmSync } from "node:fs"
 import { dirname, join } from "node:path"
 import {
   getRuntimeWorkflowPaths,
@@ -6,6 +6,7 @@ import {
   readRuntimeWorkflowState,
 } from "../features/boulder-state"
 import { writeFileAtomically, writeJSONAtomically } from "../shared/write-file-atomically"
+import { log } from "../shared/logger"
 
 type CompressionProfile = "engineering" | "bio"
 
@@ -42,7 +43,139 @@ function ensureParent(path: string): void {
   }
 }
 
-export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointArgs): {
+type CheckpointRetentionConfig = {
+  global_keep_count?: number
+  per_session_keep_count?: number
+  session_expiry_days?: number
+  auto_cleanup?: boolean
+}
+
+function getCheckpointVersion(checkpointRoot: string): number {
+  const historyDir = join(checkpointRoot, "history")
+  if (!existsSync(historyDir)) return 1
+
+  try {
+    const files = readdirSync(historyDir)
+    const versions = files
+      .filter((f) => f.startsWith("checkpoint-") && f.endsWith(".md"))
+      .map((f) => {
+        const match = f.match(/checkpoint-(\d+)\.md/)
+        return match ? parseInt(match[1], 10) : 0
+      })
+      .filter((v) => v > 0)
+
+    return versions.length > 0 ? Math.max(...versions) + 1 : 1
+  } catch {
+    return 1
+  }
+}
+
+function cleanupOldCheckpoints(
+  checkpointRoot: string,
+  config: CheckpointRetentionConfig,
+): void {
+  const globalKeepCount = config.global_keep_count ?? 5
+  const perSessionKeepCount = config.per_session_keep_count ?? 3
+  const sessionExpiryDays = config.session_expiry_days ?? 0
+  const autoCleanup = config.auto_cleanup ?? false
+
+  // Skip cleanup if disabled
+  if (!autoCleanup) {
+    return
+  }
+
+  // Cleanup global history
+  if (globalKeepCount > 0) {
+    const historyDir = join(checkpointRoot, "history")
+    if (existsSync(historyDir)) {
+      try {
+        const files = readdirSync(historyDir)
+          .filter((f) => f.startsWith("checkpoint-") && f.endsWith(".md"))
+          .map((f) => ({
+            name: f,
+            path: join(historyDir, f),
+            mtime: statSync(join(historyDir, f)).mtime.getTime(),
+          }))
+          .sort((a, b) => b.mtime - a.mtime)
+
+        // Keep only the most recent N checkpoints
+        const toDelete = files.slice(globalKeepCount)
+        for (const file of toDelete) {
+          try {
+            rmSync(file.path, { force: true })
+            log("[checkpoint-cleanup] Removed old global checkpoint: " + file.name)
+          } catch (error) {
+            log("[checkpoint-cleanup] Failed to remove global checkpoint: " + file.name + " " + String(error))
+          }
+        }
+      } catch (error) {
+        log("[checkpoint-cleanup] Failed to cleanup global history: " + String(error))
+      }
+    }
+  }
+
+  // Cleanup per-session checkpoints
+  const bySessionRoot = join(checkpointRoot, "by-session")
+  if (!existsSync(bySessionRoot)) return
+
+  try {
+    const sessionDirs = readdirSync(bySessionRoot)
+    const now = Date.now()
+    const expiryMs = sessionExpiryDays * 24 * 60 * 60 * 1000
+
+    for (const sessionDir of sessionDirs) {
+      const sessionPath = join(bySessionRoot, sessionDir)
+      if (!statSync(sessionPath).isDirectory()) continue
+
+      // Check if session directory is expired
+      if (sessionExpiryDays > 0 && expiryMs > 0) {
+        const sessionMtime = statSync(sessionPath).mtime.getTime()
+        if (now - sessionMtime > expiryMs) {
+          try {
+            rmSync(sessionPath, { recursive: true, force: true })
+            log("[checkpoint-cleanup] Removed expired session directory: " + sessionDir)
+            continue
+          } catch (error) {
+            log("[checkpoint-cleanup] Failed to remove expired session: " + sessionDir + " " + String(error))
+          }
+        }
+      }
+
+      // Cleanup old checkpoints within session
+      if (perSessionKeepCount > 0) {
+        try {
+          const files = readdirSync(sessionPath)
+            .filter((f) => f.startsWith("checkpoint-") && f.endsWith(".md"))
+            .map((f) => ({
+              name: f,
+              path: join(sessionPath, f),
+              mtime: statSync(join(sessionPath, f)).mtime.getTime(),
+            }))
+            .sort((a, b) => b.mtime - a.mtime)
+
+          const toDelete = files.slice(perSessionKeepCount)
+          for (const file of toDelete) {
+            try {
+              rmSync(file.path, { force: true })
+              log("[checkpoint-cleanup] Removed old session checkpoint: " + sessionDir + " " + file.name)
+            } catch (error) {
+              log("[checkpoint-cleanup] Failed to remove session checkpoint: " + file.name + " " + String(error))
+            }
+          }
+        } catch (error) {
+          log("[checkpoint-cleanup] Failed to cleanup session checkpoints: " + sessionDir + " " + String(error))
+        }
+      }
+    }
+  } catch (error) {
+    log("[checkpoint-cleanup] Failed to cleanup by-session directory: " + String(error))
+  }
+}
+
+export function writeAutoCompressionCheckpoint(
+  args: AutoCompressionCheckpointArgs,
+  retentionConfig?: CheckpointRetentionConfig,
+): {
   markdownPath: string
   metadataPath: string
 } {
@@ -58,9 +191,23 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
   } = args
   const checkpointRoot = join(directory, ".opencode", "openagent-labforge", "checkpoints")
   const autoRoot = join(checkpointRoot, "auto")
+
+  // Get next version number
+  const version = getCheckpointVersion(autoRoot)
+  const versionedFilename = `checkpoint-${String(version).padStart(3, "0")}.md`
+
+  // Paths for versioned checkpoints
+  const historyDir = join(autoRoot, "history")
+  const historyPath = join(historyDir, versionedFilename)
+
+  // Paths for latest (for backward compatibility)
   const markdownPath = join(autoRoot, "latest.md")
-  const bySessionPath = join(autoRoot, "by-session", `${sessionID}.md`)
   const metadataPath = join(autoRoot, "latest.meta.json")
+
+  // Paths for by-session versioned checkpoints
+  const bySessionDir = join(autoRoot, "by-session", sessionID)
+  const bySessionPath = join(bySessionDir, versionedFilename)
+
   const state = readRuntimeWorkflowState(directory, sessionID)
   const paths = getRuntimeWorkflowPaths(directory, sessionID)
   const contextCapsulePath = join(paths.rootDir, "context-capsule.md")
@@ -96,6 +243,7 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     "--------------",
     `- Session ID: ${sessionID}`,
     `- Created At: ${createdAt}`,
+    `- Checkpoint Version: ${version}`,
     `- Checkpoint Kind: ${checkpointKind}`,
     `- Checkpoint Scope: ${checkpointScope}`,
     `- Profile: ${profile}`,
@@ -148,6 +296,7 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     handoff_mission: goal,
     source_session_id: sessionID,
     created_at: createdAt,
+    checkpoint_version: version,
     goal,
     cwd: directory,
     key_files: [
@@ -183,9 +332,22 @@ export function writeAutoCompressionCheckpoint(args: AutoCompressionCheckpointAr
     compression_level: level,
   }
 
-  writeFileAtomically(markdownPath, markdown, "utf-8")
+  // Write versioned checkpoint to history
+  ensureParent(historyPath)
+  writeFileAtomically(historyPath, markdown, "utf-8")
+
+  // Write versioned checkpoint to by-session
+  ensureParent(bySessionPath)
   writeFileAtomically(bySessionPath, markdown, "utf-8")
+
+  // Write latest.md (for backward compatibility)
+  writeFileAtomically(markdownPath, markdown, "utf-8")
   writeJSONAtomically(metadataPath, metadata)
+
+  // Cleanup old checkpoints if configured
+  cleanupOldCheckpoints(autoRoot, retentionConfig ?? {})
+
+  log("[checkpoint] Wrote checkpoint version " + String(version) + " for session " + sessionID)
 
   return { markdownPath, metadataPath }
 }

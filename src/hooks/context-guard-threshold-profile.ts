@@ -472,45 +472,52 @@ export function getContextGuardPreemptiveThreshold(args: {
   isBioSession: boolean
   profile: ContextGuardProfile
   overrides?: ContextGuardThresholdOverrides
+  bufferRatio?: number
 }): number {
-  const { actualLimit, isBioSession, profile, overrides } = args
+  const { actualLimit, isBioSession, profile, overrides, bufferRatio } = args
   const preset = applyThresholdOverrides(PRESETS[profile], overrides)
+  const buffer = bufferRatio ?? 0.10 // Default 10% buffer (changed from 5%)
 
   // 1M 档位 (>= 600K)
   if (actualLimit >= 600_000) {
-    return (isBioSession
+    const baseRatio = (isBioSession
       ? preset.oneMillion.preemptiveBioTokens
       : preset.oneMillion.preemptiveEngineeringTokens) / actualLimit
+    return Math.max(0, baseRatio - buffer)
   }
 
   // 400K 档位 (300K - 600K, 覆盖 256K=262144 和 400K)
   if (actualLimit >= 300_000) {
-    return isBioSession
+    const baseRatio = isBioSession
       ? preset.fourHundredK.preemptiveBioRatio
       : preset.fourHundredK.preemptiveEngineeringRatio
+    return Math.max(0, baseRatio - buffer)
   }
 
   // 200K 档位 (180K - 300K)
   if (actualLimit >= 180_000) {
-    return isBioSession
+    const baseRatio = isBioSession
       ? preset.twoHundredK.preemptiveBioRatio
       : preset.twoHundredK.preemptiveEngineeringRatio
+    return Math.max(0, baseRatio - buffer)
   }
 
   // 173K 档位 (165K - 180K, GitHub Copilot models)
   if (actualLimit >= 165_000) {
-    return isBioSession
+    const baseRatio = isBioSession
       ? preset.oneHundredSeventyK.preemptiveBioRatio
       : preset.oneHundredSeventyK.preemptiveEngineeringRatio
+    return Math.max(0, baseRatio - buffer)
   }
 
   // 128K 档位 (120K - 165K, GitHub Copilot models)
   if (actualLimit >= 120_000) {
-    return isBioSession
+    const baseRatio = isBioSession
       ? preset.oneHundredTwentyEightK.preemptiveBioRatio
       : preset.oneHundredTwentyEightK.preemptiveEngineeringRatio
+    return Math.max(0, baseRatio - buffer)
   }
 
   // 默认档位 (< 120K)
-  return preset.defaultPreemptiveRatio
+  return Math.max(0, preset.defaultPreemptiveRatio - buffer)
 }

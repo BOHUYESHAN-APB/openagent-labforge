@@ -1,6 +1,6 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { OhMyOpenCodeConfig } from "../config"
-import { existsSync, mkdirSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { log } from "../shared/logger"
 import { createSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
@@ -147,6 +147,31 @@ function getCompressionStatePath(directory: string, sessionID: string): string {
   return join(directory, ".opencode", "openagent-labforge", "runtime", sessionID, "context-pressure.json")
 }
 
+type CompressionHistoryEntry = {
+  level: number
+  carried_tokens: number
+  timestamp: string
+  action: "micro-prune" | "checkpoint" | "preemptive"
+  removed_tokens: number
+  compression_ratio: number
+}
+
+type CompressionState = {
+  session_id: string
+  provider_id: string
+  model_id: string
+  carried_tokens: number
+  cache_read_tokens: number
+  context_limit: number
+  usage_ratio: number
+  level: number
+  removed_tokens: number
+  removed_messages: number
+  compacted_tool_outputs: number
+  updated_at: string
+  history?: CompressionHistoryEntry[]
+}
+
 function writeLocalContextCapsule(args: {
   directory: string
   sessionID: string
@@ -193,7 +218,45 @@ function writeCompressionState(args: {
 }): void {
   const { directory, sessionID, cached, limit, totalInputTokens, level, stats } = args
   const path = getCompressionStatePath(directory, sessionID)
-  const payload = {
+
+  // Read existing state to preserve history
+  let existingState: CompressionState | undefined
+  try {
+    if (existsSync(path)) {
+      const content = readFileSync(path, "utf-8")
+      existingState = JSON.parse(content) as CompressionState
+    }
+  } catch {
+    // Ignore read errors
+  }
+
+  const removedTokens = stats?.removedTokens ?? 0
+  const compressionRatio = totalInputTokens > 0 ? removedTokens / totalInputTokens : 0
+
+  // Determine action type
+  let action: "micro-prune" | "checkpoint" | "preemptive" = "micro-prune"
+  if (level >= 2) {
+    action = "checkpoint"
+  }
+
+  // Create new history entry
+  const newEntry: CompressionHistoryEntry = {
+    level,
+    carried_tokens: totalInputTokens,
+    timestamp: new Date().toISOString(),
+    action,
+    removed_tokens: removedTokens,
+    compression_ratio: Number(compressionRatio.toFixed(4)),
+  }
+
+  // Preserve existing history and append new entry
+  const history = existingState?.history ?? []
+  history.push(newEntry)
+
+  // Keep only last 50 entries
+  const trimmedHistory = history.slice(-50)
+
+  const payload: CompressionState = {
     session_id: sessionID,
     provider_id: cached.providerID,
     model_id: cached.modelID ?? "",
@@ -206,6 +269,7 @@ function writeCompressionState(args: {
     removed_messages: stats?.removedMessages ?? 0,
     compacted_tool_outputs: stats?.compactedToolOutputs ?? 0,
     updated_at: new Date().toISOString(),
+    history: trimmedHistory,
   }
 
   try {
@@ -305,7 +369,7 @@ function looksLikeCompressionNotice(text: string): boolean {
     normalized.includes("Compression guard L")
 }
 
-function compactToolPartOutput(part: Record<string, unknown>): number {
+function compactToolPartOutput(part: Record<string, unknown>, threshold: number): number {
   const state = typeof part["state"] === "object" && part["state"] !== null
     ? (part["state"] as Record<string, unknown>)
     : null
@@ -313,15 +377,20 @@ function compactToolPartOutput(part: Record<string, unknown>): number {
   if (state["status"] !== "completed") return 0
   if (typeof state["output"] !== "string") return 0
   const output = state["output"] as string
-  if (output.length < 1000) return 0
+  if (output.length < threshold) return 0
 
   const removed = estimateTokensFromText(output)
   state["output"] = "[Labforge compacted stale tool output]"
   return removed
 }
 
-function injectCompressionDirective(messages: MessageWithParts[], sessionID: string, level: number): void {
-  if (level < 2) return
+function injectCompressionDirective(
+  messages: MessageWithParts[],
+  sessionID: string,
+  level: number,
+  ratio?: number
+): void {
+  if (level < 1) return
 
   let lastUserMessageIndex = -1
   for (let index = messages.length - 1; index >= 0; index--) {
@@ -337,7 +406,7 @@ function injectCompressionDirective(messages: MessageWithParts[], sessionID: str
   if (alreadyInjected) return
 
   const profile = resolveCompressionProfile(messages)
-  const directiveText = buildCompressionDirectiveText({ level, profile })
+  const directiveText = buildCompressionDirectiveText({ level, profile, ratio })
 
   const syntheticPart = {
     id: `synthetic_labforge_compress_${sessionID}`,
@@ -397,11 +466,13 @@ function applyMicroPrune(
   contextLimit: number,
   profile: ContextGuardProfile,
   overrides?: ContextGuardThresholdOverrides,
+  microPruneThreshold?: number,
 ): CompressionTransformStats {
   if (level < 1) {
     return { removedTokens: 0, removedMessages: 0, compactedToolOutputs: 0 }
   }
 
+  const threshold = microPruneThreshold ?? 500
   const keepRecentMessages = getKeepRecentMessages(level, contextLimit, profile, overrides)
   const preserveStart = Math.max(0, messages.length - keepRecentMessages)
   const result: MessageWithParts[] = []
@@ -428,7 +499,7 @@ function applyMicroPrune(
     }
 
     for (const part of message.parts) {
-      const removed = compactToolPartOutput(part)
+      const removed = compactToolPartOutput(part, threshold)
       if (removed > 0) {
         removedTokens += removed
         compactedToolOutputs += 1
@@ -507,15 +578,18 @@ export function createContextWindowMonitorHook(
       const stats = lastTransformStats.get(sessionID)
       const checkpoint =
         noticeLevel >= 2
-          ? writeAutoCompressionCheckpoint({
-              directory: ctx.directory,
-              sessionID,
-              level: noticeLevel,
-              profile,
-              totalInputTokens,
-              cacheReadTokens: lastTokens.cache?.read ?? 0,
-              contextLimit: actualLimit,
-            })
+          ? writeAutoCompressionCheckpoint(
+              {
+                directory: ctx.directory,
+                sessionID,
+                level: noticeLevel,
+                profile,
+                totalInputTokens,
+                cacheReadTokens: lastTokens.cache?.read ?? 0,
+                contextLimit: actualLimit,
+              },
+              pluginConfig?.experimental?.checkpoint_retention,
+            )
           : undefined
       writeCompressionState({
         directory: ctx.directory,
@@ -657,8 +731,9 @@ export function createContextWindowMonitorHook(
       return
     }
 
+    const usageRatio = totalInputTokens / actualLimit
     const level = getContextGuardNoticeLevel({
-      ratio: totalInputTokens / actualLimit,
+      ratio: usageRatio,
       totalTokens: totalInputTokens,
       contextLimit: actualLimit,
       profile: contextGuardProfile,
@@ -666,21 +741,31 @@ export function createContextWindowMonitorHook(
     })
     if (level < 1) return
 
-    const stats = applyMicroPrune(messages, level, actualLimit, contextGuardProfile, contextGuardThresholdOverrides)
+    const stats = applyMicroPrune(
+      messages,
+      level,
+      actualLimit,
+      contextGuardProfile,
+      contextGuardThresholdOverrides,
+      pluginConfig?.experimental?.context_compression?.micro_prune_threshold,
+    )
     lastTransformStats.set(sessionID, stats)
     const profile = resolveCompressionProfile(messages)
     sessionProfiles.set(sessionID, profile)
-    injectCompressionDirective(messages, sessionID, level)
+    injectCompressionDirective(messages, sessionID, level, usageRatio)
     const checkpoint = level >= 2
-      ? writeAutoCompressionCheckpoint({
-        directory: ctx.directory,
-        sessionID,
-        level,
-        profile,
-        totalInputTokens,
-        cacheReadTokens: cached.tokens.cache?.read ?? 0,
-        contextLimit: actualLimit,
-      })
+      ? writeAutoCompressionCheckpoint(
+          {
+            directory: ctx.directory,
+            sessionID,
+            level,
+            profile,
+            totalInputTokens,
+            cacheReadTokens: cached.tokens.cache?.read ?? 0,
+            contextLimit: actualLimit,
+          },
+          pluginConfig?.experimental?.checkpoint_retention,
+        )
       : undefined
     writeCompressionState({
       directory: ctx.directory,

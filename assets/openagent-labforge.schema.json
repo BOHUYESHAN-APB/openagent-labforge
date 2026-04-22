@@ -5205,6 +5205,17 @@
             "enforce"
           ]
         },
+        "model_context_limits": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
         "swarm": {
           "type": "object",
           "properties": {
@@ -5255,6 +5266,66 @@
               "items": {
                 "type": "string"
               }
+            }
+          },
+          "additionalProperties": false
+        },
+        "context_compression": {
+          "type": "object",
+          "properties": {
+            "micro_prune_threshold": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 5000
+            },
+            "enable_duplicate_detection": {
+              "type": "boolean"
+            },
+            "enable_error_stack_compression": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "checkpoint_retention": {
+          "type": "object",
+          "properties": {
+            "global_keep_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "per_session_keep_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 50
+            },
+            "session_expiry_days": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 365
+            },
+            "auto_cleanup": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "preemptive_compaction_config": {
+          "type": "object",
+          "properties": {
+            "buffer_ratio": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 0.2
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 30000,
+              "maximum": 300000
+            },
+            "retry_on_failure": {
+              "type": "boolean"
             }
           },
           "additionalProperties": false

@@ -1,4 +1,6 @@
 export const BUILTIN_COMMAND_ALIAS_MAP = {
+  compress: "ol-compress",
+  "compression-stats": "ol-compression-stats",
   "compress-context": "ol-compress-context",
   checkpoint: "ol-checkpoint",
   "checkpoint-resume": "ol-checkpoint-resume",
