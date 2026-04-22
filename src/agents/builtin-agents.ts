@@ -41,6 +41,11 @@ import { createMetisAgent, metisPromptMetadata } from "./metis"
 import { createAtlasAgent, atlasPromptMetadata } from "./atlas"
 import { createMomusAgent, momusPromptMetadata } from "./momus"
 import { createHephaestusAgent } from "./hephaestus"
+import { createSwarmCoordinatorAgent, SWARM_COORDINATOR_PROMPT_METADATA } from "./swarm-coordinator"
+import { createSwarmWorkerAgent, SWARM_WORKER_PROMPT_METADATA } from "./swarm-worker"
+import { createSwarmSpecialistAgent, SWARM_SPECIALIST_PROMPT_METADATA } from "./swarm-specialist"
+import { createPrometheusAgent, PROMETHEUS_AGENT_PROMPT_METADATA } from "./prometheus-agent"
+import { createExecutorAgent, EXECUTOR_PROMPT_METADATA } from "./executor"
 import type { AvailableCategory } from "./dynamic-agent-prompt-builder"
 import {
   fetchAvailableModels,
@@ -85,6 +90,11 @@ const agentSources: Record<BuiltinAgentName, AgentSource> = {
   // Note: Atlas is handled specially in createBuiltinAgents()
   // because it needs OrchestratorContext, not just a model string
   atlas: createAtlasAgent as AgentFactory,
+  "swarm-coordinator": createSwarmCoordinatorAgent,
+  "swarm-worker": createSwarmWorkerAgent,
+  "swarm-specialist": createSwarmSpecialistAgent,
+  prometheus: createPrometheusAgent,
+  executor: createExecutorAgent,
 }
 
 /**
@@ -114,6 +124,11 @@ const agentMetadata: Partial<Record<BuiltinAgentName, AgentPromptMetadata>> = {
   momus: momusPromptMetadata,
   atlas: atlasPromptMetadata,
   wase: WASE_PROMPT_METADATA,
+  "swarm-coordinator": SWARM_COORDINATOR_PROMPT_METADATA,
+  "swarm-worker": SWARM_WORKER_PROMPT_METADATA,
+  "swarm-specialist": SWARM_SPECIALIST_PROMPT_METADATA,
+  prometheus: PROMETHEUS_AGENT_PROMPT_METADATA,
+  executor: EXECUTOR_PROMPT_METADATA,
 }
 
 export async function createBuiltinAgents(

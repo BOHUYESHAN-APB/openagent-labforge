@@ -28,7 +28,7 @@ const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
 const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
 const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard"
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" | "swarm"
 type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
@@ -335,6 +335,42 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           args.onConfirm(option.value === "true")
         },
+      })
+    )
+  }
+
+  const openStringDialog = (args: {
+    title: string
+    current: string | undefined
+    placeholder: string
+    onConfirm: (value: string) => void
+    onBack: () => void
+  }) => {
+    api.ui.dialog.replace(() =>
+      api.ui.DialogPrompt({
+        title: args.title,
+        placeholder: args.placeholder,
+        value: args.current || "",
+        onConfirm: args.onConfirm,
+        onCancel: args.onBack,
+      })
+    )
+  }
+
+  const openNumberDialog = (args: {
+    title: string
+    current: number | undefined
+    placeholder: string
+    onConfirm: (value: string) => void
+    onBack: () => void
+  }) => {
+    api.ui.dialog.replace(() =>
+      api.ui.DialogPrompt({
+        title: args.title,
+        placeholder: args.placeholder,
+        value: args.current !== undefined ? String(args.current) : "",
+        onConfirm: args.onConfirm,
+        onCancel: args.onBack,
       })
     )
   }
@@ -1848,6 +1884,267 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
+  const openSwarm = () => {
+    const config = effectiveRecord()
+    const swarmEnabled = getNestedBoolean(config, ["experimental", "swarm", "enabled"])
+    const maxWorkers = getNestedNumber(config, ["experimental", "swarm", "max_workers"])
+    const coordinatorModel = getNestedString(config, ["experimental", "swarm", "coordinator_model"])
+    const workerModel = getNestedString(config, ["experimental", "swarm", "worker_model"])
+    const specialistModel = getNestedString(config, ["experimental", "swarm", "specialist_model"])
+    const heartbeatInterval = getNestedNumber(config, ["experimental", "swarm", "heartbeat_interval_ms"])
+    const heartbeatTimeout = getNestedNumber(config, ["experimental", "swarm", "heartbeat_timeout_ms"])
+    const autoCleanup = getNestedBoolean(config, ["experimental", "swarm", "auto_cleanup"])
+
+    api.ui.dialog.setSize("xlarge")
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Swarm Settings", "蜂群设置"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Swarm State", "当前蜂群状态"),
+            `${text("Enabled", "启用")}: ${booleanLabel(swarmEnabled)} • ${text("Max workers", "最大工作者")}: ${numberLabel(maxWorkers, "5")}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Swarm Enabled", "启用蜂群"),
+            value: "enabled",
+            category: text("Basic", "基础设置"),
+            description: statusLabel(swarmEnabled),
+          },
+          {
+            title: text("Max Workers", "最大工作者数"),
+            value: "max_workers",
+            category: text("Basic", "基础设置"),
+            description: numberValueLabel(maxWorkers, "5 (default)", "5（默认）"),
+          },
+          {
+            title: text("Coordinator Model", "协调器模型"),
+            value: "coordinator_model",
+            category: text("Models", "模型配置"),
+            description: stringValueLabel(coordinatorModel, "Auto (Opus)", "自动（Opus）"),
+          },
+          {
+            title: text("Worker Model", "工作者模型"),
+            value: "worker_model",
+            category: text("Models", "模型配置"),
+            description: stringValueLabel(workerModel, "Auto (Haiku)", "自动（Haiku）"),
+          },
+          {
+            title: text("Specialist Model", "专家模型"),
+            value: "specialist_model",
+            category: text("Models", "模型配置"),
+            description: stringValueLabel(specialistModel, "Auto (Sonnet)", "自动（Sonnet）"),
+          },
+          {
+            title: text("Heartbeat Interval", "心跳间隔"),
+            value: "heartbeat_interval",
+            category: text("Advanced", "高级设置"),
+            description: `${heartbeatInterval || 10000}ms`,
+          },
+          {
+            title: text("Heartbeat Timeout", "心跳超时"),
+            value: "heartbeat_timeout",
+            category: text("Advanced", "高级设置"),
+            description: `${heartbeatTimeout || 30000}ms`,
+          },
+          {
+            title: text("Auto Cleanup", "自动清理"),
+            value: "auto_cleanup",
+            category: text("Advanced", "高级设置"),
+            description: statusLabel(autoCleanup ?? true),
+          },
+          {
+            title: text("← Back", "← 返回"),
+            value: "back",
+            category: "",
+            description: "",
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("runtime")
+            return
+          }
+          if (option.value === "enabled") {
+            openBooleanDialog({
+              title: text("Swarm Enabled", "启用蜂群"),
+              current: swarmEnabled,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openSwarm,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "swarm", "enabled"], value),
+                  text("Updated swarm enabled", "已更新蜂群启用状态"),
+                  openSwarm,
+                ),
+            })
+            return
+          }
+          if (option.value === "max_workers") {
+            openNumberDialog({
+              title: text("Max Workers", "最大工作者数"),
+              current: maxWorkers,
+              placeholder: "1-20",
+              onBack: openSwarm,
+              onConfirm: (value) => {
+                const num = parseInt(value)
+                if (isNaN(num) || num < 1 || num > 20) {
+                  api.ui.toast({
+                    title: text("Invalid value", "无效值"),
+                    message: text("Must be between 1 and 20", "必须在 1 到 20 之间"),
+                    variant: "error",
+                  })
+                  openSwarm()
+                  return
+                }
+                save(
+                  (root) => setNestedValue(root, ["experimental", "swarm", "max_workers"], num),
+                  text("Updated max workers", "已更新最大工作者数"),
+                  openSwarm,
+                )
+              },
+            })
+            return
+          }
+          if (option.value === "coordinator_model" || option.value === "worker_model" || option.value === "specialist_model") {
+            const roleKey = option.value
+            const currentValue = getNestedString(config, ["experimental", "swarm", roleKey])
+
+            // 读取用户配置的 agents 和 categories
+            const configuredModels: Array<{ title: string; value: string; description: string }> = []
+
+            // 从 agents 配置中提取模型
+            const agents = config.agents as Record<string, { model?: string }> | undefined
+            if (agents) {
+              const seenModels = new Set<string>()
+              for (const [agentName, agentConfig] of Object.entries(agents)) {
+                if (agentConfig.model && !seenModels.has(agentConfig.model)) {
+                  seenModels.add(agentConfig.model)
+                  configuredModels.push({
+                    title: agentConfig.model,
+                    value: agentConfig.model,
+                    description: `Used by ${agentName}`,
+                  })
+                }
+              }
+            }
+
+            // 从 categories 配置中提取模型
+            const categories = config.categories as Record<string, { model?: string }> | undefined
+            if (categories) {
+              const seenModels = new Set(configuredModels.map(m => m.value))
+              for (const [categoryName, categoryConfig] of Object.entries(categories)) {
+                if (categoryConfig.model && !seenModels.has(categoryConfig.model)) {
+                  seenModels.add(categoryConfig.model)
+                  configuredModels.push({
+                    title: categoryConfig.model,
+                    value: categoryConfig.model,
+                    description: `Used by category ${categoryName}`,
+                  })
+                }
+              }
+            }
+
+            // 添加常用模型作为后备选项
+            const commonModels = [
+              { title: "anthropic/claude-opus-4-6", value: "anthropic/claude-opus-4-6", description: "High-tier, expensive" },
+              { title: "anthropic/claude-sonnet-4-6", value: "anthropic/claude-sonnet-4-6", description: "Mid-tier, balanced" },
+              { title: "anthropic/claude-haiku-4-5", value: "anthropic/claude-haiku-4-5", description: "Low-tier, cheap" },
+              { title: "openai/gpt-5.4", value: "openai/gpt-5.4", description: "High-tier" },
+              { title: "openai/gpt-4o", value: "openai/gpt-4o", description: "Mid-tier" },
+              { title: "google/gemini-3.1-pro", value: "google/gemini-3.1-pro", description: "1M context" },
+            ]
+
+            const seenModels = new Set(configuredModels.map(m => m.value))
+            for (const model of commonModels) {
+              if (!seenModels.has(model.value)) {
+                configuredModels.push(model)
+              }
+            }
+
+            openEnumDialog({
+              title: text(
+                roleKey === "coordinator_model" ? "Coordinator Model" : roleKey === "worker_model" ? "Worker Model" : "Specialist Model",
+                roleKey === "coordinator_model" ? "协调器模型" : roleKey === "worker_model" ? "工作者模型" : "专家模型"
+              ),
+              current: currentValue || "auto",
+              choices: [
+                {
+                  title: text("Auto (Recommended)", "自动（推荐）"),
+                  value: "auto",
+                  description: text("Use default fallback chain", "使用默认回退链"),
+                },
+                ...configuredModels.map(m => ({
+                  title: m.title,
+                  value: m.value,
+                  description: m.description,
+                })),
+              ],
+              onBack: openSwarm,
+              onConfirm: (value) => {
+                save(
+                  (root) => setNestedValue(root, ["experimental", "swarm", roleKey], value === "auto" ? undefined : value),
+                  text("Updated model", "已更新模型"),
+                  openSwarm,
+                )
+              },
+            })
+            return
+          }
+          if (option.value === "heartbeat_interval" || option.value === "heartbeat_timeout") {
+            const key = option.value === "heartbeat_interval" ? "heartbeat_interval_ms" : "heartbeat_timeout_ms"
+            const currentValue = getNestedNumber(config, ["experimental", "swarm", key])
+            openNumberDialog({
+              title: text(
+                option.value === "heartbeat_interval" ? "Heartbeat Interval (ms)" : "Heartbeat Timeout (ms)",
+                option.value === "heartbeat_interval" ? "心跳间隔（毫秒）" : "心跳超时（毫秒）"
+              ),
+              current: currentValue,
+              placeholder: option.value === "heartbeat_interval" ? "10000" : "30000",
+              onBack: openSwarm,
+              onConfirm: (value) => {
+                const num = parseInt(value)
+                if (isNaN(num) || num < 1000) {
+                  api.ui.toast({
+                    title: text("Invalid value", "无效值"),
+                    message: text("Must be at least 1000ms", "必须至少 1000 毫秒"),
+                    variant: "error",
+                  })
+                  openSwarm()
+                  return
+                }
+                save(
+                  (root) => setNestedValue(root, ["experimental", "swarm", key], num),
+                  text("Updated setting", "已更新设置"),
+                  openSwarm,
+                )
+              },
+            })
+            return
+          }
+          if (option.value === "auto_cleanup") {
+            openBooleanDialog({
+              title: text("Auto Cleanup", "自动清理"),
+              current: autoCleanup ?? true,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openSwarm,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "swarm", "auto_cleanup"], value),
+                  text("Updated auto cleanup", "已更新自动清理"),
+                  openSwarm,
+                ),
+            })
+            return
+          }
+        },
+      })
+    )
+  }
+
   const openRoot = (entry: SettingsEntry = "root") => {
     if (entry === "general") {
       openGeneral()
@@ -1869,6 +2166,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       openContextGuard()
       return
     }
+    if (entry === "swarm") {
+      openSwarm()
+      return
+    }
 
     const config = effective()
     const configRecord = config as unknown as Record<string, unknown>
@@ -1877,6 +2178,8 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"])
     const preemptiveCompaction = getNestedBoolean(configRecord, ["experimental", "preemptive_compaction"])
     const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
+    const swarmEnabled = getNestedBoolean(configRecord, ["experimental", "swarm", "enabled"])
+    const swarmMaxWorkers = getNestedNumber(configRecord, ["experimental", "swarm", "max_workers"])
 
     api.ui.dialog.setSize("xlarge")
     api.ui.dialog.replace(() =>
@@ -1927,6 +2230,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             category: text("Pages", "页面"),
             description: `${text("Image bus", "图片总线")}: ${booleanLabel(imageBusEnabled)} • ${text("Routing and provider settings", "路由与通道配置")}`,
           },
+          {
+            title: text("Swarm Settings", "蜂群设置"),
+            value: "swarm",
+            category: text("Pages", "页面"),
+            description: `${text("Swarm", "蜂群")}: ${booleanLabel(swarmEnabled)} • ${text("Max workers", "最大工作者")}: ${numberLabel(swarmMaxWorkers, "5")}`,
+          },
         ],
         onSelect: (option) => {
           if (option.value === "scope") {
@@ -1951,6 +2260,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "context-guard") {
             openContextGuard()
+            return
+          }
+          if (option.value === "swarm") {
+            openSwarm()
             return
           }
           openImageBus()

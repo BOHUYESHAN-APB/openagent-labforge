@@ -48,6 +48,31 @@ export const ExperimentalConfigSchema = z.object({
   strict_user_model_priority: z.boolean().optional(),
   /** Semantic mode hint injection policy for keyword detector: off | suggest | enforce */
   semantic_mode_hint: z.enum(["off", "suggest", "enforce"]).optional(),
+  /** Swarm agent configuration */
+  swarm: z.object({
+    /** Enable swarm mode (default: false) */
+    enabled: z.boolean().optional(),
+    /** Maximum number of concurrent workers (default: 5, min: 1, max: 20) */
+    max_workers: z.number().int().min(1).max(20).optional(),
+    /** Heartbeat update interval in milliseconds (default: 10000) */
+    heartbeat_interval_ms: z.number().int().min(1000).optional(),
+    /** Heartbeat timeout in milliseconds (default: 30000) */
+    heartbeat_timeout_ms: z.number().int().min(5000).optional(),
+    /** Auto cleanup completed swarms (default: true) */
+    auto_cleanup: z.boolean().optional(),
+    /** Coordinator model (default: uses fallback chain) */
+    coordinator_model: z.string().optional(),
+    /** Coordinator fallback models */
+    coordinator_fallback_models: z.array(z.string()).optional(),
+    /** Worker model (default: uses fallback chain) */
+    worker_model: z.string().optional(),
+    /** Worker fallback models */
+    worker_fallback_models: z.array(z.string()).optional(),
+    /** Specialist model (default: uses fallback chain) */
+    specialist_model: z.string().optional(),
+    /** Specialist fallback models */
+    specialist_fallback_models: z.array(z.string()).optional(),
+  }).optional(),
 })
 
 export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>

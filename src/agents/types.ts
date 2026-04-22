@@ -108,6 +108,8 @@ export type BuiltinAgentName =
   | "sisyphus"
   | "wase"
   | "hephaestus"
+  | "prometheus"
+  | "executor"
   | "oracle"
   | "librarian"
   | "explore"
@@ -128,7 +130,10 @@ export type BuiltinAgentName =
   | "paper-evidence-synthesizer"
   | "metis"
   | "momus"
-  | "atlas";
+  | "atlas"
+  | "swarm-coordinator"
+  | "swarm-worker"
+  | "swarm-specialist";
 
 export type OverridableAgentName = "build" | BuiltinAgentName;
 

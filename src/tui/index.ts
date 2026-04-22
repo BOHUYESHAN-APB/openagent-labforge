@@ -5,6 +5,7 @@ import type { TuiPlugin, TuiPluginModule } from "./types"
 
 const OPEN_SETTINGS_COMMAND = "openagent-labforge.settings.open"
 const OPEN_IMAGE_BUS_COMMAND = "openagent-labforge.settings.image-bus"
+const OPEN_SWARM_COMMAND = "openagent-labforge.settings.swarm"
 
 const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
   const controller = createSettingsController(api, api.state.path.directory)
@@ -29,6 +30,16 @@ const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
         name: "ol-settings-image-bus",
       },
       onSelect: () => controller.openRoot("image-bus"),
+    },
+    {
+      title: "Swarm Settings",
+      value: OPEN_SWARM_COMMAND,
+      description: "Configure swarm agent settings (parallel coordination)",
+      category: "OpenAgent Labforge",
+      slash: {
+        name: "ol-settings-swarm",
+      },
+      onSelect: () => controller.openRoot("swarm"),
     },
   ])
 }

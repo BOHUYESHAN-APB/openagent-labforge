@@ -18,12 +18,36 @@ import {
 import { writeFileAtomically, writeJSONAtomically } from "../shared/write-file-atomically"
 
 const PRESETS = {
-  conservative: { twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 } },
-  "conservative-plus": { twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 } },
-  balanced: { twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 } },
-  "balanced-plus": { twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 } },
-  aggressive: { twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 } },
-  "aggressive-plus": { twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 } },
+  conservative: {
+    twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 },
+    fourHundredK: { keepRecentMessagesL1: 220, keepRecentMessagesL2: 160, keepRecentMessagesL3: 100 },
+    oneMillion: { keepRecentMessagesL1: 550, keepRecentMessagesL2: 400, keepRecentMessagesL3: 250 }
+  },
+  "conservative-plus": {
+    twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 },
+    fourHundredK: { keepRecentMessagesL1: 220, keepRecentMessagesL2: 160, keepRecentMessagesL3: 100 },
+    oneMillion: { keepRecentMessagesL1: 550, keepRecentMessagesL2: 400, keepRecentMessagesL3: 250 }
+  },
+  balanced: {
+    twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 },
+    fourHundredK: { keepRecentMessagesL1: 200, keepRecentMessagesL2: 140, keepRecentMessagesL3: 80 },
+    oneMillion: { keepRecentMessagesL1: 500, keepRecentMessagesL2: 350, keepRecentMessagesL3: 200 }
+  },
+  "balanced-plus": {
+    twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 },
+    fourHundredK: { keepRecentMessagesL1: 200, keepRecentMessagesL2: 140, keepRecentMessagesL3: 80 },
+    oneMillion: { keepRecentMessagesL1: 500, keepRecentMessagesL2: 350, keepRecentMessagesL3: 200 }
+  },
+  aggressive: {
+    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 },
+    fourHundredK: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 70 },
+    oneMillion: { keepRecentMessagesL1: 450, keepRecentMessagesL2: 300, keepRecentMessagesL3: 175 }
+  },
+  "aggressive-plus": {
+    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 },
+    fourHundredK: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 70 },
+    oneMillion: { keepRecentMessagesL1: 450, keepRecentMessagesL2: 300, keepRecentMessagesL3: 175 }
+  },
 }
 
 function applyThresholdOverrides(
@@ -345,8 +369,22 @@ function getKeepRecentMessages(
 ): number {
   const preset = applyThresholdOverrides(PRESETS[profile], overrides)
 
-  // 200K 档位使用配置的保留消息数
-  if (contextLimit >= 180_000 && contextLimit < 350_000) {
+  // 1M 档位使用配置的保留消息数 (>= 600K)
+  if (contextLimit >= 600_000) {
+    if (level >= 3) return preset.oneMillion.keepRecentMessagesL3
+    if (level >= 2) return preset.oneMillion.keepRecentMessagesL2
+    return preset.oneMillion.keepRecentMessagesL1
+  }
+
+  // 400K 档位使用配置的保留消息数 (300K - 600K, 覆盖 256K=262144 和 400K)
+  if (contextLimit >= 300_000 && contextLimit < 600_000) {
+    if (level >= 3) return preset.fourHundredK.keepRecentMessagesL3
+    if (level >= 2) return preset.fourHundredK.keepRecentMessagesL2
+    return preset.fourHundredK.keepRecentMessagesL1
+  }
+
+  // 200K 档位使用配置的保留消息数 (180K - 300K)
+  if (contextLimit >= 180_000 && contextLimit < 300_000) {
     if (level >= 3) return preset.twoHundredK.keepRecentMessagesL3
     if (level >= 2) return preset.twoHundredK.keepRecentMessagesL2
     return preset.twoHundredK.keepRecentMessagesL1

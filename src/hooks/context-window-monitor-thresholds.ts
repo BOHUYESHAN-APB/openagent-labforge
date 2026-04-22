@@ -72,18 +72,28 @@ export function inferContextLimit(providerID: string, modelID: string | undefine
 }
 
 export function getNoticeLevel(ratio: number, totalTokens: number, contextLimit: number): 0 | 1 | 2 | 3 {
-  if (contextLimit >= 900_000) {
+  // 1M 档位 (>= 600K)
+  if (contextLimit >= 600_000) {
     if (totalTokens >= 550_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
     if (totalTokens >= 320_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
     if (totalTokens >= 220_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
     return 0
   }
-  if (contextLimit >= 350_000) {
+  // 400K 档位 (300K - 600K, 覆盖 256K=262144 和 400K)
+  if (contextLimit >= 300_000) {
     if (totalTokens >= 300_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
     if (totalTokens >= 220_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
     if (totalTokens >= 150_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
     return 0
   }
+  // 200K 档位 (180K - 300K)
+  if (contextLimit >= 180_000) {
+    if (totalTokens >= 150_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
+    if (totalTokens >= 130_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
+    if (totalTokens >= 100_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
+    return 0
+  }
+  // 默认档位 (< 180K)
   if (ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
   if (ratio >= LABFORGE_FUSE_THRESHOLD) return 2
   if (ratio >= LABFORGE_NOTICE_THRESHOLD) return 1

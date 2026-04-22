@@ -2,8 +2,8 @@ import { z } from "zod"
 
 /**
  * Agent display mode determines how many agents are visible to the user
- * - minimal: 5-6 agents (default, best UX)
- * - standard: 8 agents (includes hephaestus and bio-pipeline-operator)
+ * - minimal: 4-5 agents (default, best UX)
+ * - standard: 6-7 agents (includes hephaestus and bio-pipeline-operator)
  */
 export const AgentDisplayModeSchema = z.enum(["minimal", "standard"])
 
@@ -13,8 +13,8 @@ export const AgentDisplayModeSchema = z.enum(["minimal", "standard"])
 export const AGENT_DISPLAY_PRESETS = {
   minimal: [
     "sisyphus",      // 主编排器
-    "prometheus",    // 规划师（让用户知道在规划）
-    "orchestrator",  // 执行计划（让用户知道在执行）
+    "prometheus",    // 规划器（统一入口）
+    "executor",      // 执行器（智能路由）
     "wase",          // 通用全自动
     "atlas",         // 轻量执行
     // bio-autopilot 通过领域开关控制
@@ -22,7 +22,8 @@ export const AGENT_DISPLAY_PRESETS = {
   standard: [
     "sisyphus",
     "prometheus",
-    "orchestrator",
+    "executor",
+    "orchestrator",         // 编排器（高级用户）
     "wase",
     "atlas",
     "hephaestus",           // 深度执行

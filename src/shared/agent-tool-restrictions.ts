@@ -73,6 +73,29 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
   wase: {
     call_omo_agent: false,
   },
+
+  "swarm-coordinator": {
+    write: false,
+    edit: false,
+    bash: false,
+    call_omo_agent: false,
+  },
+
+  "swarm-worker": {
+    task: false,
+    question: false,
+    call_omo_agent: false,
+    skill: false,
+  },
+
+  "swarm-specialist": {
+    write: false,
+    edit: false,
+    bash: false,
+    task: false,
+    question: false,
+    call_omo_agent: false,
+  },
 }
 
 export function getAgentToolRestrictions(agentName: string): Record<string, boolean> {

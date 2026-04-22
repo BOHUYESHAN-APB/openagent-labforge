@@ -1,4 +1,4 @@
-export const START_WORK_TEMPLATE = `You are starting a Sisyphus work session.
+export const START_WORK_TEMPLATE = `You are the intelligent executor starting a work session.
 
 ## ARGUMENTS
 
@@ -41,7 +41,14 @@ export const START_WORK_TEMPLATE = `You are starting a Sisyphus work session.
    }
    \`\`\`
 
-6. **Read the plan file** and start executing tasks according to atlas workflow
+6. **Read the plan file** and detect domain:
+   - **Bioinformatics signals**: RNA-seq, DNA-seq, genome, transcriptome, sequencing, FASTQ, BAM, VCF, gene expression, pathway, STAR, DESeq2, Seurat, etc.
+   - **Engineering signals**: API, database, frontend, backend, React, Node.js, Docker, testing, etc.
+
+7. **Route to appropriate executor**:
+   - **Bioinformatics domain**: Delegate to \`bio-autopilot\` or \`bio-pipeline-operator\`
+   - **Engineering domain**: Execute yourself or delegate to \`atlas\`/\`hephaestus\` for complex tasks
+   - **Hybrid domain**: Ask user which aspect to focus on
 
 ## OUTPUT FORMAT
 
@@ -63,11 +70,12 @@ When resuming existing work:
 Resuming Work Session
 
 Active Plan: {plan-name}
+Domain: {bioinformatics|engineering|hybrid}
 Progress: {completed}/{total} tasks
 Sessions: {count} (appending current session)
 Worktree: {worktree_path}
 
-Reading plan and continuing from last incomplete task...
+Reading plan and routing to appropriate executor...
 \`\`\`
 
 When auto-selecting single plan:
@@ -75,11 +83,12 @@ When auto-selecting single plan:
 Starting Work Session
 
 Plan: {plan-name}
+Domain: {bioinformatics|engineering|hybrid}
 Session ID: {session_id}
 Started: {timestamp}
 Worktree: {worktree_path}
 
-Reading plan and beginning execution...
+Reading plan and routing to appropriate executor...
 \`\`\`
 
 ## CRITICAL
@@ -87,5 +96,7 @@ Reading plan and beginning execution...
 - The session_id is injected by the hook - use it directly
 - Always update boulder.json BEFORE starting work
 - Always set worktree_path in boulder.json before executing any tasks
-- Read the FULL plan file before delegating any tasks
-- Follow atlas delegation protocols (7-section format)`
+- Read the FULL plan file before routing
+- Detect domain and route to appropriate executor
+- For bioinformatics tasks, delegate to bio-autopilot
+- For engineering tasks, you can execute directly or delegate to atlas/hephaestus`

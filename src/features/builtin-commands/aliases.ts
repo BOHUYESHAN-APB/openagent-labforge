@@ -14,6 +14,7 @@ export const BUILTIN_COMMAND_ALIAS_MAP = {
   "workflow-reset": "ol-workflow-reset",
   "focus-chat": "ol-focus-chat",
   handoff: "ol-handoff",
+  "swarm-start": "ol-swarm-start",
   "ol-settings": "ol-settings",
   "ol-settings-image-bus": "ol-settings-image-bus",
 } as const

@@ -322,20 +322,23 @@ export function getContextGuardNoticeLevel(args: {
   const { ratio, totalTokens, contextLimit, profile, overrides } = args
   const preset = applyThresholdOverrides(PRESETS[profile], overrides)
 
-  if (contextLimit >= 900_000) {
+  // 1M 档位 (>= 600K)
+  if (contextLimit >= 600_000) {
     if (totalTokens >= preset.oneMillion.l3Tokens || ratio >= preset.severeRatio) return 3
     if (totalTokens >= preset.oneMillion.l2Tokens || ratio >= preset.fuseRatio) return 2
     if (totalTokens >= preset.oneMillion.l1Tokens || ratio >= preset.noticeRatio) return 1
     return 0
   }
 
-  if (contextLimit >= 350_000) {
+  // 400K 档位 (300K - 600K, 覆盖 256K=262144 和 400K)
+  if (contextLimit >= 300_000) {
     if (totalTokens >= preset.fourHundredK.l3Tokens || ratio >= preset.severeRatio) return 3
     if (totalTokens >= preset.fourHundredK.l2Tokens || ratio >= preset.fuseRatio) return 2
     if (totalTokens >= preset.fourHundredK.l1Tokens || ratio >= preset.noticeRatio) return 1
     return 0
   }
 
+  // 200K 档位 (180K - 300K)
   if (contextLimit >= 180_000) {
     if (totalTokens >= preset.twoHundredK.l3Tokens || ratio >= preset.severeRatio) return 3
     if (totalTokens >= preset.twoHundredK.l2Tokens || ratio >= preset.fuseRatio) return 2
@@ -343,6 +346,7 @@ export function getContextGuardNoticeLevel(args: {
     return 0
   }
 
+  // 默认档位 (< 180K)
   if (ratio >= preset.severeRatio) return 3
   if (ratio >= preset.fuseRatio) return 2
   if (ratio >= preset.noticeRatio) return 1
@@ -358,23 +362,27 @@ export function getContextGuardPreemptiveThreshold(args: {
   const { actualLimit, isBioSession, profile, overrides } = args
   const preset = applyThresholdOverrides(PRESETS[profile], overrides)
 
-  if (actualLimit >= 900_000) {
+  // 1M 档位 (>= 600K)
+  if (actualLimit >= 600_000) {
     return (isBioSession
       ? preset.oneMillion.preemptiveBioTokens
       : preset.oneMillion.preemptiveEngineeringTokens) / actualLimit
   }
 
-  if (actualLimit >= 350_000) {
+  // 400K 档位 (300K - 600K, 覆盖 256K=262144 和 400K)
+  if (actualLimit >= 300_000) {
     return isBioSession
       ? preset.fourHundredK.preemptiveBioRatio
       : preset.fourHundredK.preemptiveEngineeringRatio
   }
 
+  // 200K 档位 (180K - 300K)
   if (actualLimit >= 180_000) {
     return isBioSession
       ? preset.twoHundredK.preemptiveBioRatio
       : preset.twoHundredK.preemptiveEngineeringRatio
   }
 
+  // 默认档位 (< 180K)
   return preset.defaultPreemptiveRatio
 }

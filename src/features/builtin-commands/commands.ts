@@ -15,23 +15,27 @@ import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
+import { SWARM_START_TEMPLATE } from "./templates/swarm-start"
 
 export interface LoadBuiltinCommandsOptions {
   useRegisteredAgents?: boolean
+  swarmEnabled?: boolean
 }
 
-function resolveStartWorkAgent(options?: LoadBuiltinCommandsOptions): "atlas" | "sisyphus" {
+function resolveStartWorkAgent(options?: LoadBuiltinCommandsOptions): "executor" | "atlas" | "sisyphus" {
   if (options?.useRegisteredAgents) {
+    // Prefer executor for intelligent domain routing
+    if (isAgentRegistered("executor")) return "executor"
     return isAgentRegistered("atlas") ? "atlas" : "sisyphus"
   }
 
-  return "atlas"
+  return "executor"
 }
 
 function createBuiltinCommandDefinitions(
   options?: LoadBuiltinCommandsOptions,
 ): Record<string, Omit<CommandDefinition, "name">> {
-  return {
+  const commands: Record<string, Omit<CommandDefinition, "name">> = {
   "ol-compress-context": {
     description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",
     template: `<command-instruction>
@@ -128,7 +132,7 @@ ${REFACTOR_TEMPLATE}
     argumentHint: "<refactoring-target> [--scope=<file|module|project>] [--strategy=<safe|aggressive>]",
   },
   "ol-start-work": {
-    description: "(builtin) Start Sisyphus work session from Prometheus plan",
+    description: "(builtin) Start work session with intelligent domain routing (executor)",
     agent: resolveStartWorkAgent(options),
     template: `<command-instruction>
 ${START_WORK_TEMPLATE}
@@ -195,6 +199,29 @@ $ARGUMENTS
     argumentHint: "[goal]",
   },
   }
+
+  // Only include swarm-start if swarm is enabled
+  if (options?.swarmEnabled !== false) {
+    commands["ol-swarm-start"] = {
+      description: "(builtin) Start a swarm of parallel agents with configurable workers and models",
+      agent: "swarm-coordinator",
+      template: `<command-instruction>
+${SWARM_START_TEMPLATE}
+</command-instruction>
+
+<session-context>
+Session ID: $SESSION_ID
+Timestamp: $TIMESTAMP
+</session-context>
+
+<user-request>
+$ARGUMENTS
+</user-request>`,
+      argumentHint: '"<task-description>" [--workers=N] [--strategy=batch|dynamic]',
+    }
+  }
+
+  return commands
 }
 
 export function loadBuiltinCommands(
