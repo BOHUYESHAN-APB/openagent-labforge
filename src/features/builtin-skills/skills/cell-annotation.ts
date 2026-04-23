@@ -7,7 +7,7 @@ export const cellAnnotationSkill: BuiltinSkill = {
     category: "research/single-cell-annotation",
     domain: "single-cell",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Cell Annotation
 

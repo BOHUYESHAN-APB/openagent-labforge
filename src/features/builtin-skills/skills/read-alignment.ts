@@ -10,7 +10,7 @@ export const readAlignmentSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "read-alignment",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Read Alignment
 

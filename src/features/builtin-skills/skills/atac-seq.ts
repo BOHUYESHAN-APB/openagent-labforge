@@ -7,7 +7,7 @@ export const atacSeqSkill: BuiltinSkill = {
     category: "research/atac-seq",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# ATAC-seq
 

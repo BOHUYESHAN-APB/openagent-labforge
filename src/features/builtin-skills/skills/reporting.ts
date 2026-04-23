@@ -10,7 +10,7 @@ export const reportingSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "reporting",
   },
-  agent: "scientific-writer",
+  // agent: "scientific-writer",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(Rscript:*)", "Bash(*)"],
   template: `# Reporting
 

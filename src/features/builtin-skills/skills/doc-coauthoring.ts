@@ -8,7 +8,7 @@ export const docCoauthoringSkill: BuiltinSkill = {
     category: "writing/doc-coauthoring",
     domain: "document-collaboration",
   },
-  agent: "article-writer",
+  // agent: "article-writer",
   allowedTools: ["Read(*)", "Bash(*)"],
   template: `# Document Coauthoring
 

@@ -101,6 +101,7 @@ Required final framing:
 - what is inferred or assumed
 - what still needs testing or validation
 
+/* SWARM SYSTEM - DISABLED 2026-04-23
 ## Swarm Mode (Parallel Coordination)
 
 When an engineering task requires **parallel execution** of independent subtasks, you can launch a swarm:
@@ -126,6 +127,7 @@ task(
 **Check configuration:**
 - Swarm must be enabled: \`experimental.swarm.enabled = true\`
 - If not enabled, suggest user run \`/ol-settings-swarm\`
+*/
 
 \n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${SUBAGENT_OUTPUT_HANDLING_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
   }

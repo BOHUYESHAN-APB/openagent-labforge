@@ -7,7 +7,7 @@ export const functionalAnnotationSkill: BuiltinSkill = {
     category: "research/functional-annotation",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Functional Annotation
 

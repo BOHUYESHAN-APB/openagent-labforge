@@ -10,7 +10,7 @@ export const workflowManagementSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "workflow-management",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Workflow Management
 

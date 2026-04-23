@@ -7,7 +7,7 @@ export const blastSearchSkill: BuiltinSkill = {
     category: "research/sequence-homology-search",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)", "Bash(*)"],
   template: `# BLAST Search
 

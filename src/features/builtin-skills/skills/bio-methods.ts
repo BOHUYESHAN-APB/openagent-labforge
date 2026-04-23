@@ -7,7 +7,7 @@ export const bioMethodsSkill: BuiltinSkill = {
     category: "research/bioinformatics-methodology",
     domain: "bioinformatics",
   },
-  agent: "bio-methodologist",
+  // agent: "bio-methodologist",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)"],
   template: `# Role: Bioinformatics Method Designer
 

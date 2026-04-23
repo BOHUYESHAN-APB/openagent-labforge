@@ -53,50 +53,110 @@ function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number 
 }
 
 export function inferContextLimit(providerID: string, modelID: string | undefined, modelCacheState?: ModelCacheStateLike): number {
+  // Priority 1: Use cached context limit from OpenCode provider data (most accurate)
   if (modelID) {
     const cached = modelCacheState?.modelContextLimitsCache?.get(`${providerID}/${modelID}`)
-    if (cached && cached > 0) return cached
+    if (cached && cached > 0) {
+      return cached
+    }
   }
+
+  // Priority 2: Check if large context mode is enabled (for Anthropic and other 1M models)
+  if (modelCacheState?.anthropicContext1MEnabled) {
+    return 1_000_000
+  }
+
+  // Priority 3: Provider-specific defaults
   if (isAnthropicProvider(providerID)) {
     return getAnthropicActualLimit(modelCacheState)
   }
 
+  // Priority 4: Model name pattern matching (fallback, less reliable)
   const normalized = `${providerID}/${modelID ?? ""}`.toLowerCase()
-  if (normalized.includes("gpt-5.4") || normalized.includes("gemini-2.5-pro") || normalized.includes("gemini-3")) {
+
+  // 1M models
+  if (normalized.includes("gemini-3") || normalized.includes("gemini-2.5-pro")) {
     return 1_000_000
   }
-  if (normalized.includes("gpt-5.3") || normalized.includes("claude-sonnet-4.6")) {
+  if (normalized.includes("gpt-5.4") || normalized.includes("gpt-5-4")) {
+    return 1_000_000
+  }
+
+  // 400K models
+  if (normalized.includes("gpt-5.3") || normalized.includes("gpt-5-3")) {
     return 400_000
   }
+
+  // 256K models
+  if (normalized.includes("kimi") || normalized.includes("k2.5")) {
+    return 256_000
+  }
+
+  // 128K models (common default for many models)
+  if (normalized.includes("gpt-4") || normalized.includes("gpt-3.5")) {
+    return 128_000
+  }
+
+  // Priority 5: Conservative default
   return DEFAULT_MODEL_CONTEXT_LIMIT
 }
 
 export function getNoticeLevel(ratio: number, totalTokens: number, contextLimit: number): 0 | 1 | 2 | 3 {
-  // 1M 档位 (>= 600K)
-  if (contextLimit >= 600_000) {
-    if (totalTokens >= 550_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-    if (totalTokens >= 320_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-    if (totalTokens >= 220_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
+  // Align with OpenCode's 50% threshold - don't warn too early
+  // OpenCode shows context usage at 50%, we should be conservative
+
+  // 1M+ models (>= 800K)
+  if (contextLimit >= 800_000) {
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3  // 75%
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2  // 65%
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1  // 55%
     return 0
   }
-  // 400K 档位 (300K - 600K, 覆盖 256K=262144 和 400K)
-  if (contextLimit >= 300_000) {
-    if (totalTokens >= 300_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-    if (totalTokens >= 220_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-    if (totalTokens >= 150_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
+
+  // 400K-800K models (includes 400K, 512K, etc.)
+  if (contextLimit >= 350_000) {
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1
     return 0
   }
-  // 200K 档位 (180K - 300K)
+
+  // 256K models (Kimi, etc.)
+  if (contextLimit >= 240_000) {
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1
+    return 0
+  }
+
+  // 200K models
   if (contextLimit >= 180_000) {
-    if (totalTokens >= 150_000 || ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-    if (totalTokens >= 130_000 || ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-    if (totalTokens >= 100_000 || ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1
     return 0
   }
-  // 默认档位 (< 180K)
-  if (ratio >= LABFORGE_SEVERE_THRESHOLD) return 3
-  if (ratio >= LABFORGE_FUSE_THRESHOLD) return 2
-  if (ratio >= LABFORGE_NOTICE_THRESHOLD) return 1
+
+  // 173K models (GitHub Copilot Gemini, etc.)
+  if (contextLimit >= 160_000) {
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1
+    return 0
+  }
+
+  // 128K models (GPT-4, etc.)
+  if (contextLimit >= 120_000) {
+    if (ratio >= 0.75 || totalTokens >= contextLimit * 0.75) return 3
+    if (ratio >= 0.65 || totalTokens >= contextLimit * 0.65) return 2
+    if (ratio >= 0.55 || totalTokens >= contextLimit * 0.55) return 1
+    return 0
+  }
+
+  // Smaller models (< 128K) - be more conservative
+  if (ratio >= 0.72) return 3
+  if (ratio >= 0.60) return 2
+  if (ratio >= 0.50) return 1
   return 0
 }
 

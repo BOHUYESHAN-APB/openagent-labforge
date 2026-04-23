@@ -7,7 +7,7 @@ export const metagenomicsSkill: BuiltinSkill = {
     category: "research/metagenomics",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Metagenomics
 

@@ -5,7 +5,9 @@ import type { TuiPlugin, TuiPluginModule } from "./types"
 
 const OPEN_SETTINGS_COMMAND = "openagent-labforge.settings.open"
 const OPEN_IMAGE_BUS_COMMAND = "openagent-labforge.settings.image-bus"
+/* SWARM SYSTEM - DISABLED 2026-04-23
 const OPEN_SWARM_COMMAND = "openagent-labforge.settings.swarm"
+*/
 
 const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
   const controller = createSettingsController(api, api.state.path.directory)
@@ -31,6 +33,7 @@ const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
       },
       onSelect: () => controller.openRoot("image-bus"),
     },
+    /* SWARM SYSTEM - DISABLED 2026-04-23
     {
       title: "Swarm Settings",
       value: OPEN_SWARM_COMMAND,
@@ -41,6 +44,7 @@ const OpenAgentLabforgeTuiPlugin: TuiPlugin = async (api) => {
       },
       onSelect: () => controller.openRoot("swarm"),
     },
+    */
   ])
 }
 

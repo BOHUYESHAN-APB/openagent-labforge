@@ -7,7 +7,7 @@ export const bioVisualizationSkill: BuiltinSkill = {
     category: "research/bioinformatics-visualization",
     domain: "bio-visualization",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(Rscript:*)", "Bash(*)"],
   template: `# Bio Visualization
 

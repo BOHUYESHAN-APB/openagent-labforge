@@ -1,3 +1,13 @@
+/*
+ * SWARM SYSTEM - TEMPORARILY DISABLED
+ *
+ * This file is part of the swarm parallel coordination system.
+ * Disabled because OpenCode doesn't officially support execution-type parallel agents yet.
+ *
+ * Preserved for future use when OpenCode adds official parallel support.
+ * Date disabled: 2026-04-23
+ */
+
 import { existsSync, readFileSync } from "fs"
 import { join } from "path"
 
@@ -94,3 +104,7 @@ export function getWorkerModel(): string | undefined {
 export function getSpecialistModel(): string | undefined {
   return getSwarmConfig().specialist_model
 }
+
+/*
+ * END OF SWARM SYSTEM - TEMPORARILY DISABLED
+ */

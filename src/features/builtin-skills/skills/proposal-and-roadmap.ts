@@ -7,7 +7,7 @@ export const proposalAndRoadmapSkill: BuiltinSkill = {
     category: "writing/proposal-and-roadmap",
     domain: "proposal-roadmap-writing",
   },
-  agent: "article-writer",
+  // agent: "article-writer",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Proposal And Roadmap
 

@@ -8,7 +8,7 @@ export const internalCommsSkill: BuiltinSkill = {
     category: "writing/internal-comms",
     domain: "internal-communications",
   },
-  agent: "article-writer",
+  // agent: "article-writer",
   allowedTools: ["Read(*)", "Bash(*)"],
   template: `# Internal Comms
 

@@ -106,6 +106,7 @@ export function isGeminiModel(model: string): boolean {
 
 export type BuiltinAgentName =
   | "sisyphus"
+  | "sisyphus-junior"
   | "wase"
   | "hephaestus"
   | "prometheus"
@@ -131,9 +132,11 @@ export type BuiltinAgentName =
   | "metis"
   | "momus"
   | "atlas"
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   | "swarm-coordinator"
   | "swarm-worker"
-  | "swarm-specialist";
+  | "swarm-specialist"
+  */;
 
 export type OverridableAgentName = "build" | BuiltinAgentName;
 

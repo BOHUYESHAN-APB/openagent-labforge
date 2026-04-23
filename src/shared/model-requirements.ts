@@ -389,6 +389,7 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       { providers: ["openai", "github-copilot", "opencode"], model: "gpt-5.4", variant: "medium" },
     ],
   },
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   "swarm-coordinator": {
     fallbackChain: [
       {
@@ -437,6 +438,7 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       },
     ],
   },
+  */
 };
 
 export const CATEGORY_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {

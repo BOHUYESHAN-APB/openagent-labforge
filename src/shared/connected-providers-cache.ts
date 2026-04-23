@@ -165,7 +165,7 @@ export function hasProviderModelsCache(): boolean {
 /**
  * Write the provider-models cache.
  */
-export function writeProviderModelsCache(data: { models: Record<string, string[]>; connected: string[] }): void {
+export function writeProviderModelsCache(data: { models: Record<string, string[] | ModelMetadata[]>; connected: string[] }): void {
 	ensureCacheDir()
 	const cacheFile = getCacheFilePath(PROVIDER_MODELS_CACHE_FILE)
 
@@ -215,21 +215,41 @@ export async function updateConnectedProvidersCache(client: {
 
 		writeConnectedProvidersCache(connected)
 
-		const modelsByProvider: Record<string, string[]> = {}
+		const modelsByProvider: Record<string, ModelMetadata[]> = {}
 		const allProviders = result.data?.all ?? []
 
 		for (const provider of allProviders) {
 			if (provider.models) {
-				const modelIds = Object.keys(provider.models)
-				if (modelIds.length > 0) {
-					modelsByProvider[provider.id] = modelIds
+				const models: ModelMetadata[] = []
+				for (const [modelId, modelData] of Object.entries(provider.models)) {
+					const metadata: ModelMetadata = { id: modelId, provider: provider.id }
+
+					// Extract context window size if available
+					if (modelData && typeof modelData === 'object') {
+						const data = modelData as Record<string, unknown>
+						if (typeof data.context === 'number') {
+							metadata.context = data.context
+						}
+						if (typeof data.output === 'number') {
+							metadata.output = data.output
+						}
+						if (typeof data.name === 'string') {
+							metadata.name = data.name
+						}
+					}
+
+					models.push(metadata)
+				}
+
+				if (models.length > 0) {
+					modelsByProvider[provider.id] = models
 				}
 			}
 		}
 
 		log("[connected-providers-cache] Extracted models from provider list", {
 			providerCount: Object.keys(modelsByProvider).length,
-			totalModels: Object.values(modelsByProvider).reduce((sum, ids) => sum + ids.length, 0),
+			totalModels: Object.values(modelsByProvider).reduce((sum, models) => sum + models.length, 0),
 		})
 
 		writeProviderModelsCache({
@@ -245,4 +265,39 @@ export async function updateConnectedProvidersCache(client: {
 export function resetConnectedProvidersCacheForTesting(): void {
 	connectedProvidersMemoryCache = null
 	providerModelsMemoryCache = null
+}
+
+/**
+ * Get model metadata from cache by model ID.
+ * Returns null if model not found or cache doesn't exist.
+ */
+export function getModelMetadata(modelId: string): ModelMetadata | null {
+	const cache = readProviderModelsCache()
+	if (!cache) {
+		return null
+	}
+
+	for (const models of Object.values(cache.models)) {
+		if (Array.isArray(models)) {
+			for (const model of models) {
+				if (typeof model === 'object' && model !== null && 'id' in model) {
+					const metadata = model as ModelMetadata
+					if (metadata.id === modelId) {
+						return metadata
+					}
+				}
+			}
+		}
+	}
+
+	return null
+}
+
+/**
+ * Get context window size for a model from cache.
+ * Returns null if not found or not available.
+ */
+export function getModelContextWindow(modelId: string): number | null {
+	const metadata = getModelMetadata(modelId)
+	return metadata?.context ?? null
 }

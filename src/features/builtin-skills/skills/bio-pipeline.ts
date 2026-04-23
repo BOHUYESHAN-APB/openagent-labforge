@@ -7,7 +7,7 @@ export const bioPipelineSkill: BuiltinSkill = {
     category: "research/bioinformatics-execution",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(Rscript:*)", "Bash(*)"],
   template: `# Role: Bioinformatics Pipeline Operator
 

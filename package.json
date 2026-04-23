@@ -1,6 +1,6 @@
 {
   "name": "@bohuyeshan/openagent-labforge-core",
-  "version": "3.13.4",
+  "version": "3.15.1",
   "description": "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -90,17 +90,17 @@
     "typescript": "^5.7.3"
   },
   "optionalDependencies": {
-    "openagent-labforge-darwin-arm64": "3.13.4",
-    "openagent-labforge-darwin-x64": "3.13.4",
-    "openagent-labforge-darwin-x64-baseline": "3.13.4",
-    "openagent-labforge-linux-arm64": "3.13.4",
-    "openagent-labforge-linux-arm64-musl": "3.13.4",
-    "openagent-labforge-linux-x64": "3.13.4",
-    "openagent-labforge-linux-x64-baseline": "3.13.4",
-    "openagent-labforge-linux-x64-musl": "3.13.4",
-    "openagent-labforge-linux-x64-musl-baseline": "3.13.4",
-    "openagent-labforge-windows-x64": "3.13.4",
-    "openagent-labforge-windows-x64-baseline": "3.13.4"
+    "openagent-labforge-darwin-arm64": "3.15.1",
+    "openagent-labforge-darwin-x64": "3.15.1",
+    "openagent-labforge-darwin-x64-baseline": "3.15.1",
+    "openagent-labforge-linux-arm64": "3.15.1",
+    "openagent-labforge-linux-arm64-musl": "3.15.1",
+    "openagent-labforge-linux-x64": "3.15.1",
+    "openagent-labforge-linux-x64-baseline": "3.15.1",
+    "openagent-labforge-linux-x64-musl": "3.15.1",
+    "openagent-labforge-linux-x64-musl-baseline": "3.15.1",
+    "openagent-labforge-windows-x64": "3.15.1",
+    "openagent-labforge-windows-x64-baseline": "3.15.1"
   },
   "overrides": {
     "@opencode-ai/sdk": "^1.2.17"

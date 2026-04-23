@@ -10,7 +10,7 @@ export const variantCallingSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "variant-calling",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Variant Calling
 

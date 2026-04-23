@@ -7,7 +7,7 @@ export const pubmedSearchSkill: BuiltinSkill = {
     category: "research/literature-pubmed",
     domain: "scientific-literature",
   },
-  agent: "paper-evidence-synthesizer",
+  // agent: "paper-evidence-synthesizer",
   allowedTools: ["Read(*)", "Bash(python:*)", "WebFetch(*)", "Bash(*)"],
   template: `# PubMed Search
 

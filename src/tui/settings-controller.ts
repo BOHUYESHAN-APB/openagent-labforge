@@ -28,7 +28,7 @@ const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
 const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
 const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" | "swarm"
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" /* SWARM SYSTEM - DISABLED 2026-04-23: | "swarm" */
 type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
@@ -1869,6 +1869,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     )
   }
 
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   const openSwarm = () => {
     const config = effectiveRecord()
     const swarmEnabled = getNestedBoolean(config, ["experimental", "swarm", "enabled"])
@@ -2129,6 +2130,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       })
     )
   }
+  END OF SWARM SYSTEM - TEMPORARILY DISABLED */
 
   const openRoot = (entry: SettingsEntry = "root") => {
     if (entry === "general") {
@@ -2151,10 +2153,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       openContextGuard()
       return
     }
+    /* SWARM SYSTEM - DISABLED 2026-04-23
     if (entry === "swarm") {
       openSwarm()
       return
     }
+    */
 
     const config = effective()
     const configRecord = config as unknown as Record<string, unknown>
@@ -2163,8 +2167,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"])
     const preemptiveCompaction = getNestedBoolean(configRecord, ["experimental", "preemptive_compaction"])
     const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
+    /* SWARM SYSTEM - DISABLED 2026-04-23
     const swarmEnabled = getNestedBoolean(configRecord, ["experimental", "swarm", "enabled"])
     const swarmMaxWorkers = getNestedNumber(configRecord, ["experimental", "swarm", "max_workers"])
+    */
 
     api.ui.dialog.setSize("xlarge")
     api.ui.dialog.replace(() =>
@@ -2215,12 +2221,14 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             category: text("Pages", "页面"),
             description: `${text("Image bus", "图片总线")}: ${booleanLabel(imageBusEnabled)} • ${text("Routing and provider settings", "路由与通道配置")}`,
           },
+          /* SWARM SYSTEM - DISABLED 2026-04-23
           {
             title: text("Swarm Settings", "蜂群设置"),
             value: "swarm",
             category: text("Pages", "页面"),
             description: `${text("Swarm", "蜂群")}: ${booleanLabel(swarmEnabled)} • ${text("Max workers", "最大工作者")}: ${numberLabel(swarmMaxWorkers, "5")}`,
           },
+          */
         ],
         onSelect: (option) => {
           if (option.value === "scope") {
@@ -2247,10 +2255,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             openContextGuard()
             return
           }
+          /* SWARM SYSTEM - DISABLED 2026-04-23
           if (option.value === "swarm") {
             openSwarm()
             return
           }
+          */
           openImageBus()
         },
       })

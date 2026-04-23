@@ -57,9 +57,11 @@ const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
   "wet-lab-designer": "Wet-Lab Designer",
   "bio-pipeline-operator": "Bio Pipeline",
   "paper-evidence-synthesizer": "Paper Synthesizer",
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   "swarm-coordinator": "Swarm Coordinator",
   "swarm-worker": "Swarm Worker",
   "swarm-specialist": "Swarm Specialist",
+  */
 }
 
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
@@ -89,9 +91,11 @@ const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   "wet-lab-designer": "湿实验设计师",
   "bio-pipeline-operator": "生信流程",
   "paper-evidence-synthesizer": "文献综合器",
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   "swarm-coordinator": "蜂群协调器",
   "swarm-worker": "蜂群工作者",
   "swarm-specialist": "蜂群专家",
+  */
 }
 
 export const AGENT_DISPLAY_NAMES: Record<string, string> = AGENT_DISPLAY_NAMES_EN

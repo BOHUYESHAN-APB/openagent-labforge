@@ -7,7 +7,7 @@ export const sequenceAnalysisSkill: BuiltinSkill = {
     category: "research/sequence-analysis",
     domain: "sequence-biology",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Sequence Analysis
 

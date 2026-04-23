@@ -13,10 +13,20 @@ const INJECTED_MODE_PREFIX_PATTERNS = [
   "[search-mode]",
   "[analyze-mode]",
   "[semantic-mode-hint]",
+  "[ultrawork-autonomous-mode]",
   "<ultrawork-mode>",
 ]
 
 const INJECTION_SEPARATOR = "\n\n---\n\n"
+
+/**
+ * Removes paste placeholder text that leaks from the frontend.
+ * Pattern: [Pasted ~N lines] or [Pasted N lines]
+ */
+function removePastePlaceholders(text: string): string {
+  // Remove the placeholder and any surrounding whitespace
+  return text.replace(/\[Pasted ~?\d+ lines?\]\s*/gi, "").trim()
+}
 
 export function removeCodeBlocks(text: string): string {
   return text.replace(CODE_BLOCK_PATTERN, "").replace(INLINE_CODE_PATTERN, "")
@@ -24,6 +34,9 @@ export function removeCodeBlocks(text: string): string {
 
 export function stripInjectedKeywordPrelude(text: string): string {
   let current = text
+
+  // First, remove any paste placeholders that leaked from the frontend
+  current = removePastePlaceholders(current)
 
   while (true) {
     const trimmed = current.trimStart()
@@ -91,8 +104,10 @@ export function detectKeywordsWithType(text: string, agentName?: string, modelID
 export function extractPromptText(
   parts: Array<{ type: string; text?: string }>
 ): string {
-  return parts
+  const rawText = parts
     .filter((p) => p.type === "text")
     .map((p) => p.text || "")
     .join(" ")
+
+  return removePastePlaceholders(rawText)
 }

@@ -10,7 +10,7 @@ export const readQcSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "read-qc",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Read QC
 

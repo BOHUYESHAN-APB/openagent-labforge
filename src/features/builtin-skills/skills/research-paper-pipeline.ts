@@ -7,7 +7,7 @@ export const researchPaperPipelineSkill: BuiltinSkill = {
     category: "research/paper-pipeline",
     domain: "research-paper-writing",
   },
-  agent: "scientific-writer",
+  // agent: "scientific-writer",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)", "Bash(Rscript:*)", "Bash(*)"],
   template: `# Research Paper Pipeline
 

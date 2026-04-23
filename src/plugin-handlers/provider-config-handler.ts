@@ -41,9 +41,30 @@ export function applyProviderConfig(params: {
     | Record<string, ProviderConfig>
     | undefined;
 
+  // Check for explicit 1M context beta header (for older Claude 3.x models)
   const anthropicBeta = providers?.anthropic?.options?.headers?.["anthropic-beta"];
-  params.modelCacheState.anthropicContext1MEnabled =
-    anthropicBeta?.includes("context-1m") ?? false;
+  const hasBetaHeader = anthropicBeta?.includes("context-1m") ?? false;
+
+  // Check if any model has context limit >= 1M configured
+  let hasLargeContextModel = false;
+  if (providers) {
+    for (const providerConfig of Object.values(providers)) {
+      const models = providerConfig?.models;
+      if (!models) continue;
+
+      for (const modelConfig of Object.values(models)) {
+        const contextLimit = modelConfig?.limit?.context;
+        if (contextLimit && contextLimit >= 1_000_000) {
+          hasLargeContextModel = true;
+          break;
+        }
+      }
+      if (hasLargeContextModel) break;
+    }
+  }
+
+  // Enable 1M context if either beta header is present OR any large context model is configured
+  params.modelCacheState.anthropicContext1MEnabled = hasBetaHeader || hasLargeContextModel;
 
   if (!providers) return;
 

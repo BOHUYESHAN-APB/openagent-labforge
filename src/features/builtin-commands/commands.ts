@@ -15,13 +15,17 @@ import { REMOVE_AI_SLOPS_TEMPLATE } from "./templates/remove-ai-slops"
 import { TODO_CLEAR_TEMPLATE } from "./templates/todo-clear"
 import { WORKFLOW_RESET_TEMPLATE } from "./templates/workflow-reset"
 import { FOCUS_CHAT_TEMPLATE } from "./templates/focus-chat"
+/* SWARM SYSTEM - DISABLED 2026-04-23
 import { SWARM_START_TEMPLATE } from "./templates/swarm-start"
+*/
 import { COMPRESSION_STATS_TEMPLATE } from "./templates/compression-stats"
 import { MANUAL_COMPRESS_TEMPLATE } from "./templates/manual-compress"
 
 export interface LoadBuiltinCommandsOptions {
   useRegisteredAgents?: boolean
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   swarmEnabled?: boolean
+  */
 }
 
 function resolveStartWorkAgent(options?: LoadBuiltinCommandsOptions): "executor" | "atlas" | "sisyphus" {
@@ -234,6 +238,7 @@ $ARGUMENTS
   },
   }
 
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   // Only include swarm-start if swarm is enabled
   if (options?.swarmEnabled !== false) {
     commands["ol-swarm-start"] = {
@@ -254,6 +259,7 @@ $ARGUMENTS
       argumentHint: '"<task-description>" [--workers=N] [--strategy=batch|dynamic]',
     }
   }
+  */
 
   return commands
 }

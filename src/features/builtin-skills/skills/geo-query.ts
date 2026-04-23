@@ -7,7 +7,7 @@ export const geoQuerySkill: BuiltinSkill = {
     category: "research/public-dataset-discovery",
     domain: "gene-expression-datasets",
   },
-  agent: "paper-evidence-synthesizer",
+  // agent: "paper-evidence-synthesizer",
   allowedTools: ["Read(*)", "Bash(python:*)", "WebFetch(*)", "Bash(*)"],
   template: `# GEO Dataset Query
 

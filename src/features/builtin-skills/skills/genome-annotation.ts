@@ -10,7 +10,7 @@ export const genomeAnnotationSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "genome-annotation",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Genome Annotation
 

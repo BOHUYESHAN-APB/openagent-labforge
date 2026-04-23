@@ -16,7 +16,9 @@ export const BUILTIN_COMMAND_ALIAS_MAP = {
   "workflow-reset": "ol-workflow-reset",
   "focus-chat": "ol-focus-chat",
   handoff: "ol-handoff",
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   "swarm-start": "ol-swarm-start",
+  */
   "ol-settings": "ol-settings",
   "ol-settings-image-bus": "ol-settings-image-bus",
 } as const

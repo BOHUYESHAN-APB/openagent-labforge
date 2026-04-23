@@ -1,3 +1,13 @@
+/*
+ * SWARM SYSTEM - TEMPORARILY DISABLED
+ *
+ * This file is part of the swarm parallel coordination system.
+ * Disabled because OpenCode doesn't officially support execution-type parallel agents yet.
+ *
+ * Preserved for future use when OpenCode adds official parallel support.
+ * Date disabled: 2026-04-23
+ */
+
 import { join } from "path"
 import { existsSync, readdirSync, readFileSync } from "fs"
 import { writeJSONAtomically } from "../../shared/write-file-atomically"
@@ -95,3 +105,7 @@ export async function deleteResult(swarmId: string, agentName: string): Promise<
     console.error(`Failed to delete result for agent ${agentName} in swarm ${swarmId}:`, error)
   }
 }
+
+/*
+ * END OF SWARM SYSTEM - TEMPORARILY DISABLED
+ */

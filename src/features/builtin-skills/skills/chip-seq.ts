@@ -7,7 +7,7 @@ export const chipSeqSkill: BuiltinSkill = {
     category: "research/chip-seq",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# ChIP-seq
 

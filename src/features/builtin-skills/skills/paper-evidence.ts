@@ -7,7 +7,7 @@ export const paperEvidenceSkill: BuiltinSkill = {
     category: "research/paper-evidence-synthesis",
     domain: "scientific-evidence",
   },
-  agent: "paper-evidence-synthesizer",
+  // agent: "paper-evidence-synthesizer",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)"],
   template: `# Role: Paper Evidence Synthesizer
 

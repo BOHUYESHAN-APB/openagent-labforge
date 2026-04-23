@@ -7,7 +7,7 @@ export const wetLabDesignSkill: BuiltinSkill = {
     category: "research/wet-lab-validation-design",
     domain: "wet-lab",
   },
-  agent: "wet-lab-designer",
+  // agent: "wet-lab-designer",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)"],
   template: `# Wet-Lab Validation Design
 

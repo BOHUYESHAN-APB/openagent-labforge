@@ -10,7 +10,7 @@ export const pathwayAnalysisSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "pathway-analysis",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(Rscript:*)", "Bash(python:*)", "Bash(*)"],
   template: `# Pathway Analysis
 

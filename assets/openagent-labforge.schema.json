@@ -5216,60 +5216,6 @@
             "maximum": 9007199254740991
           }
         },
-        "swarm": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "max_workers": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 20
-            },
-            "heartbeat_interval_ms": {
-              "type": "integer",
-              "minimum": 1000,
-              "maximum": 9007199254740991
-            },
-            "heartbeat_timeout_ms": {
-              "type": "integer",
-              "minimum": 5000,
-              "maximum": 9007199254740991
-            },
-            "auto_cleanup": {
-              "type": "boolean"
-            },
-            "coordinator_model": {
-              "type": "string"
-            },
-            "coordinator_fallback_models": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "worker_model": {
-              "type": "string"
-            },
-            "worker_fallback_models": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "specialist_model": {
-              "type": "string"
-            },
-            "specialist_fallback_models": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
         "context_compression": {
           "type": "object",
           "properties": {

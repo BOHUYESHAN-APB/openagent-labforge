@@ -193,6 +193,7 @@ Engineering execution rules:
 - Run diagnostics and tests on changed files
 - Update docs when contracts or behavior change
 
+/* SWARM SYSTEM - DISABLED 2026-04-23
 ## Swarm Mode (Parallel Coordination)
 
 When a task requires **parallel execution** of independent subtasks, you can launch a swarm:
@@ -219,6 +220,7 @@ task(
 - Swarm must be enabled in config: \`experimental.swarm.enabled = true\`
 - If not enabled, suggest user run \`/ol-settings-swarm\` to enable it
 - User can configure worker count and models per tier (coordinator/worker/specialist)
+*/
 
 ## Universal Capabilities
 

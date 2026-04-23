@@ -8,7 +8,7 @@ export const brandGuidelinesSkill: BuiltinSkill = {
     category: "writing/brand-guidelines",
     domain: "brand-guidelines",
   },
-  agent: "article-writer",
+  // agent: "article-writer",
   allowedTools: ["Read(*)", "Bash(*)"],
   template: `# Brand Guidelines
 

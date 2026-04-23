@@ -74,6 +74,7 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
     call_omo_agent: false,
   },
 
+  /* SWARM SYSTEM - DISABLED 2026-04-23
   "swarm-coordinator": {
     write: false,
     edit: false,
@@ -96,6 +97,7 @@ const AGENT_RESTRICTIONS: Record<string, Record<string, boolean>> = {
     question: false,
     call_omo_agent: false,
   },
+  */
 }
 
 export function getAgentToolRestrictions(agentName: string): Record<string, boolean> {

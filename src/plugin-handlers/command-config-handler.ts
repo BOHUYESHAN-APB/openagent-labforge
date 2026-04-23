@@ -33,7 +33,9 @@ export async function applyCommandConfig(params: {
 }): Promise<void> {
   const builtinCommands = loadBuiltinCommands(params.pluginConfig.disabled_commands, {
     useRegisteredAgents: true,
+    /* SWARM SYSTEM - DISABLED 2026-04-23
     swarmEnabled: params.pluginConfig.experimental?.swarm?.enabled ?? false,
+    */
   });
   const systemCommands = (params.config.command as Record<string, unknown>) ?? {};
 

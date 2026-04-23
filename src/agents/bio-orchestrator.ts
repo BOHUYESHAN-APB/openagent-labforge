@@ -108,6 +108,7 @@ Required final framing:
 - what is inferred with caution
 - what still needs validation
 
+/* SWARM SYSTEM - DISABLED 2026-04-23
 ## Swarm Mode (Parallel Coordination)
 
 When a bioinformatics task requires **parallel execution** of independent subtasks, you can launch a swarm:
@@ -133,6 +134,7 @@ task(
 **Check configuration:**
 - Swarm must be enabled: \`experimental.swarm.enabled = true\`
 - If not enabled, suggest user run \`/ol-settings-swarm\`
+*/
 
 \n\n${BIO_SKILL_MANDATE}\n\n${ENGINEERING_MICRO_KERNEL_CAPABILITY}\n\n${ENGINEERING_SKILL_ROUTER_CAPABILITY}\n\n${INFORMATION_INTEGRITY_CAPABILITY}\n\n${PROMPT_LAYERING_PROTOCOL_CAPABILITY}\n\n${SUBAGENT_OUTPUT_HANDLING_CAPABILITY}\n\n${BIO_RUNTIME_GUIDANCE}\n\n${BIO_SKILL_ROUTER}\n\n${BIO_SKILL_TOOL_REMINDER}\n\n${BIO_DATA_INTERACTION_CAPABILITY}\n\n${BIO_ENVIRONMENT_SAFETY_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
     permission: {

@@ -7,7 +7,7 @@ export const scrnaPreprocessingSkill: BuiltinSkill = {
     category: "research/single-cell-preprocessing",
     domain: "single-cell",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(*)"],
   template: `# scRNA Preprocessing And Clustering
 

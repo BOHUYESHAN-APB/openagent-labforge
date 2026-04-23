@@ -1,3 +1,13 @@
+/*
+ * SWARM SYSTEM - TEMPORARILY DISABLED
+ *
+ * This file is part of the swarm parallel coordination system.
+ * Disabled because OpenCode doesn't officially support execution-type parallel agents yet.
+ *
+ * Preserved for future use when OpenCode adds official parallel support.
+ * Date disabled: 2026-04-23
+ */
+
 export const SWARM_START_TEMPLATE = `You are launching a Swarm coordination session.
 
 ## ARGUMENTS
@@ -205,3 +215,7 @@ npm run lint
 - Respect configured models from user's OpenCode configuration
 - Monitor heartbeats to detect stale workers
 - Clean up swarm state after completion (if auto_cleanup enabled)`
+
+/*
+ * END OF SWARM SYSTEM - TEMPORARILY DISABLED
+ */

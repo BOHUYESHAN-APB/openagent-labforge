@@ -1,3 +1,13 @@
+/*
+ * SWARM SYSTEM - TEMPORARILY DISABLED
+ *
+ * This file is part of the swarm parallel coordination system.
+ * Disabled because OpenCode doesn't officially support execution-type parallel agents yet.
+ *
+ * Preserved for future use when OpenCode adds official parallel support.
+ * Date disabled: 2026-04-23
+ */
+
 import type { AgentConfig } from "@opencode-ai/sdk"
 import type { AgentMode, AgentPromptMetadata } from "./types"
 import { buildAgentIdentitySection } from "./dynamic-agent-prompt-builder"
@@ -309,3 +319,7 @@ task(
   }
 }
 createSwarmCoordinatorAgent.mode = MODE
+
+/*
+ * END OF SWARM SYSTEM - TEMPORARILY DISABLED
+ */

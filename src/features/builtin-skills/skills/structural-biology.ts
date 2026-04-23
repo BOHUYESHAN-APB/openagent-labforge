@@ -7,7 +7,7 @@ export const structuralBiologySkill: BuiltinSkill = {
     category: "research/structural-biology",
     domain: "protein-structure",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "WebFetch(*)", "Bash(*)"],
   template: `# Structural Biology
 

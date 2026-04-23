@@ -7,7 +7,7 @@ export const literatureSynthesisSkill: BuiltinSkill = {
     category: "writing/literature-synthesis",
     domain: "literature-synthesis",
   },
-  agent: "scientific-writer",
+  // agent: "scientific-writer",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Literature Synthesis
 

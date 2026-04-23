@@ -7,7 +7,7 @@ export const differentialExpressionSkill: BuiltinSkill = {
     category: "research/bulk-rna-differential-expression",
     domain: "bioinformatics",
   },
-  agent: "bio-pipeline-operator",
+  // agent: "bio-pipeline-operator",
   allowedTools: ["Read(*)", "Bash(python:*)", "Bash(Rscript:*)", "Bash(*)"],
   template: `# Differential Expression
 

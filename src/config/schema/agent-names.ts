@@ -2,9 +2,11 @@ import { z } from "zod"
 
 export const BuiltinAgentNameSchema = z.enum([
   "sisyphus",
+  "sisyphus-junior",
   "wase",
   "hephaestus",
   "prometheus",
+  "executor",
   "orchestrator",
   "oracle",
   "librarian",

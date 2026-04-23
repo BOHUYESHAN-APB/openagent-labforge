@@ -10,7 +10,7 @@ export const experimentalDesignSkill: BuiltinSkill = {
     imported_from: "GPTomics/bioSkills",
     source_category: "experimental-design",
   },
-  agent: "bio-methodologist",
+  // agent: "bio-methodologist",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(Rscript:*)", "Bash(python:*)", "Bash(*)"],
   template: `# Experimental Design
 

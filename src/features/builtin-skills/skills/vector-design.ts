@@ -7,7 +7,7 @@ export const vectorDesignSkill: BuiltinSkill = {
     category: "research/vector-and-construct-design",
     domain: "vector-design",
   },
-  agent: "wet-lab-designer",
+  // agent: "wet-lab-designer",
   allowedTools: ["Read(*)", "WebFetch(*)", "Bash(python:*)", "Bash(*)"],
   template: `# Vector And Construct Design
 

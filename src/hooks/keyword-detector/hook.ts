@@ -23,6 +23,9 @@ export function createKeywordDetectorHook(
   _collector?: ContextCollector,
   pluginConfig?: OhMyOpenCodeConfig,
 ) {
+  // Track processed messages to prevent duplicate keyword injection on undo/replay
+  const processedMessages = new Map<string, string>()
+
   return {
     "chat.message": async (
       input: {
@@ -51,10 +54,42 @@ export function createKeywordDetectorHook(
 
       const currentAgent = getSessionAgent(input.sessionID) ?? input.agent
       const textPartIndex = output.parts.findIndex((p) => p.type === "text" && p.text !== undefined)
+
+      // Always strip injected preludes from the primary text part to handle undo/replay
+      if (textPartIndex !== -1 && output.parts[textPartIndex].text) {
+        const originalText = output.parts[textPartIndex].text ?? ""
+        const cleanedText = stripInjectedKeywordPrelude(originalText)
+
+        // If we stripped something, it means this is a replayed message with stale injection
+        if (cleanedText !== originalText) {
+          log(`[keyword-detector] Stripped stale injection from replayed message`, {
+            sessionID: input.sessionID,
+            originalLength: originalText.length,
+            cleanedLength: cleanedText.length,
+          })
+          output.parts[textPartIndex].text = cleanedText
+        }
+      }
+
       const sanitizedPrimaryText =
         textPartIndex !== -1
           ? stripInjectedKeywordPrelude(output.parts[textPartIndex].text ?? "")
           : undefined
+
+      // Check if we've already processed this exact message content
+      const messageFingerprint = sanitizedPrimaryText ?? sanitizedPromptText
+      const lastProcessed = processedMessages.get(input.sessionID)
+
+      if (lastProcessed === messageFingerprint) {
+        log(`[keyword-detector] Skipping duplicate message processing (undo/replay detected)`, {
+          sessionID: input.sessionID,
+          fingerprintLength: messageFingerprint.length,
+        })
+        return
+      }
+
+      // Update the fingerprint for this session
+      processedMessages.set(input.sessionID, messageFingerprint)
 
       // Remove system-reminder content to prevent automated system messages from triggering mode keywords
       const cleanText = removeSystemReminders(sanitizedPromptText)
