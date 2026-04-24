@@ -264,6 +264,9 @@ jobs:
           fi
 
           npm publish --access public --provenance $TAG_ARG
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
         timeout-minutes: 15
 
       - name: Upload release asset
