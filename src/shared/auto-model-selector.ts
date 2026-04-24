@@ -177,8 +177,9 @@ export function selectModelForCategory(
 }
 
 /**
- * Get all available models from the provider models cache.
+ * Get all available models from connected providers only.
  * Returns an array of model objects with provider, id, name, and context info.
+ * Only includes models from providers that are currently connected.
  */
 export function getAllAvailableModels(): Array<{
   provider: string
@@ -189,6 +190,13 @@ export function getAllAvailableModels(): Array<{
 }> {
   const cache = readProviderModelsCache()
   if (!cache) {
+    log("[auto-model-selector] No provider models cache available")
+    return []
+  }
+
+  const connectedProviders = cache.connected || []
+  if (connectedProviders.length === 0) {
+    log("[auto-model-selector] No connected providers found")
     return []
   }
 
@@ -200,7 +208,9 @@ export function getAllAvailableModels(): Array<{
     context?: number
   }> = []
 
-  for (const [providerID, providerModels] of Object.entries(cache.models)) {
+  // Only iterate through connected providers
+  for (const providerID of connectedProviders) {
+    const providerModels = cache.models[providerID]
     if (!Array.isArray(providerModels)) continue
 
     for (const model of providerModels) {
@@ -216,6 +226,11 @@ export function getAllAvailableModels(): Array<{
       }
     }
   }
+
+  log("[auto-model-selector] Retrieved available models", {
+    connectedProviders: connectedProviders.length,
+    totalModels: models.length
+  })
 
   return models
 }

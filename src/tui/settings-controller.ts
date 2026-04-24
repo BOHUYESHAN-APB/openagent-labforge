@@ -2235,8 +2235,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
         },
-      }),
-      () => openRoot("root")
+      })
     )
   }
 
@@ -2283,21 +2282,19 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       description: text("Return to model selection settings", "返回模型选择设置"),
     })
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title: text("Agent Model Preferences", "Agent 模型偏好"),
-          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
-          options,
-          onSelect: (option) => {
-            if (option.value === "back") {
-              openModelSelection()
-              return
-            }
-            openAgentPreferenceDetail(option.value)
-          },
-        }),
-      openModelSelection
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Agent Model Preferences", "Agent 模型偏好"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options,
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openModelSelection()
+            return
+          }
+          openAgentPreferenceDetail(option.value)
+        },
+      })
     )
   }
 
@@ -2309,12 +2306,11 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const preferredModel = pref?.preferred_model
     const fallbackModels = pref?.fallback_models ?? []
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title: `${text("Agent", "代理")}: ${agentName}`,
-          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
-          options: [
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: `${text("Agent", "代理")}: ${agentName}`,
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
           summaryRow(
             text("Model Configuration", "模型配置"),
             text("Configure preferred and fallback models", "配置首选和备用模型"),
@@ -2399,8 +2395,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
         },
-      }),
-      openAgentPreferences
+      })
     )
   }
 
@@ -2445,21 +2440,19 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       description: text("Return to model selection settings", "返回模型选择设置"),
     })
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title: text("Category Model Preferences", "分类模型偏好"),
-          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
-          options,
-          onSelect: (option) => {
-            if (option.value === "back") {
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Category Model Preferences", "分类模型偏好"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options,
+        onSelect: (option) => {
+          if (option.value === "back") {
             openModelSelection()
             return
           }
           openCategoryPreferenceDetail(option.value)
         },
-      }),
-      openModelSelection
+      })
     )
   }
 
@@ -2471,12 +2464,11 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const preferredModel = pref?.preferred_model
     const fallbackModels = pref?.fallback_models ?? []
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title: `${text("Category", "分类")}: ${categoryName}`,
-          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
-          options: [
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: `${text("Category", "分类")}: ${categoryName}`,
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
           summaryRow(
             text("Model Configuration", "模型配置"),
             text("Configure preferred and fallback models", "配置首选和备用模型"),
@@ -2561,8 +2553,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
         },
-      }),
-      openCategoryPreferences
+      })
     )
   }
 
@@ -2612,22 +2603,20 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       description: text("Return without selecting", "不选择并返回"),
     })
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title,
-          placeholder: text("Filter models • Enter select • Esc back", "筛选模型 • 回车选择 • Esc 返回"),
-          current: currentModel,
-          options,
-          onSelect: (option) => {
-            if (option.value === "back") {
-              onBack()
-              return
-            }
-            onConfirm(option.value)
-          },
-        }),
-      onBack
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title,
+        placeholder: text("Filter models • Enter select • Esc close", "筛选模型 • 回车选择 • Esc 关闭"),
+        current: currentModel,
+        options,
+        onSelect: (option) => {
+          if (option.value === "back") {
+            onBack()
+            return
+          }
+          onConfirm(option.value)
+        },
+      })
     )
   }
 
@@ -2678,18 +2667,17 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       description: text("Return to detail page", "返回详情页"),
     })
 
-    api.ui.dialog.replace(
-      () =>
-        api.ui.DialogSelect({
-          title: `${text("Fallback Models", "备用模型")}: ${name}`,
-          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
-          options,
-          onSelect: (option) => {
-            if (option.value === "back") {
-              onBack()
-              return
-            }
-            if (option.value === "add") {
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: `${text("Fallback Models", "备用模型")}: ${name}`,
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options,
+        onSelect: (option) => {
+          if (option.value === "back") {
+            onBack()
+            return
+          }
+          if (option.value === "add") {
             openModelSelectionDialog(
               text("Add Fallback Model", "添加备用模型"),
               undefined,
@@ -2732,8 +2720,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
         },
-      }),
-      onBack
+      })
     )
   }
 
