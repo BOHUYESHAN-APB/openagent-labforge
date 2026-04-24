@@ -105,6 +105,9 @@
   "overrides": {
     "@opencode-ai/sdk": "^1.2.17"
   },
+  "resolutions": {
+    "zod": "4.1.8"
+  },
   "trustedDependencies": [
     "@ast-grep/cli",
     "@ast-grep/napi",

@@ -36,6 +36,12 @@ import { log } from "../shared"
 import type { Managers } from "../create-managers"
 import type { SkillContext } from "./skill-context"
 
+// Magic Context tools
+import { createCtxReduceTool } from "../tools/magic-context/ctx-reduce"
+import { createCtxExpandTool } from "../tools/magic-context/ctx-expand"
+import { createCtxMemoryTool } from "../tools/magic-context/ctx-memory"
+import { createCtxSearchTool } from "../tools/magic-context/ctx-search"
+
 export type ToolRegistryResult = {
   filteredTools: ToolsRecord
   taskSystemEnabled: boolean
@@ -159,9 +165,20 @@ export function createToolRegistry(args: {
     ? { edit: createHashlineEditTool() }
     : {}
 
-  // Magic Context tools - Phase 3 placeholder
-  // TODO: Complete tool implementation after resolving zod version compatibility
+  // Magic Context tools
+  const magicContextEnabled = pluginConfig.experimental?.magic_context?.enabled ?? false
   const magicContextTools: Record<string, ToolDefinition> = {}
+  if (magicContextEnabled) {
+    const ctxReduce = createCtxReduceTool(ctx, pluginConfig)
+    const ctxExpand = createCtxExpandTool(ctx, pluginConfig)
+    const ctxMemory = createCtxMemoryTool(ctx, pluginConfig)
+    const ctxSearch = createCtxSearchTool(ctx, pluginConfig)
+
+    if (ctxReduce) magicContextTools.ctx_reduce = ctxReduce
+    if (ctxExpand) magicContextTools.ctx_expand = ctxExpand
+    if (ctxMemory) magicContextTools.ctx_memory = ctxMemory
+    if (ctxSearch) magicContextTools.ctx_search = ctxSearch
+  }
 
   const allTools: Record<string, ToolDefinition> = {
     ...builtinTools,
