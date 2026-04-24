@@ -247,6 +247,32 @@ Current runtime workflow structure includes:
   - `wave-001-build.md`
   - `wave-001-review.md`
 - document workspaces
+
+### Magic Context - Cache-Aware Context Management
+
+OpenAgent LabForge includes advanced context management inspired by [Magic Context](https://github.com/cortexkit/opencode-magic-context):
+
+- **Cache-aware compression**: Respects Anthropic's prompt cache TTL (default 5 minutes)
+- **Tag system**: Precise message references with §N§ tags
+- **Cross-session memories**: Project-scoped persistent knowledge
+- **Background compression**: Async Historian agent
+- **Agent tools**: ctx_reduce, ctx_expand, ctx_memory, ctx_search
+- **TUI visualization**: Real-time context breakdown
+
+See [MAGIC_CONTEXT.md](MAGIC_CONTEXT.md) for detailed documentation.
+
+Enable in config:
+```jsonc
+{
+  "experimental": {
+    "magic_context": {
+      "enabled": true,
+      "cache_ttl": "5m",
+      "async_compression": true
+    }
+  }
+}
+```
 - paper cache
 
 This is intended to keep long tasks inspectable and compaction-safe without
