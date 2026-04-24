@@ -10,6 +10,8 @@ import { log } from "../../shared/logger"
 import { getAvailableModelsForDelegateTask } from "./available-models"
 import type { FallbackEntry } from "../../shared/model-requirements"
 import { resolveModelForDelegateTask } from "./model-selection"
+import { selectModelForAgent } from "../../shared/auto-model-selector"
+import { loadPluginConfig } from "../../plugin-config"
 
 export async function resolveSubagentExecution(
   args: DelegateTaskArgs,
@@ -101,7 +103,11 @@ Create the work plan directly - that's your job as the planning agent.`,
     const agentRequirement = AGENT_MODEL_REQUIREMENTS[agentConfigKey]
     fallbackChain = agentRequirement?.fallbackChain
 
-    if (agentOverride?.model || agentRequirement || matchedAgent.model) {
+    // Try auto model selection first
+    const config = loadPluginConfig(executorCtx.directory, undefined)
+    const autoModel = selectModelForAgent(agentConfigKey, config)
+
+    if (agentOverride?.model || autoModel || agentRequirement || matchedAgent.model) {
       const availableModels = await getAvailableModelsForDelegateTask(client)
 
       const normalizedMatchedModel = matchedAgent.model
@@ -112,7 +118,7 @@ Create the work plan directly - that's your job as the planning agent.`,
         : undefined
 
       const resolution = resolveModelForDelegateTask({
-        userModel: agentOverride?.model ?? inheritedModel,
+        userModel: autoModel ?? agentOverride?.model ?? inheritedModel,
         categoryDefaultModel: matchedAgentModelStr,
         fallbackChain: agentRequirement?.fallbackChain,
         availableModels,

@@ -40,18 +40,42 @@ path to Apache-2.0. See [REFACTOR_APACHE2_PLAN.md](REFACTOR_APACHE2_PLAN.md).
 
 ## Current Model Recommendation
 
+**🌟 Strongly Recommended: DeepSeek V4 (Best Value)**
+
+DeepSeek V4 models offer exceptional performance at unbeatable prices:
+
+- **DeepSeek V4-Pro**: T0-tier performance (comparable to GPT-5.4/Claude Opus 4.6)
+  - Price: $0.28-0.30/M tokens (20-50x cheaper than competitors)
+  - Context: 1M tokens
+  - Use for: Main agents, complex reasoning, orchestration
+  
+- **DeepSeek V4-Flash**: T1-tier performance (completely sufficient for most tasks)
+  - Price: ~1/3 of V4-Pro
+  - Context: 1M tokens
+  - Use for: Subagents, research, code exploration
+
+**Why DeepSeek V4?**
+- 🚀 T0-tier reasoning at fraction of the cost
+- 💰 Accessible to all users (frequent promotional offers)
+- 🎯 Optimized prompts included in this plugin
+- 📊 1M context window for large codebases
+
+**Configuration**: Use the built-in TUI settings (`/ol-settings` → Model Selection Settings) to configure DeepSeek as your preferred model for all agents.
+
+### Other Recommended Models
+
 Current project recommendation for manual model choice:
 
-- strongly recommended:
-  - GPT family
+- **Also strongly recommended:**
+  - GPT family (GPT-5.4, GPT-4o)
   - GLM family
   - Kimi family
-- also recommended:
-  - Google / Gemini
-- also currently adapting well:
-  - DeepSeek family
-- supported, but not fully re-validated in the latest local test cycle:
-  - Claude family
+  
+- **Also recommended:**
+  - Google / Gemini family
+  
+- **Supported, but not fully re-validated in latest test cycle:**
+  - Claude family (note: some users prefer to avoid this provider)
 
 Gemini note:
 
@@ -96,8 +120,26 @@ The plugin automatically adjusts compression thresholds based on model context:
 - **400K tier** (350K-900K): For 400K models
   - Balanced preset: L1@150K, L2@220K, L3@300K
   
-- **1M tier** (900K+): For 1M+ models
+- **1M tier** (900K+): For 1M+ models (including DeepSeek V4)
   - Balanced preset: L1@220K, L2@320K, L3@550K
+  - **DeepSeek V4 Note**: Both V4-Pro and V4-Flash have 1M context and work excellently with the balanced preset
+
+### Model-Specific Context Recommendations
+
+**DeepSeek V4 (1M context):**
+- Use `balanced` or `aggressive` preset
+- Excellent context utilization efficiency
+- Can handle large codebases comfortably
+- Recommended for long-running sessions
+
+**GPT-5.4 and similar (400K+):**
+- Use `balanced` preset
+- Strong performance across all context ranges
+
+**Gemini (varies by provider):**
+- Check actual context limit with your provider
+- Some provider variants expose less context than advertised
+- Use `balanced-plus` for 256K variants
 
 ### Legacy Recommendation (Pre-v2.0)
 
@@ -136,11 +178,13 @@ For serious autonomous use, especially:
 
 prefer models with **more than 500K effective context** whenever possible.
 
+**🌟 DeepSeek V4 is ideal for these use cases** with its 1M context window and excellent performance.
+
 Practical rule:
 
 - below ~400K: use with caution for deep autonomous sessions
 - ~500K and above: strongly recommended
-- ~1M and above: best experience for long-running auto / bio sessions
+- ~1M and above: best experience for long-running auto / bio sessions (DeepSeek V4 fits here)
 
 Why this matters:
 

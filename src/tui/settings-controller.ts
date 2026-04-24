@@ -28,7 +28,7 @@ const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
 const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
 const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" /* SWARM SYSTEM - DISABLED 2026-04-23: | "swarm" */
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" | "model-selection" /* SWARM SYSTEM - DISABLED 2026-04-23: | "swarm" */
 type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
@@ -2132,6 +2132,611 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
   }
   END OF SWARM SYSTEM - TEMPORARILY DISABLED */
 
+  const openModelSelection = () => {
+    const config = effectiveRecord()
+    const autoProviderEnabled = getNestedBoolean(config, ["model_selection", "enable_auto_provider"])
+    const deepseekAvailable = getNestedBoolean(config, ["model_selection", "deepseek_available"])
+
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Model Selection Settings", "模型选择设置"),
+        placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Auto Provider Mode", "自动提供商模式"),
+            text(
+              "Automatically select models based on agent/category preferences",
+              "根据 Agent/分类偏好自动选择模型"
+            ),
+            text("Status", "状态")
+          ),
+          {
+            title: text("Enable Auto Provider", "启用自动提供商"),
+            value: "enable_auto_provider",
+            category: text("Auto Mode", "自动模式"),
+            description: statusLabel(autoProviderEnabled),
+          },
+          {
+            title: text("DeepSeek Available", "DeepSeek 可用"),
+            value: "deepseek_available",
+            category: text("Auto Mode", "自动模式"),
+            description: statusLabel(deepseekAvailable),
+          },
+          summaryRow(
+            text("Model Preferences", "模型偏好"),
+            text(
+              "Configure preferred models for agents and categories",
+              "为 Agent 和分类配置首选模型"
+            ),
+            text("Configuration", "配置")
+          ),
+          {
+            title: text("Agent Preferences", "Agent 偏好"),
+            value: "agent_preferences",
+            category: text("Preferences", "偏好"),
+            description: text("Configure model preferences for each agent", "为每个 Agent 配置模型偏好"),
+          },
+          {
+            title: text("Category Preferences", "分类偏好"),
+            value: "category_preferences",
+            category: text("Preferences", "偏好"),
+            description: text("Configure model preferences for each category", "为每个分类配置模型偏好"),
+          },
+          {
+            title: text("← Back", "← 返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to main settings", "返回主设置"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("root")
+            return
+          }
+          if (option.value === "enable_auto_provider") {
+            openBooleanDialog({
+              title: text("Enable Auto Provider", "启用自动提供商"),
+              current: autoProviderEnabled ?? true,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openModelSelection,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["model_selection", "enable_auto_provider"], value),
+                  text("Updated auto provider mode", "已更新自动提供商模式"),
+                  openModelSelection,
+                ),
+            })
+            return
+          }
+          if (option.value === "deepseek_available") {
+            openBooleanDialog({
+              title: text("DeepSeek Available", "DeepSeek 可用"),
+              current: deepseekAvailable ?? false,
+              trueLabel: text("Available", "可用"),
+              falseLabel: text("Not Available", "不可用"),
+              onBack: openModelSelection,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["model_selection", "deepseek_available"], value),
+                  text("Updated DeepSeek availability", "已更新 DeepSeek 可用性"),
+                  openModelSelection,
+                ),
+            })
+            return
+          }
+          if (option.value === "agent_preferences") {
+            openAgentPreferences()
+            return
+          }
+          if (option.value === "category_preferences") {
+            openCategoryPreferences()
+            return
+          }
+        },
+      }),
+      () => openRoot("root")
+    )
+  }
+
+  const openAgentPreferences = () => {
+    const config = effectiveRecord()
+    const agentPrefs = config["model_selection"] as Record<string, unknown> | undefined
+    const agentPreferences = agentPrefs?.["agent_preferences"] as Record<string, { preferred_model?: string; fallback_models?: string[] }> | undefined
+
+    // List of all configurable agents
+    const allAgents = [
+      "sisyphus", "wase", "prometheus", "oracle", "hephaestus", "atlas",
+      "bio-autopilot", "bio-orchestrator",
+      "librarian", "explore", "github-scout", "tech-scout",
+      "article-writer", "scientific-writer", "multimodal-looker"
+    ]
+
+    const options: TuiDialogSelectOption<string>[] = [
+      summaryRow(
+        text("Agent Model Preferences", "Agent 模型偏好"),
+        text("Configure preferred and fallback models for each agent", "为每个 Agent 配置首选和备用模型"),
+        text("Configuration", "配置")
+      ),
+    ]
+
+    for (const agentName of allAgents) {
+      const pref = agentPreferences?.[agentName]
+      const preferredModel = pref?.preferred_model
+      const fallbackCount = pref?.fallback_models?.length ?? 0
+
+      options.push({
+        title: agentName,
+        value: agentName,
+        category: text("Agents", "代理"),
+        description: preferredModel
+          ? `${preferredModel} • ${fallbackCount} ${text("fallbacks", "备用")}`
+          : text("Not configured", "未配置"),
+      })
+    }
+
+    options.push({
+      title: text("← Back", "← 返回"),
+      value: "back",
+      category: text("Navigation", "导航"),
+      description: text("Return to model selection settings", "返回模型选择设置"),
+    })
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title: text("Agent Model Preferences", "Agent 模型偏好"),
+          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
+          options,
+          onSelect: (option) => {
+            if (option.value === "back") {
+              openModelSelection()
+              return
+            }
+            openAgentPreferenceDetail(option.value)
+          },
+        }),
+      openModelSelection
+    )
+  }
+
+  const openAgentPreferenceDetail = (agentName: string) => {
+    const config = effectiveRecord()
+    const agentPrefs = config["model_selection"] as Record<string, unknown> | undefined
+    const agentPreferences = agentPrefs?.["agent_preferences"] as Record<string, { preferred_model?: string; fallback_models?: string[] }> | undefined
+    const pref = agentPreferences?.[agentName]
+    const preferredModel = pref?.preferred_model
+    const fallbackModels = pref?.fallback_models ?? []
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title: `${text("Agent", "代理")}: ${agentName}`,
+          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
+          options: [
+          summaryRow(
+            text("Model Configuration", "模型配置"),
+            text("Configure preferred and fallback models", "配置首选和备用模型"),
+            text("Settings", "设置")
+          ),
+          {
+            title: text("Preferred Model", "首选模型"),
+            value: "preferred_model",
+            category: text("Configuration", "配置"),
+            description: preferredModel ?? text("Not set", "未设置"),
+          },
+          {
+            title: text("Fallback Models", "备用模型"),
+            value: "fallback_models",
+            category: text("Configuration", "配置"),
+            description: fallbackModels.length > 0
+              ? `${fallbackModels.length} ${text("models", "个模型")}: ${fallbackModels.slice(0, 2).join(", ")}${fallbackModels.length > 2 ? "..." : ""}`
+              : text("Not set", "未设置"),
+          },
+          {
+            title: text("Reset to Default", "重置为默认"),
+            value: "reset",
+            category: text("Actions", "操作"),
+            description: text("Clear all preferences for this agent", "清除此 Agent 的所有偏好"),
+          },
+          {
+            title: text("← Back", "← 返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to agent list", "返回 Agent 列表"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openAgentPreferences()
+            return
+          }
+          if (option.value === "preferred_model") {
+            openModelSelectionDialog(
+              text("Select Preferred Model", "选择首选模型"),
+              preferredModel,
+              (selectedModel) => {
+                save(
+                  (root) => {
+                    const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                    const agentPrefs = modelSelection["agent_preferences"] as Record<string, unknown> | undefined ?? {}
+                    const agentPref = agentPrefs[agentName] as Record<string, unknown> | undefined ?? {}
+                    agentPref["preferred_model"] = selectedModel
+                    agentPrefs[agentName] = agentPref
+                    modelSelection["agent_preferences"] = agentPrefs
+                    root["model_selection"] = modelSelection
+                  },
+                  text("Updated preferred model", "已更新首选模型"),
+                  () => openAgentPreferenceDetail(agentName)
+                )
+              },
+              () => openAgentPreferenceDetail(agentName)
+            )
+            return
+          }
+          if (option.value === "fallback_models") {
+            openFallbackModelsManager(
+              agentName,
+              "agent",
+              fallbackModels,
+              () => openAgentPreferenceDetail(agentName)
+            )
+            return
+          }
+          if (option.value === "reset") {
+            save(
+              (root) => {
+                const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                const agentPrefs = modelSelection["agent_preferences"] as Record<string, unknown> | undefined ?? {}
+                delete agentPrefs[agentName]
+                modelSelection["agent_preferences"] = agentPrefs
+                root["model_selection"] = modelSelection
+              },
+              text("Reset agent preferences", "已重置 Agent 偏好"),
+              openAgentPreferences
+            )
+            return
+          }
+        },
+      }),
+      openAgentPreferences
+    )
+  }
+
+  const openCategoryPreferences = () => {
+    const config = effectiveRecord()
+    const categoryPrefs = config["model_selection"] as Record<string, unknown> | undefined
+    const categoryPreferences = categoryPrefs?.["category_preferences"] as Record<string, { preferred_model?: string; fallback_models?: string[] }> | undefined
+
+    // List of all configurable categories
+    const allCategories = [
+      "quick", "ultrabrain", "deep", "visual-engineering",
+      "artistry", "writing", "unspecified-low", "unspecified-high"
+    ]
+
+    const options: TuiDialogSelectOption<string>[] = [
+      summaryRow(
+        text("Category Model Preferences", "分类模型偏好"),
+        text("Configure preferred and fallback models for each category", "为每个分类配置首选和备用模型"),
+        text("Configuration", "配置")
+      ),
+    ]
+
+    for (const categoryName of allCategories) {
+      const pref = categoryPreferences?.[categoryName]
+      const preferredModel = pref?.preferred_model
+      const fallbackCount = pref?.fallback_models?.length ?? 0
+
+      options.push({
+        title: categoryName,
+        value: categoryName,
+        category: text("Categories", "分类"),
+        description: preferredModel
+          ? `${preferredModel} • ${fallbackCount} ${text("fallbacks", "备用")}`
+          : text("Not configured", "未配置"),
+      })
+    }
+
+    options.push({
+      title: text("← Back", "← 返回"),
+      value: "back",
+      category: text("Navigation", "导航"),
+      description: text("Return to model selection settings", "返回模型选择设置"),
+    })
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title: text("Category Model Preferences", "分类模型偏好"),
+          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
+          options,
+          onSelect: (option) => {
+            if (option.value === "back") {
+            openModelSelection()
+            return
+          }
+          openCategoryPreferenceDetail(option.value)
+        },
+      }),
+      openModelSelection
+    )
+  }
+
+  const openCategoryPreferenceDetail = (categoryName: string) => {
+    const config = effectiveRecord()
+    const categoryPrefs = config["model_selection"] as Record<string, unknown> | undefined
+    const categoryPreferences = categoryPrefs?.["category_preferences"] as Record<string, { preferred_model?: string; fallback_models?: string[] }> | undefined
+    const pref = categoryPreferences?.[categoryName]
+    const preferredModel = pref?.preferred_model
+    const fallbackModels = pref?.fallback_models ?? []
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title: `${text("Category", "分类")}: ${categoryName}`,
+          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
+          options: [
+          summaryRow(
+            text("Model Configuration", "模型配置"),
+            text("Configure preferred and fallback models", "配置首选和备用模型"),
+            text("Settings", "设置")
+          ),
+          {
+            title: text("Preferred Model", "首选模型"),
+            value: "preferred_model",
+            category: text("Configuration", "配置"),
+            description: preferredModel ?? text("Not set", "未设置"),
+          },
+          {
+            title: text("Fallback Models", "备用模型"),
+            value: "fallback_models",
+            category: text("Configuration", "配置"),
+            description: fallbackModels.length > 0
+              ? `${fallbackModels.length} ${text("models", "个模型")}: ${fallbackModels.slice(0, 2).join(", ")}${fallbackModels.length > 2 ? "..." : ""}`
+              : text("Not set", "未设置"),
+          },
+          {
+            title: text("Reset to Default", "重置为默认"),
+            value: "reset",
+            category: text("Actions", "操作"),
+            description: text("Clear all preferences for this category", "清除此分类的所有偏好"),
+          },
+          {
+            title: text("← Back", "← 返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to category list", "返回分类列表"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openCategoryPreferences()
+            return
+          }
+          if (option.value === "preferred_model") {
+            openModelSelectionDialog(
+              text("Select Preferred Model", "选择首选模型"),
+              preferredModel,
+              (selectedModel) => {
+                save(
+                  (root) => {
+                    const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                    const categoryPrefs = modelSelection["category_preferences"] as Record<string, unknown> | undefined ?? {}
+                    const categoryPref = categoryPrefs[categoryName] as Record<string, unknown> | undefined ?? {}
+                    categoryPref["preferred_model"] = selectedModel
+                    categoryPrefs[categoryName] = categoryPref
+                    modelSelection["category_preferences"] = categoryPrefs
+                    root["model_selection"] = modelSelection
+                  },
+                  text("Updated preferred model", "已更新首选模型"),
+                  () => openCategoryPreferenceDetail(categoryName)
+                )
+              },
+              () => openCategoryPreferenceDetail(categoryName)
+            )
+            return
+          }
+          if (option.value === "fallback_models") {
+            openFallbackModelsManager(
+              categoryName,
+              "category",
+              fallbackModels,
+              () => openCategoryPreferenceDetail(categoryName)
+            )
+            return
+          }
+          if (option.value === "reset") {
+            save(
+              (root) => {
+                const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                const categoryPrefs = modelSelection["category_preferences"] as Record<string, unknown> | undefined ?? {}
+                delete categoryPrefs[categoryName]
+                modelSelection["category_preferences"] = categoryPrefs
+                root["model_selection"] = modelSelection
+              },
+              text("Reset category preferences", "已重置分类偏好"),
+              openCategoryPreferences
+            )
+            return
+          }
+        },
+      }),
+      openCategoryPreferences
+    )
+  }
+
+  const openModelSelectionDialog = (
+    title: string,
+    currentModel: string | undefined,
+    onConfirm: (model: string) => void,
+    onBack: () => void
+  ) => {
+    // Import getAllAvailableModels at runtime
+    const { getAllAvailableModels } = require("../shared/auto-model-selector")
+    const availableModels = getAllAvailableModels()
+
+    if (availableModels.length === 0) {
+      toast(text("No models available. Please connect a provider first.", "没有可用模型。请先连接提供商。"), "warning")
+      onBack()
+      return
+    }
+
+    // Group models by provider
+    const modelsByProvider: Record<string, typeof availableModels> = {}
+    for (const model of availableModels) {
+      if (!modelsByProvider[model.provider]) {
+        modelsByProvider[model.provider] = []
+      }
+      modelsByProvider[model.provider].push(model)
+    }
+
+    const options: TuiDialogSelectOption<string>[] = []
+
+    for (const [provider, models] of Object.entries(modelsByProvider)) {
+      for (const model of models) {
+        const contextInfo = model.context ? ` • ${formatCompactTokens(model.context)}` : ""
+        options.push({
+          title: model.name ?? model.id,
+          value: model.fullId,
+          category: provider,
+          description: `${model.fullId}${contextInfo}`,
+        })
+      }
+    }
+
+    options.push({
+      title: text("← Back", "← 返回"),
+      value: "back",
+      category: text("Navigation", "导航"),
+      description: text("Return without selecting", "不选择并返回"),
+    })
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title,
+          placeholder: text("Filter models • Enter select • Esc back", "筛选模型 • 回车选择 • Esc 返回"),
+          current: currentModel,
+          options,
+          onSelect: (option) => {
+            if (option.value === "back") {
+              onBack()
+              return
+            }
+            onConfirm(option.value)
+          },
+        }),
+      onBack
+    )
+  }
+
+  const openFallbackModelsManager = (
+    name: string,
+    type: "agent" | "category",
+    currentFallbacks: string[],
+    onBack: () => void
+  ) => {
+    const options: TuiDialogSelectOption<string>[] = [
+      summaryRow(
+        text("Fallback Models", "备用模型"),
+        text("Manage fallback models in priority order", "按优先级顺序管理备用模型"),
+        text("Configuration", "配置")
+      ),
+    ]
+
+    if (currentFallbacks.length === 0) {
+      options.push({
+        title: text("No fallback models configured", "未配置备用模型"),
+        value: "__empty__",
+        category: text("Status", "状态"),
+        description: text("Add fallback models below", "在下方添加备用模型"),
+        disabled: true,
+      })
+    } else {
+      for (let i = 0; i < currentFallbacks.length; i++) {
+        options.push({
+          title: `${i + 1}. ${currentFallbacks[i]}`,
+          value: `remove_${i}`,
+          category: text("Current Fallbacks", "当前备用"),
+          description: text("Select to remove", "选择以移除"),
+        })
+      }
+    }
+
+    options.push({
+      title: text("+ Add Fallback Model", "+ 添加备用模型"),
+      value: "add",
+      category: text("Actions", "操作"),
+      description: text("Add a new fallback model", "添加新的备用模型"),
+    })
+
+    options.push({
+      title: text("← Back", "← 返回"),
+      value: "back",
+      category: text("Navigation", "导航"),
+      description: text("Return to detail page", "返回详情页"),
+    })
+
+    api.ui.dialog.replace(
+      () =>
+        api.ui.DialogSelect({
+          title: `${text("Fallback Models", "备用模型")}: ${name}`,
+          placeholder: text(SETTINGS_SUBPAGE_PLACEHOLDER, "筛选选项 • 回车确认 • Esc 返回"),
+          options,
+          onSelect: (option) => {
+            if (option.value === "back") {
+              onBack()
+              return
+            }
+            if (option.value === "add") {
+            openModelSelectionDialog(
+              text("Add Fallback Model", "添加备用模型"),
+              undefined,
+              (selectedModel) => {
+                const newFallbacks = [...currentFallbacks, selectedModel]
+                save(
+                  (root) => {
+                    const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                    const prefs = modelSelection[type === "agent" ? "agent_preferences" : "category_preferences"] as Record<string, unknown> | undefined ?? {}
+                    const pref = prefs[name] as Record<string, unknown> | undefined ?? {}
+                    pref["fallback_models"] = newFallbacks
+                    prefs[name] = pref
+                    modelSelection[type === "agent" ? "agent_preferences" : "category_preferences"] = prefs
+                    root["model_selection"] = modelSelection
+                  },
+                  text("Added fallback model", "已添加备用模型"),
+                  () => openFallbackModelsManager(name, type, newFallbacks, onBack)
+                )
+              },
+              () => openFallbackModelsManager(name, type, currentFallbacks, onBack)
+            )
+            return
+          }
+          if (option.value.startsWith("remove_")) {
+            const index = parseInt(option.value.replace("remove_", ""))
+            const newFallbacks = currentFallbacks.filter((_, i) => i !== index)
+            save(
+              (root) => {
+                const modelSelection = root["model_selection"] as Record<string, unknown> | undefined ?? {}
+                const prefs = modelSelection[type === "agent" ? "agent_preferences" : "category_preferences"] as Record<string, unknown> | undefined ?? {}
+                const pref = prefs[name] as Record<string, unknown> | undefined ?? {}
+                pref["fallback_models"] = newFallbacks
+                prefs[name] = pref
+                modelSelection[type === "agent" ? "agent_preferences" : "category_preferences"] = prefs
+                root["model_selection"] = modelSelection
+              },
+              text("Removed fallback model", "已移除备用模型"),
+              () => openFallbackModelsManager(name, type, newFallbacks, onBack)
+            )
+            return
+          }
+        },
+      }),
+      onBack
+    )
+  }
+
   const openRoot = (entry: SettingsEntry = "root") => {
     if (entry === "general") {
       openGeneral()
@@ -2153,6 +2758,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       openContextGuard()
       return
     }
+    if (entry === "model-selection") {
+      openModelSelection()
+      return
+    }
     /* SWARM SYSTEM - DISABLED 2026-04-23
     if (entry === "swarm") {
       openSwarm()
@@ -2167,6 +2776,8 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const profile = getNestedString(configRecord, ["experimental", "context_guard_profile"])
     const preemptiveCompaction = getNestedBoolean(configRecord, ["experimental", "preemptive_compaction"])
     const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
+    const autoProviderEnabled = getNestedBoolean(configRecord, ["model_selection", "enable_auto_provider"])
+    const deepseekAvailable = getNestedBoolean(configRecord, ["model_selection", "deepseek_available"])
     /* SWARM SYSTEM - DISABLED 2026-04-23
     const swarmEnabled = getNestedBoolean(configRecord, ["experimental", "swarm", "enabled"])
     const swarmMaxWorkers = getNestedNumber(configRecord, ["experimental", "swarm", "max_workers"])
@@ -2221,6 +2832,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             category: text("Pages", "页面"),
             description: `${text("Image bus", "图片总线")}: ${booleanLabel(imageBusEnabled)} • ${text("Routing and provider settings", "路由与通道配置")}`,
           },
+          {
+            title: text("Model Selection Settings", "模型选择设置"),
+            value: "model-selection",
+            category: text("Pages", "页面"),
+            description: `${text("Auto provider", "自动提供商")}: ${booleanLabel(autoProviderEnabled)} • ${text("DeepSeek", "DeepSeek")}: ${booleanLabel(deepseekAvailable)} • ${text("Agent & category preferences", "Agent 与分类偏好")}`,
+          },
           /* SWARM SYSTEM - DISABLED 2026-04-23
           {
             title: text("Swarm Settings", "蜂群设置"),
@@ -2253,6 +2870,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "context-guard") {
             openContextGuard()
+            return
+          }
+          if (option.value === "model-selection") {
+            openModelSelection()
             return
           }
           /* SWARM SYSTEM - DISABLED 2026-04-23

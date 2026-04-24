@@ -26,6 +26,7 @@ import { SisyphusAgentConfigSchema } from "./sisyphus-agent"
 import { TmuxConfigSchema } from "./tmux"
 import { StartWorkConfigSchema } from "./start-work"
 import { WebsearchConfigSchema } from "./websearch"
+import { ModelSelectionConfigSchema } from "./model-selection"
 
 export const OhMyOpenCodeConfigSchema = z.object({
   $schema: z.string().optional(),
@@ -77,6 +78,8 @@ export const OhMyOpenCodeConfigSchema = z.object({
   start_work: StartWorkConfigSchema.optional(),
   /** Agent display configuration (minimal/standard/full modes, domain switches) */
   agent_display: AgentDisplayConfigSchema.optional(),
+  /** Model selection configuration (auto provider, agent/category preferences) */
+  model_selection: ModelSelectionConfigSchema.optional(),
   /** Migration history to prevent re-applying migrations (e.g., model version upgrades) */
   _migrations: z.array(z.string()).optional(),
 })

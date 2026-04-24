@@ -5837,6 +5837,60 @@
       ],
       "additionalProperties": false
     },
+    "model_selection": {
+      "type": "object",
+      "properties": {
+        "enable_auto_provider": {
+          "type": "boolean"
+        },
+        "deepseek_available": {
+          "type": "boolean"
+        },
+        "agent_preferences": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "preferred_model": {
+                "type": "string"
+              },
+              "fallback_models": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "category_preferences": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "preferred_model": {
+                "type": "string"
+              },
+              "fallback_models": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "_migrations": {
       "type": "array",
       "items": {

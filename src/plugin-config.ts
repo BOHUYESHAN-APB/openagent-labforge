@@ -13,6 +13,7 @@ import {
 } from "./shared";
 import { LEGACY_CONFIG_BASENAME } from "./shared/plugin-identity";
 import { stripBOM } from "./shared/strip-bom";
+import { initializeDefaultModelPreferences } from "./shared/init-model-preferences";
 
 const PARTIAL_STRING_ARRAY_KEYS = new Set([
   "disabled_mcps",
@@ -205,6 +206,16 @@ export function loadPluginConfig(
     config = mergeConfigs(config, projectConfig);
   }
 
+  // Initialize default model preferences if not configured
+  if (!config.model_selection || Object.keys(config.model_selection).length === 0) {
+    log("No model_selection config found, initializing defaults with DeepSeek preferences");
+    const defaultPreferences = initializeDefaultModelPreferences();
+    config = {
+      ...config,
+      model_selection: defaultPreferences,
+    };
+  }
+
   config = {
     ...config,
   };
@@ -215,6 +226,7 @@ export function loadPluginConfig(
     disabled_mcps: config.disabled_mcps,
     disabled_hooks: config.disabled_hooks,
     claude_code: config.claude_code,
+    model_selection: config.model_selection,
   });
   return config;
 }

@@ -9,6 +9,8 @@ import { parseModelString } from "./model-string-parser"
 import { CATEGORY_MODEL_REQUIREMENTS } from "../../shared/model-requirements"
 import { getAvailableModelsForDelegateTask } from "./available-models"
 import { resolveModelForDelegateTask } from "./model-selection"
+import { selectModelForCategory } from "../../shared/auto-model-selector"
+import { loadPluginConfig } from "../../plugin-config"
 
 export interface CategoryResolutionResult {
   agentToUse: string
@@ -86,15 +88,22 @@ Available categories: ${allCategoryNames}`,
   const overrideModel = sisyphusJuniorModel
   const explicitCategoryModel = userCategories?.[args.category!]?.model
 
+  // Try auto model selection first
+  const config = loadPluginConfig(executorCtx.directory, undefined)
+  const autoModel = selectModelForCategory(args.category!, config)
+
   if (!requirement) {
     // Precedence:
-    // 1. explicit category model (user explicitly set for this category)
-    // 2. inherited parent model (inherit from parent agent by default)
-    // 3. sisyphus-junior default (global sisyphus-junior model config)
-    // 4. category resolved model (category's default model)
-    actualModel = explicitCategoryModel ?? inheritedModel ?? overrideModel ?? resolved.model
+    // 1. auto model selection (from model_selection config)
+    // 2. explicit category model (user explicitly set for this category)
+    // 3. inherited parent model (inherit from parent agent by default)
+    // 4. sisyphus-junior default (global sisyphus-junior model config)
+    // 5. category resolved model (category's default model)
+    actualModel = autoModel ?? explicitCategoryModel ?? inheritedModel ?? overrideModel ?? resolved.model
     if (actualModel) {
-      modelInfo = inheritedModel && actualModel === inheritedModel
+      modelInfo = autoModel && actualModel === autoModel
+        ? { model: actualModel, type: "user-defined", source: "override" }
+        : inheritedModel && actualModel === inheritedModel
         ? { model: actualModel, type: "inherited", source: "override" }
         : explicitCategoryModel || overrideModel
           ? { model: actualModel, type: "user-defined", source: "override" }
@@ -102,11 +111,12 @@ Available categories: ${allCategoryNames}`,
     }
   } else {
     // Precedence for model resolution:
-    // 1. explicit category model (user explicitly set for this category)
-    // 2. inherited parent model (inherit from parent agent by default)
-    // 3. sisyphus-junior default (global sisyphus-junior model config)
+    // 1. auto model selection (from model_selection config)
+    // 2. explicit category model (user explicitly set for this category)
+    // 3. inherited parent model (inherit from parent agent by default)
+    // 4. sisyphus-junior default (global sisyphus-junior model config)
     const resolution = resolveModelForDelegateTask({
-      userModel: explicitCategoryModel ?? inheritedModel ?? overrideModel,
+      userModel: autoModel ?? explicitCategoryModel ?? inheritedModel ?? overrideModel,
       categoryDefaultModel: resolved.model,
       fallbackChain: requirement.fallbackChain,
       availableModels,
@@ -131,7 +141,9 @@ Available categories: ${allCategoryNames}`,
       }
 
       const type: "user-defined" | "inherited" | "category-default" | "system-default" =
-        (inheritedModel && actualModel === inheritedModel)
+        (autoModel && actualModel === autoModel)
+          ? "user-defined"
+          : (inheritedModel && actualModel === inheritedModel)
           ? "inherited"
           : (explicitCategoryModel || overrideModel)
               ? "user-defined"
