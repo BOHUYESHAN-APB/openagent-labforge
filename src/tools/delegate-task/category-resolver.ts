@@ -88,7 +88,10 @@ Available categories: ${allCategoryNames}`,
 
   if (!requirement) {
     // Precedence:
-    // explicit category model > inherited parent model > sisyphus-junior default > category resolved model
+    // 1. explicit category model (user explicitly set for this category)
+    // 2. inherited parent model (inherit from parent agent by default)
+    // 3. sisyphus-junior default (global sisyphus-junior model config)
+    // 4. category resolved model (category's default model)
     actualModel = explicitCategoryModel ?? inheritedModel ?? overrideModel ?? resolved.model
     if (actualModel) {
       modelInfo = inheritedModel && actualModel === inheritedModel
@@ -98,6 +101,10 @@ Available categories: ${allCategoryNames}`,
         : { model: actualModel, type: "system-default", source: "system-default" }
     }
   } else {
+    // Precedence for model resolution:
+    // 1. explicit category model (user explicitly set for this category)
+    // 2. inherited parent model (inherit from parent agent by default)
+    // 3. sisyphus-junior default (global sisyphus-junior model config)
     const resolution = resolveModelForDelegateTask({
       userModel: explicitCategoryModel ?? inheritedModel ?? overrideModel,
       categoryDefaultModel: resolved.model,

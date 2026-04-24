@@ -257,16 +257,13 @@ jobs:
         if: steps.check.outputs.skip != 'true' && steps.download.outcome == 'success'
         run: |
           cd packages/${{ matrix.platform }}
-          
+
           TAG_ARG=""
           if [ -n "${{ inputs.dist_tag }}" ]; then
             TAG_ARG="--tag ${{ inputs.dist_tag }}"
           fi
-          
+
           npm publish --access public --provenance $TAG_ARG
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
         timeout-minutes: 15
 
       - name: Upload release asset

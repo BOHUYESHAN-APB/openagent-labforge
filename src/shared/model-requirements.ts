@@ -15,6 +15,13 @@ export type ModelRequirement = {
 export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   sisyphus: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (best cost-performance ratio, T0-level)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "max",
+      },
+      // Priority 2: Claude Opus 4.6 (highest performance)
       {
         providers: ["anthropic", "github-copilot", "opencode"],
         model: "claude-opus-4-6",
@@ -40,6 +47,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   hephaestus: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (best for deep coding tasks)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "medium",
+      },
       {
         providers: ["openai", "venice", "opencode"],
         model: "gpt-5.3-codex",
@@ -47,10 +60,16 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
       },
       { providers: ["github-copilot"], model: "gpt-5.4", variant: "medium" },
     ],
-    requiresProvider: ["openai", "github-copilot", "venice", "opencode"],
+    requiresProvider: ["deepseek", "openai", "github-copilot", "venice", "opencode"],
   },
   oracle: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (excellent for architecture and planning)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "high",
+      },
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",
@@ -70,6 +89,11 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   librarian: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Flash (fast and cost-effective for documentation)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-flash",
+      },
       {
         providers: ["google", "github-copilot", "opencode"],
         model: "gemini-3-flash",
@@ -80,6 +104,11 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   explore: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Flash (fast exploration with 1M context)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-flash",
+      },
       { providers: ["github-copilot"], model: "grok-code-fast-1" },
       { providers: ["opencode"], model: "minimax-m2.5-free" },
       { providers: ["anthropic", "opencode"], model: "claude-haiku-4-5" },
@@ -88,6 +117,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   wase: {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (best for autonomous engineering)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "max",
+      },
       {
         providers: ["anthropic", "github-copilot", "opencode"],
         model: "claude-opus-4-6",
@@ -113,6 +148,11 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   "github-scout": {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Flash (fast GitHub exploration)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-flash",
+      },
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",
@@ -127,6 +167,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   "tech-scout": {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (excellent for technical research)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "high",
+      },
       {
         providers: ["google", "github-copilot", "opencode"],
         model: "gemini-3.1-pro",
@@ -145,6 +191,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   "article-writer": {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (excellent for writing)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "medium",
+      },
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",
@@ -163,6 +215,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   "scientific-writer": {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (excellent for scientific writing)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "high",
+      },
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",
@@ -181,6 +239,12 @@ export const AGENT_MODEL_REQUIREMENTS: Record<string, ModelRequirement> = {
   },
   "bio-autopilot": {
     fallbackChain: [
+      // Priority 1: DeepSeek V4-Pro (excellent for bioinformatics)
+      {
+        providers: ["deepseek", "opencode"],
+        model: "deepseek-v4-pro",
+        variant: "high",
+      },
       {
         providers: ["openai", "github-copilot", "opencode"],
         model: "gpt-5.4",

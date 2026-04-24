@@ -1,12 +1,18 @@
 import type { PluginInput } from "@opencode-ai/plugin";
 import { normalizeSDKResponse } from "./normalize-sdk-response"
+import { getModelContextWindow } from "./connected-providers-cache"
 
 const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000;
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 const DEFAULT_TARGET_MAX_TOKENS = 50_000;
+// Use 128K as conservative default for unknown models
+const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000;
 
 type ModelCacheStateLike = {
 	anthropicContext1MEnabled: boolean;
+	modelContextLimitsCache?: Map<string, number>;
+	providerID?: string;
+	modelID?: string;
 }
 
 function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number {
@@ -15,6 +21,47 @@ function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number 
 		process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
 		? 1_000_000
 		: DEFAULT_ANTHROPIC_ACTUAL_LIMIT;
+}
+
+function inferContextLimit(modelCacheState?: ModelCacheStateLike): number {
+	// Priority 1: Use cached context limit from OpenCode provider data
+	if (modelCacheState?.providerID && modelCacheState?.modelID) {
+		const cached = modelCacheState.modelContextLimitsCache?.get(
+			`${modelCacheState.providerID}/${modelCacheState.modelID}`
+		);
+		if (cached && cached > 0) {
+			return cached;
+		}
+	}
+
+	// Priority 2: Try to get from connected providers cache
+	if (modelCacheState?.modelID) {
+		const contextFromCache = getModelContextWindow(modelCacheState.modelID);
+		if (contextFromCache && contextFromCache > 0) {
+			return contextFromCache;
+		}
+	}
+
+	// Priority 3: Check if large context mode is enabled
+	if (modelCacheState?.anthropicContext1MEnabled) {
+		return 1_000_000;
+	}
+
+	// Priority 4: Provider-specific defaults
+	const providerID = modelCacheState?.providerID ?? "";
+	const modelID = modelCacheState?.modelID ?? "";
+
+	if (providerID === "anthropic" || providerID === "google-vertex-anthropic") {
+		return getAnthropicActualLimit(modelCacheState);
+	}
+
+	// DeepSeek V4 models have 1M context
+	if (modelID.includes("deepseek-v4")) {
+		return 1_000_000;
+	}
+
+	// Priority 5: Conservative default
+	return DEFAULT_MODEL_CONTEXT_LIMIT;
 }
 
 interface AssistantMessageInfo {
@@ -143,13 +190,13 @@ export async function getContextWindowUsage(
 			(lastTokens?.input ?? 0) +
 			(lastTokens?.cache?.read ?? 0) +
 			(lastTokens?.output ?? 0);
-		const anthropicActualLimit = getAnthropicActualLimit(modelCacheState);
-		const remainingTokens = anthropicActualLimit - usedTokens;
+		const contextLimit = inferContextLimit(modelCacheState);
+		const remainingTokens = contextLimit - usedTokens;
 
 		return {
 			usedTokens,
 			remainingTokens,
-			usagePercentage: usedTokens / anthropicActualLimit,
+			usagePercentage: usedTokens / contextLimit,
 		};
 	} catch {
 		return null;

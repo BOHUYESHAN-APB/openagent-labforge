@@ -48,13 +48,24 @@ export async function fetchSyncResult(
   // The last assistant message may only contain tool calls with no text.
   let textContent = ""
   for (const msg of assistantMessages) {
+    // DEBUG: 临时调试日志 - 查看消息结构
+    console.log("[SUBAGENT DEBUG] Message parts:", JSON.stringify(msg.parts?.map(p => ({
+      type: p.type,
+      hasText: !!p.text,
+      textLength: p.text?.length || 0
+    })), null, 2))
+
     const textParts = msg.parts?.filter((p) => p.type === "text" || p.type === "reasoning") ?? []
     const content = textParts.map((p) => p.text ?? "").filter(Boolean).join("\n")
+
+    console.log("[SUBAGENT DEBUG] Filtered parts count:", textParts.length, "Content length:", content.length)
+
     if (content) {
       textContent = content
       break
     }
   }
 
+  console.log("[SUBAGENT DEBUG] Final textContent length:", textContent.length)
   return { ok: true, textContent }
 }

@@ -301,3 +301,39 @@ export function getModelContextWindow(modelId: string): number | null {
 	const metadata = getModelMetadata(modelId)
 	return metadata?.context ?? null
 }
+
+/**
+ * Populate modelContextLimitsCache from the provider models cache.
+ * This should be called during plugin initialization to ensure all models
+ * from OpenCode's provider data are available in the cache.
+ */
+export function populateModelContextLimitsCache(
+	modelContextLimitsCache: Map<string, number>
+): void {
+	const cache = readProviderModelsCache()
+	if (!cache) {
+		log("[connected-providers-cache] No provider models cache available to populate modelContextLimitsCache")
+		return
+	}
+
+	let populatedCount = 0
+	for (const [providerID, models] of Object.entries(cache.models)) {
+		if (!Array.isArray(models)) continue
+
+		for (const model of models) {
+			if (typeof model === 'object' && model !== null && 'id' in model) {
+				const metadata = model as ModelMetadata
+				if (metadata.context && metadata.context > 0) {
+					const key = `${providerID}/${metadata.id}`
+					modelContextLimitsCache.set(key, metadata.context)
+					populatedCount++
+				}
+			}
+		}
+	}
+
+	log("[connected-providers-cache] Populated modelContextLimitsCache", {
+		populatedCount,
+		providerCount: Object.keys(cache.models).length,
+	})
+}

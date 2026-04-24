@@ -2,7 +2,9 @@ const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000
 const LABFORGE_NOTICE_THRESHOLD = 0.45
 const LABFORGE_FUSE_THRESHOLD = 0.60
 const LABFORGE_SEVERE_THRESHOLD = 0.72
-const DEFAULT_MODEL_CONTEXT_LIMIT = 200_000
+// Use 128K as conservative default for unknown models (common for GPT-4 and many modern models)
+// This is safer than 200K which may cause issues with models that have smaller context windows
+const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
 
 export const ANTHROPIC_DISPLAY_LIMIT = 1_000_000
 export const CONTEXT_WARNING_THRESHOLD = 0.70
@@ -61,25 +63,46 @@ export function inferContextLimit(providerID: string, modelID: string | undefine
     }
   }
 
-  // Priority 2: Check if large context mode is enabled (for Anthropic and other 1M models)
+  // Priority 2: Try to get context window from OpenCode's connected providers cache
+  // This is populated by OpenCode when it fetches provider/model information
+  if (modelID) {
+    try {
+      const { getModelContextWindow } = require("../shared/connected-providers-cache")
+      const contextFromCache = getModelContextWindow(modelID)
+      if (contextFromCache && contextFromCache > 0) {
+        return contextFromCache
+      }
+    } catch {
+      // Ignore if module not available or error occurs
+    }
+  }
+
+  // Priority 3: Check if large context mode is enabled (for Anthropic and other 1M models)
   if (modelCacheState?.anthropicContext1MEnabled) {
     return 1_000_000
   }
 
-  // Priority 3: Provider-specific defaults
+  // Priority 4: Provider-specific defaults
   if (isAnthropicProvider(providerID)) {
     return getAnthropicActualLimit(modelCacheState)
   }
 
-  // Priority 4: Model name pattern matching (fallback, less reliable)
+  // Priority 5: Model name pattern matching (fallback, less reliable)
   const normalized = `${providerID}/${modelID ?? ""}`.toLowerCase()
 
   // 1M models
+  if (normalized.includes("deepseek-v4")) {
+    return 1_000_000
+  }
   if (normalized.includes("gemini-3") || normalized.includes("gemini-2.5-pro")) {
     return 1_000_000
   }
   if (normalized.includes("gpt-5.4") || normalized.includes("gpt-5-4")) {
     return 1_000_000
+  }
+  if (normalized.includes("claude") && (normalized.includes("opus") || normalized.includes("sonnet"))) {
+    // Modern Claude models typically have 200K context
+    return 200_000
   }
 
   // 400K models
@@ -92,12 +115,17 @@ export function inferContextLimit(providerID: string, modelID: string | undefine
     return 256_000
   }
 
+  // 200K models
+  if (normalized.includes("gemini-2.0") || normalized.includes("gemini-1.5")) {
+    return 200_000
+  }
+
   // 128K models (common default for many models)
   if (normalized.includes("gpt-4") || normalized.includes("gpt-3.5")) {
     return 128_000
   }
 
-  // Priority 5: Conservative default
+  // Priority 6: Conservative default (128K is safer than 200K for unknown models)
   return DEFAULT_MODEL_CONTEXT_LIMIT
 }
 

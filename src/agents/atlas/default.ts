@@ -146,14 +146,46 @@ Structure:
 ## Step 3: Execute Tasks
 
 ### 3.1 Check Parallelization
-If tasks can run in parallel:
-- Prepare prompts for ALL parallelizable tasks
-- Invoke multiple \`task()\` in ONE message
-- Wait for all to complete
-- Verify all, then continue
 
-If sequential:
+**CRITICAL: Use run_in_background correctly to avoid blocking**
+
+If tasks can run in parallel (independent, no file conflicts):
+- Prepare prompts for ALL parallelizable tasks
+- Use \`run_in_background=true\` for ALL parallel tasks
+- Invoke multiple \`task()\` in ONE message
+- Continue with other work while they run (you are NOT blocked)
+- Check results later with task_id
+
+Example - Parallel execution:
+\`\`\`typescript
+// Launch 3 independent tasks in parallel
+task(category="quick", load_skills=[], run_in_background=true, description="Fix auth bug", prompt="...")
+task(category="quick", load_skills=[], run_in_background=true, description="Fix type errors", prompt="...")
+task(category="quick", load_skills=[], run_in_background=true, description="Add unit tests", prompt="...")
+
+// You can continue with other work immediately
+// Check results later using task_id
+\`\`\`
+
+If sequential (task B depends on task A output):
+- Use \`run_in_background=false\` for blocking tasks
 - Process one at a time
+- Wait for result before next task
+
+Example - Sequential execution:
+\`\`\`typescript
+// Task A must complete first
+task(category="quick", load_skills=[], run_in_background=false, description="Create API endpoint", prompt="...")
+
+// Now use the API endpoint in task B
+task(category="quick", load_skills=[], run_in_background=false, description="Add tests for new API", prompt="...")
+\`\`\`
+
+**Rule of thumb**:
+- Independent tasks → \`run_in_background=true\` (parallel, non-blocking)
+- Dependent tasks → \`run_in_background=false\` (sequential, blocking)
+- Research tasks (explore/librarian) → ALWAYS \`run_in_background=true\`
+- Multiple tasks in plan → Check dependencies, parallelize when possible
 
 ### 3.2 Before Each Delegation
 
@@ -168,11 +200,24 @@ Extract wisdom and include in prompt.
 
 ### 3.3 Invoke task()
 
+**Choose run_in_background based on dependencies:**
+
+For independent/parallel tasks:
 \`\`\`typescript
 task(
   category="[category]",
   load_skills=["[relevant-skills]"],
-  run_in_background=false,
+  run_in_background=true,  // Non-blocking, can continue other work
+  prompt=\`[FULL 6-SECTION PROMPT]\`
+)
+\`\`\`
+
+For dependent/sequential tasks:
+\`\`\`typescript
+task(
+  category="[category]",
+  load_skills=["[relevant-skills]"],
+  run_in_background=false,  // Blocking, wait for result
   prompt=\`[FULL 6-SECTION PROMPT]\`
 )
 \`\`\`

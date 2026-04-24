@@ -17,6 +17,8 @@ import {
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
 const DEFAULT_ACTUAL_LIMIT = 200_000
+// Use 128K as conservative default for unknown models
+const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
 const PREEMPTIVE_COMPACTION_TIMEOUT_MS = 120_000
 
 type ModelCacheStateLike = {

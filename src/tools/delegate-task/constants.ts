@@ -283,14 +283,14 @@ You are NOT an interactive assistant. You are an autonomous problem-solver.
 
 
 export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
-  "visual-engineering": { model: "google/gemini-3.1-pro", variant: "high" },
-  ultrabrain: { model: "openai/gpt-5.3-codex", variant: "xhigh" },
-  deep: { model: "openai/gpt-5.3-codex", variant: "medium" },
-  artistry: { model: "google/gemini-3.1-pro", variant: "high" },
-  quick: { model: "anthropic/claude-haiku-4-5" },
-  "unspecified-low": { model: "anthropic/claude-sonnet-4-6" },
-  "unspecified-high": { model: "openai/gpt-5.4-high" },
-  writing: { model: "kimi-for-coding/k2p5" },
+  "visual-engineering": { model: "deepseek/deepseek-v4-flash" },
+  ultrabrain: { model: "deepseek/deepseek-v4-pro", variant: "max" },
+  deep: { model: "deepseek/deepseek-v4-pro", variant: "medium" },
+  artistry: { model: "deepseek/deepseek-v4-flash" },
+  quick: { model: "deepseek/deepseek-v4-flash" },
+  "unspecified-low": { model: "deepseek/deepseek-v4-flash" },
+  "unspecified-high": { model: "deepseek/deepseek-v4-pro", variant: "high" },
+  writing: { model: "deepseek/deepseek-v4-flash" },
 }
 
 export const CATEGORY_PROMPT_APPENDS: Record<string, string> = {

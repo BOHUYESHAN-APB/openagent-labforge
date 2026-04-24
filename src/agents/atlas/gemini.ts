@@ -152,8 +152,36 @@ Structure: learnings.md, decisions.md, issues.md, problems.md
 ## Step 3: Execute Tasks
 
 ### 3.1 Parallelization Check
-- Parallel tasks → invoke multiple \`task()\` in ONE message
-- Sequential → process one at a time
+
+**CRITICAL: Use run_in_background correctly to avoid blocking**
+
+Parallel tasks (independent, no file conflicts):
+- Use \`run_in_background=true\` for ALL parallel tasks
+- Invoke multiple \`task()\` in ONE message
+- Continue with other work (you are NOT blocked)
+- Check results later with task_id
+
+Example:
+\`\`\`typescript
+// Launch 3 independent tasks in parallel
+task(category="quick", load_skills=[], run_in_background=true, description="Fix auth", prompt="...")
+task(category="quick", load_skills=[], run_in_background=true, description="Fix types", prompt="...")
+task(category="quick", load_skills=[], run_in_background=true, description="Add tests", prompt="...")
+// Continue immediately with other work
+\`\`\`
+
+Sequential tasks (task B depends on task A):
+- Use \`run_in_background=false\` for blocking tasks
+- Process one at a time
+
+Example:
+\`\`\`typescript
+task(category="quick", load_skills=[], run_in_background=false, description="Create API", prompt="...")
+// Wait for result, then use it in next task
+task(category="quick", load_skills=[], run_in_background=false, description="Test API", prompt="...")
+\`\`\`
+
+**Rule**: Independent → \`true\` (parallel), Dependent → \`false\` (sequential), Research → ALWAYS \`true\`
 
 ### 3.2 Pre-Delegation (MANDATORY)
 \`\`\`
@@ -164,7 +192,13 @@ Extract wisdom → include in prompt.
 
 ### 3.3 Invoke task()
 
+**Choose run_in_background based on dependencies:**
+
 \`\`\`typescript
+// For independent/parallel tasks
+task(category="[cat]", load_skills=["[skills]"], run_in_background=true, prompt=\`[6-SECTION PROMPT]\`)
+
+// For dependent/sequential tasks
 task(category="[cat]", load_skills=["[skills]"], run_in_background=false, prompt=\`[6-SECTION PROMPT]\`)
 \`\`\`
 

@@ -60,7 +60,8 @@ function applyThresholdOverrides(
 const ANTHROPIC_DISPLAY_LIMIT = 1_000_000
 const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000
 const CONTEXT_WARNING_THRESHOLD = 0.70
-const DEFAULT_MODEL_CONTEXT_LIMIT = 200_000
+// Use 128K as conservative default for unknown models
+const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
 
 type ModelCacheStateLike = {
   anthropicContext1MEnabled: boolean
@@ -118,12 +119,26 @@ function inferContextLimit(providerID: string, modelID: string | undefined, mode
     const cached = modelCacheState?.modelContextLimitsCache?.get(`${providerID}/${modelID}`)
     if (cached && cached > 0) return cached
   }
+
+  // Try to get from connected providers cache
+  if (modelID) {
+    try {
+      const { getModelContextWindow } = require("../shared/connected-providers-cache")
+      const contextFromCache = getModelContextWindow(modelID)
+      if (contextFromCache && contextFromCache > 0) {
+        return contextFromCache
+      }
+    } catch {
+      // Ignore if module not available
+    }
+  }
+
   if (isAnthropicProvider(providerID)) {
     return getAnthropicActualLimit(modelCacheState)
   }
 
-  // 无法确定上下文限制 - 返回 null
-  // 避免错误地将 1M 模型限制为 200K
+  // Return null for unknown models to avoid incorrect assumptions
+  // Caller should handle null and use a conservative default
   return null
 }
 
