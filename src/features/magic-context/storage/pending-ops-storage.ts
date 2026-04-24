@@ -90,3 +90,21 @@ export function getAllPendingOps(projectDir: string): PendingOperation[] {
 export function generateOpId(): string {
   return `op_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 }
+
+/**
+ * Execute all pending operations for a session.
+ * Returns the number of operations executed.
+ *
+ * Note: This is a placeholder that marks operations as executed.
+ * Full implementation would actually perform the operations (drop tags, compress, etc.)
+ */
+export function executePendingOps(projectDir: string, sessionId: string): number {
+  const registry = loadPendingOps(projectDir)
+  const sessionOps = registry.operations.filter(op => op.sessionId === sessionId)
+
+  // Remove all pending ops for this session
+  registry.operations = registry.operations.filter(op => op.sessionId !== sessionId)
+  savePendingOps(projectDir, registry)
+
+  return sessionOps.length
+}
