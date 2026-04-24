@@ -26,6 +26,11 @@ import {
   queuePendingOp,
   generateOpId,
 } from "../features/magic-context/storage/pending-ops-storage"
+import {
+  launchBackgroundCompression,
+  isAsyncCompressionEnabled,
+} from "../features/magic-context/async-compression"
+import { getSessionTags } from "../features/magic-context/storage/tags-storage"
 const DEFAULT_ACTUAL_LIMIT = 200_000
 // Use 128K as conservative default for unknown models
 const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
@@ -336,6 +341,56 @@ export function createPreemptiveCompactionHook(
     compactionInProgress.add(sessionID)
 
     try {
+      // Magic Context: Check if async compression is enabled
+      if (isAsyncCompressionEnabled(pluginConfig)) {
+        // Get tag range for compression
+        const tags = getSessionTags(ctx.directory, sessionID)
+        const activeTags = tags.filter(t => t.status === "active").sort((a, b) => a.tagNumber - b.tagNumber)
+
+        if (activeTags.length > 0) {
+          const startTag = activeTags[0].tagNumber
+          const endTag = activeTags[activeTags.length - 1].tagNumber
+
+          log("[magic-context] Launching async background compression", {
+            sessionID,
+            startTag,
+            endTag,
+            tagCount: activeTags.length,
+          })
+
+          await ctx.client.tui
+            .showToast({
+              body: {
+                title: "Background Compression",
+                message: `Compressing §${startTag}§-§${endTag}§ in background...`,
+                variant: "info",
+                duration: 3000,
+              },
+            })
+            .catch(() => {})
+
+          // Launch background compression (non-blocking)
+          await launchBackgroundCompression(ctx.directory, pluginConfig, {
+            sessionId: sessionID,
+            startTag,
+            endTag,
+            reason: "preemptive compaction threshold exceeded",
+          })
+
+          compactedSessions.add(sessionID)
+          clearSwitchBuffer(sessionID)
+
+          log("[magic-context] Background compression launched", {
+            sessionID,
+            startTag,
+            endTag,
+          })
+
+          return
+        }
+      }
+
+      // Fallback to sync compression (original behavior)
       const { providerID: targetProviderID, modelID: targetModelID } = resolveCompactionModel(
         pluginConfig,
         sessionID,
