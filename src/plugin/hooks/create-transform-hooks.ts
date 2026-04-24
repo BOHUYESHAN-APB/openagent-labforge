@@ -11,12 +11,14 @@ import {
   createContextInjectorMessagesTransformHook,
 } from "../../features/context-injector"
 import { safeCreateHook } from "../../shared/safe-create-hook"
+import { createTagMessagesHook } from "../../hooks/magic-context/tag-messages"
 
 export type TransformHooks = {
   claudeCodeHooks: ReturnType<typeof createClaudeCodeHooksHook> | null
   keywordDetector: ReturnType<typeof createKeywordDetectorHook> | null
   contextInjectorMessagesTransform: ReturnType<typeof createContextInjectorMessagesTransformHook>
   thinkingBlockValidator: ReturnType<typeof createThinkingBlockValidatorHook> | null
+  tagMessages: ReturnType<typeof createTagMessagesHook> | null
 }
 
 export function createTransformHooks(args: {
@@ -63,10 +65,19 @@ export function createTransformHooks(args: {
       )
     : null
 
+  const tagMessages = isHookEnabled("tag-messages")
+    ? safeCreateHook(
+        "tag-messages",
+        () => createTagMessagesHook(ctx, pluginConfig),
+        { enabled: safeHookEnabled },
+      )
+    : null
+
   return {
     claudeCodeHooks,
     keywordDetector,
     contextInjectorMessagesTransform,
     thinkingBlockValidator,
+    tagMessages,
   }
 }

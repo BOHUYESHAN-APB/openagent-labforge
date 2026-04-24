@@ -16,6 +16,16 @@ import {
 } from "./context-switch-buffer"
 
 import { resolveCompactionModel } from "./shared/compaction-model-resolver"
+import { createScheduler } from "../features/magic-context/scheduler"
+import {
+  loadSessionMeta,
+  recordResponseTime,
+  updateSessionMeta,
+} from "../features/magic-context/storage/session-meta-storage"
+import {
+  queuePendingOp,
+  generateOpId,
+} from "../features/magic-context/storage/pending-ops-storage"
 const DEFAULT_ACTUAL_LIMIT = 200_000
 // Use 128K as conservative default for unknown models
 const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
@@ -188,6 +198,15 @@ export function createPreemptiveCompactionHook(
   const compactedSessions = new Set<string>()
   const tokenCache = new Map<string, CachedCompactionState>()
 
+  // Magic Context integration
+  const magicContextEnabled = pluginConfig.experimental?.magic_context?.enabled ?? false
+  const scheduler = magicContextEnabled
+    ? createScheduler({
+        executeThresholdPercentage:
+          pluginConfig.experimental?.magic_context?.execute_threshold_percentage ?? 65,
+      })
+    : null
+
   const toolExecuteAfter = async (
     input: { tool: string; sessionID: string; callID: string },
     _output: { title: string; output: string; metadata: unknown }
@@ -265,6 +284,54 @@ export function createPreemptiveCompactionHook(
 
     const modelID = cached.modelID
     if (!modelID) return
+
+    // Magic Context: Check TTL and defer if needed
+    if (magicContextEnabled && scheduler) {
+      const sessionMeta = loadSessionMeta(ctx.directory, sessionID)
+      const schedulerDecision = scheduler.shouldExecute(
+        sessionMeta,
+        {
+          percentage: usageRatio * 100,
+          inputTokens: totalInputTokens,
+        },
+        Date.now(),
+        sessionID,
+        `${cached.providerID}/${modelID}`,
+      )
+
+      if (schedulerDecision === "defer") {
+        // Queue compaction operation, don't execute yet
+        queuePendingOp(ctx.directory, {
+          id: generateOpId(),
+          sessionId: sessionID,
+          type: "compress",
+          level: currentLevel,
+          profile: isBioSession(sessionID) ? "bio" : "engineering",
+          totalInputTokens,
+          usageRatio,
+          timestamp: Date.now(),
+          reason: "cache TTL not expired",
+        })
+
+        log("[magic-context] Compaction deferred (cache TTL not expired)", {
+          sessionID,
+          usageRatio,
+          threshold,
+          totalInputTokens,
+          actualLimit,
+        })
+        return
+      }
+
+      // schedulerDecision === "execute" - proceed with compaction
+      log("[magic-context] Compaction executing (TTL expired or threshold exceeded)", {
+        sessionID,
+        usageRatio,
+        threshold,
+        totalInputTokens,
+        actualLimit,
+      })
+    }
 
     compactionInProgress.add(sessionID)
 
@@ -409,6 +476,20 @@ export function createPreemptiveCompactionHook(
         contextLimit: inferContextLimit(info.providerID, info.modelID ?? "", modelCacheState),
       })
       compactedSessions.delete(info.sessionID)
+
+      // Magic Context: Record response time for TTL tracking
+      if (magicContextEnabled) {
+        recordResponseTime(ctx.directory, info.sessionID)
+
+        // Initialize session metadata if not exists
+        const sessionMeta = loadSessionMeta(ctx.directory, info.sessionID)
+        if (!sessionMeta) {
+          updateSessionMeta(ctx.directory, info.sessionID, {
+            cacheTtl: pluginConfig.experimental?.magic_context?.cache_ttl ?? "5m",
+            lastResponseTime: Date.now(),
+          })
+        }
+      }
     }
   }
 

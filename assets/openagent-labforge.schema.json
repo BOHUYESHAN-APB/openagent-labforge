@@ -5275,6 +5275,51 @@
             }
           },
           "additionalProperties": false
+        },
+        "magic_context": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "cache_ttl": {
+              "default": "5m",
+              "type": "string"
+            },
+            "execute_threshold_percentage": {
+              "default": 65,
+              "type": "number",
+              "minimum": 50,
+              "maximum": 95
+            },
+            "async_compression": {
+              "default": true,
+              "type": "boolean"
+            },
+            "tag_system_enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "cross_session_memories": {
+              "default": true,
+              "type": "boolean"
+            },
+            "tui_sidebar": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled",
+            "cache_ttl",
+            "execute_threshold_percentage",
+            "async_compression",
+            "tag_system_enabled",
+            "cross_session_memories",
+            "tui_sidebar"
+          ],
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

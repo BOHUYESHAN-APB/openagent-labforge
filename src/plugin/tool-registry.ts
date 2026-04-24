@@ -159,6 +159,10 @@ export function createToolRegistry(args: {
     ? { edit: createHashlineEditTool() }
     : {}
 
+  // Magic Context tools - Phase 3 placeholder
+  // TODO: Complete tool implementation after resolving zod version compatibility
+  const magicContextTools: Record<string, ToolDefinition> = {}
+
   const allTools: Record<string, ToolDefinition> = {
     ...builtinTools,
     ...createGrepTools(ctx),
@@ -177,6 +181,7 @@ export function createToolRegistry(args: {
     interactive_bash,
     ...taskToolsRecord,
     ...hashlineToolsRecord,
+    ...magicContextTools,
   }
 
   const filteredTools = filterDisabledTools(allTools, pluginConfig.disabled_tools)

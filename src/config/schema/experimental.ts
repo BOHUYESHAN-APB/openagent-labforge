@@ -94,6 +94,23 @@ export const ExperimentalConfigSchema = z.object({
     /** Retry on failure (default: false) */
     retry_on_failure: z.boolean().optional(),
   }).optional(),
+  /** Magic Context configuration - cache-aware compression and context management */
+  magic_context: z.object({
+    /** Enable Magic Context features (default: false) */
+    enabled: z.boolean().default(false),
+    /** Cache TTL for deferring operations (default: "5m") - supports "5m", "10m", "1h", "30s" */
+    cache_ttl: z.string().default("5m"),
+    /** Execute threshold percentage - trigger compression when usage exceeds this (default: 65) */
+    execute_threshold_percentage: z.number().min(50).max(95).default(65),
+    /** Enable async background compression via Historian agent (default: true) */
+    async_compression: z.boolean().default(true),
+    /** Enable tag system (§N§) for precise message references (default: true) */
+    tag_system_enabled: z.boolean().default(true),
+    /** Enable cross-session memories (default: true) */
+    cross_session_memories: z.boolean().default(true),
+    /** Enable TUI sidebar visualization (default: true) */
+    tui_sidebar: z.boolean().default(true),
+  }).optional(),
 })
 
 export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>
