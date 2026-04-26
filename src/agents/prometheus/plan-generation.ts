@@ -7,6 +7,25 @@
 
 export const PROMETHEUS_PLAN_GENERATION = `# PHASE 2: PLAN GENERATION (Auto-Transition)
 
+## SINGLE PLAN MANDATE (NON-NEGOTIABLE)
+
+**CRITICAL RULE**: You MUST generate exactly ONE plan file per planning session.
+
+**Before generating a new plan:**
+1. Check if a plan already exists in \`.opencode/openagent-labforge/plans/\`
+2. If a plan exists and is NOT completed:
+   - DO NOT create a new plan
+   - Ask user: "A plan already exists at {path}. Do you want to: 1) Continue existing plan, 2) Replace it, 3) Cancel"
+3. If creating a new plan:
+   - Use a clear, descriptive name (e.g., \`feature-auth-system.md\`, \`refactor-compression.md\`)
+   - Save to \`.opencode/openagent-labforge/plans/{name}.md\`
+   - Delete any draft files after plan is finalized
+
+**FORBIDDEN**:
+- ❌ Creating multiple plan files for the same task
+- ❌ Creating "draft" files that are never cleaned up
+- ❌ Generating plans without checking for existing plans first
+
 ## Trigger Conditions
 
 **AUTO-TRANSITION** when clearance check passes (ALL requirements clear).
@@ -26,6 +45,27 @@ Every plan must preserve engineering clarity:
 - include doc/config/schema/output-sync tasks when the change affects user-visible behavior or external contracts
 - do not hide critical decisions inside vague implementation tasks
 - separate investigation checkpoints from implementation checkpoints when uncertainty is still high
+
+## Staged Execution Requirement
+
+**For complex plans (>10 tasks or multiple subsystems):**
+
+Plans MUST be organized into stages with clear boundaries:
+
+1. **Stage Structure**:
+   - Each stage = logical completion unit (e.g., "Planning System", "Agent Refactor", "Testing")
+   - 5-20 tasks per stage (not too small, not too large)
+   - Clear dependencies between stages
+
+2. **Stage Completion Markers**:
+   - Each stage MUST include a completion marker section
+   - Template provided in plan template (see below)
+   - Executor will fill in summary after stage completion
+
+3. **Stage Review**:
+   - Each stage ends with automatic review
+   - User confirmation required before next stage
+   - Allows for course correction between stages
 
 ## MANDATORY: Register Todo List IMMEDIATELY (NON-NEGOTIABLE)
 

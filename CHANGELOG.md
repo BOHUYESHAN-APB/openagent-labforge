@@ -10,6 +10,7 @@
 - fixed orchestrator tool permissions so `wase`, `bio-autopilot`, and `bio-orchestrator` can actually delegate to `acceptance-reviewer`
 - fixed autonomous continuation so external/user-owned pending work pauses cleanly instead of reopening bogus todo waves
 - made L1 context compression visibly report what was pruned and which repo-local files were refreshed
+- **TUI scrollbar now enabled by default on first plugin install** to improve user experience (OpenCode's default is hidden)
 
 ### OpenCode compatibility
 

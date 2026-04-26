@@ -14,6 +14,7 @@ import {
   createHashlineReadEnhancerHook,
   createReadImageResizerHook,
   createJsonErrorRecoveryHook,
+  createL0RealtimeCleanupHook,
 } from "../../hooks"
 import {
   getOpenCodeVersion,
@@ -35,6 +36,7 @@ export type ToolGuardHooks = {
   hashlineReadEnhancer: ReturnType<typeof createHashlineReadEnhancerHook> | null
   jsonErrorRecovery: ReturnType<typeof createJsonErrorRecoveryHook> | null
   readImageResizer: ReturnType<typeof createReadImageResizerHook> | null
+  l0RealtimeCleanup: ReturnType<typeof createL0RealtimeCleanupHook> | null
 }
 
 export function createToolGuardHooks(args: {
@@ -111,6 +113,10 @@ export function createToolGuardHooks(args: {
     ? safeHook("read-image-resizer", () => createReadImageResizerHook(ctx))
     : null
 
+  const l0RealtimeCleanup = isHookEnabled("l0-realtime-cleanup")
+    ? safeHook("l0-realtime-cleanup", () => createL0RealtimeCleanupHook({ ctx, config: pluginConfig }))
+    : null
+
   return {
     commentChecker,
     toolOutputTruncator,
@@ -123,5 +129,6 @@ export function createToolGuardHooks(args: {
     hashlineReadEnhancer,
     jsonErrorRecovery,
     readImageResizer,
+    l0RealtimeCleanup,
   }
 }

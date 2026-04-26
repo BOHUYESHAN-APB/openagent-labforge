@@ -31,7 +31,9 @@ import {
   isAsyncCompressionEnabled,
 } from "../features/magic-context/async-compression"
 import { getSessionTags } from "../features/magic-context/storage/tags-storage"
-const DEFAULT_ACTUAL_LIMIT = 200_000
+// Modern Anthropic Claude models default to 1M context
+// Only fall back to 200K if explicitly disabled via legacy env var
+const DEFAULT_ACTUAL_LIMIT = 1_000_000
 // Use 128K as conservative default for unknown models
 const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
 const PREEMPTIVE_COMPACTION_TIMEOUT_MS = 120_000
@@ -45,11 +47,12 @@ type ModelCacheStateLike = {
 let pluginConfigRef: OhMyOpenCodeConfig | undefined
 
 function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number {
-  return (modelCacheState?.anthropicContext1MEnabled ?? false) ||
-    process.env.ANTHROPIC_1M_CONTEXT === "true" ||
-    process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
-    ? 1_000_000
-    : DEFAULT_ACTUAL_LIMIT
+  // Check if explicitly disabled (legacy behavior)
+  if (process.env.ANTHROPIC_1M_CONTEXT === "false" || process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "false") {
+    return 200_000
+  }
+  // Default to 1M for modern Claude models
+  return 1_000_000
 }
 
 interface TokenInfo {
@@ -99,21 +102,31 @@ function isAnthropicProvider(providerID: string): boolean {
 function inferContextLimit(providerID: string, modelID: string, modelCacheState?: ModelCacheStateLike): number | null {
   const fullModelID = `${providerID}/${modelID}`
 
+  log("[preemptive-compaction] 🔍 Inferring context limit for:", { fullModelID })
+  log("[preemptive-compaction] 🔍 Environment check:", {
+    ANTHROPIC_1M_CONTEXT: process.env.ANTHROPIC_1M_CONTEXT,
+    VERTEX_ANTHROPIC_1M_CONTEXT: process.env.VERTEX_ANTHROPIC_1M_CONTEXT
+  })
+
   // 1. 优先：用户自定义配置（允许手动覆盖，用于特殊情况）
   if (pluginConfigRef?.experimental?.model_context_limits) {
     const customLimit = pluginConfigRef.experimental.model_context_limits[fullModelID]
     if (customLimit && customLimit > 0) {
-      log("[preemptive-compaction] Using user custom limit:", { fullModelID, limit: customLimit })
+      log("[preemptive-compaction] ✅ Using user custom limit:", { fullModelID, limit: customLimit })
       return customLimit
     }
+    log("[preemptive-compaction] ℹ️ No custom limit for:", { fullModelID })
+  } else {
+    log("[preemptive-compaction] ℹ️ No model_context_limits config")
   }
 
   // 2. OpenCode API 缓存（主要数据源 - 完全信任 OpenCode 的适配）
   // OpenCode 对官方服务商的适配很积极且准确，直接使用其检测结果
   if (modelID) {
     const apiLimit = modelCacheState?.modelContextLimitsCache?.get(fullModelID)
+    log("[preemptive-compaction] 🔍 OpenCode API cache:", { fullModelID, apiLimit })
     if (apiLimit && apiLimit > 0) {
-      log("[preemptive-compaction] Using OpenCode API limit:", { fullModelID, limit: apiLimit })
+      log("[preemptive-compaction] ✅ Using OpenCode API limit:", { fullModelID, limit: apiLimit })
       return apiLimit
     }
   }
@@ -121,7 +134,7 @@ function inferContextLimit(providerID: string, modelID: string, modelCacheState?
   // 3. 特殊处理：Anthropic（1M context 开关）
   if (isAnthropicProvider(providerID)) {
     const anthropicLimit = getAnthropicActualLimit(modelCacheState)
-    log("[preemptive-compaction] Using Anthropic limit:", { fullModelID, limit: anthropicLimit })
+    log("[preemptive-compaction] ✅ Using Anthropic limit:", { fullModelID, limit: anthropicLimit })
     return anthropicLimit
   }
 
@@ -175,9 +188,13 @@ type PluginInput = {
   client: {
     session: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      create: (...args: any[]) => any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: (...args: any[]) => any
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       summarize: (...args: any[]) => any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete: (...args: any[]) => any
     }
     tui: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -370,23 +387,38 @@ export function createPreemptiveCompactionHook(
             .catch(() => {})
 
           // Launch background compression (non-blocking)
-          await launchBackgroundCompression(ctx.directory, pluginConfig, {
-            sessionId: sessionID,
-            startTag,
-            endTag,
-            reason: "preemptive compaction threshold exceeded",
-          })
+          const compressionResult = await launchBackgroundCompression(
+            ctx.client,
+            ctx.directory,
+            pluginConfig,
+            {
+              sessionId: sessionID,
+              startTag,
+              endTag,
+              reason: "preemptive compaction threshold exceeded",
+            }
+          )
 
-          compactedSessions.add(sessionID)
-          clearSwitchBuffer(sessionID)
+          // If async compression failed, fallback to sync compression
+          if (compressionResult.startsWith("error:")) {
+            log("[magic-context] Async compression failed, falling back to sync", {
+              sessionID,
+              error: compressionResult,
+            })
 
-          log("[magic-context] Background compression launched", {
-            sessionID,
-            startTag,
-            endTag,
-          })
+            // Continue to sync compression fallback below
+          } else {
+            compactedSessions.add(sessionID)
+            clearSwitchBuffer(sessionID)
 
-          return
+            log("[magic-context] Background compression launched", {
+              sessionID,
+              startTag,
+              endTag,
+            })
+
+            return
+          }
         }
       }
 

@@ -83,6 +83,15 @@ export type TuiPluginApi = {
     toast: (input: TuiToast) => void
     dialog: TuiDialogStack
   }
+  slot: {
+    register: (config: any) => void
+  }
+  event: {
+    on: (event: string, handler: (data: any) => void) => () => void
+  }
+  renderer: {
+    requestRender: () => void
+  }
   kv: TuiKv
   state: {
     path: {

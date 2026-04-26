@@ -51,6 +51,7 @@ export const HookNameSchema = z.enum([
   "anthropic-effort",
   "hashline-read-enhancer",
   "read-image-resizer",
+  "l0-realtime-cleanup",
 ])
 
 export type HookName = z.infer<typeof HookNameSchema>

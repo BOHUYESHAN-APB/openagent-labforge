@@ -9,6 +9,8 @@ export const PROMETHEUS_PLAN_TEMPLATE = `## Plan Structure
 
 Generate plan to: \`.opencode/openagent-labforge/plans/{name}.md\`
 
+**IMPORTANT**: Check for existing plans first. Only create ONE plan per task.
+
 \`\`\`markdown
 # {Plan Title}
 
@@ -20,9 +22,35 @@ Generate plan to: \`.opencode/openagent-labforge/plans/{name}.md\`
 > - [Output 1]
 > - [Output 2]
 > 
-> **Estimated Effort**: [Quick | Short | Medium | Large | XL]
+> **Estimated Effort**: [Quick | Short | Medium | Large | XL | XXL]
+> **Execution Mode**: [Single-stage | Multi-stage (N stages)]
 > **Parallel Execution**: [YES - N waves | NO - sequential]
 > **Critical Path**: [Task X → Task Y → Task Z]
+
+---
+
+## Execution Strategy
+
+### Stage Organization (for multi-stage plans)
+
+> For complex plans (>10 tasks), organize into logical stages.
+> Each stage = complete unit of work with review checkpoint.
+
+\`\`\`
+Stage 1: {Stage Name} (N tasks)
+  ├─ Complete all tasks
+  ├─ Stage Review
+  ├─ Stage Summary
+  └─ User Confirmation → Stage 2
+
+Stage 2: {Stage Name} (N tasks)
+  ├─ Complete all tasks
+  ├─ Stage Review
+  ├─ Stage Summary
+  └─ User Confirmation → Stage 3
+
+...
+\`\`\`
 
 ---
 
@@ -321,6 +349,67 @@ command  # Expected: output
 - [ ] All "Must Have" present
 - [ ] All "Must NOT Have" absent
 - [ ] All tests pass
+\`\`\`
+
+---
+
+## Stage Completion Markers (for multi-stage plans)
+
+> Each stage MUST include a completion marker section.
+> Executor fills this in after completing all stage tasks.
+
+\`\`\`markdown
+### Stage N Execution Status
+
+**Status**: 🟡 In Progress | ✅ Completed | ❌ Failed
+**Started**: ISO_TIMESTAMP
+**Completed**: ISO_TIMESTAMP
+
+#### Stage Summary
+<!-- Executor: Fill in after completing Stage N -->
+
+**Completed Tasks**: X / Y
+
+**Key Achievements**:
+- Achievement 1
+- Achievement 2
+- Achievement 3
+
+**Known Issues**:
+- Issue 1 (if any)
+- Issue 2 (if any)
+
+**Next Steps**:
+- Recommendation 1
+- Recommendation 2
+
+**User Confirmation**: ⏸️ Awaiting user confirmation to proceed to Stage N+1 | ✅ Confirmed
+\`\`\`
+
+---
+
+## Final Execution Status (for all plans)
+
+\`\`\`markdown
+### Project Execution Status
+
+**Status**: 🟡 In Progress | ✅ Completed | ❌ Failed
+**Started**: ISO_TIMESTAMP
+**Completed**: ISO_TIMESTAMP
+
+#### Final Summary
+<!-- Executor: Fill in after completing ALL tasks -->
+
+**Total Completed Tasks**: X / Y
+
+**Key Achievements**:
+- 
+
+**Known Issues**:
+- 
+
+**Follow-up Recommendations**:
+- 
 \`\`\`
 
 ---

@@ -11,7 +11,30 @@
  * - Efficient context utilization (1M context window)
  *
  * These overlays optimize the Sisyphus prompt for DeepSeek's strengths.
+ * 
+ * Official prompts from DeepSeek-V4 Technical Report are included below.
  */
+
+/**
+ * Official DeepSeek-V4 Think Max Prompt
+ * 
+ * Source: DeepSeek-V4 Technical Report
+ * 
+ * USAGE: Inject at the beginning of system prompt to enable "Think Max" mode.
+ * This activates DeepSeek-V4's maximum reasoning depth.
+ */
+export const DEEPSEEK_V4_THINK_MAX_PROMPT = `Reasoning Effort: Absolute maximum with no shortcuts permitted.
+You MUST be very thorough in your thinking and comprehensively decompose the problem to resolve the root cause, rigorously stress-testing your logic against all potential paths, edge cases, and adversarial scenarios.
+Explicitly write out your entire deliberation process, documenting every intermediate step, considered alternative, and rejected hypothesis to ensure absolutely no assumption is left unchecked.`;
+
+/**
+ * Check if a model ID is DeepSeek-V4
+ */
+export function isDeepSeekV4(modelID: string): boolean {
+  if (!modelID) return false;
+  const lower = modelID.toLowerCase();
+  return lower.includes("deepseek") && (lower.includes("v4") || lower.includes("v-4"));
+}
 
 export function buildDeepSeekReasoningGuidance(): string {
   return `<DEEPSEEK_REASONING>
@@ -207,4 +230,90 @@ DeepSeek can manage multiple tasks effectively:
 - Integrate results when agents complete
 - Maintain clear task status throughout
 </DEEPSEEK_TASKS>`;
+}
+
+/**
+ * Official DeepSeek-V4 Tool Call Format (XML-based DSML)
+ * 
+ * Source: DeepSeek-V4 Technical Report
+ * 
+ * DeepSeek-V4 uses XML-based `<|DSML|>` format instead of traditional JSON.
+ * This is the official tool call format definition.
+ */
+export function buildDeepSeekV4ToolCallSchema(): string {
+  return `<DEEPSEEK_V4_TOOL_FORMAT>
+## DeepSeek-V4 Tool Call Format (XML-based)
+
+**IMPORTANT**: DeepSeek-V4 uses XML-based tool calls, not JSON.
+
+Format:
+\`\`\`
+<|DSML|tool_calls>
+<|DSML|invoke name="$TOOL_NAME">
+<|DSML|parameter name="$PARAMETER_NAME" string="true|false">$PARAMETER_VALUE</|DSML|parameter>
+</|DSML|invoke>
+</|DSML|tool_calls>
+\`\`\`
+
+Rules:
+- String parameters: set \`string="true"\`, pass value as-is
+- Other types (numbers, booleans, arrays, objects): set \`string="false"\`, pass as JSON
+- If thinking_mode enabled: output complete reasoning inside \`<think>...</think>\` BEFORE tool calls
+- Otherwise: output directly after \`</think>\` with tool calls or final response
+
+You MUST strictly follow this XML format for all tool calls.
+</DEEPSEEK_V4_TOOL_FORMAT>`;
+}
+
+/**
+ * Official DeepSeek-V4 Math Reasoning Template
+ * 
+ * Source: DeepSeek-V4 Technical Report
+ */
+export function buildDeepSeekV4MathTemplate(question: string, deepMode = false): string {
+  if (deepMode) {
+    // Pro-Max mode with rigorous proof
+    return `Solve the following problem. The problem may ask you to prove a statement, or ask for an answer. If finding an answer is required, you should come up with the answer, and your final solution should also be a rigorous proof of that answer being valid.
+
+${question}`;
+  } else {
+    // General mode
+    return `${question}
+Please reason step by step, and put your final answer within \\boxed{}.`;
+  }
+}
+
+/**
+ * Build complete DeepSeek-V4 optimized prompt overlay
+ * 
+ * Combines existing optimizations with official prompts when appropriate.
+ */
+export function buildDeepSeekV4CompleteOverlay(options: {
+  enableThinkMax?: boolean;
+  enableToolFormat?: boolean;
+  modelID?: string;
+}): string {
+  const sections: string[] = [];
+
+  // Add Think Max prompt if enabled and model is V4
+  if (options.enableThinkMax && options.modelID && isDeepSeekV4(options.modelID)) {
+    sections.push(`<DEEPSEEK_V4_THINK_MAX>
+${DEEPSEEK_V4_THINK_MAX_PROMPT}
+</DEEPSEEK_V4_THINK_MAX>`);
+  }
+
+  // Add existing optimization sections
+  sections.push(buildDeepSeekReasoningGuidance());
+  sections.push(buildDeepSeekToolOptimization());
+  sections.push(buildDeepSeekDelegationStrategy());
+  sections.push(buildDeepSeekContextManagement());
+  sections.push(buildDeepSeekOutputGuidance());
+  sections.push(buildDeepSeekTaskManagement());
+
+  // Add tool format if enabled and model is V4
+  if (options.enableToolFormat && options.modelID && isDeepSeekV4(options.modelID)) {
+    sections.push(buildDeepSeekV4ToolCallSchema());
+  }
+
+  return sections.join("\n\n");
 }

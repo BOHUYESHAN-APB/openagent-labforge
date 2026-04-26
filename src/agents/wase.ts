@@ -14,6 +14,7 @@ import {
   INFORMATION_INTEGRITY_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
+import { STAGE_COMPLETION_CAPABILITY } from "./stage-completion-capability"
 
 const MODE: AgentMode = "all"
 
@@ -212,6 +213,8 @@ Autonomous quality bar:
 - do not treat a tiny first-pass todo list as completion for a multi-hour task
 - before ending, compare the finished work against the original request and the active backlog
 </wase-verification>
+
+${STAGE_COMPLETION_CAPABILITY}
 
 ${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}
 

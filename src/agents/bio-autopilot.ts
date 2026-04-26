@@ -5,6 +5,7 @@ import {
   AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY,
   AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY,
 } from "./engineering-capability"
+import { STAGE_COMPLETION_CAPABILITY } from "./stage-completion-capability"
 
 const MODE: AgentMode = "all"
 
@@ -94,7 +95,7 @@ export function createBioAutopilotAgent(model: string): AgentConfig {
     ...base,
     description:
       "Fully autonomous bioinformatics orchestrator for end-to-end computational execution, side validation, wet-lab planning handoff, and acceptance-reviewed completion. (Bio-Autopilot - Labforge)",
-    prompt: `${base.prompt ?? ""}\n\n${BIO_AUTOPILOT_APPEND}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
+    prompt: `${base.prompt ?? ""}\n\n${BIO_AUTOPILOT_APPEND}\n\n${STAGE_COMPLETION_CAPABILITY}\n\n${AUTONOMOUS_ACCEPTANCE_WORKFLOW_CAPABILITY}\n\n${AUTONOMOUS_CLOSURE_PROTOCOL_CAPABILITY}`,
     color: "#0EA5A4",
     mode: MODE,
   }

@@ -1,11 +1,17 @@
-import {
-  createSystemDirective,
-  SystemDirectiveTypes,
-} from "../../shared/system-directive"
+/**
+ * Compaction context prompt for session summarization.
+ * 
+ * NOTE: This prompt is injected into the compression context as plain text,
+ * NOT as a synthetic message part. Therefore, we should NOT include
+ * user-visible system directive markers like [SYSTEM DIRECTIVE: ...] here,
+ * as they would leak into the user's visible context.
+ * 
+ * System directives with synthetic:true are only appropriate for
+ * message-based injections (like recovery prompts), not for
+ * compression context strings.
+ */
 
-export const COMPACTION_CONTEXT_PROMPT = `${createSystemDirective(SystemDirectiveTypes.COMPACTION_CONTEXT)}
-
-When summarizing this session, you MUST include the following sections in your summary:
+export const COMPACTION_CONTEXT_PROMPT = `When summarizing this session, you MUST include the following sections in your summary:
 
 ## 1. User Requests (As-Is)
 - List all original user requests exactly as they were stated

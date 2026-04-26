@@ -37,24 +37,105 @@ OpenAgent Labforge 是一个面向 OpenCode 的插件分支，当前聚焦三件
 
 ## 当前模型推荐
 
+**🌟 强烈推荐：DeepSeek V4（性价比之王）**
+
+DeepSeek V4 系列模型以无与伦比的价格提供卓越性能：
+
+- **DeepSeek V4-Pro**：T0 级性能（媲美 GPT-5.4/Claude Opus 4.6）
+  - 价格：$0.28-0.30/M tokens（比竞品便宜 20-50 倍）
+  - 上下文：1M tokens
+  - 适用场景：主 agent、复杂推理、编排任务
+  
+- **DeepSeek V4-Flash**：T1 级性能（足以应对大多数任务）
+  - 价格：约为 V4-Pro 的 1/3
+  - 上下文：1M tokens
+  - 适用场景：子 agent、研究、代码探索
+
+**为什么选择 DeepSeek V4？**
+- 🚀 T0 级推理能力，价格却是零头
+- 💰 所有用户都能负担（经常有促销活动）
+- 🎯 本插件包含优化的提示词
+- 📊 1M 上下文窗口，适合大型代码库
+
+**配置方式**：使用内置 TUI 设置（`/ol-settings` → 模型选择设置）将 DeepSeek 配置为所有 agent 的首选模型。
+
+### 其他推荐模型
+
 当前项目对手动模型选择的建议是：
 
-- 强烈推荐：
-  - GPT 系列
+- **同样强烈推荐：**
+  - GPT 系列（GPT-5.4、GPT-4o）
   - GLM 系列
   - Kimi 系列
-- 推荐：
-  - Google / Gemini
-- 当前适配也不错：
-  - DeepSeek 系列
-- 仍然支持，但这一轮本地验证还没有完全覆盖：
-  - Claude 系列
+  
+- **推荐：**
+  - Google / Gemini 系列
+  
+- **支持但未在最新测试周期完全验证：**
+  - Claude 系列（注意：部分用户倾向避免此提供商）
 
 Gemini 说明：
 
 - 在这个分支当前的长上下文提示词和工具路由方式下，Gemini 在提示词特别长时，偶尔更容易在中英混合用户场景里输出非用户目标语言，或者出现语言漂移
 
 ## 上下文窗口建议
+
+**⚠️ 重要：Context Guard 系统 v2.0 现已可用**
+
+本插件现在包含针对不同模型上下文大小优化的高级多层上下文保护系统。详见 [Context Guard 实现指南](./CONTEXT_GUARD_IMPLEMENTATION.md)（[中文版](./CONTEXT_GUARD_IMPLEMENTATION_ZH.md)）。
+
+### 快速开始
+
+**200K 模型（Claude Haiku 等）**：使用 `balanced` 预设
+**256K 模型（Kimi 等）**：使用 `balanced-plus` 预设  
+**400K+ 模型**：使用 `balanced` 或 `aggressive` 预设
+
+在 `.opencode/openagent-labforge.jsonc` 中配置：
+```jsonc
+{
+  "experimental": {
+    "context_guard_profile": "balanced",  // 或 "balanced-plus" 用于 256K
+    "preemptive_compaction": true
+  }
+}
+```
+
+访问设置：输入 `/ol-settings` → 运行时设置 → Context Guard 设置
+
+### 上下文窗口层级
+
+插件会根据模型上下文自动调整压缩阈值：
+
+- **200K 层级**（180K-350K）：针对 200K 和 256K 模型优化
+  - Balanced 预设：L1@110K, L2@140K, L3@150K
+  - 避免 150K+ 问题（1/3 的 200K 模型在 150K 后有问题）
+  - Plus 预设为 256K 模型增加 30K 余量
+  
+- **400K 层级**（350K-900K）：针对 400K 模型
+  - Balanced 预设：L1@150K, L2@220K, L3@300K
+  
+- **1M 层级**（900K+）：针对 1M+ 模型（包括 DeepSeek V4）
+  - Balanced 预设：L1@220K, L2@320K, L3@550K
+  - **DeepSeek V4 注意**：V4-Pro 和 V4-Flash 都有 1M 上下文，使用 balanced 预设效果极佳
+
+### 模型特定上下文建议
+
+**DeepSeek V4（1M 上下文）：**
+- 使用 `balanced` 或 `aggressive` 预设
+- 上下文利用效率极佳
+- 可以轻松处理大型代码库
+- 推荐用于长时间会话
+
+**GPT-5.4 及类似模型（400K+）：**
+- 使用 `balanced` 预设
+- 在所有上下文范围内表现强劲
+
+**Gemini（因提供商而异）：**
+- 检查提供商的实际上下文限制
+- 某些提供商变体暴露的上下文少于宣传值
+- 256K 变体使用 `balanced-plus`
+
+### 传统建议（v2.0 之前）
 
 为了获得更稳定的结果，优先选择**稳定支持大于 400K 上下文**的模型。
 
@@ -64,15 +145,37 @@ Gemini 说明：
 - 实际有效工作上下文尽量保持在 500K 到 550K 左右
 - 不要默认把上下文推到宣传上限
 - 真正需要长时间自动执行、生物信息学长会话、或深度工程会话时，尽量使用 **大于 500K** 的上下文模型
-- 如果能稳定提供 **1M 以上上下文**，体验通常最好
 
-这很重要，因为：
+### 强烈实践建议
+
+对于严肃的自主使用，特别是：
+
+- `wase`
+- `bio-autopilot`
+- `bio-orchestrator`
+- 长时间工程会话
+- 长时间生物信息学会话
+
+尽可能优先使用**超过 500K 有效上下文**的模型。
+
+**🌟 DeepSeek V4 是这些用例的理想选择**，拥有 1M 上下文窗口和卓越性能。
+
+实践规则：
+
+- 低于 ~400K：深度自主会话需谨慎使用
+- ~500K 及以上：强烈推荐
+- ~1M 及以上：长时间 auto / bio 会话的最佳体验（DeepSeek V4 属于此类）
+
+为什么这很重要：
 
 - 模型自己就可能生成很长的 summary
 - 两次 compaction 之间的真实工作轮次有时会非常短
 - 同一个模型家族在不同服务商下，上下文上限可能完全不同
 
-实践上不要只看模型名，要看提供商的真实上下文上限。
+示例：
+
+- 某些 Gemini 提供商变体暴露的上下文可能远少于模型家族建议值
+- 不要假设提供商 A 和提供商 B 为同一模型名提供相同的实际上下文窗口
 
 ## 当前核心能力
 
@@ -123,9 +226,31 @@ Gemini 说明：
   - `wave-001-build.md`
   - `wave-001-review.md`
 - 文档工作区
-- 论文缓存
+### Magic Context - 缓存感知的上下文管理
 
-这样做的目的，是让长任务在 compaction 后仍然可持续推进，同时避免把临时状态散落到多个顶层目录里。
+OpenAgent LabForge 包含受 [Magic Context](https://github.com/cortexkit/opencode-magic-context) 启发的高级上下文管理：
+
+- **缓存感知压缩**：遵守 Anthropic 的提示缓存 TTL（默认 5 分钟）
+- **标签系统**：使用 §N§ 标签精确引用消息
+- **跨会话记忆**：项目范围的持久化知识
+- **后台压缩**：异步 Historian agent
+- **Agent 工具**：ctx_reduce、ctx_expand、ctx_memory、ctx_search
+- **TUI 可视化**：实时上下文分解
+
+详见 [MAGIC_CONTEXT.md](MAGIC_CONTEXT.md)。
+
+在配置中启用：
+```jsonc
+{
+  "experimental": {
+    "magic_context": {
+      "enabled": true,
+      "cache_ttl": "5m",
+      "async_compression": true
+    }
+  }
+}
+```
 
 ### 自动执行模式
 
@@ -717,29 +842,66 @@ OpenAgent Labforge 强烈建议和下面两个插件搭配使用：
 
 它们不是硬依赖，但对本地实际工作流帮助很大。
 
-## 当前安装现实
+## 安装
 
-这个项目仍以本地优先为主，Windows 也建议走本地克隆 + 本地构建安装。
+### 快速开始（全平台）
 
-当前安装现实：
-
-- 全平台（推荐）：本地克隆 + 本地构建 + 本地文件插件安装
-- `Windows x64`（可选便捷路径）：可以走已发布 npm 包
-- 非 Windows 平台：仍以本地构建 + 本地安装为准
-
-推荐默认策略：
-
-- 把本地克隆/构建/安装作为主路径
-- 把 npm 已发布二进制当作兜底或便捷路径，而不是主工作流
-
-推荐流程：
+**重要：OpenCode 从本地 `node_modules` 加载插件，而不是从全局 npm 安装！**
 
 ```bash
+# 步骤 1：克隆并构建
+git clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git
+cd openagent-labforge
+bun install
 bun run build
-bun pm pack
+npm pack
+
+# 步骤 2：安装到 OpenCode 配置目录
+# Linux/macOS:
+cd ~/.config/opencode
+# Windows:
+cd C:\Users\<你的用户名>\.config\opencode
+
+npm install /path/to/openagent-labforge/bohuyeshan-openagent-labforge-core-<version>.tgz
+
+# 步骤 3：验证安装
+ls node_modules/@bohuyeshan/openagent-labforge-core  # 应该存在
+
+# 步骤 4：配置 OpenCode
+# 编辑 ~/.config/opencode/ 中的两个配置文件：
+# - opencode.json（服务端插件）
+# - tui.json（TUI 插件）
+
+# opencode.json:
+{
+  "plugin": [
+    "@bohuyeshan/openagent-labforge-core@<version>",
+    "opencode-pty@0.3.2"
+  ]
+}
+
+# tui.json:
+{
+  "plugin": [
+    "@bohuyeshan/openagent-labforge-core@<version>"
+  ]
+}
+
+# 步骤 5：完全重启 OpenCode
 ```
 
-然后参考：
+**关键要点：**
+- ✅ 安装到 `~/.config/opencode/node_modules`（本地安装）
+- ❌ 不要使用 `npm install -g`（全局安装不起作用）
+- ✅ 同时更新 `opencode.json` 和 `tui.json`
+- ✅ 使用带版本号的包名：`@bohuyeshan/openagent-labforge-core@3.15.2`
+
+**配置目录位置：**
+- Linux: `~/.config/opencode`
+- macOS: `~/.config/opencode`
+- Windows: `C:\Users\<你的用户名>\.config\opencode`
+
+详细安装说明、故障排查和配置选项，请参见：
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 
@@ -804,33 +966,33 @@ Google 中转/代理端点配置示例：
 
 `context_memory` 用于控制图像生成相关上下文在多轮对话中的携带策略。
 
-### 可直接复制到 OpenCode 的安装提示词
+### OpenCode 自动安装提示词
 
-如果你想让 OpenCode 自己去克隆仓库、构建插件、并把本地插件路径接进配置，可以直接把下面这段提示词贴进一个新的 OpenCode 会话：
+如果你想让 OpenCode 自己克隆、构建并安装此插件，可以将此提示词粘贴到新的 OpenCode 会话中：
 
 ```text
-请你在这台机器上完成 OpenAgent Labforge 的本地开发版安装。
-
-目标仓库：
-https://github.com/BOHUYESHAN-APB/openagent-labforge.git
+请在本地克隆 https://github.com/BOHUYESHAN-APB/openagent-labforge.git，然后构建并安装到 OpenCode 配置目录（不是全局 npm）。
 
 要求：
-1. 先把仓库克隆到本地一个合适的工作目录。
-2. 这个仓库统一使用 Bun，不要用 npm 或 yarn。
-3. 运行最少必要的安装与构建命令，确保最终成功生成 dist/index.js 和 dist/tui/index.js。
-4. 修改 %USERPROFILE%\.config\opencode\opencode.json 和 %USERPROFILE%\.config\opencode\tui.jsonc：
-   - 把插件数组里加入指向仓库根目录的本地文件插件：
-     file:///ABSOLUTE/PATH/TO/openagent-labforge
-   - 如果已经有旧的 openagent-labforge 或 oh-my-opencode npm 安装项，替换为本地文件项，不要保留重复项。
-   - 不要覆盖其他无关 provider、model 或已有插件配置。
-5. 最后把下面这些结果展示出来：
-   - 仓库克隆路径
-   - 实际执行的构建命令
-   - opencode.json 最终 plugin 数组
-   - tui.jsonc 最终 plugin 数组
-   - 是否需要重启 OpenCode Desktop
+1. 使用 Bun 构建（不要用 npm 或 yarn）
+2. 运行：bun install && bun run build && npm pack
+3. 安装到 OpenCode 配置目录：
+   - Windows: cd %USERPROFILE%\.config\opencode
+   - Linux/macOS: cd ~/.config/opencode
+   - 然后运行：npm install /path/to/openagent-labforge/bohuyeshan-openagent-labforge-core-*.tgz
+4. 同时更新 opencode.json 和 tui.json 使用包名：
+    "@bohuyeshan/openagent-labforge-core@<version>"
+   （不要用 file:/// 路径 - 它们无法正常工作）
+5. 删除此插件的任何旧 file:/// 条目
+6. 保留其他现有插件
+7. 显示给我：
+    - 克隆路径
+    - 执行的构建命令
+    - OpenCode 目录内安装验证（npm list @bohuyeshan/openagent-labforge-core）
+    - opencode.json 与 tui.json 的最终 plugin 数组
+    - 确认需要重启 OpenCode
 
-如果系统缺少 Bun，就不要硬做，直接告诉我该先安装什么。
+如果缺少 Bun，请先告诉我如何安装。
 ```
 
 如果你只是想清掉旧会话里的残留状态，而不是重新安装插件：
@@ -891,6 +1053,18 @@ https://github.com/BOHUYESHAN-APB/openagent-labforge.git
 - 多人协作场景下的 Git 合并有时会花更久
 - 维护者本人并不擅长复杂的多人 Git 冲突处理
 - 某些贡献合并阶段，可能会依赖 AI 先参与审阅、整理和辅助合并
+
+## 故障排查
+
+### TUI 滚动条不可见
+
+如果安装插件后 TUI 中看不到垂直滚动条：
+
+1. **自动修复**：插件现在会在首次安装时自动启用滚动条（v1.15.0+）
+2. **手动切换**：按 `Ctrl+K` 打开命令面板，然后搜索 "Toggle session scrollbar"
+3. **持久化设置**：滚动条设置存储在 `~/.local/state/opencode/kv.json` 中的 `scrollbar_visible` 字段
+
+注意：OpenCode 的默认行为是隐藏滚动条。此插件默认启用它以提供更好的用户体验。
 
 ## 文档入口
 

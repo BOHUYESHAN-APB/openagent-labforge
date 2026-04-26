@@ -35,6 +35,7 @@ import {
   ENGINEERING_SKILL_ROUTER_CAPABILITY,
   PROMPT_LAYERING_PROTOCOL_CAPABILITY,
 } from "../engineering-capability"
+import { STAGE_COMPLETION_CAPABILITY } from "../stage-completion-capability"
 
 const MODE: AgentMode = "all"
 
@@ -126,6 +127,7 @@ function buildDynamicOrchestratorPrompt(ctx?: OrchestratorContext): string {
     .replace("{{CATEGORY_SKILLS_DELEGATION_GUIDE}}", categorySkillsGuide)
     + "\n\n" + ENGINEERING_MICRO_KERNEL_CAPABILITY
     + "\n\n" + ENGINEERING_SKILL_ROUTER_CAPABILITY
+    + "\n\n" + STAGE_COMPLETION_CAPABILITY
     + "\n\n" + INFORMATION_INTEGRITY_CAPABILITY
     + "\n\n" + PROMPT_LAYERING_PROTOCOL_CAPABILITY
     + "\n\n" + ENGINEERING_ORCHESTRATION_CAPABILITY

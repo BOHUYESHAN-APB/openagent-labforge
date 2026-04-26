@@ -79,8 +79,10 @@ export function captureMagicContextSnapshot(
     const conversationTokens = activeTags.reduce((sum, t) => sum + Math.floor(t.byteSize / 4), 0)
     const systemPromptTokens = Math.max(0, totalInputTokens - compartmentTokens - memoryTokens - conversationTokens)
 
-    // Calculate usage percentage (rough estimate)
-    const contextLimit = 200_000 // Default, should be dynamic based on model
+    // Calculate usage percentage
+    // Note: In TUI context we don't have access to current model ID, so we use a reasonable default
+    // The actual context window is tracked by context-window-monitor hook during session execution
+    const contextLimit = 1_000_000 // Default to 1M (most modern models support this)
     const usagePercentage = (totalInputTokens / contextLimit) * 100
 
     // Get TTL info

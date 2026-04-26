@@ -33,4 +33,6 @@ export interface SessionState {
   waitingForFinalWaveApproval?: boolean
   pendingFinalWaveTaskCount?: number
   approvedFinalWaveTaskCount?: number
+  userCancelledAt?: number
+  userCancelCount?: number
 }

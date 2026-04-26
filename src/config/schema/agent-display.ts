@@ -17,6 +17,9 @@ export const AGENT_DISPLAY_PRESETS = {
     "executor",      // 执行器（智能路由）
     "wase",          // 通用全自动
     "atlas",         // 轻量执行
+    "oracle",        // 架构顾问（子 agent）
+    "librarian",     // 文档专家（子 agent）
+    "explore",       // 代码探索（子 agent）
     // bio-autopilot 通过领域开关控制
   ],
   standard: [

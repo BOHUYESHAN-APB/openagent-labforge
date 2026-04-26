@@ -5219,6 +5219,10 @@
         "context_compression": {
           "type": "object",
           "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
             "micro_prune_threshold": {
               "type": "integer",
               "minimum": 100,
@@ -5229,8 +5233,123 @@
             },
             "enable_error_stack_compression": {
               "type": "boolean"
+            },
+            "l0_realtime_cleanup": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "apply_on_tool_call": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enabled",
+                "apply_on_tool_call"
+              ],
+              "additionalProperties": false
+            },
+            "l1_micro_prune": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "threshold": {
+                  "default": 500,
+                  "type": "number",
+                  "minimum": 100,
+                  "maximum": 5000
+                },
+                "keep_head_lines": {
+                  "default": 50,
+                  "type": "number",
+                  "minimum": 10,
+                  "maximum": 200
+                },
+                "keep_tail_lines": {
+                  "default": 50,
+                  "type": "number",
+                  "minimum": 10,
+                  "maximum": 200
+                }
+              },
+              "required": [
+                "enabled",
+                "threshold",
+                "keep_head_lines",
+                "keep_tail_lines"
+              ],
+              "additionalProperties": false
+            },
+            "l2_light_checkpoint": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "keep_versions": {
+                  "default": 3,
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "enabled",
+                "keep_versions"
+              ],
+              "additionalProperties": false
+            },
+            "l3_heavy_checkpoint": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "keep_versions": {
+                  "default": 5,
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "enabled",
+                "keep_versions"
+              ],
+              "additionalProperties": false
+            },
+            "history": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "max_events": {
+                  "default": 50,
+                  "type": "number",
+                  "minimum": 10,
+                  "maximum": 200
+                }
+              },
+              "required": [
+                "enabled",
+                "max_events"
+              ],
+              "additionalProperties": false
             }
           },
+          "required": [
+            "enabled"
+          ],
           "additionalProperties": false
         },
         "checkpoint_retention": {
@@ -5318,6 +5437,37 @@
             "tag_system_enabled",
             "cross_session_memories",
             "tui_sidebar"
+          ],
+          "additionalProperties": false
+        },
+        "autonomous_agents": {
+          "type": "object",
+          "properties": {
+            "enable_review": {
+              "default": true,
+              "type": "boolean"
+            },
+            "enable_auto_planning": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enable_review",
+            "enable_auto_planning"
+          ],
+          "additionalProperties": false
+        },
+        "prompt_optimization": {
+          "type": "object",
+          "properties": {
+            "enable_deepseek_v4": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enable_deepseek_v4"
           ],
           "additionalProperties": false
         }

@@ -24,6 +24,7 @@ import {
 } from "./agent-override-protection";
 import { buildPrometheusAgentConfig } from "./prometheus-agent-config-builder";
 import { buildPlanDemoteConfig } from "./plan-model-inheritance";
+import { filterAgentsByDisplayMode } from "../agents/agent-filter";
 
 type AgentConfigRecord = Record<string, Record<string, unknown> | undefined> & {
   build?: Record<string, unknown>;
@@ -89,6 +90,15 @@ export async function applyAgentConfig(params: {
   const browserProvider =
     params.pluginConfig.browser_automation_engine?.provider ?? "playwright";
   const currentModel = params.config.model as string | undefined;
+  
+  // DEBUG: Log currentModel to diagnose sisyphus-junior initialization issue
+  if (!currentModel) {
+    console.error("[DEBUG] currentModel is undefined! params.config.model:", params.config.model);
+    console.error("[DEBUG] Full params.config keys:", Object.keys(params.config));
+  } else {
+    console.log("[DEBUG] currentModel successfully loaded:", currentModel);
+  }
+  
   const disabledSkills = new Set<string>(params.pluginConfig.disabled_skills ?? []);
   const useTaskSystem = params.pluginConfig.experimental?.task_system ?? false;
   const disableOmoEnv = params.pluginConfig.experimental?.disable_omo_env ?? false;
@@ -184,11 +194,15 @@ export async function applyAgentConfig(params: {
       sisyphus: builtinAgents.sisyphus,
     };
 
-    agentConfig["sisyphus-junior"] = createSisyphusJuniorAgentWithOverrides(
-      params.pluginConfig.agents?.["sisyphus-junior"],
-      (builtinAgents.atlas as { model?: string } | undefined)?.model,
-      useTaskSystem,
-    );
+    // Only initialize sisyphus-junior if currentModel is available
+    // This avoids initialization failure when params.config.model is undefined during plugin load
+    if (currentModel) {
+      agentConfig["sisyphus-junior"] = createSisyphusJuniorAgentWithOverrides(
+        params.pluginConfig.agents?.["sisyphus-junior"],
+        currentModel, // Inherit main model instead of hardcoding
+        useTaskSystem,
+      );
+    }
 
     if (builderEnabled) {
       const { name: _buildName, ...buildConfigWithoutName } =
@@ -261,7 +275,7 @@ export async function applyAgentConfig(params: {
       protectedBuiltinAgentNames,
     );
 
-    params.config.agent = {
+    let allAgents = {
       ...agentConfig,
       ...Object.fromEntries(
         Object.entries(builtinAgents).filter(([key]) => key !== "sisyphus"),
@@ -273,6 +287,13 @@ export async function applyAgentConfig(params: {
       ...(shouldHideBuild ? { build: { ...migratedBuild, mode: "subagent", hidden: true } } : {}),
       ...(shouldHidePlan ? { plan: planDemoteConfig } : {}),
     };
+
+    // Apply agent display mode filtering
+    if (agentDisplayConfig) {
+      allAgents = filterAgentsByDisplayMode(allAgents as Record<string, any>, agentDisplayConfig);
+    }
+
+    params.config.agent = allAgents;
   } else {
     const protectedBuiltinAgentNames = createProtectedAgentNameSet(
       Object.keys(builtinAgents),
@@ -290,13 +311,20 @@ export async function applyAgentConfig(params: {
       protectedBuiltinAgentNames,
     );
 
-    params.config.agent = {
+    let allAgents = {
       ...builtinAgents,
       ...filterDisabledAgents(filteredUserAgents),
       ...filterDisabledAgents(filteredProjectAgents),
       ...filterDisabledAgents(filteredPluginAgents),
       ...configAgent,
     };
+
+    // Apply agent display mode filtering
+    if (agentDisplayConfig) {
+      allAgents = filterAgentsByDisplayMode(allAgents as Record<string, any>, agentDisplayConfig);
+    }
+
+    params.config.agent = allAgents;
   }
 
   if (params.config.agent) {

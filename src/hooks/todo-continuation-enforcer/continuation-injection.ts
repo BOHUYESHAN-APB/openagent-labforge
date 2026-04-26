@@ -42,6 +42,13 @@ import { getMessageDir } from "./message-directory"
 import { getIncompleteCount } from "./todo"
 import type { ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
+import { detectUserIntent, shouldSkipContinuation, explainIntent } from "./user-intent-detector"
+import {
+  shouldTriggerPreemptiveCompression,
+  triggerAndWaitForCompression,
+  isInCompactionCooldown,
+  getCompactionCooldownRemaining,
+} from "./compaction-trigger-guard"
 
 function hasWritePermission(tools: Record<string, ToolPermission> | undefined): boolean {
   const editPermission = tools?.edit
@@ -177,6 +184,67 @@ export async function injectContinuation(args: {
 
   if (hasRunningBgTasks) {
     log(`[${HOOK_NAME}] Skipped injection: background tasks running`, { sessionID })
+    return
+  }
+
+  // Check if we should trigger preemptive compression before injection
+  const compressionCheck = await shouldTriggerPreemptiveCompression(ctx.client, sessionID)
+  
+  if (compressionCheck.shouldCompress) {
+    log(`[${HOOK_NAME}] Triggering preemptive compression before injection`, {
+      sessionID,
+      reason: compressionCheck.reason,
+      usage: compressionCheck.usage,
+    })
+    
+    const compressed = await triggerAndWaitForCompression(ctx.client, sessionID, "continuation-injection")
+    
+    if (!compressed) {
+      log(`[${HOOK_NAME}] Preemptive compression failed, skipping injection`, { sessionID })
+      return
+    }
+  } else if (compressionCheck.reason) {
+    log(`[${HOOK_NAME}] Skipping preemptive compression: ${compressionCheck.reason}`, {
+      sessionID,
+      usage: compressionCheck.usage,
+    })
+  }
+
+  // Check user intent from the latest user message
+  let latestUserMessage: string | undefined
+  try {
+    const messages = await ctx.client.session.message({ 
+      path: { id: sessionID, messageID: "" },
+      query: { directory: ctx.directory }
+    })
+    const messageList = normalizeSDKResponse(messages, [] as any[], { preferResponseOnMissingData: true })
+    // Find the most recent user message
+    for (let i = messageList.length - 1; i >= 0; i--) {
+      if (messageList[i]?.role === "user") {
+        const parts = messageList[i]?.parts || []
+        for (const part of parts) {
+          if (part?.type === "text" && part?.text) {
+            latestUserMessage = part.text
+            break
+          }
+        }
+        if (latestUserMessage) break
+      }
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Failed to fetch messages for intent detection`, { sessionID, error: String(error) })
+  }
+
+  // Detect user intent
+  const userIntent = latestUserMessage ? detectUserIntent(latestUserMessage) : { type: "unclear" as const, confidence: "low" as const, signals: [] }
+  
+  // If user explicitly asked to stop, skip continuation
+  if (shouldSkipContinuation(userIntent)) {
+    log(`[${HOOK_NAME}] Skipped injection: user intent detected`, { 
+      sessionID, 
+      intent: userIntent.type,
+      explanation: explainIntent(userIntent)
+    })
     return
   }
 

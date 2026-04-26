@@ -23,6 +23,11 @@ import {
   convertBase64ImageToJpeg,
   cleanupConvertedImage,
 } from "./image-converter"
+import {
+  supportsNativePdf,
+  supportsNativePptx,
+  getUnsupportedFileTypeMessage,
+} from "./model-capability"
 
 type FilePart = { type: "file"; mime: string; url: string; filename: string }
 
@@ -284,6 +289,25 @@ export function createLookAt(ctx: PluginInput): ToolDefinition {
 
         if (fileParts.length === 0) {
           return "Error: No analyzable media content found."
+        }
+
+        // Check model capability for PDF/PPTX files
+        if (filePath && !isBase64Input) {
+          const fileExt = extname(filePath).toLowerCase()
+          const { agentModel } = await resolveMultimodalLookerAgentMetadata(ctx)
+          const modelID = agentModel 
+            ? `${agentModel.providerID}/${agentModel.modelID}` 
+            : "unknown"
+          
+          if (fileExt === ".pdf" && !supportsNativePdf(modelID)) {
+            log(`[look_at] PDF not supported by model: ${modelID}`)
+            return getUnsupportedFileTypeMessage(".pdf", modelID)
+          }
+          
+          if (fileExt === ".pptx" && !supportsNativePptx(modelID)) {
+            log(`[look_at] PPTX not supported by model: ${modelID}`)
+            return getUnsupportedFileTypeMessage(".pptx", modelID)
+          }
         }
 
       const prompt = `Analyze this ${promptTargetDescription} and extract the requested information.

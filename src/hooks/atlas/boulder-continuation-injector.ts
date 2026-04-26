@@ -69,10 +69,25 @@ export async function injectBoulderContinuation(input: {
   } catch (err) {
     sessionState.promptFailureCount += 1
     sessionState.lastFailureAt = Date.now()
-    log(`[${HOOK_NAME}] Boulder continuation failed`, {
+    
+    const errorDetails = {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
       sessionID,
-      error: String(err),
+      agent: agent ?? "atlas",
       promptFailureCount: sessionState.promptFailureCount,
-    })
+    }
+    
+    log(`[${HOOK_NAME}] Boulder continuation failed`, errorDetails)
+    
+    // 提供更清晰的错误提示
+    const errorStr = String(err).toLowerCase()
+    if (errorStr.includes('unauthorized') || errorStr.includes('authentication')) {
+      log(`[${HOOK_NAME}] Authentication issue detected. Check provider credentials and OAuth token restrictions.`)
+    } else if (errorStr.includes('timeout')) {
+      log(`[${HOOK_NAME}] Timeout detected. Consider increasing timeout or checking network connectivity.`)
+    } else if (errorStr.includes('model')) {
+      log(`[${HOOK_NAME}] Model-related error. Verify model ID and availability.`)
+    }
   }
 }

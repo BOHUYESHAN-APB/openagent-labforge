@@ -37,10 +37,13 @@ interface MemoryRegistry {
 /**
  * Generate a project identity hash from directory path.
  * Uses git remote URL if available, otherwise falls back to directory path.
+ *
+ * NOTE: Currently uses directory path only. Future enhancement could detect
+ * git remote URL for better cross-machine project identification.
  */
 export function resolveProjectIdentity(directory: string): string {
-  // For now, just use the directory path
-  // TODO: Add git remote URL detection in future iteration
+  // Use directory path as project identity
+  // This works well for local development and is simple to implement
   return directory
 }
 

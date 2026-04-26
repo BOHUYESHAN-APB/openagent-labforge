@@ -103,7 +103,7 @@ afterEach(() => {
 })
 
 describe("Sisyphus-Junior model inheritance", () => {
-  test("does not inherit UI-selected model as system default", async () => {
+  test("inherits main model as system default", async () => {
     // #given
     const pluginConfig: OhMyOpenCodeConfig = {}
     const config: Record<string, unknown> = {
@@ -122,10 +122,10 @@ describe("Sisyphus-Junior model inheritance", () => {
     // #when
     await handler(config)
 
-    // #then
+    // #then - Sisyphus-Junior should inherit the main model
     const agentConfig = config.agent as Record<string, { model?: string }>
     expect(agentConfig[getAgentDisplayName("sisyphus-junior")]?.model).toBe(
-      sisyphusJunior.SISYPHUS_JUNIOR_DEFAULTS.model
+      "opencode/kimi-k2.5-free"
     )
   })
 
@@ -245,7 +245,7 @@ describe("Plan agent demote behavior", () => {
     expect(agents[getAgentDisplayName("prometheus")]?.prompt).toBeDefined()
   })
 
-  test("plan agent remains visible by default when planner is enabled", async () => {
+  test("plan agent is hidden by default with new agent_display config", async () => {
     // #given
     const pluginConfig: OhMyOpenCodeConfig = {
       sisyphus_agent: {
@@ -274,11 +274,11 @@ describe("Plan agent demote behavior", () => {
     // #when
     await handler(config)
 
-    // #then
-    const agents = config.agent as Record<string, { mode?: string; prompt?: string }>
+    // #then - plan is demoted to subagent and hidden by default
+    const agents = config.agent as Record<string, { mode?: string; hidden?: boolean }>
     expect(agents.plan).toBeDefined()
-    expect(agents.plan.mode).toBe("primary")
-    expect(agents.plan.prompt).toBe("original plan prompt")
+    expect(agents.plan.mode).toBe("subagent")
+    expect(agents.plan.hidden).toBe(true)
     expect(agents[getAgentDisplayName("prometheus")]).toBeDefined()
   })
 
@@ -287,6 +287,11 @@ describe("Plan agent demote behavior", () => {
     const pluginConfig: OhMyOpenCodeConfig = {
       sisyphus_agent: {
         planner_enabled: false,
+      },
+      agent_display: {
+        hide_upstream_commands: {
+          plan: false, // Explicitly keep plan visible
+        },
       },
     }
     const config: Record<string, unknown> = {
@@ -311,9 +316,9 @@ describe("Plan agent demote behavior", () => {
     // #when
     await handler(config)
 
-    // #then - plan is not touched, prometheus is not created
+    // #then - plan is not touched, prometheus is still created (new architecture)
     const agents = config.agent as Record<string, { mode?: string; name?: string; prompt?: string }>
-    expect(agents[getAgentDisplayName("prometheus")]).toBeUndefined()
+    expect(agents[getAgentDisplayName("prometheus")]).toBeDefined()
     expect(agents.plan).toBeDefined()
     expect(agents.plan.mode).toBe("primary")
     expect(agents.plan.prompt).toBe("original plan prompt")
@@ -387,10 +392,49 @@ describe("Agent permission defaults", () => {
 })
 
 describe("Build agent visibility", () => {
-  test("build agent remains visible by default when present in config", async () => {
+  test("build agent is hidden by default with new agent_display config", async () => {
     // #given
     const pluginConfig: OhMyOpenCodeConfig = {
       sisyphus_agent: {},
+    }
+    const config: Record<string, unknown> = {
+      model: "anthropic/claude-opus-4-6",
+      agent: {
+        build: {
+          name: "build",
+          mode: "primary",
+          prompt: "original build prompt",
+        },
+      },
+    }
+    const handler = createConfigHandler({
+      ctx: { directory: "/tmp" },
+      pluginConfig,
+      modelCacheState: {
+        anthropicContext1MEnabled: false,
+        modelContextLimitsCache: new Map(),
+      },
+    })
+
+    // #when
+    await handler(config)
+
+    // #then - build agent is demoted to subagent and hidden by default
+    const agents = config.agent as Record<string, { mode?: string; hidden?: boolean }>
+    expect(agents.build).toBeDefined()
+    expect(agents.build.mode).toBe("subagent")
+    expect(agents.build.hidden).toBe(true)
+  })
+
+  test("build agent remains visible when hide_upstream_commands.build is false", async () => {
+    // #given
+    const pluginConfig: OhMyOpenCodeConfig = {
+      sisyphus_agent: {},
+      agent_display: {
+        hide_upstream_commands: {
+          build: false,
+        },
+      },
     }
     const config: Record<string, unknown> = {
       model: "anthropic/claude-opus-4-6",
@@ -666,8 +710,8 @@ describe("Prometheus category config resolution", () => {
 
     // then
     expect(config).toBeDefined()
-    expect(config?.model).toBe("openai/gpt-5.3-codex")
-    expect(config?.variant).toBe("xhigh")
+    expect(config?.model).toBe("deepseek/deepseek-v4-pro")
+    expect(config?.variant).toBe("max")
   })
 
   test("resolves visual-engineering category config", () => {
@@ -679,7 +723,7 @@ describe("Prometheus category config resolution", () => {
 
     // then
     expect(config).toBeDefined()
-    expect(config?.model).toBe("google/gemini-3.1-pro")
+    expect(config?.model).toBe("deepseek/deepseek-v4-flash")
   })
 
   test("user categories override default categories", () => {
@@ -726,8 +770,8 @@ describe("Prometheus category config resolution", () => {
 
     // then - falls back to DEFAULT_CATEGORIES
     expect(config).toBeDefined()
-    expect(config?.model).toBe("openai/gpt-5.3-codex")
-    expect(config?.variant).toBe("xhigh")
+    expect(config?.model).toBe("deepseek/deepseek-v4-pro")
+    expect(config?.variant).toBe("max")
   })
 
   test("preserves all category properties (temperature, top_p, tools, etc.)", () => {

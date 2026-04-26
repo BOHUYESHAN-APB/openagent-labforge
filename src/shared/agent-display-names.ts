@@ -67,7 +67,7 @@ const AGENT_DISPLAY_NAMES_EN: Record<string, string> = {
 const AGENT_DISPLAY_NAMES_ZH: Record<string, string> = {
   sisyphus: "智能助手",
   prometheus: "任务规划",
-  executor: "计划执行",
+  executor: "智能执行器",
   wase: "工程全自动",
   atlas: "快速开发",
   hephaestus: "深度开发",

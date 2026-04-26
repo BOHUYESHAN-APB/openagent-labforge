@@ -979,32 +979,66 @@ OpenAgent Labforge is strongly recommended together with:
 These are recommendations, not hard dependencies, but they improve the
 practical local workflow substantially.
 
-## Installation Reality
+## Installation
 
-This project is still optimized for local-first use, including Windows.
+### Quick Start (All Platforms)
 
-Current install reality:
-
-- all platforms (recommended): local clone + local build + local file plugin install
-- `Windows x64` (optional convenience path): published npm package is available
-- non-Windows platforms: local build + local install remains the reliable path
-
-Recommended default:
-
-- treat local clone/build install as the primary path
-- treat published npm binaries as fallback/convenience, not the baseline workflow
-
-Recommended workflow:
+**IMPORTANT:** OpenCode loads plugins from its local `node_modules`, NOT from global npm installation.
 
 ```bash
+# Step 1: Clone and build
+git clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git
+cd openagent-labforge
+bun install
 bun run build
-bun pm pack
+npm pack
+
+# Step 2: Install to OpenCode's config directory
+# Linux/macOS:
+cd ~/.config/opencode
+# Windows:
+cd C:\Users\<YourUsername>\.config\opencode
+
+npm install /path/to/openagent-labforge/bohuyeshan-openagent-labforge-core-<version>.tgz
+
+# Step 3: Verify installation
+ls node_modules/@bohuyeshan/openagent-labforge-core  # Should exist
+
+# Step 4: Configure OpenCode
+# Edit both config files in ~/.config/opencode/:
+# - opencode.json (server plugins)
+# - tui.json (TUI plugins)
+
+# opencode.json:
+{
+  "plugin": [
+    "@bohuyeshan/openagent-labforge-core@<version>",
+    "opencode-pty@0.3.2"
+  ]
+}
+
+# tui.json:
+{
+  "plugin": [
+    "@bohuyeshan/openagent-labforge-core@<version>"
+  ]
+}
+
+# Step 5: Restart OpenCode completely
 ```
 
-`bun run build` now also generates the bio skill bundle through
-`build:bio-skills-catalog`.
+**Key Points:**
+- ✅ Install to `~/.config/opencode/node_modules` (local installation)
+- ❌ Do NOT use `npm install -g` (global installation doesn't work)
+- ✅ Update BOTH `opencode.json` AND `tui.json`
+- ✅ Use package name with version: `@bohuyeshan/openagent-labforge-core@3.15.2`
 
-Then follow:
+**Config Directory Locations:**
+- Linux: `~/.config/opencode`
+- macOS: `~/.config/opencode`
+- Windows: `C:\Users\<YourUsername>\.config\opencode`
+
+For detailed installation instructions, troubleshooting, and configuration options, see:
 
 - [docs/guide/installation.md](docs/guide/installation.md)
 
@@ -1070,31 +1104,33 @@ It also supports `{model}` placeholder substitution.
 `context_memory` controls how much image-generation context is carried across
 chat turns.
 
-### OpenCode install prompt
+### OpenCode Auto-Install Prompt
 
-If you want OpenCode itself to clone this repository, build it, and wire the
-local plugin path automatically, you can paste the following prompt into a
-fresh OpenCode session:
+If you want OpenCode itself to clone, build, and install this plugin automatically, paste this prompt into a fresh OpenCode session:
 
 ```text
-Clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git into a local working directory on this machine, then install and build it in local-development mode for OpenCode Desktop on Windows.
+Clone https://github.com/BOHUYESHAN-APB/openagent-labforge.git into a local working directory, then build and install it for OpenCode.
 
 Requirements:
-1. Use Bun, not npm or yarn, for this repository.
-2. Run the minimum required install/build steps so the plugin produces both dist/index.js and dist/tui/index.js successfully.
-3. Update both %USERPROFILE%\.config\opencode\opencode.json and %USERPROFILE%\.config\opencode\tui.jsonc so the plugin array contains the local file plugin entry pointing at the package root:
-   file:///ABSOLUTE/PATH/TO/openagent-labforge
-4. Preserve any existing useful plugins already in the plugin array unless they are duplicate old entries for this same plugin.
-5. If an old npm-installed entry for openagent-labforge or oh-my-opencode exists, replace it with the local file entry instead of keeping duplicates.
-6. Do not overwrite unrelated provider or model config.
-7. At the end, show:
-   - the clone path
-   - the exact build command(s) you ran
-   - the final plugin array from opencode.json
-   - the final plugin array from tui.jsonc
-   - whether an OpenCode Desktop restart is required
+1. Use Bun for building (not npm or yarn)
+2. Run: bun install && bun run build && npm pack
+3. Install to OpenCode's config directory:
+   cd ~/.config/opencode
+   npm install /path/to/bohuyeshan-openagent-labforge-core-*.tgz
+4. Update ~/.config/opencode/opencode.json to use the package name:
+   "@bohuyeshan/openagent-labforge-core@<version>"
+5. Remove any old file:/// entries for this plugin
+6. Preserve other existing plugins
+7. Show me:
+   - Clone path
+   - Build commands executed
+   - Installation path (should be ~/.config/opencode/node_modules/@bohuyeshan/openagent-labforge-core)
+   - Final plugin array from opencode.json
+   - Confirmation that OpenCode restart is required
 
-If Bun is missing, stop and tell me exactly what to install first.
+IMPORTANT: Do NOT use "npm install -g" (global install). OpenCode loads plugins from ~/.config/opencode/node_modules, not global npm.
+
+If Bun is missing, tell me how to install it first.
 ```
 
 For users who only want to clear stale session residue rather than reinstall:
@@ -1159,6 +1195,18 @@ Maintainer note:
   resolution workflows
 - in some contribution windows, AI-assisted merge review or conflict handling
   may be used before merge completion
+
+## Troubleshooting
+
+### TUI Scrollbar Not Visible
+
+If the vertical scrollbar is not visible in the TUI after installing the plugin:
+
+1. **Automatic Fix**: The plugin now automatically enables the scrollbar on first install (v1.15.0+)
+2. **Manual Toggle**: Press `Ctrl+K` to open the command palette, then search for "Toggle session scrollbar"
+3. **Persistent Setting**: The scrollbar setting is stored in `~/.local/state/opencode/kv.json` as `scrollbar_visible`
+
+Note: OpenCode's default behavior is to hide the scrollbar. This plugin enables it by default for better user experience.
 
 ## Docs
 

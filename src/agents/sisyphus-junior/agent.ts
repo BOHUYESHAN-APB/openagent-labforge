@@ -31,8 +31,9 @@ const MODE: AgentMode = "subagent"
 // Use task(subagent_type=...) for first-class child sessions; avoid call_omo_agent.
 const BLOCKED_TOOLS = ["call_omo_agent"]
 
+// NOTE: No hardcoded model defaults. Sisyphus-Junior MUST inherit the main model.
+// If systemDefaultModel is not provided, it will throw an error to prevent silent hardcoding.
 export const SISYPHUS_JUNIOR_DEFAULTS = {
-  model: "anthropic/claude-sonnet-4-6",
   temperature: 0.1,
 } as const
 
@@ -86,7 +87,27 @@ export function createSisyphusJuniorAgentWithOverrides(
   }
 
   const overrideModel = (override as { model?: string } | undefined)?.model
-  const model = overrideModel ?? systemDefaultModel ?? SISYPHUS_JUNIOR_DEFAULTS.model
+
+  // Priority: 1. User override, 2. System default (main model), 3. Skip initialization
+  // NEVER use hardcoded fallback - must inherit main model
+  const model = overrideModel ?? systemDefaultModel
+
+  // If no model is available, return a disabled agent config instead of throwing
+  // This allows the plugin to load successfully even when params.config.model is undefined
+  if (!model) {
+    return {
+      description: "Sisyphus-Junior (disabled - no model available)",
+      mode: MODE,
+      model: "anthropic/claude-sonnet-4-6", // Placeholder, agent is disabled
+      temperature: 0.1,
+      maxTokens: 64000,
+      prompt: "This agent is disabled.",
+      color: "#808080",
+      permission: { "*": "deny" },
+      disable: true,
+    } as AgentConfig
+  }
+
   const temperature = override?.temperature ?? SISYPHUS_JUNIOR_DEFAULTS.temperature
 
   const promptAppend = override?.prompt_append

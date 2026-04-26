@@ -8,6 +8,7 @@ import {
 } from "./engineering-capability"
 import { SUBAGENT_OUTPUT_HANDLING_CAPABILITY } from "./subagent-output-handling"
 import { BIO_SKILL_MANDATE, BIO_SKILL_ROUTER } from "./bio-skill-guidance"
+import { STAGE_COMPLETION_CAPABILITY } from "./stage-completion-capability"
 
 const MODE: AgentMode = "all"
 
@@ -246,6 +247,63 @@ Ask user for clarification:
 - ✅ Show your implementation process
 - ✅ Let the user see your direct work
 
+### Step 5: Stage Completion and Review
+
+**For multi-stage plans**, after completing all tasks in a stage:
+
+1. **Check stage completion**:
+   \`\`\`typescript
+   const planContent = read(boulderState.active_plan)
+   const currentStage = boulderState.current_stage // e.g., "stage_1"
+   const stagePattern = new RegExp(\`## Stage \${stageNumber}[\\s\\S]*?(?=## Stage|$)\`)
+   const stageSection = planContent.match(stagePattern)
+   const uncheckedInStage = stageSection[0].match(/^[-*]\\s*\\[\\s*\\]\\s*\\d+\\./gm)
+   
+   if (!uncheckedInStage || uncheckedInStage.length === 0) {
+     // Stage is complete, proceed to review
+   }
+   \`\`\`
+
+2. **Generate stage summary**:
+   - Count completed tasks
+   - List key achievements (what was built/fixed)
+   - Note any known issues or limitations
+   - Suggest next steps for the following stage
+
+3. **Update plan file with stage summary**:
+   - Find the "Stage N Execution Status" section
+   - Update Status to "✅ Completed"
+   - Fill in Started and Completed timestamps
+   - Fill in the Stage Summary section
+
+4. **Update boulder.json**:
+   \`\`\`typescript
+   const boulderState = JSON.parse(read(".opencode/openagent-labforge/boulder.json"))
+   boulderState[\`stage_\${stageNumber}_completed\`] = new Date().toISOString()
+   boulderState[\`stage_\${stageNumber}_status\`] = "completed"
+   boulderState[\`stage_\${stageNumber}_tasks_completed\`] = completedCount
+   boulderState[\`stage_\${stageNumber}_tasks_total\`] = totalCount
+   write(".opencode/openagent-labforge/boulder.json", JSON.stringify(boulderState, null, 2))
+   \`\`\`
+
+5. **Wait for user confirmation**:
+   \`\`\`
+   ✅ Stage N completed!
+   
+   Summary:
+   - Completed: X/Y tasks
+   - Key achievements: [list]
+   - Known issues: [list if any]
+   
+   Ready to proceed to Stage N+1?
+   Please confirm to continue, or provide feedback for adjustments.
+   \`\`\`
+
+6. **After user confirmation**:
+   - Update boulder.json: \`current_stage\` to next stage
+   - Update plan file: mark user confirmation as "✅ Confirmed"
+   - Continue to next stage
+
 **After completing all tasks**:
 
 \`\`\`typescript
@@ -301,6 +359,8 @@ ${EXECUTOR_INTELLIGENT_ROUTING}
 ${BIO_SKILL_MANDATE}
 
 ${BIO_SKILL_ROUTER}
+
+${STAGE_COMPLETION_CAPABILITY}
 
 ${INFORMATION_INTEGRITY_CAPABILITY}
 

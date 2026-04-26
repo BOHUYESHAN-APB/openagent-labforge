@@ -43,6 +43,13 @@ AUTONOMOUS COMPLETION AUDIT.
 
 All current todos are completed, but autonomous execution does NOT stop here automatically.
 
+**USER INTENT DETECTION** (highest priority):
+- If the user explicitly asked to stop (e.g., "先停下来", "stop", "wait", "我会测试", "let me test"), RESPECT that request immediately
+- If the user expressed satisfaction (e.g., "完成了", "done", "looks good", "可以了"), accept completion
+- In these cases, you MAY skip \`acceptance-reviewer\` and provide a concise completion summary instead
+- Do NOT force continuation when the user clearly wants to pause or test themselves
+
+**STANDARD REVIEW FLOW** (when user intent is unclear):
 - Audit the original user request against the actual work completed
 - If any substantial work remains, immediately create a new wave of 5-15 concrete todos
 - Distinguish agent-owned remaining work from user-owned/manual/external follow-up
@@ -52,6 +59,8 @@ All current todos are completed, but autonomous execution does NOT stop here aut
 - Treat \`acceptance-reviewer\` as a normal callable subagent when it appears in the available agent list. Do not claim the reviewer is unavailable unless the \`task()\` call actually returns an error.
 - If no agent-owned work remains and only user-owned/manual/external pending work remains, do NOT emit ${CONTINUATION_REPLAN_MARKER}; report the waiting condition and stop.
 - If \`acceptance-reviewer\` actually fails to run while agent-owned work remains, do NOT provide a final completion answer. Keep the wave open and continue with concrete owned work or state the blocker explicitly.
+
+**COMPLETION**:
 - If the task is truly complete, only then provide a final completion answer
 - Do not ask the user whether you should continue when clear unfinished work remains
 - Do not replace the audit with a prose wishlist; either create the next todo wave or conclude with evidence`

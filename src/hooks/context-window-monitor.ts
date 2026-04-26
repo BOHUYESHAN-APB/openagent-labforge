@@ -58,7 +58,9 @@ function applyThresholdOverrides(
 }
 
 const ANTHROPIC_DISPLAY_LIMIT = 1_000_000
-const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 200_000
+// Modern Anthropic Claude models default to 1M context
+// Only fall back to 200K if explicitly disabled via legacy env var
+const DEFAULT_ANTHROPIC_ACTUAL_LIMIT = 1_000_000
 const CONTEXT_WARNING_THRESHOLD = 0.70
 // Use 128K as conservative default for unknown models
 const DEFAULT_MODEL_CONTEXT_LIMIT = 128_000
@@ -69,11 +71,12 @@ type ModelCacheStateLike = {
 }
 
 function getAnthropicActualLimit(modelCacheState?: ModelCacheStateLike): number {
-  return (modelCacheState?.anthropicContext1MEnabled ?? false) ||
-    process.env.ANTHROPIC_1M_CONTEXT === "true" ||
-    process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "true"
-    ? 1_000_000
-    : DEFAULT_ANTHROPIC_ACTUAL_LIMIT
+  // Check if explicitly disabled (legacy behavior)
+  if (process.env.ANTHROPIC_1M_CONTEXT === "false" || process.env.VERTEX_ANTHROPIC_1M_CONTEXT === "false") {
+    return 200_000
+  }
+  // Default to 1M for modern Claude models
+  return 1_000_000
 }
 
 const CONTEXT_REMINDER = `${createSystemDirective(SystemDirectiveTypes.CONTEXT_WINDOW_MONITOR)}
