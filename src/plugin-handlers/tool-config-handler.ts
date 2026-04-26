@@ -1,10 +1,21 @@
 import type { OhMyOpenCodeConfig } from "../config";
-import { getAgentDisplayName } from "../shared/agent-display-names";
+import { getAgentDisplayName, getAgentListDisplayName } from "../shared/agent-display-names";
 
 type AgentWithPermission = { permission?: Record<string, unknown> };
 
+function getConfigQuestionPermission(): string | null {
+  const configContent = process.env.OPENCODE_CONFIG_CONTENT;
+  if (!configContent) return null;
+  try {
+    const parsed = JSON.parse(configContent);
+    return parsed?.permission?.question ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function agentByKey(agentResult: Record<string, unknown>, key: string): AgentWithPermission | undefined {
-  return (agentResult[key] ?? agentResult[getAgentDisplayName(key)]) as
+  return (agentResult[getAgentListDisplayName(key)] ?? agentResult[getAgentDisplayName(key)] ?? agentResult[key]) as
     | AgentWithPermission
     | undefined;
 }
@@ -32,62 +43,17 @@ export function applyToolConfig(params: {
   };
 
   const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true";
-  const questionPermission = isCliRunMode ? "deny" : "allow";
+  const configQuestionPermission = getConfigQuestionPermission();
+  const isQuestionDisabledByPlugin = params.pluginConfig.disabled_tools?.includes("question") ?? false;
+  const questionPermission =
+    isQuestionDisabledByPlugin ? "deny" :
+    configQuestionPermission === "deny" ? "deny" :
+    isCliRunMode ? "deny" :
+    "allow";
 
-  // Read-only subagents - no task delegation
-  const oracle = agentByKey(params.agentResult, "oracle");
-  if (oracle) {
-    oracle.permission = {
-      ...oracle.permission,
-      task: "deny",
-      call_omo_agent: "deny",
-      write: "deny",
-      edit: "deny",
-    };
-  }
   const librarian = agentByKey(params.agentResult, "librarian");
   if (librarian) {
-    librarian.permission = {
-      ...librarian.permission,
-      "grep_app_*": "allow",
-      task: "deny",
-      call_omo_agent: "deny",
-      write: "deny",
-      edit: "deny",
-    };
-  }
-  const explore = agentByKey(params.agentResult, "explore");
-  if (explore) {
-    explore.permission = {
-      ...explore.permission,
-      task: "deny",
-      call_omo_agent: "deny",
-      write: "deny",
-      edit: "deny",
-    };
-  }
-  const githubScout = agentByKey(params.agentResult, "github-scout");
-  if (githubScout) {
-    githubScout.permission = {
-      ...githubScout.permission,
-      "grep_app_*": "allow",
-      websearch_web_search_exa: "allow",
-    };
-  }
-  const techScout = agentByKey(params.agentResult, "tech-scout");
-  if (techScout) {
-    techScout.permission = {
-      ...techScout.permission,
-      "grep_app_*": "allow",
-      websearch_web_search_exa: "allow",
-      "context7_resolve-library-id": "allow",
-      "context7_query-docs": "allow",
-      paper_search_mcp_search_arxiv: "allow",
-      paper_search_mcp_search_google_scholar: "allow",
-      paper_search_mcp_search_pubmed: "allow",
-      paper_search_mcp_search_biorxiv: "allow",
-      paper_search_mcp_search_medrxiv: "allow",
-    };
+    librarian.permission = { ...librarian.permission, "grep_app_*": "allow" };
   }
   const looker = agentByKey(params.agentResult, "multimodal-looker");
   if (looker) {
@@ -138,7 +104,18 @@ export function applyToolConfig(params: {
       ...denyTodoTools,
     };
   }
-  // Orchestrator agents - full delegation capabilities
+  const junior = agentByKey(params.agentResult, "sisyphus-junior");
+  if (junior) {
+    junior.permission = {
+      ...junior.permission,
+      task: "allow",
+      "task_*": "allow",
+      teammate: "allow",
+      ...denyTodoTools,
+    };
+  }
+
+  // orchestrators - wase, bio-autopilot, bio-orchestrator, orchestrator, engineering-orchestrator, bio-planner, bio-methodologist, bio-pipeline-operator
   for (const orchestratorName of [
     "wase",
     "orchestrator",
@@ -162,8 +139,8 @@ export function applyToolConfig(params: {
       };
     }
   }
-  
-  // Executor - direct execution without delegation
+
+  // Executor - direct execution, no delegation
   const executor = agentByKey(params.agentResult, "executor");
   if (executor) {
     executor.permission = {
@@ -174,14 +151,26 @@ export function applyToolConfig(params: {
       ...denyTodoTools,
     };
   }
-  const junior = agentByKey(params.agentResult, "sisyphus-junior");
-  if (junior) {
-    junior.permission = {
-      ...junior.permission,
-      task: "allow",
-      "task_*": "allow",
-      teammate: "allow",
-      ...denyTodoTools,
+
+  // Read-only subagents - no task delegation
+  const oracle = agentByKey(params.agentResult, "oracle");
+  if (oracle) {
+    oracle.permission = {
+      ...oracle.permission,
+      task: "deny",
+      call_omo_agent: "deny",
+      write: "deny",
+      edit: "deny",
+    };
+  }
+  const explore = agentByKey(params.agentResult, "explore");
+  if (explore) {
+    explore.permission = {
+      ...explore.permission,
+      task: "deny",
+      call_omo_agent: "deny",
+      write: "deny",
+      edit: "deny",
     };
   }
 
