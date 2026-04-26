@@ -1,5 +1,6 @@
 import type { OhMyOpenCodeConfig } from "../config";
 import { getAgentDisplayName, getAgentListDisplayName } from "../shared/agent-display-names";
+import { log } from "../shared/logger";
 
 type AgentWithPermission = { permission?: Record<string, unknown> };
 
@@ -50,6 +51,13 @@ export function applyToolConfig(params: {
     configQuestionPermission === "deny" ? "deny" :
     isCliRunMode ? "deny" :
     "allow";
+
+  log("[tool-config] Available agent keys:", Object.keys(params.agentResult));
+  log("[tool-config] Checking sisyphus with keys:", [
+    "sisyphus",
+    getAgentDisplayName("sisyphus"),
+    getAgentListDisplayName("sisyphus")
+  ]);
 
   const librarian = agentByKey(params.agentResult, "librarian");
   if (librarian) {
@@ -178,6 +186,5 @@ export function applyToolConfig(params: {
     webfetch: "allow",
     external_directory: "allow",
     ...(params.config.permission as Record<string, unknown>),
-    task: "deny",
   };
 }
