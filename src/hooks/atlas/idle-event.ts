@@ -2,12 +2,14 @@ import type { PluginInput } from "@opencode-ai/plugin"
 import { getSessionAgent, isAgentRegistered } from "../../features/claude-code-session-state"
 import { readBoulderState } from "../../features/boulder-state"
 import { getAgentConfigKey } from "../../shared/agent-display-names"
+import { normalizeSDKResponse } from "../../shared"
 import { log } from "../../shared/logger"
 import { injectBoulderContinuation } from "./boulder-continuation-injector"
 import { HOOK_NAME } from "./hook-name"
 import { isSessionInBoulderLineage } from "./boulder-session-lineage"
 import { getLastAgentFromSession } from "./session-last-agent"
 import { resolveActiveBoulderSession } from "./resolve-active-boulder-session"
+import { detectUserIntent, shouldSkipContinuation, explainIntent } from "../todo-continuation-enforcer/user-intent-detector"
 import type { AtlasHookOptions, SessionState } from "./types"
 
 const CONTINUATION_COOLDOWN_MS = 5000
@@ -140,10 +142,74 @@ export async function handleAtlasSessionIdle(input: {
   const sessionState = getState(sessionID)
   const now = Date.now()
 
+  // Early user intent detection - check if user explicitly asked to stop
+  try {
+    const messagesResp = await ctx.client.session.messages({
+      path: { id: sessionID },
+      query: { directory: ctx.directory },
+    })
+    const messages = normalizeSDKResponse(messagesResp, [] as Array<{ info?: { role?: string }; parts?: Array<{ type?: string; text?: string }> }>)
+    
+    // Find the most recent user message
+    let latestUserMessageText: string | undefined
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i]
+      if (message.info?.role === "user") {
+        const parts = message.parts || []
+        for (const part of parts) {
+          if (part?.type === "text" && part?.text) {
+            latestUserMessageText = part.text
+            break
+          }
+        }
+        if (latestUserMessageText) break
+      }
+    }
+    
+    if (latestUserMessageText) {
+      const userIntent = detectUserIntent(latestUserMessageText)
+      if (shouldSkipContinuation(userIntent)) {
+        log(`[${HOOK_NAME}] Skipped: user intent detected (early check)`, {
+          sessionID,
+          intent: userIntent.type,
+          explanation: explainIntent(userIntent)
+        })
+        return
+      }
+    }
+  } catch (error) {
+    log(`[${HOOK_NAME}] Failed to fetch messages for intent detection`, { sessionID, error: String(error) })
+  }
+
+  // Check if user has cancelled (ESC) recently
   if (sessionState.lastEventWasAbortError) {
     sessionState.lastEventWasAbortError = false
-    log(`[${HOOK_NAME}] Skipped: abort error immediately before idle`, { sessionID })
+    sessionState.userCancelledAt = now
+    sessionState.userCancelCount = (sessionState.userCancelCount || 0) + 1
+    log(`[${HOOK_NAME}] User cancelled (ESC), respecting user intent`, { 
+      sessionID,
+      cancelCount: sessionState.userCancelCount 
+    })
     return
+  }
+
+  // If user has cancelled multiple times in the last 5 minutes, stop auto-continuation
+  if (sessionState.userCancelledAt && sessionState.userCancelCount && sessionState.userCancelCount >= 2) {
+    const timeSinceCancel = now - sessionState.userCancelledAt
+    const CANCEL_RESPECT_WINDOW = 5 * 60 * 1000 // 5 minutes
+    
+    if (timeSinceCancel < CANCEL_RESPECT_WINDOW) {
+      log(`[${HOOK_NAME}] Skipped: user has cancelled ${sessionState.userCancelCount} times, respecting user intent`, {
+        sessionID,
+        cancelCount: sessionState.userCancelCount,
+        timeSinceCancel,
+      })
+      return
+    }
+    
+    // Reset after 5 minutes
+    sessionState.userCancelledAt = undefined
+    sessionState.userCancelCount = 0
   }
 
   if (sessionState.promptFailureCount >= 2) {
