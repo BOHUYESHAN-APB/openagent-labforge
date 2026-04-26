@@ -67,12 +67,41 @@ export const ExperimentalConfigSchema = z.object({
   */
   /** Context compression configuration */
   context_compression: z.object({
+    /** Enable context compression system (default: true) */
+    enabled: z.boolean().default(true),
     /** Micro-pruning threshold for tool output compression in characters (default: 500) */
     micro_prune_threshold: z.number().int().min(100).max(5000).optional(),
     /** Enable duplicate content detection (default: true) */
     enable_duplicate_detection: z.boolean().optional(),
     /** Enable error stack compression (default: true) */
     enable_error_stack_compression: z.boolean().optional(),
+    /** L0: Real-time cleanup configuration */
+    l0_realtime_cleanup: z.object({
+      enabled: z.boolean().default(true),
+      apply_on_tool_call: z.boolean().default(true),
+    }).optional(),
+    /** L1: Micro-prune configuration */
+    l1_micro_prune: z.object({
+      enabled: z.boolean().default(true),
+      threshold: z.number().min(100).max(5000).default(500),
+      keep_head_lines: z.number().min(10).max(200).default(50),
+      keep_tail_lines: z.number().min(10).max(200).default(50),
+    }).optional(),
+    /** L2: Light checkpoint configuration */
+    l2_light_checkpoint: z.object({
+      enabled: z.boolean().default(true),
+      keep_versions: z.number().min(1).max(10).default(3),
+    }).optional(),
+    /** L3: Heavy checkpoint configuration */
+    l3_heavy_checkpoint: z.object({
+      enabled: z.boolean().default(true),
+      keep_versions: z.number().min(1).max(10).default(5),
+    }).optional(),
+    /** Compression history tracking */
+    history: z.object({
+      enabled: z.boolean().default(true),
+      max_events: z.number().min(10).max(200).default(50),
+    }).optional(),
   }).optional(),
   /** Checkpoint retention configuration */
   checkpoint_retention: z.object({
@@ -110,6 +139,18 @@ export const ExperimentalConfigSchema = z.object({
     cross_session_memories: z.boolean().default(true),
     /** Enable TUI sidebar visualization (default: true) */
     tui_sidebar: z.boolean().default(true),
+  }).optional(),
+  /** Autonomous agent configuration */
+  autonomous_agents: z.object({
+    /** Enable acceptance-reviewer for autonomous agents (default: true) */
+    enable_review: z.boolean().default(true),
+    /** Enable automatic planning bootstrap in heavy autonomous mode (default: true) */
+    enable_auto_planning: z.boolean().default(true),
+  }).optional(),
+  /** Model-specific prompt optimization */
+  prompt_optimization: z.object({
+    /** Enable DeepSeek V4 official prompts (Think Max, math reasoning, XML tools) (default: true) */
+    enable_deepseek_v4: z.boolean().default(true),
   }).optional(),
 })
 

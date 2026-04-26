@@ -28,7 +28,7 @@ const SETTINGS_LANGUAGE_KEY = "openagent-labforge.settings.language"
 const SETTINGS_SELECT_PLACEHOLDER = "Filter settings • Enter select • Esc close"
 const SETTINGS_SUBPAGE_PLACEHOLDER = "Filter options • Enter confirm • Esc close"
 
-type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" | "model-selection" /* SWARM SYSTEM - DISABLED 2026-04-23: | "swarm" */
+type SettingsEntry = "root" | "general" | "runtime" | "image-bus" | "agent-display" | "context-guard" | "model-selection" | "magic-context" /* SWARM SYSTEM - DISABLED 2026-04-23: | "swarm" */
 type UiLanguage = "en" | "zh"
 
 type ProviderKey = "google_nano_banana" | "comfyui" | "stable_diffusion"
@@ -1473,6 +1473,9 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       | undefined
     const preemptiveCompaction = getNestedBoolean(config, ["experimental", "preemptive_compaction"])
     const strictModelPriority = getNestedBoolean(config, ["experimental", "strict_user_model_priority"])
+    const enableReview = getNestedBoolean(config, ["experimental", "autonomous_agents", "enable_review"])
+    const enableAutoPlanning = getNestedBoolean(config, ["experimental", "autonomous_agents", "enable_auto_planning"])
+    const enableDeepSeekV4 = getNestedBoolean(config, ["experimental", "prompt_optimization", "enable_deepseek_v4"])
     const thresholdProfile = resolveContextGuardProfile(profile)
     const thresholds = getContextGuardThresholdDisplay({
       profile: thresholdProfile,
@@ -1507,6 +1510,24 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             value: "preemptive_compaction",
             category: text("Core", "核心"),
             description: statusLabel(preemptiveCompaction),
+          },
+          {
+            title: text("Toggle Autonomous Review", "切换自动审查"),
+            value: "enable_review",
+            category: text("Autonomous", "自动执行"),
+            description: `${statusLabel(enableReview !== false)} • ${text("Acceptance-reviewer for wase/bio-autopilot", "wase/bio-autopilot 的验收审查")}`,
+          },
+          {
+            title: text("Toggle Auto Planning", "切换自动规划"),
+            value: "enable_auto_planning",
+            category: text("Autonomous", "自动执行"),
+            description: `${statusLabel(enableAutoPlanning !== false)} • ${text("Planning bootstrap in heavy mode", "重度模式下的规划引导")}`,
+          },
+          {
+            title: text("Toggle DeepSeek V4 Prompts", "切换 DeepSeek V4 提示词"),
+            value: "enable_deepseek_v4",
+            category: text("Optimization", "优化"),
+            description: `${statusLabel(enableDeepSeekV4 !== false)} • ${text("Think Max, math reasoning, XML tools", "Think Max、数学推理、XML 工具")}`,
           },
           {
             title: text("Toggle Strict User Model Priority", "切换严格用户模型优先"),
@@ -1572,6 +1593,58 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             return
           }
 
+          // Handle new autonomous agent settings
+          if (option.value === "enable_review") {
+            openBooleanDialog({
+              title: text("Autonomous Review", "自动审查"),
+              current: enableReview !== false,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openRuntime,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "autonomous_agents", "enable_review"], value),
+                  text("Updated autonomous review", "已更新自动审查"),
+                  openRuntime,
+                ),
+            })
+            return
+          }
+
+          if (option.value === "enable_auto_planning") {
+            openBooleanDialog({
+              title: text("Auto Planning", "自动规划"),
+              current: enableAutoPlanning !== false,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openRuntime,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "autonomous_agents", "enable_auto_planning"], value),
+                  text("Updated auto planning", "已更新自动规划"),
+                  openRuntime,
+                ),
+            })
+            return
+          }
+
+          if (option.value === "enable_deepseek_v4") {
+            openBooleanDialog({
+              title: text("DeepSeek V4 Prompts", "DeepSeek V4 提示词"),
+              current: enableDeepSeekV4 !== false,
+              trueLabel: text("Enable", "启用"),
+              falseLabel: text("Disable", "禁用"),
+              onBack: openRuntime,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "prompt_optimization", "enable_deepseek_v4"], value),
+                  text("Updated DeepSeek V4 prompts", "已更新 DeepSeek V4 提示词"),
+                  openRuntime,
+                ),
+            })
+            return
+          }
+
           const current =
             option.value === "preemptive_compaction"
               ? preemptiveCompaction
@@ -1590,6 +1663,186 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
                 (root) => setNestedValue(root, ["experimental", option.value], value),
                 `Updated ${option.value.replaceAll("_", " ")}`,
                 openRuntime,
+              ),
+          })
+        },
+      })
+    )
+  }
+
+  const openMagicContext = () => {
+    const config = effectiveRecord()
+    const magicContextEnabled = getNestedBoolean(config, ["experimental", "magic_context", "enabled"])
+    const asyncCompression = getNestedBoolean(config, ["experimental", "magic_context", "async_compression"])
+    const cacheTtl = getNestedString(config, ["experimental", "magic_context", "cache_ttl"])
+    const tagSystemEnabled = getNestedBoolean(config, ["experimental", "magic_context", "tag_system_enabled"])
+    const crossSessionMemories = getNestedBoolean(config, ["experimental", "magic_context", "cross_session_memories"])
+    const tuiSidebar = getNestedBoolean(config, ["experimental", "magic_context", "tui_sidebar"])
+    const executeThreshold = getNestedNumber(config, ["experimental", "magic_context", "execute_threshold_percentage"])
+
+    api.ui.dialog.setSize("xlarge")
+    api.ui.dialog.replace(() =>
+      api.ui.DialogSelect({
+        title: text("Magic Context Settings", "Magic Context 设置"),
+        placeholder: text(SETTINGS_SELECT_PLACEHOLDER, "筛选设置 • 回车进入 • Esc 关闭"),
+        options: [
+          summaryRow(
+            text("Current Magic Context State", "当前 Magic Context 状态"),
+            `${text("Enabled", "启用")}: ${booleanLabel(magicContextEnabled)} • ${text("Async compression", "异步压缩")}: ${booleanLabel(asyncCompression)} • ${text("Cache TTL", "缓存 TTL")}: ${stringLabel(cacheTtl, "5m")}`,
+            text("Current", "当前"),
+          ),
+          {
+            title: text("Toggle Magic Context", "切换 Magic Context"),
+            value: "magic_context_enabled",
+            category: text("Core", "核心"),
+            description: statusLabel(magicContextEnabled),
+          },
+          {
+            title: text("Toggle Async Compression", "切换异步压缩"),
+            value: "async_compression",
+            category: text("Core", "核心"),
+            description: `${statusLabel(asyncCompression)} • ${text("Background compression via Historian agent (higher token usage but non-blocking)", "通过 Historian agent 后台压缩（token 消耗更高但不阻塞）")}`,
+          },
+          {
+            title: text("Set Cache TTL", "设置缓存 TTL"),
+            value: "cache_ttl",
+            category: text("Core", "核心"),
+            description: stringValueLabel(cacheTtl, "5m", "5m"),
+          },
+          {
+            title: text("Toggle Tag System", "切换标签系统"),
+            value: "tag_system_enabled",
+            category: text("Features", "功能"),
+            description: statusLabel(tagSystemEnabled),
+          },
+          {
+            title: text("Toggle Cross-Session Memories", "切换跨会话记忆"),
+            value: "cross_session_memories",
+            category: text("Features", "功能"),
+            description: statusLabel(crossSessionMemories),
+          },
+          {
+            title: text("Toggle TUI Sidebar", "切换 TUI 侧边栏"),
+            value: "tui_sidebar",
+            category: text("Features", "功能"),
+            description: statusLabel(tuiSidebar),
+          },
+          {
+            title: text("Set Execute Threshold", "设置执行阈值"),
+            value: "execute_threshold_percentage",
+            category: text("Advanced", "高级"),
+            description: numberLabel(executeThreshold, "65") + "%",
+          },
+          {
+            title: text("Back", "返回"),
+            value: "back",
+            category: text("Navigation", "导航"),
+            description: text("Return to the main settings page.", "返回设置主页。"),
+          },
+        ],
+        onSelect: (option) => {
+          if (option.value === "back") {
+            openRoot("root")
+            return
+          }
+          if (option.value === "cache_ttl") {
+            openEnumDialog({
+              title: text("Cache TTL", "缓存 TTL"),
+              current: cacheTtl,
+              choices: [
+                {
+                  title: "30s",
+                  value: "30s",
+                  description: text("30 seconds (for testing)", "30 秒（用于测试）"),
+                },
+                {
+                  title: "1m",
+                  value: "1m",
+                  description: text("1 minute", "1 分钟"),
+                },
+                {
+                  title: "5m",
+                  value: "5m",
+                  description: text("5 minutes (recommended default)", "5 分钟（推荐默认值）"),
+                },
+                {
+                  title: "10m",
+                  value: "10m",
+                  description: text("10 minutes", "10 分钟"),
+                },
+                {
+                  title: "1h",
+                  value: "1h",
+                  description: text("1 hour", "1 小时"),
+                },
+              ],
+              onBack: openMagicContext,
+              onConfirm: (value) =>
+                save(
+                  (root) => setNestedValue(root, ["experimental", "magic_context", "cache_ttl"], value),
+                  text("Updated cache TTL", "已更新缓存 TTL"),
+                  openMagicContext,
+                ),
+            })
+            return
+          }
+          if (option.value === "execute_threshold_percentage") {
+            openNumberDialog({
+              title: text("Execute Threshold Percentage", "执行阈值百分比"),
+              placeholder: text("Enter percentage (1-100)", "输入百分比（1-100）"),
+              current: executeThreshold,
+              onBack: openMagicContext,
+              onConfirm: (valueStr) => {
+                const value = Number.parseInt(valueStr, 10)
+                if (Number.isNaN(value)) {
+                  api.ui.toast({
+                    variant: "error",
+                    message: text("Invalid number", "无效的数字"),
+                  })
+                  openMagicContext()
+                  return
+                }
+                const clamped = Math.max(1, Math.min(100, value))
+                save(
+                  (root) => setNestedValue(root, ["experimental", "magic_context", "execute_threshold_percentage"], clamped),
+                  text("Updated execute threshold", "已更新执行阈值"),
+                  openMagicContext,
+                )
+              },
+            })
+            return
+          }
+
+          const current =
+            option.value === "magic_context_enabled"
+              ? magicContextEnabled
+              : option.value === "async_compression"
+                ? asyncCompression
+                : option.value === "tag_system_enabled"
+                  ? tagSystemEnabled
+                  : option.value === "cross_session_memories"
+                    ? crossSessionMemories
+                    : tuiSidebar
+
+          openBooleanDialog({
+            title: option.value === "magic_context_enabled"
+              ? text("Magic Context", "Magic Context")
+              : option.value === "async_compression"
+                ? text("Async Compression", "异步压缩")
+                : option.value === "tag_system_enabled"
+                  ? text("Tag System", "标签系统")
+                  : option.value === "cross_session_memories"
+                    ? text("Cross-Session Memories", "跨会话记忆")
+                    : text("TUI Sidebar", "TUI 侧边栏"),
+            current,
+            trueLabel: text("Enable", "启用"),
+            falseLabel: text("Disable", "禁用"),
+            onBack: openMagicContext,
+            onConfirm: (value) =>
+              save(
+                (root) => setNestedValue(root, ["experimental", "magic_context", option.value], value),
+                `Updated ${option.value.replaceAll("_", " ")}`,
+                openMagicContext,
               ),
           })
         },
@@ -2749,6 +3002,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       openModelSelection()
       return
     }
+    if (entry === "magic-context") {
+      openMagicContext()
+      return
+    }
     /* SWARM SYSTEM - DISABLED 2026-04-23
     if (entry === "swarm") {
       openSwarm()
@@ -2765,6 +3022,8 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
     const strictModelPriority = getNestedBoolean(configRecord, ["experimental", "strict_user_model_priority"])
     const autoProviderEnabled = getNestedBoolean(configRecord, ["model_selection", "enable_auto_provider"])
     const deepseekAvailable = getNestedBoolean(configRecord, ["model_selection", "deepseek_available"])
+    const magicContextEnabled = getNestedBoolean(configRecord, ["experimental", "magic_context", "enabled"])
+    const asyncCompression = getNestedBoolean(configRecord, ["experimental", "magic_context", "async_compression"])
     /* SWARM SYSTEM - DISABLED 2026-04-23
     const swarmEnabled = getNestedBoolean(configRecord, ["experimental", "swarm", "enabled"])
     const swarmMaxWorkers = getNestedNumber(configRecord, ["experimental", "swarm", "max_workers"])
@@ -2825,6 +3084,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
             category: text("Pages", "页面"),
             description: `${text("Auto provider", "自动提供商")}: ${booleanLabel(autoProviderEnabled)} • ${text("DeepSeek", "DeepSeek")}: ${booleanLabel(deepseekAvailable)} • ${text("Agent & category preferences", "Agent 与分类偏好")}`,
           },
+          {
+            title: text("Magic Context Settings", "Magic Context 设置"),
+            value: "magic-context",
+            category: text("Pages", "页面"),
+            description: `${text("Magic Context", "Magic Context")}: ${booleanLabel(magicContextEnabled)} • ${text("Async compression", "异步压缩")}: ${booleanLabel(asyncCompression)} • ${text("Cache-aware context management", "缓存感知的上下文管理")}`,
+          },
           /* SWARM SYSTEM - DISABLED 2026-04-23
           {
             title: text("Swarm Settings", "蜂群设置"),
@@ -2861,6 +3126,10 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
           }
           if (option.value === "model-selection") {
             openModelSelection()
+            return
+          }
+          if (option.value === "magic-context") {
+            openMagicContext()
             return
           }
           /* SWARM SYSTEM - DISABLED 2026-04-23
