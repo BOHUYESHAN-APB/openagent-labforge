@@ -46,6 +46,7 @@ import { detectLatestAssistantCompletionPosture } from "./completion-posture-det
 import { startCountdown } from "./countdown"
 import { hasContinuationIntent } from "./continuation-intent-detection"
 import { hasUnansweredQuestion } from "./pending-question-detection"
+import { detectUserIntent, shouldSkipContinuation, explainIntent } from "./user-intent-detector"
 import { resolveLatestMessageInfo } from "./resolve-message-info"
 import type { MessageInfo, ResolvedMessageInfo, Todo } from "./types"
 import type { SessionStateStore } from "./session-state"
@@ -191,6 +192,35 @@ export async function handleSessionIdle(args: {
       log(`[${HOOK_NAME}] Skipped: last assistant message was aborted (API fallback)`, { sessionID })
       return
     }
+    
+    // Early user intent detection - check if user explicitly asked to stop
+    let latestUserMessageText: string | undefined
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i]
+      if (message.info?.role === "user") {
+        const parts = (message as any).parts || []
+        for (const part of parts) {
+          if (part?.type === "text" && part?.text) {
+            latestUserMessageText = part.text
+            break
+          }
+        }
+        if (latestUserMessageText) break
+      }
+    }
+    
+    if (latestUserMessageText) {
+      const userIntent = detectUserIntent(latestUserMessageText)
+      if (shouldSkipContinuation(userIntent)) {
+        log(`[${HOOK_NAME}] Skipped: user intent detected (early check)`, {
+          sessionID,
+          intent: userIntent.type,
+          explanation: explainIntent(userIntent)
+        })
+        return
+      }
+    }
+    
     if (hasUnansweredQuestion(messages)) {
       log(`[${HOOK_NAME}] Skipped: pending question awaiting user response`, { sessionID })
       return
