@@ -34,9 +34,37 @@ export function applyToolConfig(params: {
   const isCliRunMode = process.env.OPENCODE_CLI_RUN_MODE === "true";
   const questionPermission = isCliRunMode ? "deny" : "allow";
 
+  // Read-only subagents - no task delegation
+  const oracle = agentByKey(params.agentResult, "oracle");
+  if (oracle) {
+    oracle.permission = {
+      ...oracle.permission,
+      task: "deny",
+      call_omo_agent: "deny",
+      write: "deny",
+      edit: "deny",
+    };
+  }
   const librarian = agentByKey(params.agentResult, "librarian");
   if (librarian) {
-    librarian.permission = { ...librarian.permission, "grep_app_*": "allow" };
+    librarian.permission = {
+      ...librarian.permission,
+      "grep_app_*": "allow",
+      task: "deny",
+      call_omo_agent: "deny",
+      write: "deny",
+      edit: "deny",
+    };
+  }
+  const explore = agentByKey(params.agentResult, "explore");
+  if (explore) {
+    explore.permission = {
+      ...explore.permission,
+      task: "deny",
+      call_omo_agent: "deny",
+      write: "deny",
+      edit: "deny",
+    };
   }
   const githubScout = agentByKey(params.agentResult, "github-scout");
   if (githubScout) {
@@ -110,7 +138,17 @@ export function applyToolConfig(params: {
       ...denyTodoTools,
     };
   }
-  for (const orchestratorName of ["wase", "bio-autopilot", "bio-orchestrator"]) {
+  // Orchestrator agents - full delegation capabilities
+  for (const orchestratorName of [
+    "wase",
+    "orchestrator",
+    "bio-autopilot",
+    "bio-orchestrator",
+    "engineering-orchestrator",
+    "bio-planner",
+    "bio-methodologist",
+    "bio-pipeline-operator",
+  ]) {
     const orchestrator = agentByKey(params.agentResult, orchestratorName);
     if (orchestrator) {
       orchestrator.permission = {
@@ -123,6 +161,18 @@ export function applyToolConfig(params: {
         ...denyTodoTools,
       };
     }
+  }
+  
+  // Executor - direct execution without delegation
+  const executor = agentByKey(params.agentResult, "executor");
+  if (executor) {
+    executor.permission = {
+      ...executor.permission,
+      call_omo_agent: "deny",
+      task: "deny",
+      question: questionPermission,
+      ...denyTodoTools,
+    };
   }
   const junior = agentByKey(params.agentResult, "sisyphus-junior");
   if (junior) {
