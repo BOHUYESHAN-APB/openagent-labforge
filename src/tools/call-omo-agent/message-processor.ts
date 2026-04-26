@@ -21,7 +21,7 @@ export async function processMessages(
   }
 
   const messages = messagesResult.data
-  log(`[call_omo_agent] Got ${messages.length} messages`)
+  log(`[call_omo_agent] Got ${messages.length} total messages`)
 
   // Include both assistant messages AND tool messages
   // Tool results (grep, glob, bash output) come from role "tool"
@@ -31,11 +31,11 @@ export async function processMessages(
 
   if (relevantMessages.length === 0) {
     log(`[call_omo_agent] No assistant or tool messages found`)
-    log(`[call_omo_agent] All messages:`, JSON.stringify(messages, null, 2))
+    log(`[call_omo_agent] Message roles:`, messages.map((m: SDKMessage) => m.info?.role).join(", "))
     throw new Error("No assistant or tool response found")
   }
 
-  log(`[call_omo_agent] Found ${relevantMessages.length} relevant messages`)
+  log(`[call_omo_agent] Found ${relevantMessages.length} relevant messages (${messages.filter((m: SDKMessage) => m.info?.role === "assistant").length} assistant, ${messages.filter((m: SDKMessage) => m.info?.role === "tool").length} tool)`)
 
   // Sort by time ascending (oldest first) to process messages in order
   const sortedMessages = [...relevantMessages].sort((a: SDKMessage, b: SDKMessage) => {
@@ -46,6 +46,8 @@ export async function processMessages(
 
   const newMessages = consumeNewMessages(sessionID, sortedMessages)
 
+  log(`[call_omo_agent] Processing ${newMessages.length} new messages`)
+
   if (newMessages.length === 0) {
     return "No new output since last check."
   }
@@ -55,32 +57,37 @@ export async function processMessages(
   const extractedContent: string[] = []
 
   for (const message of newMessages) {
+    let messageContentCount = 0
     for (const part of message.parts ?? []) {
       // Handle both "text" and "reasoning" parts (thinking models use "reasoning")
       if ((part.type === "text" || part.type === "reasoning") && part.text) {
         extractedContent.push(part.text)
+        messageContentCount++
       } else if ((part.type as string) === "tool_result") {
         // Tool results contain the actual output from tool calls
         const toolResult = part as { content?: string | Array<{ type: string; text?: string }> }
         if (typeof toolResult.content === "string" && toolResult.content) {
           extractedContent.push(toolResult.content)
+          messageContentCount++
         } else if (Array.isArray(toolResult.content)) {
           // Handle array of content blocks
           for (const block of toolResult.content) {
             if ((block.type === "text" || block.type === "reasoning") && block.text) {
               extractedContent.push(block.text)
+              messageContentCount++
             }
           }
         }
       }
     }
+    log(`[call_omo_agent] Message ${message.info?.role}: extracted ${messageContentCount} content parts`)
   }
 
   const responseText = extractedContent
     .filter((text) => text.length > 0)
     .join("\n\n")
 
-  log(`[call_omo_agent] Got response, length: ${responseText.length}`)
+  log(`[call_omo_agent] Final response length: ${responseText.length} chars from ${extractedContent.length} parts`)
 
   return responseText
 }
