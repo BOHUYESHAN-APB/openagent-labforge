@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.tgz
+.env
+.env.*
+!.env.example
+
+# Cloned reference repos — NOT part of this project
+Future/
+OLD/
+
+# OpenCode runtime
+.opencode/
+.agents/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
