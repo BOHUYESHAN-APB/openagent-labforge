@@ -1,9 +1,44 @@
+# Dependencies
+.sisyphus/*
+!.sisyphus/rules/
 node_modules/
+
+# Build output
 dist/
-*.tgz
+
+# Platform binaries (built, not committed)
+packages/*/bin/oh-my-opencode
+packages/*/bin/oh-my-opencode.exe
+packages/*/bin/*.map
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Lock files (use bun.lockb instead)
+package-lock.json
+yarn.lock
+
+# Environment
 .env
 .env.*
 !.env.example
+test-injection/
+notepad.md
+oauth-success.html
+*.bun-build
+.omx/
+.dori-sync/
 
 # Cloned reference repos — NOT part of this project
 Future/
@@ -13,12 +48,5 @@ OLD/
 .opencode/
 .agents/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
+# npm pack artifacts
+*.tgz
