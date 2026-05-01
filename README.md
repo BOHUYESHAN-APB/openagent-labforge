@@ -1,47 +1,112 @@
 # OpenAgent LabForge
 
-> 生物信息学 + 工程能力的双轨 AI 代理编排插件
->
-> Bioinformatics + Engineering dual-track AI agent orchestration plugin for OpenCode
+> Bioinformatics + Engineering dual-track AI agent orchestration plugin for [OpenCode](https://github.com/anomalyco/opencode)
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![OpenCode](https://img.shields.io/badge/OpenCode-plugin-green.svg)](https://opencode.ai/docs/plugins)
+
+English | [中文](#中文)
 
 ---
 
-## English
+## Overview
 
-### What is OpenAgent LabForge?
+OpenAgent LabForge is a lightweight agent orchestration plugin that extends OpenCode with **17 specialized agents** (5 primary + 12 subagents), a three-tier prompt system, bioinformatics capabilities, and a checkpoint-based memory architecture.
 
-OpenAgent LabForge is an agent orchestration plugin for [OpenCode](https://github.com/anomalyco/opencode), forked from [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim). It extends the original 9-agent system to **17 agents** (5 primary + 12 subagents) with:
+**Key differentiators from base OpenCode:**
 
-- **Three-tier prompt system**: Heavy (Omo-inspired) / Light (OMOS-native) / Turbo (OLD-2-inspired)
-- **Bioinformatics specialization**: Dedicated bio-orchestrator agent + 2 integrated bio MCPs + 439 bio skills
-- **Checkpoint mechanism**: Light (same-session recovery) + Heavy (cross-session handoff)
-- **Command system**: 13 slash commands for workflow control
-- **Mode detection**: Automatic search/analyze/heavy mode injection via keyword detection
+- 5 primary agents with distinct roles (orchestrator, deep-worker, prometheus, atlas, bio-orchestrator)
+- Three-tier prompt system: Heavy / Light / Turbo, switchable at runtime
+- Bioinformatics-first: dedicated agent, 439 domain skills, 2 integrated bio MCPs
+- Checkpoint mechanism: light (same-session) + heavy (cross-session) recovery
+- 13 slash commands for workflow control
+- All runtime prompts injected via system channel — user messages remain pure
 
-### Design Principles
+---
 
-1. **Main agent priority** - Primary agents do real work, not just dispatch
-2. **Lightweight** - Don't reimplement OpenCode mechanisms, extend them
-3. **Bio as first-class capability** - Not an add-on, deeply integrated
-4. **Token-friendly** - Cost-sensitive, use cheaper models for subagents
-5. **User message purity** - Runtime prompts injected via system channel, not user messages
-6. **OpenCode-only platform** - No multi-platform abstraction
+## Installation
 
-### Architecture
+### Recommended: Local Build
 
-#### Agent System
+Clone and build from source. This gives you full control and is the approach used in production.
 
-**5 Primary Agents (visible in OpenCode UI)**:
+```bash
+git clone git@github.com:BOHUYESHAN-APB/openagent-labforge-bio.git
+cd openagent-labforge-bio
+bun install
+bun run build
+```
 
-| Agent | Display Name | Role | Mode Support |
-|-------|-------------|------|--------------|
-| `orchestrator` | Ultraworker | Main engineering orchestrator | Heavy/Light/Turbo |
-| `deep-worker` | Deep Agent | Autonomous deep worker | Heavy/Light/Turbo |
-| `prometheus` | Plan Builder | Strategic planner (interview + plan) | Light only |
-| `atlas` | Plan Executor | Plan execution coordinator | Light only |
-| `bio-orchestrator` | Bio Ultraworker | Bioinformatics specialist | Heavy/Light/Turbo |
+Then register the plugin in your OpenCode config:
 
-**12 Subagents (hidden, delegated to)**:
+**Windows** (`%APPDATA%\opencode\opencode.json`):
+```jsonc
+{
+  "plugin": ["file:///D:/path/to/openagent-labforge-bio"]
+}
+```
+
+**macOS / Linux** (`~/.config/opencode/opencode.json`):
+```jsonc
+{
+  "plugin": ["file:///home/user/openagent-labforge-bio"]
+}
+```
+
+### Alternative: npm (when published)
+
+```jsonc
+{
+  "plugin": ["openagent-labforge"]
+}
+```
+
+> See [OpenCode Plugin Docs](https://opencode.ai/docs/zh-cn/plugins/) for full plugin loading options.
+
+---
+
+## Configuration
+
+Create `openagent-labforge.jsonc` in your project root or `~/.config/opencode/`:
+
+```jsonc
+{
+  // Prompt mode: "light" (default), "heavy", "turbo"
+  "promptMode": {
+    "defaultMode": "light",
+    "allowModeSwitch": true
+  },
+
+  // Bio Skills: on-demand loading from bioSkills repository
+  "bioSkills": {
+    "enabled": false,
+    "repoPath": "Future/clone/bioSkills"
+  },
+
+  // Model presets: "openai", "deepseek", "mixed"
+  "modelPreferences": {
+    "profile": "openai"
+  }
+}
+```
+
+See [`openagent-labforge.example.jsonc`](openagent-labforge.example.jsonc) for the full configuration reference.
+
+---
+
+## Agent Architecture
+
+### Primary Agents (visible in OpenCode UI)
+
+| Agent | Display | Role | Mode Support |
+|-------|---------|------|--------------|
+| `orchestrator` | Ultraworker | Main engineering orchestrator | Heavy / Light / Turbo |
+| `deep-worker` | Deep Agent | Autonomous deep worker | Heavy / Light / Turbo |
+| `prometheus` | Plan Builder | Strategic planner | Light |
+| `atlas` | Plan Executor | Plan execution coordinator | Light |
+| `bio-orchestrator` | Bio Ultraworker | Bioinformatics specialist | Heavy / Light / Turbo |
+
+### Subagents (hidden, delegated to)
 
 | Agent | Role |
 |-------|------|
@@ -49,7 +114,7 @@ OpenAgent LabForge is an agent orchestration plugin for [OpenCode](https://githu
 | `librarian` | External documentation lookup |
 | `oracle` | Architecture advisor, code reviewer |
 | `designer` | UI/UX specialist |
-| `fixer` | Fast execution for well-defined tasks |
+| `fixer` | Fast execution for bounded tasks |
 | `observer` | Visual analysis (images, PDFs) |
 | `council` | Multi-LLM consensus engine |
 | `councillor` | Council member (internal) |
@@ -58,286 +123,222 @@ OpenAgent LabForge is an agent orchestration plugin for [OpenCode](https://githu
 | `multimodal-looker` | Media analysis |
 | `reviewer` | Code review (4-layer analysis) |
 
-#### Three-Tier Mode System
+---
 
-| Mode | Source | Lines | Use Case |
-|------|--------|-------|----------|
-| **Light** (default) | OMOS native | 200-300 | Daily development |
-| **Heavy** | Omo-inspired | 542 | Complex tasks, Phase 0-3 workflow |
-| **Turbo** | OLD-2-inspired | 58 | Fast execution, "KEEP GOING" philosophy |
+## Three-Tier Mode System
 
-Switch modes: `/ol-light`, `/ol-heavy`, `/ol-turbo`
+| Mode | Source | Use Case |
+|------|--------|----------|
+| **Light** (default) | OMOS native | Daily development, balanced delegation |
+| **Heavy** | Omo-inspired | Complex tasks, Phase 0-3 workflow, failure recovery |
+| **Turbo** | OLD-2-inspired | Fast execution, minimal overhead |
 
-#### Command System
+Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 
-**Mode Commands** (direct execution, bypass LLM):
+---
 
+## Command System
+
+### Mode Commands (direct execution)
 | Command | Description |
 |---------|-------------|
 | `/ol-light` | Switch to light mode |
 | `/ol-heavy` | Switch to heavy mode |
 | `/ol-turbo` | Switch to turbo mode |
 
-**Checkpoint Commands** (prompt injection, AI executes):
-
+### Checkpoint Commands (AI-executed)
 | Command | Description |
 |---------|-------------|
 | `/ol-checkpoint [light\|heavy] [goal]` | Create durable checkpoint |
 | `/ol-handoff [goal]` | Create context summary for new session |
 | `/ol-checkpoint-resume [latest\|session-id\|path]` | Resume from checkpoint |
 
-**Workflow Commands** (prompt injection, AI executes):
-
+### Workflow Commands (AI-executed)
 | Command | Description |
 |---------|-------------|
-| `/start-work [plan-name]` | Start work session from Prometheus plan |
+| `/start-work [plan-name]` | Start work session from plan |
 | `/ralph-loop "task" [--max-iterations=N]` | Self-referential loop until completion |
 | `/cancel-ralph` | Cancel active Ralph Loop |
 | `/stop-continuation` | Stop all continuation mechanisms |
 
-**Utility Commands**:
-
+### Utility Commands
 | Command | Description |
 |---------|-------------|
 | `/auto-continue` | Toggle auto-continuation |
 | `/preset [name]` | Switch agent presets |
 | `/interview [idea]` | Start product interview |
 
-#### Bioinformatics Features
+---
 
-- **Bio Skills**: 439 SKILL.md files across 65 categories, loaded on-demand via `load_bio_skills` tool
-- **Bio MCPs (integrated)**: UniProt (MIT), BioNext (MIT)
-- **Bio MCPs (extended)**: Semantic Scholar (MIT), PubMed search via arxiv_mcp
-- **Bio Orchestrator**: Specialized agent with genomics/proteomics/computational biology workflows
+## Bioinformatics
 
-#### Recommended Bio MCPs (User-Installable)
+### Integrated Bio MCPs
 
-These MCPs are **not bundled** due to licensing or dependency requirements, but highly recommended for bioinformatics work. Add them to your `opencode.jsonc` under `mcp`:
+| MCP | License | Status |
+|-----|---------|--------|
+| [UniProt MCP](https://github.com/TakumiY235/uniprot-mcp-server) | MIT | Bundled (disabled by default) |
+| [BioNext MCP](https://github.com/Cherine0205/BioNext-mcp) | MIT | Bundled (disabled by default) |
 
-**MIT / Apache-2.0 Licensed (Recommended)**:
+### Recommended Bio MCPs (user-installable)
 
 | MCP | Stars | Description | Install |
 |-----|-------|-------------|---------|
-| [PubMed MCP Server](https://github.com/cyanheads/pubmed-mcp-server) | 89 | NCBI E-utilities: PubMed search, MeSH terms, citations | `npx pubmed-mcp-server` |
-| [ChatSpatial](https://github.com/cafferychen777/ChatSpatial) | 33 | Spatial transcriptomics: 60+ methods, 15 categories | `pip install chatspatial` |
-| [BioThings MCP](https://github.com/longevity-genie/biothings-mcp) | 31 | Genetics, variants, bioinformatics data | See repo |
-| [gget MCP](https://github.com/longevity-genie/gget-mcp) | 27 | Bioinformatics functions (gget library) | See repo |
-| [OpenTargets MCP](https://github.com/nickzren/opentargets-mcp) | 16 | Genomics, drug discovery data | See repo |
-| [Precision Medicine MCP](https://github.com/lynnlangit/precision-medicine-mcp) | 13 | Multiomics/genomics + spatial transcriptomics | See repo |
-| [PubChem MCP Server](https://github.com/cyanheads/pubchem-mcp-server) | 8 | Chemical database: compounds, safety, bioactivity | `npx pubchem-mcp-server` |
-| [Ensembl MCP Server](https://github.com/effieklimi/ensembl-mcp-server) | 6 | Ensembl REST API: genome annotation | See repo |
-| [PDBe MCP Servers](https://github.com/PDBeurope/PDBe-MCP-Servers) | 5 | Protein Data Bank Europe: structure data | See repo |
+| [PubMed MCP Server](https://github.com/cyanheads/pubmed-mcp-server) | 89 | NCBI E-utilities | `npx pubmed-mcp-server` |
+| [ChatSpatial](https://github.com/cafferychen777/ChatSpatial) | 33 | Spatial transcriptomics | `pip install chatspatial` |
+| [BioThings MCP](https://github.com/longevity-genie/biothings-mcp) | 31 | Genetics, variants | See repo |
+| [gget MCP](https://github.com/longevity-genie/gget-mcp) | 27 | Bioinformatics functions | See repo |
+| [Semantic Scholar](https://github.com/zongmin-yu/semantic-scholar-fastmcp) | — | Academic paper search | Bundled (enabled by default) |
 
-**Non-Commercial Licensed (Personal Use Only)**:
+> PubMed (NCBI) and Semantic Scholar (Allen AI) serve different databases and can coexist.
 
-| MCP | Stars | Description | License |
-|-----|-------|-------------|---------|
-| [AlphaFold MCP](https://github.com/Augmented-Nature/AlphaFold-MCP-Server) | 34 | Protein structure predictions, confidence analysis | Non-Commercial |
-| [PDB MCP](https://github.com/Augmented-Nature/PDB-MCP-Server) | 24 | Protein Data Bank: 3D structures, validation | Non-Commercial |
-| [Gene Ontology MCP](https://github.com/Augmented-Nature/GeneOntology-MCP-Server) | 8 | Gene Ontology data, functional enrichment | Non-Commercial |
-| [STRING DB MCP](https://github.com/Augmented-Nature/STRING-db-MCP-Server) | 4 | Protein interaction networks | Non-Commercial |
+### Bio Skills
 
-> **Note**: PubMed MCP and Semantic Scholar serve different databases (NCBI vs Allen AI) and can coexist without conflict.
+439 SKILL.md files across 65 categories (RNA-seq, ChIP-seq, CRISPR, scRNA-seq, etc.), loaded on-demand via the `load_bio_skills` tool. Skills are sourced from the [bioSkills](https://github.com/BOHUYESHAN-APB/bioSkills) repository.
 
-#### Checkpoint Mechanism
+---
 
-**Light Checkpoint** (same-session recovery):
-- Triggered at L2 context usage (60-75%)
-- Auto-summarizes current state
-- Keeps 3 versions (configurable)
+## Checkpoint Mechanism
 
-**Heavy Checkpoint** (cross-session handoff):
-- Triggered at L3 context usage (>75%)
-- Full state transfer with 115 metadata fields
-- Recommends session switch
-- Keeps 5 versions (configurable)
+| Type | Trigger | Scope | Versions |
+|------|---------|-------|----------|
+| **Light** | L2 context (60-75%) | Same-session recovery | 3 (configurable) |
+| **Heavy** | L3 context (>75%) | Cross-session handoff | 5 (configurable) |
+
+Heavy checkpoints carry 115+ metadata fields for full state reconstruction.
+
+---
+
+## Roadmap
+
+### Near-term
+- [ ] Context pressure monitor (auto-trigger checkpoints)
+- [ ] Extended MCP registry with lane-based permissions
+- [ ] Bio task auto-detection improvements
+
+### Mid-term
+- [ ] GitHub Actions CI/CD (automated testing + npm publish)
+- [ ] Automated test suite (Bun test + typecheck + lint)
+- [ ] DeepSeek-TUI plugin integration ([DeepSeek-TUI](https://github.com/BOHUYESHAN-APB/DeepSeek-TUI))
+
+### Long-term
+- [ ] Automatic model routing based on task complexity
+- [ ] Cross-workspace memory persistence
+- [ ] Advanced compression strategies (cache-aware, compartmentalized)
+
+---
+
+## Development
+
+```bash
+# Build
+bun run build
+
+# Type check
+bun run typecheck
+
+# Lint
+bun run lint
+
+# Test
+bun test
+
+# Full check
+bun run check:ci
+```
+
+---
+
+## License
+
+[Apache-2.0](LICENSE)
+
+## Credits
+
+- Base: [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) by Boring Dystopia Development
+- Agent architecture inspired by [oh-my-openagent](https://github.com/anomalyco/oh-my-openagent)
+- Design reference: [openagent-labforge](https://github.com/bohuyeshan/openagent-labforge)
 
 ---
 
 ## 中文
 
-### 什么是 OpenAgent LabForge？
+### 概述
 
-OpenAgent LabForge 是 [OpenCode](https://github.com/anomalyco/opencode) 的代理编排插件，从 [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) 分支而来。它将原来的 9 代理系统扩展为 **17 个代理**（5 个主代理 + 12 个子代理），并提供：
+OpenAgent LabForge 是 [OpenCode](https://github.com/anomalyco/opencode) 的轻量级代理编排插件，扩展为 **17 个代理**（5 主 + 12 子），支持三层提示词系统、生物信息学能力和检查点记忆架构。
 
-- **三层提示词系统**：重量（Omo 启发）/ 轻量（OMOS 原生）/ 极速（OLD-2 启发）
-- **生物信息学专业化**：专用 bio-orchestrator 代理 + 2 个已集成生物 MCP + 439 个生物技能
-- **检查点机制**：轻量（同会话恢复）+ 重量（跨会话转交）
-- **指令系统**：13 个斜杠命令用于工作流控制
-- **模式检测**：通过关键词自动注入 search/analyze/heavy 模式提示词
+**核心特性**：
+- 5 个主代理各司其职（编排、深度执行、规划、计划执行、生物信息学）
+- 三层提示词：重量 / 轻量 / 极速，运行时切换
+- 生物信息学一等公民：专用代理 + 439 领域技能 + 2 个已集成 MCP
+- 检查点机制：轻量（同会话）+ 重量（跨会话）恢复
+- 13 个斜杠命令控制工作流
+- 所有运行时提示通过系统通道注入，用户消息保持纯净
 
-### 设计原则
+### 安装
 
-1. **主代理优先** - 主代理做实际工作，不仅仅是调度
-2. **轻量化** - 不重新实现 OpenCode 机制，而是扩展
-3. **生物信息学一等公民** - 不是附加功能，深度集成
-4. **Token 友好** - 成本敏感，子代理使用更便宜的模型
-5. **用户消息纯净** - 运行时提示通过系统通道注入，不污染用户消息
-6. **仅支持 OpenCode** - 不做多平台抽象
-
-### 架构
-
-#### 代理系统
-
-**5 个主代理（OpenCode UI 可见）**：
-
-| 代理 | 显示名称 | 角色 | 模式支持 |
-|------|---------|------|---------|
-| `orchestrator` | Ultraworker | 工程主编排器 | 重量/轻量/极速 |
-| `deep-worker` | Deep Agent | 自主深度工作者 | 重量/轻量/极速 |
-| `prometheus` | Plan Builder | 战略规划师 | 仅轻量 |
-| `atlas` | Plan Executor | 计划执行协调员 | 仅轻量 |
-| `bio-orchestrator` | Bio Ultraworker | 生物信息学专家 | 重量/轻量/极速 |
-
-**12 个子代理（隐藏，被委派）**：
-
-| 代理 | 角色 |
-|------|------|
-| `explorer` | 并行代码库搜索 |
-| `librarian` | 外部文档查询 |
-| `oracle` | 架构顾问、代码审查 |
-| `designer` | UI/UX 专家 |
-| `fixer` | 快速执行明确定义的任务 |
-| `observer` | 视觉分析（图片、PDF） |
-| `council` | 多 LLM 共识引擎 |
-| `councillor` | Council 成员（内部） |
-| `metis` | 规划前顾问 |
-| `momus` | 计划审查员（5 维度评分） |
-| `multimodal-looker` | 媒体分析 |
-| `reviewer` | 代码审查（4 层分析） |
-
-#### 三层模式系统
-
-| 模式 | 来源 | 行数 | 适用场景 |
-|------|------|------|---------|
-| **轻量**（默认） | OMOS 原生 | 200-300 | 日常开发 |
-| **重量** | Omo 启发 | 542 | 复杂任务、Phase 0-3 工作流 |
-| **极速** | OLD-2 启发 | 58 | 快速执行、"KEEP GOING" 哲学 |
-
-切换模式：`/ol-light`、`/ol-heavy`、`/ol-turbo`
-
-#### 指令系统
-
-**模式指令**（直接执行，绕过 LLM）：
-
-| 指令 | 说明 |
-|------|------|
-| `/ol-light` | 切换到轻量模式 |
-| `/ol-heavy` | 切换到重量模式 |
-| `/ol-turbo` | 切换到极速模式 |
-
-**检查点指令**（提示词注入，AI 执行）：
-
-| 指令 | 说明 |
-|------|------|
-| `/ol-checkpoint [light\|heavy] [goal]` | 创建持久检查点 |
-| `/ol-handoff [goal]` | 创建新会话的上下文摘要 |
-| `/ol-checkpoint-resume [latest\|session-id\|path]` | 从检查点恢复 |
-
-**工作流指令**（提示词注入，AI 执行）：
-
-| 指令 | 说明 |
-|------|------|
-| `/start-work [plan-name]` | 从 Prometheus 计划启动工作会话 |
-| `/ralph-loop "task" [--max-iterations=N]` | 自循环直到任务完成 |
-| `/cancel-ralph` | 取消活跃的 Ralph 循环 |
-| `/stop-continuation` | 停止所有继续机制 |
-
-**工具指令**：
-
-| 指令 | 说明 |
-|------|------|
-| `/auto-continue` | 切换自动继续 |
-| `/preset [name]` | 切换代理预设 |
-| `/interview [idea]` | 启动产品访谈 |
-
-#### 生物信息学功能
-
-- **Bio Skills**：439 个 SKILL.md 文件，涵盖 65 个类别，通过 `load_bio_skills` 工具按需加载
-- **Bio MCP（已集成）**：UniProt (MIT)、BioNext (MIT)
-- **Bio MCP（扩展）**：Semantic Scholar (MIT)、PubMed 检索（通过 arxiv_mcp）
-- **Bio Orchestrator**：专用代理，支持基因组学/蛋白质组学/计算生物学工作流
-
-#### 推荐安装的生物 MCP（用户自行配置）
-
-以下 MCP 因协议或依赖原因未集成，但强烈推荐生物信息学用户安装。在 `opencode.jsonc` 的 `mcp` 中添加：
-
-**MIT / Apache-2.0 协议（推荐）**：
-
-| MCP | Stars | 说明 | 安装方式 |
-|-----|-------|------|---------|
-| [PubMed MCP Server](https://github.com/cyanheads/pubmed-mcp-server) | 89 | NCBI E-utilities：PubMed 检索、MeSH 术语、引用 | `npx pubmed-mcp-server` |
-| [ChatSpatial](https://github.com/cafferychen777/ChatSpatial) | 33 | 空间转录组学：60+ 方法，15 个类别 | `pip install chatspatial` |
-| [BioThings MCP](https://github.com/longevity-genie/biothings-mcp) | 31 | 遗传学、变异、生物信息学数据 | 见仓库 |
-| [gget MCP](https://github.com/longevity-genie/gget-mcp) | 27 | 生物信息学函数库（gget） | 见仓库 |
-| [OpenTargets MCP](https://github.com/nickzren/opentargets-mcp) | 16 | 基因组学、药物发现数据 | 见仓库 |
-| [Precision Medicine MCP](https://github.com/lynnlangit/precision-medicine-mcp) | 13 | 多组学/基因组学 + 空间转录组学 | 见仓库 |
-| [PubChem MCP Server](https://github.com/cyanheads/pubchem-mcp-server) | 8 | 化学数据库：化合物、安全性、生物活性 | `npx pubchem-mcp-server` |
-| [Ensembl MCP Server](https://github.com/effieklimi/ensembl-mcp-server) | 6 | Ensembl REST API：基因组注释 | 见仓库 |
-| [PDBe MCP Servers](https://github.com/PDBeurope/PDBe-MCP-Servers) | 5 | 欧洲蛋白质数据库：结构数据 | 见仓库 |
-
-**非商业协议（仅限个人使用）**：
-
-| MCP | Stars | 说明 | 协议 |
-|-----|-------|------|------|
-| [AlphaFold MCP](https://github.com/Augmented-Nature/AlphaFold-MCP-Server) | 34 | 蛋白质结构预测、置信度分析 | 非商业 |
-| [PDB MCP](https://github.com/Augmented-Nature/PDB-MCP-Server) | 24 | 蛋白质数据库：3D 结构、验证 | 非商业 |
-| [Gene Ontology MCP](https://github.com/Augmented-Nature/GeneOntology-MCP-Server) | 8 | 基因本体数据、功能富集 | 非商业 |
-| [STRING DB MCP](https://github.com/Augmented-Nature/STRING-db-MCP-Server) | 4 | 蛋白质相互作用网络 | 非商业 |
-
-> **注意**：PubMed MCP 和 Semantic Scholar 服务不同数据库（NCBI vs Allen AI），可以共存，无冲突。
-
-#### 检查点机制
-
-**轻量检查点**（同会话恢复）：
-- 在 L2 上下文使用率（60-75%）时触发
-- 自动总结当前状态
-- 保留 3 个版本（可配置）
-
-**重量检查点**（跨会话转交）：
-- 在 L3 上下文使用率（>75%）时触发
-- 完整状态转移，包含 115 个元数据字段
-- 推荐会话切换
-- 保留 5 个版本（可配置）
-
----
-
-## Installation
+**推荐：本地构建**
 
 ```bash
-bunx openagent-labforge@latest install
+git clone git@github.com:BOHUYESHAN-APB/openagent-labforge-bio.git
+cd openagent-labforge-bio
+bun install
+bun run build
 ```
 
-## Configuration
+在 OpenCode 配置中注册插件：
 
-Create `.opencode/openagent-labforge.json` in your project:
-
+**Windows** (`%APPDATA%\opencode\opencode.json`):
 ```jsonc
 {
-  "promptMode": {
-    "defaultMode": "light",
-    "allowModeSwitch": true,
-    "applyToAgents": ["orchestrator", "bio-orchestrator", "deep-worker"]
-  },
-  "bioSkills": {
-    "enabled": true,
-    "repoPath": "Future/clone/bioSkills",
-    "allowedAgents": ["*"]
-  },
-  "compression": {
-    "enabled": false,
-    "strategy": "auto",
-    "thresholdTokens": 100000,
-    "preserveRecent": 10
-  }
+  "plugin": ["file:///D:/path/to/openagent-labforge-bio"]
 }
 ```
 
-## License
+**macOS / Linux** (`~/.config/opencode/opencode.json`):
+```jsonc
+{
+  "plugin": ["file:///home/user/openagent-labforge-bio"]
+}
+```
 
-Apache-2.0
+> 详见 [OpenCode 插件文档](https://opencode.ai/docs/zh-cn/plugins/)。
 
-## Credits
+### 代理系统
 
-Based on [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) by Boring Dystopia Development.
-Agent architecture inspired by [oh-my-openagent](https://github.com/anomalyco/oh-my-openagent) and [openagent-labforge](https://github.com/bohuyeshan/openagent-labforge).
+**5 个主代理（UI 可见）**：
+
+| 代理 | 显示名 | 角色 | 模式 |
+|------|--------|------|------|
+| `orchestrator` | Ultraworker | 工程主编排器 | 重量/轻量/极速 |
+| `deep-worker` | Deep Agent | 自主深度工作者 | 重量/轻量/极速 |
+| `prometheus` | Plan Builder | 战略规划师 | 轻量 |
+| `atlas` | Plan Executor | 计划执行协调员 | 轻量 |
+| `bio-orchestrator` | Bio Ultraworker | 生物信息学专家 | 重量/轻量/极速 |
+
+**12 个子代理（隐藏）**：explorer, librarian, oracle, designer, fixer, observer, council, councillor, metis, momus, multimodal-looker, reviewer
+
+### 三层模式系统
+
+| 模式 | 来源 | 适用场景 |
+|------|------|---------|
+| **轻量**（默认） | OMOS 原生 | 日常开发 |
+| **重量** | Omo 启发 | 复杂任务，Phase 0-3 工作流 |
+| **极速** | OLD-2 启发 | 快速执行 |
+
+切换：`/ol-light`、`/ol-heavy`、`/ol-turbo`
+
+### 生物信息学
+
+- **Bio Skills**：439 个 SKILL.md，65 个类别（RNA-seq, ChIP-seq, CRISPR 等）
+- **已集成 MCP**：UniProt (MIT)、BioNext (MIT)、Semantic Scholar (MIT)
+- **推荐 MCP**：PubMed、ChatSpatial、BioThings、gget 等（见英文章节表格）
+
+### 路线图
+
+- 近期：上下文压力监控、扩展 MCP 权限
+- 中期：GitHub Actions CI/CD、自动化测试、DeepSeek-TUI 插件集成
+- 远期：自动模型路由、跨工作区记忆、高级压缩策略
+
+### 许可证
+
+[Apache-2.0](LICENSE)
