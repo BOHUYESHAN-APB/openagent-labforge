@@ -1,4 +1,6 @@
+import type { CheckpointCleanupConfig } from '../config/schema';
 import type { CheckpointStorage, ContextCheckpoint } from './types';
+import { cleanupCheckpoints } from './cleaner';
 import { ConversationMemoryStore } from './conversation-memory';
 import {
   getRepositoryWorkspaces,
@@ -141,5 +143,13 @@ export class CheckpointManager {
     }
 
     return checkpoints.sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  cleanup(config: CheckpointCleanupConfig): void {
+    if (!this.workspaceRoot) return;
+    const stats = cleanupCheckpoints(this.workspaceRoot, this.storage, config);
+    if (stats.checkpointsRemoved > 0) {
+      this.persist();
+    }
   }
 }

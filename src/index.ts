@@ -309,6 +309,15 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Initialize Checkpoint Manager
     checkpointManager = new CheckpointManager(ctx.directory);
 
+    // Run checkpoint cleanup on startup
+    const cleanupConfig = config.checkpoint ?? {
+      enabled: true,
+      maxAgeMs: 30 * 24 * 60 * 60 * 1000,
+      maxCheckpointsPerSession: 50,
+      maxTotalSizeMb: 100,
+    };
+    checkpointManager.cleanup(cleanupConfig);
+
     // Initialize Prompt Mode Manager
     const promptModeConfig = config.promptMode ?? {
       defaultMode: 'light' as const,

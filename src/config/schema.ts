@@ -238,6 +238,38 @@ export const TodoContinuationConfigSchema = z.object({
 export type TodoContinuationConfig = z.infer<
   typeof TodoContinuationConfigSchema
 >;
+
+// Checkpoint cleanup configuration
+export const CheckpointCleanupConfigSchema = z.object({
+  enabled: z
+    .boolean()
+    .default(true)
+    .describe('Enable automatic checkpoint cleanup on startup'),
+  maxAgeMs: z
+    .number()
+    .int()
+    .min(0)
+    .default(30 * 24 * 60 * 60 * 1000)
+    .describe('Maximum age of checkpoints in milliseconds (default: 30 days)'),
+  maxCheckpointsPerSession: z
+    .number()
+    .int()
+    .min(1)
+    .default(50)
+    .describe('Maximum number of checkpoints to keep per session'),
+  maxTotalSizeMb: z
+    .number()
+    .min(0)
+    .default(100)
+    .describe(
+      'Maximum total size of checkpoint storage in MB (0 = unlimited)',
+    ),
+});
+
+export type CheckpointCleanupConfig = z.infer<
+  typeof CheckpointCleanupConfigSchema
+>;
+
 // Bio Skills configuration (on-demand loading)
 export const BioSkillsConfigSchema = z.object({
   enabled: z
@@ -417,6 +449,7 @@ export const PluginConfigSchema = z
     interview: InterviewConfigSchema.optional(),
     sessionManager: SessionManagerConfigSchema.optional(),
     todoContinuation: TodoContinuationConfigSchema.optional(),
+    checkpoint: CheckpointCleanupConfigSchema.optional(),
     bioSkills: BioSkillsConfigSchema.optional(),
     compression: CompressionConfigSchema.optional(),
     modelPreferences: ModelPreferencesConfigSchema.optional(),
