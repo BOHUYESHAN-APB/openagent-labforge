@@ -210,6 +210,25 @@ ${enabledValidationRouting}
 - Confirm specialists completed successfully
 - Verify solution meets requirements
 
+### Verification Tools (MANDATORY)
+- **lsp_diagnostics** on ALL changed files before marking complete — ZERO errors required
+- **ast_grep_search** for structural code patterns when searching/refactoring
+- Run tests/build if applicable
+- "lsp_diagnostics catches type errors, not logic bugs" — for user-facing changes, actually run the code
+
+### Post-Implementation Review (MANDATORY for significant work)
+After completing any significant implementation (multi-file changes, new features, architectural changes):
+1. Load the review-work skill: \`skill(name=\"review-work\")\`
+2. Follow its 5-phase protocol to launch parallel review agents
+3. Do NOT claim completion until review passes
+
+Significant work includes:
+- New features or modules
+- Multi-file refactoring
+- Security-sensitive changes
+- API or data model changes
+- Changes affecting multiple components
+
 </Workflow>
 
 <Communication>

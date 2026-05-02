@@ -13,6 +13,33 @@ const COMMAND_NAME = 'auto-continue';
 
 const CONTINUATION_PROMPT =
   '[Auto-continue: enabled - there are incomplete todos remaining. Continue with the next uncompleted item. Press Esc to cancel. If you need user input or review for the next item, ask instead of proceeding.]';
+
+const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
+
+## Review Protocol
+
+1. **Read the plan** — re-read the original user request and any plan files
+2. **Check each todo** — verify the work actually matches what was requested
+3. **Run diagnostics** — lsp_diagnostics on ALL changed files, run tests/build if applicable
+4. **Assess completeness** — are there missing pieces, TODOs left behind, or partial implementations?
+
+## Output Format
+
+After review, output ONE of:
+
+**[APPROVE]** — Work is complete and matches the plan. Include a brief summary of what was delivered.
+
+**[REJECT: <reason>]** — Work has issues. List each issue as:
+- FINDING: <what is wrong>
+- LOCATION: <where>
+- FIX: <how to fix it>
+
+Then create new todos for each finding and continue working.
+
+**DO NOT** revert git commits. If changes need correction, make new commits that fix the issues.
+**DO NOT** claim completion without running diagnostics.
+]`;
+
 const TODO_HYGIENE_INSTRUCTION_OPEN = '<instruction name="todo_hygiene">';
 const TODO_HYGIENE_INSTRUCTION_CLOSE = '</instruction>';
 
@@ -54,11 +81,45 @@ interface ContinuationState {
   // sessionID → timestamp until which just-completed noReply countdown
   // notification busy transitions are ignored, covering HTTP/SSE reordering.
   notificationBusyUntilBySession: Map<string, number>;
+  // Review verdict tracking per session (for auto-review in full-auto mode)
+  reviewVerdictBySession: Map<string, 'approve' | 'reject' | 'pending' | 'none'>;
+  // Track if review was already injected to avoid duplicates
+  reviewInjectedBySession: Set<string>;
+}
+
+/**
+ * Parse review verdict from assistant message text.
+ * Returns 'approve', 'reject' (with findings), or 'none'.
+ */
+function parseReviewVerdict(text: string): {
+  verdict: 'approve' | 'reject' | 'none';
+  findings: string;
+} {
+  const approveMatch = text.match(/\[APPROVE\]/i);
+  if (approveMatch) {
+    return { verdict: 'approve', findings: '' };
+  }
+
+  const rejectMatch = text.match(/\[REJECT(?::\s*(.*?))?\]/is);
+  if (rejectMatch) {
+    return {
+      verdict: 'reject',
+      findings: rejectMatch[1]?.trim() || 'Review rejected work — check findings above.',
+    };
+  }
+
+  return { verdict: 'none', findings: '' };
+}
+
+/**
+ * Build rework prompt from review findings.
+ */
+function buildReworkPrompt(findings: string): string {
+  return `[Auto-review: REJECTED — the following issues were found:\n\n${findings}\n\nCreate new todos for each finding and fix them. DO NOT revert git commits — make new corrective commits instead.]`;
 }
 
 function isQuestion(text: string): boolean {
   const lowerText = text.toLowerCase().trim();
-  // Match trailing '?' with optional whitespace after it
   if (/\?\s*$/.test(lowerText)) {
     return true;
   }
@@ -119,6 +180,8 @@ function resetState(state: ContinuationState): void {
   state.isAutoInjecting = false;
   state.notifyingSessionIds.clear();
   state.notificationBusyUntilBySession.clear();
+  state.reviewVerdictBySession.clear();
+  state.reviewInjectedBySession.clear();
 }
 
 export function createTodoContinuationHook(
@@ -176,6 +239,8 @@ export function createTodoContinuationHook(
     isAutoInjecting: false,
     notifyingSessionIds: new Set<string>(),
     notificationBusyUntilBySession: new Map<string, number>(),
+    reviewVerdictBySession: new Map(),
+    reviewInjectedBySession: new Set(),
   };
 
   const hygiene = createTodoHygiene({
@@ -573,7 +638,96 @@ export function createTodoContinuationHook(
       }
 
       if (!hasIncompleteTodos) {
-        log(`[${HOOK_NAME}] Skipped: no incomplete todos`, { sessionID });
+        log(`[${HOOK_NAME}] All todos complete`, { sessionID });
+
+        // === AUTO-REVIEW: Only in full-auto mode ===
+        if (state.reviewInjectedBySession.has(sessionID)) {
+          // Review already injected — check for verdict in last assistant message
+          try {
+            const messagesResult = await ctx.client.session.messages({
+              path: { id: sessionID },
+            });
+            const messages = messagesResult.data as Message[];
+            const lastAssistant = messages
+              .slice()
+              .reverse()
+              .find((m) => m.info?.role === 'assistant');
+            if (lastAssistant?.parts) {
+              const text = lastAssistant.parts
+                .map((p) => p.text ?? '')
+                .join(' ');
+              const { verdict, findings } = parseReviewVerdict(text);
+              if (verdict === 'approve') {
+                state.reviewVerdictBySession.set(sessionID, 'approve');
+                state.reviewInjectedBySession.delete(sessionID);
+                log(`[${HOOK_NAME}] Review APPROVED`, { sessionID });
+                return; // Allow stop
+              }
+              if (verdict === 'reject') {
+                state.reviewVerdictBySession.set(sessionID, 'reject');
+                state.reviewInjectedBySession.delete(sessionID);
+                log(`[${HOOK_NAME}] Review REJECTED — injecting rework`, {
+                  sessionID,
+                  findings,
+                });
+                // Inject rework prompt
+                state.isAutoInjecting = true;
+                try {
+                  await ctx.client.session.prompt({
+                    path: { id: sessionID },
+                    body: {
+                      parts: [
+                        createInternalAgentTextPart(
+                          buildReworkPrompt(findings),
+                        ),
+                      ],
+                    },
+                  });
+                } finally {
+                  state.isAutoInjecting = false;
+                }
+                return;
+              }
+              // verdict === 'none' — agent hasn't given verdict yet, wait
+              log(
+                `[${HOOK_NAME}] Review pending — no verdict found yet`,
+                { sessionID },
+              );
+              return;
+            }
+          } catch (error) {
+            log(
+              `[${HOOK_NAME}] Warning: failed to parse review verdict`,
+              {
+                sessionID,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
+          }
+          return;
+        }
+
+        // First time all todos complete — inject review prompt
+        log(`[${HOOK_NAME}] Injecting auto-review prompt`, { sessionID });
+        state.reviewInjectedBySession.add(sessionID);
+        state.reviewVerdictBySession.set(sessionID, 'pending');
+        state.isAutoInjecting = true;
+        try {
+          await ctx.client.session.prompt({
+            path: { id: sessionID },
+            body: {
+              parts: [createInternalAgentTextPart(REVIEW_PROMPT)],
+            },
+          });
+          state.consecutiveContinuations++;
+        } catch (error) {
+          log(`[${HOOK_NAME}] Error: failed to inject review prompt`, {
+            sessionID,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        } finally {
+          state.isAutoInjecting = false;
+        }
         return;
       }
 

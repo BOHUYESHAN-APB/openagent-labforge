@@ -2,21 +2,40 @@ import type { BioSkillCategory } from './catalog';
 import type { BioSkillMetadata } from './loader';
 
 /**
- * Formats catalog as XML for system prompt
+ * Formats catalog as XML for system prompt with routing guidance
  */
 export function formatCatalogForPrompt(categories: BioSkillCategory[]): string {
   if (categories.length === 0) return '';
 
   const lines = [
     '<bio_skills_catalog>',
-    'Available bio skill categories. To use skills from a category, say "load [category] skills" or "use [category] tools".',
+    '## Bio Skills Catalog',
+    '',
+    'For bioinformatics tasks, load relevant skills FIRST using:',
+    '  load_bio_skills(categories=["<category-name>"])',
+    '',
+    '### Available Categories:',
     '',
   ];
 
   for (const cat of categories) {
-    lines.push(`- ${cat.name} (${cat.skillCount} skills)`);
+    lines.push(`- **${cat.name}** (${cat.skillCount} skills)`);
   }
 
+  lines.push('');
+  lines.push('### Routing Guide:');
+  lines.push('- RNA sequencing → rna-seq');
+  lines.push('- Chromatin/epigenetics → chip-seq, atac-seq');
+  lines.push('- CRISPR/gene editing → crispr');
+  lines.push('- Genetic variants → variant-calling');
+  lines.push('- Single-cell → single-cell');
+  lines.push('- Protein analysis → proteomics');
+  lines.push('- Microbial communities → metagenomics');
+  lines.push('- Evolution/phylogeny → phylogenetics');
+  lines.push('- Protein structure → structural-biology');
+  lines.push('- Pathway enrichment → pathway-analysis');
+  lines.push('- Literature search → pubmed-search');
+  lines.push('');
   lines.push('</bio_skills_catalog>');
   return lines.join('\n');
 }

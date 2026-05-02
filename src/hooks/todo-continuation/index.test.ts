@@ -1106,7 +1106,10 @@ describe('createTodoContinuationHook', () => {
 
       await delay(60);
 
-      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+      // All todos complete + auto-continue enabled → should inject review prompt
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+      const call = (ctx.client.session.prompt as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.body.parts[0].text).toContain('[Auto-review');
     });
 
     test('non-orchestrator session → skip', async () => {
