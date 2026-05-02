@@ -1,5 +1,9 @@
 export { scanBioSkillsCatalog, type BioSkillCategory } from './catalog';
-export { loadCategorySkills, type BioSkillMetadata } from './loader';
+export {
+  countSkillFilesInCategory,
+  loadCategorySkills,
+  type BioSkillMetadata,
+} from './loader';
 export {
   BioSkillsSessionManager,
   type LoadedCategory,

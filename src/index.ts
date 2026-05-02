@@ -1,5 +1,7 @@
 import type { Plugin } from '@opencode-ai/plugin';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createAgents, getAgentConfigs, getDisabledAgents } from './agents';
 import { buildOrchestratorPrompt } from './agents/orchestrator';
 import {
@@ -85,6 +87,21 @@ import {
 import { initLogger, log } from './utils/logger';
 import { SubagentDepthTracker } from './utils/subagent-depth';
 import { collapseSystemInPlace } from './utils/system-collapse';
+
+const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+function resolveBioSkillsRepoPath(
+  configuredPath: string | undefined,
+  workspaceRoot: string,
+): string {
+  const candidates = [
+    configuredPath,
+    join(packageRoot, 'Future', 'clone', 'bioSkills'),
+    join(workspaceRoot, 'Future', 'clone', 'bioSkills'),
+  ].filter((path): path is string => Boolean(path));
+
+  return candidates.find((path) => existsSync(path)) ?? candidates[0];
+}
 
 /**
  * Best-effort log to opencode's app logger.
@@ -299,18 +316,23 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     promptModeManager = new PromptModeManager(promptModeConfig);
     modeCommandHandler = createModeCommandHandler(promptModeManager);
 
-    // Initialize Bio Skills if enabled
-    if (config.bioSkills?.enabled) {
-      const repoPath =
-        config.bioSkills.repoPath ??
-        join(ctx.directory, 'Future', 'clone', 'bioSkills');
+    // Initialize Bio Skills — always try if repo exists
+    // The load_bio_skills tool is always registered when catalog is found,
+    // so bio-orchestrator can use it without requiring explicit config.
+    {
+      const repoPath = resolveBioSkillsRepoPath(
+        config.bioSkills?.repoPath,
+        ctx.directory,
+      );
       const catalog = scanBioSkillsCatalog(repoPath);
       if (catalog.length > 0) {
         bioSkillsManager = new BioSkillsSessionManager(catalog);
         log(
           'info',
-          `Bio Skills enabled: ${catalog.length} categories available`,
+          `Bio Skills: ${catalog.length} categories available`,
         );
+      } else {
+        log('info', 'Bio Skills: no catalog found, load_bio_skills disabled');
       }
     }
 
@@ -817,6 +839,28 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       }
       if (!configSkills.paths.includes(skillsPath)) {
         configSkills.paths.push(skillsPath);
+      }
+
+      // Allow reading bundled bioSkills even when OpenCode runs in another
+      // project. These are plugin-owned reference files, not project files.
+      if (bioSkillsManager) {
+        const bioSkillsPath = resolveBioSkillsRepoPath(
+          config.bioSkills?.repoPath,
+          ctx.directory,
+        );
+        const permission = (opencodeConfig.permission ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const externalDirectory =
+          typeof permission.external_directory === 'object' &&
+          permission.external_directory !== null
+            ? (permission.external_directory as Record<string, string>)
+            : {};
+        externalDirectory[join(bioSkillsPath, '*')] ??= 'allow';
+        externalDirectory[join(bioSkillsPath, '**', '*')] ??= 'allow';
+        permission.external_directory = externalDirectory;
+        opencodeConfig.permission = permission;
       }
 
       // Register checkpoint commands (/ol-checkpoint, /ol-handoff, /ol-checkpoint-resume)

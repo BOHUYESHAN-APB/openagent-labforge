@@ -41,7 +41,8 @@ export function formatCatalogForPrompt(categories: BioSkillCategory[]): string {
 }
 
 /**
- * Formats loaded skills as XML for system prompt
+ * Formats loaded skills as XML for system prompt.
+ * Shows metadata + file path so the agent can read specific skills with the read tool.
  */
 export function formatLoadedSkillsForPrompt(
   skills: BioSkillMetadata[],
@@ -50,7 +51,8 @@ export function formatLoadedSkillsForPrompt(
 
   const lines = [
     '<bio_skills_loaded>',
-    'Loaded bio skills for this session:',
+    'Loaded bio skills for this session.',
+    'Use the read tool to load specific skill instructions before executing.',
     '',
   ];
 
@@ -58,6 +60,7 @@ export function formatLoadedSkillsForPrompt(
     lines.push(`## ${skill.name}`);
     lines.push(`Category: ${skill.category}`);
     lines.push(`Description: ${skill.description}`);
+    lines.push(`Path: ${skill.filePath}`);
     lines.push('');
   }
 

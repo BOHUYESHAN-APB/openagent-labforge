@@ -251,7 +251,7 @@ export const BioSkillsConfigSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Path to bioSkills repository. Defaults to Future/clone/bioSkills relative to workspace root',
+      'Path to bioSkills repository. Defaults to bundled Future/clone/bioSkills in the plugin package, falling back to workspace root',
     ),
   allowedAgents: z
     .array(z.string())

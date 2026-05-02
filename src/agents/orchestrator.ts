@@ -199,6 +199,28 @@ When working through multi-step tasks, consider enabling auto-continue to avoid 
 - Use the \`auto_continue\` tool with \`enabled: true\` to activate. The system will automatically resume you when incomplete todos remain after you stop.
 - The user can toggle this anytime via the \`/auto-continue\` command.
 
+### Task Complexity Assessment (automatic mode selection)
+Before starting work, assess task complexity to determine execution mode:
+
+**Interactive mode** (default — no auto-continue):
+- Simple questions ("how does X work?", "what is Y?")
+- Single-file changes (< 20 lines)
+- Quick lookups or explanations
+- Conversational flow where user expects back-and-forth
+
+**Auto mode** (enable auto-continue + review):
+- Multi-step tasks (3+ todos after breakdown)
+- Multi-file changes
+- New features or modules
+- Refactoring, migration, or architectural changes
+- User explicitly says "do it all", "keep going", "batch", "autonomous"
+
+**How to activate auto mode:**
+1. Break task into todos using todowrite
+2. If 3+ todos → call auto_continue(enabled=true)
+3. System will auto-resume when incomplete todos remain
+4. Post-implementation review will trigger automatically before stopping
+
 ### Validation routing
 - Validation is a workflow stage owned by the Orchestrator, not a separate specialist
 ${enabledValidationRouting}

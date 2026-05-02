@@ -549,7 +549,7 @@
           "type": "boolean"
         },
         "repoPath": {
-          "description": "Path to bioSkills repository. Defaults to Future/clone/bioSkills relative to workspace root",
+          "description": "Path to bioSkills repository. Defaults to bundled Future/clone/bioSkills in the plugin package, falling back to workspace root",
           "type": "string"
         },
         "allowedAgents": {

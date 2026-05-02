@@ -1,6 +1,7 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import type { BioSkillsSessionManager } from './session-manager';
+import { countSkillFilesInCategory } from './loader';
 
 const z = tool.schema;
 
@@ -30,8 +31,9 @@ export function createLoadBioSkillsTool(
 
       // Validate categories exist
       const catalog = sessionManager.getCatalog();
+      const catalogByName = new Map(catalog.map((cat) => [cat.name, cat]));
       const validCategories = categories.filter((c) =>
-        catalog.some((cat) => cat.name === c),
+        catalogByName.has(c),
       );
 
       if (validCategories.length === 0) {
@@ -55,7 +57,16 @@ export function createLoadBioSkillsTool(
       const loadedCategories = sessionManager.getLoadedCategories(sessionID);
 
       if (totalLoaded === 0) {
-        return `Warning: No skills loaded from categories: ${validCategories.join(', ')}`;
+        const diagnostics = validCategories.map((categoryName) => {
+          const category = catalogByName.get(categoryName);
+          if (!category) return `${categoryName}: category missing from catalog`;
+          return `${categoryName}: path=${category.path}, catalogCount=${category.skillCount}, diskCount=${countSkillFilesInCategory(category.path)}`;
+        });
+        return [
+          `Warning: No skills loaded from categories: ${validCategories.join(', ')}`,
+          'Diagnostics:',
+          ...diagnostics,
+        ].join('\n');
       }
 
       return [

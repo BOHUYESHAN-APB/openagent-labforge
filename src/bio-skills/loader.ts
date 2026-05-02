@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface BioSkillMetadata {
@@ -44,6 +44,30 @@ export function loadCategorySkills(
   return skills;
 }
 
+export function countSkillFilesInCategory(categoryPath: string): number {
+  if (!existsSync(categoryPath)) return 0;
+
+  let count = 0;
+  function scanDir(dirPath: string) {
+    try {
+      for (const entry of readdirSync(dirPath)) {
+        const fullPath = join(dirPath, entry);
+        const stat = statSync(fullPath);
+        if (stat.isDirectory()) {
+          scanDir(fullPath);
+        } else if (entry === 'SKILL.md') {
+          count++;
+        }
+      }
+    } catch {
+      // Ignore scan errors
+    }
+  }
+
+  scanDir(categoryPath);
+  return count;
+}
+
 function parseSkillFile(
   filePath: string,
   category: string,
@@ -69,7 +93,7 @@ function parseSkillFile(
 }
 
 function extractFrontmatter(content: string): Record<string, string> {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
 
   const yaml = match[1];

@@ -40,9 +40,10 @@ For substantial bioinformatics work, skill loading is MANDATORY setup.
 Do NOT start serious bio analysis without loading relevant skills first.
 
 ### Routing Protocol (directory-first):
-1. First: load_bio_skills(categories=[\"<domain>\"]) — load the matching domain
-2. Then: follow skill instructions for specific workflows
-3. Never front-load all categories — load only what the task needs
+1. First: load_bio_skills(categories=["<domain>"]) — load the matching domain
+2. Then: READ the specific skill files using the read tool (paths shown in system prompt)
+3. Follow the loaded skill instructions for specific workflows
+4. Never front-load all categories — load only what the task needs
 
 ### High-frequency bio routes:
 - rna-seq → RNA sequencing (STAR, DESeq2, featureCounts)
@@ -59,9 +60,10 @@ Do NOT start serious bio analysis without loading relevant skills first.
 ### Turn-1 behavior:
 When receiving a bio task, your FIRST action should be:
 1. Identify the domain from the task description
-2. Call load_bio_skills(categories=[\"<domain>\"]) 
-3. Read the loaded skill instructions
-4. Then proceed with analysis planning
+2. Call load_bio_skills(categories=["<domain>"]) 
+3. Read the loaded skill file paths from the system prompt
+4. Use the read tool to load the specific SKILL.md content
+5. Then proceed with analysis planning
 
 ### Escalation:
 If initial skill doesn't cover the task:
@@ -87,8 +89,9 @@ If initial skill doesn't cover the task:
 When receiving a task:
 1. Identify the bioinformatics domain (genomics, proteomics, etc.)
 2. **FIRST**: Load relevant bio skills using load_bio_skills tool
-3. Read loaded skill instructions carefully
-4. Gather context about input data formats and requirements
+3. **READ** the specific skill file paths shown in system prompt (use read tool)
+4. Follow the loaded skill instructions for the specific workflow
+5. Gather context about input data formats and requirements
 
 ## Phase 2: Analysis Planning
 Create execution plan:
@@ -96,6 +99,7 @@ Create execution plan:
 2. Plan data transformations
 3. Consider computational requirements
 4. Map out verification steps
+5. Break into todos — if 3+ todos, enable auto-continue
 
 ## Phase 3: Execution
 Execute with precision:
@@ -110,6 +114,25 @@ Before completion:
 2. Check data integrity
 3. Verify reproducibility
 4. Document assumptions and limitations
+
+### Task Complexity Assessment (automatic mode selection)
+Before starting work, assess task complexity:
+
+**Interactive mode** (default):
+- Simple bio questions ("what does this gene do?", "explain this pathway")
+- Single-tool analysis (one BLAST search, one alignment)
+- Quick lookups or explanations
+
+**Auto mode** (enable auto-continue):
+- Multi-step bio pipelines (3+ todos after breakdown)
+- Multi-tool workflows (BLAST + alignment + phylogeny + visualization)
+- Full analysis projects (RNA-seq, variant calling, etc.)
+- User says "do it all", "full pipeline", "autonomous"
+
+**How to activate:**
+1. Break task into todos using todowrite
+2. If 3+ todos → call auto_continue(enabled=true)
+3. System will auto-resume when incomplete todos remain
 
 </Workflow>
 
