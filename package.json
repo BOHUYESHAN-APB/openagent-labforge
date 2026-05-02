@@ -45,7 +45,7 @@
   "files": [
     "dist",
     "src/skills",
-    "Future/clone/bioSkills",
+    "resources/bioSkills",
     "src/config/presets",
     "openagent-labforge.schema.json",
     "README.md",

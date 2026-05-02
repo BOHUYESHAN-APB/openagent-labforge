@@ -37,7 +37,7 @@
     // 是否启用 bio skills
     "enabled": true,
     
-    // bioSkills 仓库路径（可选，默认 Future/clone/bioSkills）
+    // bioSkills 仓库路径（可选，默认插件包内 resources/bioSkills）
     // "repoPath": "~/bioSkills",
     
     // 允许使用 bio skills 的 agent（* 表示所有 agent）

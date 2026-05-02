@@ -77,10 +77,10 @@ Create `openagent-labforge.jsonc` in your project root or `~/.config/opencode/`:
     "allowModeSwitch": true
   },
 
-  // Bio Skills: on-demand loading from bioSkills repository
+  // Bio Skills: on-demand loading from bundled resources/bioSkills
   "bioSkills": {
-    "enabled": false,
-    "repoPath": "Future/clone/bioSkills"
+    "enabled": true
+    // Optional override: "repoPath": "/absolute/path/to/bioSkills"
   },
 
   // Model presets: "openai", "deepseek", "mixed"

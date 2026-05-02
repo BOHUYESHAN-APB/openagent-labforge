@@ -96,7 +96,9 @@ function resolveBioSkillsRepoPath(
 ): string {
   const candidates = [
     configuredPath,
+    join(packageRoot, 'resources', 'bioSkills'),
     join(packageRoot, 'Future', 'clone', 'bioSkills'),
+    join(workspaceRoot, 'resources', 'bioSkills'),
     join(workspaceRoot, 'Future', 'clone', 'bioSkills'),
   ].filter((path): path is string => Boolean(path));
 

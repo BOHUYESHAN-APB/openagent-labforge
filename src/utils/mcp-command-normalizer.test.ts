@@ -19,4 +19,16 @@ describe('normalizeLocalMcpCommand', () => {
       'server',
     ]);
   });
+
+  test('does not wrap commands on Linux', () => {
+    expect(normalizeLocalMcpCommand(['npx', '-y', 'server'], 'linux')).toEqual([
+      'npx',
+      '-y',
+      'server',
+    ]);
+    expect(normalizeLocalMcpCommand(['uvx', 'server'], 'linux')).toEqual([
+      'uvx',
+      'server',
+    ]);
+  });
 });
