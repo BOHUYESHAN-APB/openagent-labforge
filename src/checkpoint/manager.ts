@@ -1,5 +1,9 @@
 import type { CheckpointStorage, ContextCheckpoint } from './types';
 import { ConversationMemoryStore } from './conversation-memory';
+import {
+  getRepositoryWorkspaces,
+  registerWorkspace,
+} from './global-index';
 import { loadCheckpointStorage, saveCheckpointStorage } from './persistence';
 import { RepositoryMemoryStore } from './repository-memory';
 import { SessionMemoryStore } from './session-memory';
@@ -100,6 +104,7 @@ export class CheckpointManager {
         repo = this.repositoryMemory.create(repositoryId);
       }
       this.repositoryMemory.addWorkspace(repositoryId, workspace);
+      registerWorkspace(repositoryId, workspaceRoot);
     }
 
     if (conversationID) {
@@ -120,5 +125,21 @@ export class CheckpointManager {
     this.workingMemory.clear(sessionID);
     this.sessionMemory.clear(sessionID);
     this.persist();
+  }
+
+  getRepositoryCheckpoints(repositoryId: string): ContextCheckpoint[] {
+    const workspaceRoots = getRepositoryWorkspaces(repositoryId);
+    const checkpoints: ContextCheckpoint[] = [];
+
+    for (const root of workspaceRoots) {
+      const storage = loadCheckpointStorage(root);
+      for (const session of storage.sessionMemory.values()) {
+        if (session.repositoryId === repositoryId) {
+          checkpoints.push(...session.checkpoints);
+        }
+      }
+    }
+
+    return checkpoints.sort((a, b) => b.timestamp - a.timestamp);
   }
 }
