@@ -221,7 +221,6 @@ Heavy checkpoints carry 115+ metadata fields for full state reconstruction.
 - [ ] DeepSeek-TUI plugin integration ([DeepSeek-TUI](https://github.com/BOHUYESHAN-APB/DeepSeek-TUI))
 
 ### Long-term
-- [ ] Automatic model routing based on task complexity
 - [ ] Cross-workspace memory persistence
 - [ ] Advanced compression strategies (cache-aware, compartmentalized)
 
@@ -337,7 +336,7 @@ bun run build
 
 - 近期：上下文压力监控、扩展 MCP 权限
 - 中期：GitHub Actions CI/CD、自动化测试、DeepSeek-TUI 插件集成
-- 远期：自动模型路由、跨工作区记忆、高级压缩策略
+- 远期：跨工作区记忆、高级压缩策略
 
 ### 许可证
 
