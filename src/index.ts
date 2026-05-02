@@ -307,7 +307,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     webfetch = createWebfetchTool(ctx);
 
     // Initialize Checkpoint Manager
-    checkpointManager = new CheckpointManager();
+    checkpointManager = new CheckpointManager(ctx.directory);
 
     // Initialize Prompt Mode Manager
     const promptModeConfig = config.promptMode ?? {

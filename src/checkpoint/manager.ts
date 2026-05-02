@@ -1,5 +1,6 @@
 import type { CheckpointStorage, ContextCheckpoint } from './types';
 import { ConversationMemoryStore } from './conversation-memory';
+import { loadCheckpointStorage, saveCheckpointStorage } from './persistence';
 import { RepositoryMemoryStore } from './repository-memory';
 import { SessionMemoryStore } from './session-memory';
 import { WorkingMemoryStore } from './working-memory';
@@ -7,20 +8,24 @@ import { WorkspaceMemoryStore } from './workspace-memory';
 
 export class CheckpointManager {
   private storage: CheckpointStorage;
+  private workspaceRoot: string | null = null;
   public workingMemory: WorkingMemoryStore;
   public conversationMemory: ConversationMemoryStore;
   public sessionMemory: SessionMemoryStore;
   public workspaceMemory: WorkspaceMemoryStore;
   public repositoryMemory: RepositoryMemoryStore;
 
-  constructor() {
-    this.storage = {
-      workingMemory: new Map(),
-      conversationMemory: new Map(),
-      sessionMemory: new Map(),
-      workspaceMemory: new Map(),
-      repositoryMemory: new Map(),
-    };
+  constructor(workspaceRoot?: string) {
+    this.workspaceRoot = workspaceRoot ?? null;
+    this.storage = workspaceRoot
+      ? loadCheckpointStorage(workspaceRoot)
+      : {
+          workingMemory: new Map(),
+          conversationMemory: new Map(),
+          sessionMemory: new Map(),
+          workspaceMemory: new Map(),
+          repositoryMemory: new Map(),
+        };
 
     this.workingMemory = new WorkingMemoryStore(this.storage.workingMemory);
     this.conversationMemory = new ConversationMemoryStore(
@@ -33,6 +38,11 @@ export class CheckpointManager {
     this.repositoryMemory = new RepositoryMemoryStore(
       this.storage.repositoryMemory,
     );
+  }
+
+  private persist(): void {
+    if (!this.workspaceRoot) return;
+    saveCheckpointStorage(this.workspaceRoot, this.storage);
   }
 
   createCheckpoint(
@@ -59,6 +69,8 @@ export class CheckpointManager {
     if (conversationID) {
       this.conversationMemory.addCheckpoint(conversationID, checkpoint);
     }
+
+    this.persist();
 
     return checkpoint;
   }
@@ -100,10 +112,13 @@ export class CheckpointManager {
     }
 
     this.workingMemory.set(sessionID, {});
+    this.workspaceRoot = workspaceRoot;
+    this.persist();
   }
 
   cleanupSession(sessionID: string): void {
     this.workingMemory.clear(sessionID);
     this.sessionMemory.clear(sessionID);
+    this.persist();
   }
 }
