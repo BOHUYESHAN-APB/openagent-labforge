@@ -1,16 +1,46 @@
-import type { Plugin } from '@opencode-ai/plugin';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import type { Plugin } from '@opencode-ai/plugin';
 import { createAgents, getAgentConfigs, getDisabledAgents } from './agents';
 import { buildOrchestratorPrompt } from './agents/orchestrator';
 import {
+  ATLAS_HEAVY_PROMPT,
+  ATLAS_TURBO_PROMPT,
+  BIO_ORCHESTRATOR_HEAVY_PROMPT,
+  BIO_ORCHESTRATOR_TURBO_PROMPT,
+  DEEP_WORKER_HEAVY_PROMPT,
+  DEEP_WORKER_TURBO_PROMPT,
+  ORCHESTRATOR_HEAVY_PROMPT,
+  ORCHESTRATOR_TURBO_PROMPT,
+  PROMETHEUS_HEAVY_PROMPT,
+  PROMETHEUS_TURBO_PROMPT,
+} from './agents/prompts/index.js';
+import {
+  BioSkillsSessionManager,
+  createLoadBioSkillsTool,
+  formatCatalogForPrompt,
+  formatLoadedSkillsForPrompt,
+  scanBioSkillsCatalog,
+} from './bio-skills';
+import { CheckpointManager } from './checkpoint';
+import {
+  CANCEL_RALPH_TEMPLATE,
+  CHECKPOINT_RESUME_TEMPLATE,
+  CHECKPOINT_TEMPLATE,
+  HANDOFF_TEMPLATE,
+  RALPH_LOOP_TEMPLATE,
+  START_WORK_TEMPLATE,
+  STOP_CONTINUATION_TEMPLATE,
+} from './commands/index.js';
+import {
   type AgentOverrideConfig,
   deepMerge,
+  ensureGlobalPluginConfigFile,
   loadPluginConfig,
   type MultiplexerConfig,
 } from './config';
-import { AGENT_ALIASES } from './config/constants';
 import { parseList } from './config/agent-mcps';
+import { AGENT_ALIASES } from './config/constants';
 import {
   getActiveRuntimePreset,
   getPreviousRuntimePreset,
@@ -31,8 +61,8 @@ import {
   createTodoContinuationHook,
   ForegroundFallbackManager,
 } from './hooks';
-import { createThinkingLanguageHook } from './hooks/thinking-language';
 import { processImageAttachments } from './hooks/image-hook';
+import { createThinkingLanguageHook } from './hooks/thinking-language';
 import { createInterviewManager } from './interview';
 import { createBuiltinMcps } from './mcp';
 import {
@@ -40,39 +70,9 @@ import {
   MultiplexerSessionManager,
   startAvailabilityCheck,
 } from './multiplexer';
-import {
-  BioSkillsSessionManager,
-  createLoadBioSkillsTool,
-  formatCatalogForPrompt,
-  formatLoadedSkillsForPrompt,
-  scanBioSkillsCatalog,
-} from './bio-skills';
-import { detectBioTaskTool } from './tools/detect-bio-task.js';
-import { CheckpointManager } from './checkpoint';
-import { PromptModeManager } from './prompt-mode/manager.js';
-import { createModeCommandHandler } from './prompt-mode/commands.js';
 import { getPackageResourceDir, getPackageRoot } from './paths/plugin-paths';
-import {
-  ORCHESTRATOR_HEAVY_PROMPT,
-  ORCHESTRATOR_TURBO_PROMPT,
-  BIO_ORCHESTRATOR_HEAVY_PROMPT,
-  BIO_ORCHESTRATOR_TURBO_PROMPT,
-  DEEP_WORKER_HEAVY_PROMPT,
-  DEEP_WORKER_TURBO_PROMPT,
-  PROMETHEUS_HEAVY_PROMPT,
-  PROMETHEUS_TURBO_PROMPT,
-  ATLAS_HEAVY_PROMPT,
-  ATLAS_TURBO_PROMPT,
-} from './agents/prompts/index.js';
-import {
-  CHECKPOINT_TEMPLATE,
-  HANDOFF_TEMPLATE,
-  CHECKPOINT_RESUME_TEMPLATE,
-  START_WORK_TEMPLATE,
-  RALPH_LOOP_TEMPLATE,
-  CANCEL_RALPH_TEMPLATE,
-  STOP_CONTINUATION_TEMPLATE,
-} from './commands/index.js';
+import { createModeCommandHandler } from './prompt-mode/commands.js';
+import { PromptModeManager } from './prompt-mode/manager.js';
 import {
   ast_grep_replace,
   ast_grep_search,
@@ -80,6 +80,7 @@ import {
   createPresetManager,
   createWebfetchTool,
 } from './tools';
+import { detectBioTaskTool } from './tools/detect-bio-task.js';
 import {
   createDisplayNameMentionRewriter,
   resolveRuntimeAgentName,
@@ -204,6 +205,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let toolCount = 0;
 
   try {
+    ensureGlobalPluginConfigFile();
     config = loadPluginConfig(ctx.directory);
 
     // Safety net: if a runtime preset was set via /preset command and
@@ -338,10 +340,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       const catalog = scanBioSkillsCatalog(repoPath);
       if (catalog.length > 0) {
         bioSkillsManager = new BioSkillsSessionManager(catalog);
-        log(
-          'info',
-          `Bio Skills: ${catalog.length} categories available`,
-        );
+        log('info', `Bio Skills: ${catalog.length} categories available`);
       } else {
         log('info', 'Bio Skills: no catalog found, load_bio_skills disabled');
       }
@@ -698,15 +697,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           // Build resolved key set from new preset for correct comparison
           // (handles alias keys like "explore" → "explorer")
           const newPresetResolved = new Set(
-            Object.keys(runtimePreset).map(
-              (k) => AGENT_ALIASES[k] ?? k,
-            ),
+            Object.keys(runtimePreset).map((k) => AGENT_ALIASES[k] ?? k),
           );
           for (const agentName of Object.keys(prevPreset)) {
-            const resolvedName =
-              AGENT_ALIASES[agentName] ?? agentName;
-            if (newPresetResolved.has(resolvedName))
-              continue; // new preset handles it
+            const resolvedName = AGENT_ALIASES[agentName] ?? agentName;
+            if (newPresetResolved.has(resolvedName)) continue; // new preset handles it
             const entry = configAgent[resolvedName] as
               | Record<string, unknown>
               | undefined;
@@ -714,8 +709,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
             // Reset to config-file baseline. Use the previous preset's
             // override to identify which fields to clear even when the
             // baseline doesn't define them.
-            const baseline =
-              config.agents?.[resolvedName];
+            const baseline = config.agents?.[resolvedName];
             const prevOverride = prevPreset[agentName] as
               | AgentOverrideConfig
               | undefined;
@@ -724,18 +718,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
             }
             if (typeof baseline?.variant === 'string') {
               entry.variant = baseline.variant;
-            } else if (
-              prevOverride &&
-              'variant' in prevOverride
-            ) {
+            } else if (prevOverride && 'variant' in prevOverride) {
               delete entry.variant;
             }
             if (typeof baseline?.temperature === 'number') {
               entry.temperature = baseline.temperature;
-            } else if (
-              prevOverride &&
-              'temperature' in prevOverride
-            ) {
+            } else if (prevOverride && 'temperature' in prevOverride) {
               delete entry.temperature;
             }
             if (
@@ -744,10 +732,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
               !Array.isArray(baseline.options)
             ) {
               entry.options = baseline.options;
-            } else if (
-              prevOverride &&
-              'options' in prevOverride
-            ) {
+            } else if (prevOverride && 'options' in prevOverride) {
               delete entry.options;
             }
             log('[plugin] runtime preset reset from previous', {
@@ -878,7 +863,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       if (!configCommand?.['ol-checkpoint']) {
         (opencodeConfig.command as Record<string, unknown>)['ol-checkpoint'] = {
           template: CHECKPOINT_TEMPLATE,
-          description: 'Create durable checkpoint (light: same-session recovery, heavy: cross-session handoff)',
+          description:
+            'Create durable checkpoint (light: same-session recovery, heavy: cross-session handoff)',
           argumentHint: '[light|heavy] [goal]',
         };
       }
@@ -890,7 +876,9 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         };
       }
       if (!configCommand?.['ol-checkpoint-resume']) {
-        (opencodeConfig.command as Record<string, unknown>)['ol-checkpoint-resume'] = {
+        (opencodeConfig.command as Record<string, unknown>)[
+          'ol-checkpoint-resume'
+        ] = {
           template: CHECKPOINT_RESUME_TEMPLATE,
           description: 'Resume from checkpoint in current session',
           argumentHint: '[latest|session-id|path]',
@@ -919,7 +907,9 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         };
       }
       if (!configCommand?.['stop-continuation']) {
-        (opencodeConfig.command as Record<string, unknown>)['stop-continuation'] = {
+        (opencodeConfig.command as Record<string, unknown>)[
+          'stop-continuation'
+        ] = {
           template: STOP_CONTINUATION_TEMPLATE,
           description: 'Stop all continuation mechanisms for current session',
         };
@@ -1185,7 +1175,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           };
 
           const agentPrompts = modePrompts[agentForMode];
-          if (agentPrompts && agentPrompts[currentMode]) {
+          if (agentPrompts?.[currentMode]) {
             const modeTag = `[MODE: ${currentMode.toUpperCase()}]`;
             const alreadyHasMode = output.system.some(
               (s) => typeof s === 'string' && s.includes(modeTag),
@@ -1207,9 +1197,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
         if (isAllowed) {
           // Always show catalog
-          const catalog = formatCatalogForPrompt(
-            bioSkillsManager.getCatalog(),
-          );
+          const catalog = formatCatalogForPrompt(bioSkillsManager.getCatalog());
           if (catalog) {
             output.system.push(catalog);
           }

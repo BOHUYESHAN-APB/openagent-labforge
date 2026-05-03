@@ -10,6 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { URL } from 'node:url';
+import { getGlobalDashboardDir } from '../paths/plugin-paths';
 import { log } from '../utils';
 import {
   extractSummarySection,
@@ -32,10 +33,19 @@ import { renderDashboardPage, renderInterviewPage } from './ui';
 // Both processes run as the same user on the same machine (localhost-only).
 
 function getAuthFilePath(port: number): string {
+  return path.join(getGlobalDashboardDir(), `.dashboard-${port}.json`);
+}
+
+function getLegacyAuthDir(): string {
   const dataHome =
     process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
-  return path.join(dataHome, 'opencode', `.dashboard-${port}.json`);
+  return path.join(dataHome, 'opencode');
 }
+
+export const dashboardAuthPathsForTesting = {
+  getAuthFilePath,
+  getLegacyAuthDir,
+};
 
 function writeAuthFile(port: number, token: string): void {
   const filePath = getAuthFilePath(port);
@@ -69,10 +79,12 @@ function removeAuthFile(port: number): void {
  * Removes files where the PID no longer exists.
  */
 function cleanupStaleAuthFiles(): void {
+  cleanupStaleAuthFilesInDir(getGlobalDashboardDir());
+  cleanupStaleAuthFilesInDir(getLegacyAuthDir());
+}
+
+function cleanupStaleAuthFilesInDir(dir: string): void {
   try {
-    const dataHome =
-      process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
-    const dir = path.join(dataHome, 'opencode');
     const entries = fsSync.readdirSync(dir);
 
     for (const entry of entries) {
@@ -84,6 +96,11 @@ function cleanupStaleAuthFiles(): void {
       try {
         const content = fsSync.readFileSync(filePath, 'utf8');
         const data = JSON.parse(content) as { pid: number };
+
+        if (!Number.isInteger(data.pid) || data.pid <= 0) {
+          fsSync.unlinkSync(filePath);
+          continue;
+        }
 
         // Check if PID is still alive
         try {
@@ -111,7 +128,15 @@ export async function readDashboardAuthFile(
   port: number,
 ): Promise<{ token: string; pid: number; startedAt: number } | null> {
   try {
-    const content = await fs.readFile(getAuthFilePath(port), 'utf8');
+    const authFilePath = getAuthFilePath(port);
+    let staleFilePath = authFilePath;
+    let content: string;
+    try {
+      content = await fs.readFile(authFilePath, 'utf8');
+    } catch {
+      staleFilePath = path.join(getLegacyAuthDir(), `.dashboard-${port}.json`);
+      content = await fs.readFile(staleFilePath, 'utf8');
+    }
     const data = JSON.parse(content) as {
       token: string;
       pid: number;
@@ -123,7 +148,7 @@ export async function readDashboardAuthFile(
     } catch {
       // PID doesn't exist — stale auth file from crashed dashboard
       try {
-        fsSync.unlinkSync(getAuthFilePath(port));
+        fsSync.unlinkSync(staleFilePath);
       } catch {
         // Ignore cleanup errors
       }

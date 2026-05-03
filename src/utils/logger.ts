@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import { appendFile } from 'node:fs/promises';
-import * as os from 'node:os';
 import * as path from 'node:path';
+import { getGlobalBgTasksDir, getGlobalLogDir } from '../paths/plugin-paths';
 
 const LOG_PREFIX = 'openagent-labforge.';
 const LOG_SUFFIX = '.log';
@@ -12,10 +12,13 @@ let logFile: string | null = null;
 let writeChain: Promise<void> = Promise.resolve();
 
 function getLogDir(): string {
-  return (
-    process.env.OPENCODE_LOG_DIR ??
-    path.join(os.homedir(), '.local/share/opencode')
-  );
+  return process.env.OPENCODE_LOG_DIR ?? getGlobalLogDir();
+}
+
+function getBgTaskDir(): string {
+  return process.env.OPENCODE_LOG_DIR
+    ? path.join(process.env.OPENCODE_LOG_DIR, 'bg-tasks')
+    : getGlobalBgTasksDir();
 }
 
 function cleanupOldLogs(logDir: string): void {
@@ -53,7 +56,7 @@ function cleanupOldLogs(logDir: string): void {
 
   // Apply 7-day retention to persisted background task files
   try {
-    const bgTaskDir = path.join(logDir, 'bg-tasks');
+    const bgTaskDir = getBgTaskDir();
     const taskFiles = fs.readdirSync(bgTaskDir);
     const now = Date.now();
     for (const entry of taskFiles) {

@@ -1,8 +1,14 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { createServer } from 'node:http';
+import * as os from 'node:os';
 import * as path from 'node:path';
-import { createDashboardServer } from './dashboard';
+import {
+  createDashboardServer,
+  dashboardAuthPathsForTesting,
+  readDashboardAuthFile,
+} from './dashboard';
 
 // Helper to find a free port (matches interview.test.ts pattern)
 function findFreePort(): Promise<number> {
@@ -48,6 +54,68 @@ async function createTempInterviewDir() {
 }
 
 describe('dashboard server', () => {
+  let origXdgDataHome: string | undefined;
+
+  beforeEach(() => {
+    origXdgDataHome = process.env.XDG_DATA_HOME;
+  });
+
+  afterEach(() => {
+    if (origXdgDataHome === undefined) {
+      delete process.env.XDG_DATA_HOME;
+    } else {
+      process.env.XDG_DATA_HOME = origXdgDataHome;
+    }
+  });
+
+  describe('auth file paths', () => {
+    test('stores auth files under plugin dashboard data directory', () => {
+      const dataHome = fsSync.mkdtempSync(
+        path.join(os.tmpdir(), 'dashboard-data-'),
+      );
+      try {
+        process.env.XDG_DATA_HOME = dataHome;
+
+        expect(dashboardAuthPathsForTesting.getAuthFilePath(12345)).toBe(
+          path.join(
+            dataHome,
+            'opencode',
+            'openagent-labforge',
+            'dashboard',
+            '.dashboard-12345.json',
+          ),
+        );
+      } finally {
+        fsSync.rmSync(dataHome, { recursive: true, force: true });
+      }
+    });
+
+    test('can read legacy root auth files during migration', async () => {
+      const dataHome = fsSync.mkdtempSync(
+        path.join(os.tmpdir(), 'dashboard-data-'),
+      );
+      try {
+        process.env.XDG_DATA_HOME = dataHome;
+        const legacyDir = dashboardAuthPathsForTesting.getLegacyAuthDir();
+        fsSync.mkdirSync(legacyDir, { recursive: true });
+        fsSync.writeFileSync(
+          path.join(legacyDir, '.dashboard-12346.json'),
+          JSON.stringify({
+            token: 'legacy-token',
+            pid: process.pid,
+            startedAt: 123,
+          }),
+        );
+
+        const auth = await readDashboardAuthFile(12346);
+
+        expect(auth?.token).toBe('legacy-token');
+      } finally {
+        fsSync.rmSync(dataHome, { recursive: true, force: true });
+      }
+    });
+  });
+
   describe('health endpoint', () => {
     test('returns 200 with status ok and counts', async () => {
       const { baseUrl, cleanup } = await startDashboard();

@@ -12,7 +12,7 @@ const HOOK_NAME = 'todo-continuation';
 const COMMAND_NAME = 'auto-continue';
 
 const CONTINUATION_PROMPT =
-  '[Auto-continue: enabled - there are incomplete todos remaining. Continue with the next uncompleted item. Press Esc to cancel. If you need user input or review for the next item, ask instead of proceeding.]';
+  '[Auto-continue: enabled for this work batch - there are incomplete todos remaining. Continue with the next uncompleted item. Press Esc to cancel. If the work is complete, user has taken over, or you are about to stop/finalize, call auto_continue with enabled=false before your final response. If you need user input or review for the next item, ask instead of proceeding.]';
 
 const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
 
@@ -22,6 +22,7 @@ const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finis
 2. **Check each todo** — verify the work actually matches what was requested
 3. **Run diagnostics** — lsp_diagnostics on ALL changed files, run tests/build if applicable
 4. **Assess completeness** — are there missing pieces, TODOs left behind, or partial implementations?
+5. **Close the batch** — if you approve, auto-continue will be disabled for this completed work batch
 
 ## Output Format
 
@@ -36,9 +37,19 @@ After review, output ONE of:
 
 Then create new todos for each finding and continue working.
 
+**[NEEDS_USER: <reason>]** — Work cannot safely continue without user input, credentials, approval, or a product/architecture decision.
+
+**[BLOCKED: <reason>]** — Work is blocked by an external dependency, missing environment, repeated tool failure, or another condition the agent cannot resolve autonomously.
+
 **DO NOT** revert git commits. If changes need correction, make new commits that fix the issues.
 **DO NOT** claim completion without running diagnostics.
+**DO** treat [APPROVE] as the end of this auto work batch.
+**DO** treat [REJECT] as mandatory rework: update todos and keep working.
+**DO** treat [NEEDS_USER] and [BLOCKED] as stop points: explain what is needed from the user.
 ]`;
+
+type ReviewVerdict = 'approve' | 'reject' | 'needs_user' | 'blocked' | 'none';
+type StoredReviewVerdict = Exclude<ReviewVerdict, 'none'> | 'pending';
 
 const TODO_HYGIENE_INSTRUCTION_OPEN = '<instruction name="todo_hygiene">';
 const TODO_HYGIENE_INSTRUCTION_CLOSE = '</instruction>';
@@ -86,17 +97,17 @@ interface ContinuationState {
   // notification busy transitions are ignored, covering HTTP/SSE reordering.
   notificationBusyUntilBySession: Map<string, number>;
   // Review verdict tracking per session (for auto-review in full-auto mode)
-  reviewVerdictBySession: Map<string, 'approve' | 'reject' | 'pending' | 'none'>;
+  reviewVerdictBySession: Map<string, StoredReviewVerdict>;
   // Track if review was already injected to avoid duplicates
   reviewInjectedBySession: Set<string>;
 }
 
 /**
  * Parse review verdict from assistant message text.
- * Returns 'approve', 'reject' (with findings), or 'none'.
+ * Returns the structured verdict and its reason/findings.
  */
 function parseReviewVerdict(text: string): {
-  verdict: 'approve' | 'reject' | 'none';
+  verdict: ReviewVerdict;
   findings: string;
 } {
   const approveMatch = text.match(/\[APPROVE\]/i);
@@ -108,7 +119,29 @@ function parseReviewVerdict(text: string): {
   if (rejectMatch) {
     return {
       verdict: 'reject',
-      findings: rejectMatch[1]?.trim() || 'Review rejected work — check findings above.',
+      findings:
+        rejectMatch[1]?.trim() ||
+        'Review rejected work — check findings above.',
+    };
+  }
+
+  const needsUserMatch = text.match(/\[NEEDS_USER(?::\s*(.*?))?\]/is);
+  if (needsUserMatch) {
+    return {
+      verdict: 'needs_user',
+      findings:
+        needsUserMatch[1]?.trim() ||
+        'Review requires user input before continuing.',
+    };
+  }
+
+  const blockedMatch = text.match(/\[BLOCKED(?::\s*(.*?))?\]/is);
+  if (blockedMatch) {
+    return {
+      verdict: 'blocked',
+      findings:
+        blockedMatch[1]?.trim() ||
+        'Review found an external blocker that prevents autonomous progress.',
     };
   }
 
@@ -119,7 +152,7 @@ function parseReviewVerdict(text: string): {
  * Build rework prompt from review findings.
  */
 function buildReworkPrompt(findings: string): string {
-  return `[Auto-review: REJECTED — the following issues were found:\n\n${findings}\n\nCreate new todos for each finding and fix them. DO NOT revert git commits — make new corrective commits instead.]`;
+  return `[Auto-review: REJECTED — the following issues were found:\n\n${findings}\n\nThis is mandatory rework. Do not stop. Create or update todos for each finding, fix them, run the relevant diagnostics/tests/build again, and then allow auto-review to run again. DO NOT revert git commits — make new corrective commits instead.]`;
 }
 
 function isQuestion(text: string): boolean {
@@ -406,7 +439,10 @@ export function createTodoContinuationHook(
     ) {
       const reminder = hygiene.getPendingReminder(lastUserMessage.sessionID);
       if (reminder) {
-        pendingHygieneReminderBySession.set(lastUserMessage.sessionID, reminder);
+        pendingHygieneReminderBySession.set(
+          lastUserMessage.sessionID,
+          reminder,
+        );
       } else {
         pendingHygieneReminderBySession.delete(lastUserMessage.sessionID);
       }
@@ -414,23 +450,29 @@ export function createTodoContinuationHook(
     }
 
     // Detect user intent from message text
-    const userMessageText = output.messages
-      .filter((m) => m.info.role === 'user')
-      .slice(-1)[0]
-      ?.parts.filter((p) => p.type === 'text' && p.text)
-      .map((p) => p.text)
-      .join(' ') || '';
-    
+    const userMessageText =
+      output.messages
+        .filter((m) => m.info.role === 'user')
+        .slice(-1)[0]
+        ?.parts.filter((p) => p.type === 'text' && p.text)
+        .map((p) => p.text)
+        .join(' ') || '';
+
     if (userMessageText) {
       const intent = detectUserIntent(userMessageText);
       if (shouldSkipContinuation(intent)) {
         // User wants to stop or is satisfied - disable continuation
-        setContinuationEnabled(state, lastUserMessage.sessionID, false);
-        cancelPendingTimer(state);
-        log(`[${HOOK_NAME}] User intent detected: ${intent.type} - disabling continuation`, {
-          sessionID: lastUserMessage.sessionID,
-          signals: intent.signals,
-        });
+        disableContinuationForSession(
+          lastUserMessage.sessionID,
+          `user intent ${intent.type}`,
+        );
+        log(
+          `[${HOOK_NAME}] User intent detected: ${intent.type} - disabling continuation`,
+          {
+            sessionID: lastUserMessage.sessionID,
+            signals: intent.signals,
+          },
+        );
       }
     }
 
@@ -495,6 +537,38 @@ export function createTodoContinuationHook(
 
   function isOrchestratorSession(sessionID: string): boolean {
     return state.orchestratorSessionIds.has(sessionID);
+  }
+
+  function disableContinuationForSession(
+    sessionID: string,
+    reason: string,
+  ): void {
+    setContinuationEnabled(state, sessionID, false);
+    setConsecutiveContinuations(state, sessionID, 0);
+    cancelPendingTimer(state);
+    clearNotificationState(sessionID);
+    state.reviewVerdictBySession.delete(sessionID);
+    state.reviewInjectedBySession.delete(sessionID);
+    log(`[${HOOK_NAME}] Auto-continue disabled: ${reason}`, {
+      sessionID,
+    });
+  }
+
+  function disableContinuationForCompletedBatch(sessionID: string): void {
+    disableContinuationForSession(sessionID, 'auto-review approved');
+  }
+
+  function disableContinuationForReviewStop(
+    sessionID: string,
+    verdict: 'needs_user' | 'blocked',
+    reason: string,
+  ): void {
+    disableContinuationForSession(sessionID, `auto-review ${verdict}`);
+    log(`[${HOOK_NAME}] Auto-review stopped for user/external input`, {
+      sessionID,
+      verdict,
+      reason,
+    });
   }
 
   function registerOrchestratorSession(sessionID: string): void {
@@ -676,14 +750,13 @@ export function createTodoContinuationHook(
                 .join(' ');
               const { verdict, findings } = parseReviewVerdict(text);
               if (verdict === 'approve') {
-                state.reviewVerdictBySession.set(sessionID, 'approve');
-                state.reviewInjectedBySession.delete(sessionID);
-                log(`[${HOOK_NAME}] Review APPROVED`, { sessionID });
+                disableContinuationForCompletedBatch(sessionID);
                 return; // Allow stop
               }
               if (verdict === 'reject') {
                 state.reviewVerdictBySession.set(sessionID, 'reject');
                 state.reviewInjectedBySession.delete(sessionID);
+                setConsecutiveContinuations(state, sessionID, 0);
                 log(`[${HOOK_NAME}] Review REJECTED — injecting rework`, {
                   sessionID,
                   findings,
@@ -706,21 +779,22 @@ export function createTodoContinuationHook(
                 }
                 return;
               }
+              if (verdict === 'needs_user' || verdict === 'blocked') {
+                state.reviewVerdictBySession.set(sessionID, verdict);
+                disableContinuationForReviewStop(sessionID, verdict, findings);
+                return;
+              }
               // verdict === 'none' — agent hasn't given verdict yet, wait
-              log(
-                `[${HOOK_NAME}] Review pending — no verdict found yet`,
-                { sessionID },
-              );
+              log(`[${HOOK_NAME}] Review pending — no verdict found yet`, {
+                sessionID,
+              });
               return;
             }
           } catch (error) {
-            log(
-              `[${HOOK_NAME}] Warning: failed to parse review verdict`,
-              {
-                sessionID,
-                error: error instanceof Error ? error.message : String(error),
-              },
-            );
+            log(`[${HOOK_NAME}] Warning: failed to parse review verdict`, {
+              sessionID,
+              error: error instanceof Error ? error.message : String(error),
+            });
           }
           return;
         }

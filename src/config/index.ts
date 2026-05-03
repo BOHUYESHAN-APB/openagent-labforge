@@ -1,3 +1,4 @@
+export { ensureGlobalPluginConfigFile } from './bootstrap';
 export * from './constants';
 export * from './council-schema';
 export { deepMerge, loadAgentPrompt, loadPluginConfig } from './loader';

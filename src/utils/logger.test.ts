@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { getGlobalLogDir } from '../paths/plugin-paths';
 import {
   flushLoggerForTesting,
   getLogDir,
@@ -126,7 +127,9 @@ describe('logger', () => {
     initLogger('current');
     log('init');
 
-    const files = fs.readdirSync(tmpDir).filter((f) => f.startsWith('openagent-labforge.'));
+    const files = fs
+      .readdirSync(tmpDir)
+      .filter((f) => f.startsWith('openagent-labforge.'));
     // Should have 10 files + current = 11 total (cleanup keeps 10, then we create 1 more)
     expect(files.length).toBeLessThanOrEqual(11);
     // The oldest files (file0, file1) should be deleted
@@ -150,7 +153,7 @@ describe('logger', () => {
 
   test('cleanup with mixed-age files keeps most recent', () => {
     const now = Date.now();
-    
+
     // Create an old file
     const oldFileName = 'openagent-labforge.old.log';
     const oldPath = path.join(tmpDir, oldFileName);
@@ -201,9 +204,7 @@ describe('logger', () => {
   test('getLogDir falls back to os.homedir when env not set', () => {
     delete process.env.OPENCODE_LOG_DIR;
     try {
-      expect(getLogDir()).toBe(
-        path.join(os.homedir(), '.local/share/opencode'),
-      );
+      expect(getLogDir()).toBe(getGlobalLogDir());
     } finally {
       if (origLogDir === undefined) {
         delete process.env.OPENCODE_LOG_DIR;

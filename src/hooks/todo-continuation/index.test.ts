@@ -718,7 +718,7 @@ describe('createTodoContinuationHook', () => {
       const promptCall = contCall(ctx.client.session.prompt);
       expect(promptCall[0].path.id).toBe('session-123');
       expect(promptCall[0].body.parts[0].text).toContain(
-        '[Auto-continue: enabled - there are incomplete todos remaining.',
+        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
       );
       expect(promptCall[0].body.parts[0].text).toContain(
         SLIM_INTERNAL_INITIATOR_MARKER,
@@ -1108,8 +1108,394 @@ describe('createTodoContinuationHook', () => {
 
       // All todos complete + auto-continue enabled → should inject review prompt
       expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
-      const call = (ctx.client.session.prompt as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      const call = (ctx.client.session.prompt as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
       expect(call.body.parts[0].text).toContain('[Auto-review');
+    });
+
+    test('review approve disables auto for completed batch', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: '[APPROVE] Complete.' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+      expect(
+        ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
+      ).toContain('[Auto-review');
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      // Approval closes the work batch and disables auto-continue. A later idle
+      // with new incomplete todos should not continue until explicitly re-enabled.
+      ctx.client.session.prompt.mockClear();
+      ctx.client.session.todo = mock(async () => ({
+        data: [
+          {
+            id: '2',
+            content: 'new todo after approve',
+            status: 'pending',
+            priority: 'high',
+          },
+        ],
+      }));
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('review reject forces rework instead of disabling auto', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [
+                {
+                  type: 'text',
+                  text: '[REJECT: tests were not run]',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+      expect(
+        ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
+      ).toContain('[Auto-review');
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
+      const reworkText = ctx.client.session.prompt.mock.calls[1][0].body
+        .parts[0].text as string;
+      expect(reworkText).toContain('[Auto-review: REJECTED');
+      expect(reworkText).toContain('This is mandatory rework');
+      expect(reworkText).toContain(SLIM_INTERNAL_INITIATOR_MARKER);
+
+      ctx.client.session.prompt.mockClear();
+      ctx.client.session.todo = mock(async () => ({
+        data: [
+          {
+            id: '2',
+            content: 'fix review finding',
+            status: 'pending',
+            priority: 'high',
+          },
+        ],
+      }));
+      ctx.client.session.messages = mock(async () => ({
+        data: [
+          {
+            info: { role: 'assistant' },
+            parts: [{ type: 'text', text: 'Rework todo created.' }],
+          },
+        ],
+      }));
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
+    });
+
+    test('review needs user disables auto for completed batch', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [
+                {
+                  type: 'text',
+                  text: '[NEEDS_USER: choose migration strategy]',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      ctx.client.session.prompt.mockClear();
+      ctx.client.session.todo = mock(async () => ({
+        data: [
+          {
+            id: '2',
+            content: 'should not continue',
+            status: 'pending',
+            priority: 'high',
+          },
+        ],
+      }));
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('review blocked disables auto for completed batch', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [
+                {
+                  type: 'text',
+                  text: '[BLOCKED: missing credentials]',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      ctx.client.session.prompt.mockClear();
+      ctx.client.session.todo = mock(async () => ({
+        data: [
+          {
+            id: '2',
+            content: 'should not continue',
+            status: 'pending',
+            priority: 'high',
+          },
+        ],
+      }));
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('continuation prompt tells agent to disable auto before finalizing', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Working...' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      const call = contCall(ctx.client.session.prompt);
+      expect(call[0].body.parts[0].text).toContain(
+        'call auto_continue with enabled=false before your final response',
+      );
+    });
+
+    test('explicit user stop clears auto and review state', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Ready for review' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+      expect(
+        ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
+      ).toContain('[Auto-review');
+
+      await hook.handleMessagesTransform(
+        userMessages(
+          '先停，我看看',
+          'session-123',
+          'orchestrator',
+          undefined,
+          'u1',
+        ),
+      );
+
+      ctx.client.session.prompt.mockClear();
+      ctx.client.session.todo = mock(async () => ({
+        data: [
+          {
+            id: '2',
+            content: 'should not continue after stop',
+            status: 'pending',
+            priority: 'high',
+          },
+        ],
+      }));
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
     test('non-orchestrator session → skip', async () => {
@@ -1605,7 +1991,7 @@ describe('createTodoContinuationHook', () => {
 
       expect(output.parts).toHaveLength(1);
       expect(output.parts[0].text).toContain(
-        '[Auto-continue: enabled - there are incomplete todos remaining.',
+        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
       );
       expect(output.parts[0].text).toContain(SLIM_INTERNAL_INITIATOR_MARKER);
     });
@@ -1710,7 +2096,7 @@ describe('createTodoContinuationHook', () => {
       );
       // Should have continuation prompt again (count was reset)
       expect(outputOn.parts[0].text).toContain(
-        '[Auto-continue: enabled - there are incomplete todos remaining.',
+        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
       );
     });
 

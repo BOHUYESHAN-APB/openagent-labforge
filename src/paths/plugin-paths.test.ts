@@ -1,9 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import {
+  getGlobalBgTasksDir,
+  getGlobalDashboardDir,
+  getGlobalDataDir,
+  getGlobalLogDir,
   getGlobalMcpDir,
   getGlobalMemoryDir,
   getGlobalStateDir,
+  getOpenCodeDataDir,
   getPackageResourceDir,
   getProjectCheckpointDir,
   getProjectMcpDir,
@@ -55,6 +60,23 @@ describe('plugin paths', () => {
     const env = { XDG_CONFIG_HOME: '/home/me/.config' };
     expect(getGlobalStateDir('linux', env)).toBe(
       join(env.XDG_CONFIG_HOME, 'opencode', 'openagent-labforge'),
+    );
+  });
+
+  test('resolves global data directories under XDG_DATA_HOME', () => {
+    const env = { XDG_DATA_HOME: '/home/me/.local/share' };
+    expect(getOpenCodeDataDir(env)).toBe(join(env.XDG_DATA_HOME, 'opencode'));
+    expect(getGlobalDataDir(env)).toBe(
+      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge'),
+    );
+    expect(getGlobalLogDir(env)).toBe(
+      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'logs'),
+    );
+    expect(getGlobalDashboardDir(env)).toBe(
+      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'dashboard'),
+    );
+    expect(getGlobalBgTasksDir(env)).toBe(
+      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'bg-tasks'),
     );
   });
 });

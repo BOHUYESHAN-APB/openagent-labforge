@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const PLUGIN_STATE_DIR = 'openagent-labforge';
 
+function getDefaultDataHome(): string {
+  return join(homedir(), '.local', 'share');
+}
+
 export function getPackageRoot(moduleUrl: string = import.meta.url): string {
   return dirname(dirname(fileURLToPath(moduleUrl)));
 }
@@ -66,4 +70,30 @@ export function getGlobalMcpDir(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   return join(getGlobalStateDir(platform, env), 'mcp');
+}
+
+export function getOpenCodeDataDir(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  return join(env.XDG_DATA_HOME ?? getDefaultDataHome(), 'opencode');
+}
+
+export function getGlobalDataDir(env: NodeJS.ProcessEnv = process.env): string {
+  return join(getOpenCodeDataDir(env), PLUGIN_STATE_DIR);
+}
+
+export function getGlobalLogDir(env: NodeJS.ProcessEnv = process.env): string {
+  return join(getGlobalDataDir(env), 'logs');
+}
+
+export function getGlobalDashboardDir(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  return join(getGlobalDataDir(env), 'dashboard');
+}
+
+export function getGlobalBgTasksDir(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  return join(getGlobalDataDir(env), 'bg-tasks');
 }
