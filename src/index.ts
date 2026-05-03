@@ -812,6 +812,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           template: 'Call the auto_continue tool with enabled=true',
           description:
             'Enable auto-continuation — orchestrator keeps working through incomplete todos',
+          argumentHint: '[on|off]',
         };
       }
 
@@ -865,7 +866,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           template: CHECKPOINT_TEMPLATE,
           description:
             'Create durable checkpoint (light: same-session recovery, heavy: cross-session handoff)',
-          argumentHint: '[light|heavy] [goal]',
+          argumentHint: '[l|h|light|heavy] [goal]',
         };
       }
       if (!configCommand?.['ol-handoff']) {

@@ -149,7 +149,7 @@ Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 ### Checkpoint Commands (AI-executed)
 | Command | Description |
 |---------|-------------|
-| `/ol-checkpoint [light\|heavy] [goal]` | Create durable checkpoint |
+| `/ol-checkpoint [l\|h\|light\|heavy] [goal]` | Create durable checkpoint (`l` = light, `h` = heavy) |
 | `/ol-handoff [goal]` | Create context summary for new session |
 | `/ol-checkpoint-resume [latest\|session-id\|path]` | Resume from checkpoint |
 
@@ -164,7 +164,7 @@ Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 ### Utility Commands
 | Command | Description |
 |---------|-------------|
-| `/auto-continue` | Toggle auto-continuation |
+| `/auto-continue [on\|off]` | Toggle or explicitly enable/disable auto-continuation |
 | `/preset [name]` | Switch agent presets |
 | `/interview [idea]` | Start product interview |
 
@@ -207,6 +207,16 @@ Project-installed MCPs should live under `.opencode/openagent-labforge/mcp/serve
 | **Heavy** | L3 context (>75%) | Cross-session handoff | 5 (configurable) |
 
 Heavy checkpoints carry 115+ metadata fields for full state reconstruction.
+
+Checkpoint kind arguments accept both full words and one-letter shorthands:
+
+```bash
+/ol-checkpoint l "quick recovery point"
+/ol-checkpoint h "cross-session handoff"
+```
+
+Use the same shorthand style for future parameterized commands when the meaning
+is unambiguous, while keeping full words available for readability.
 
 ---
 

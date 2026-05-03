@@ -97,7 +97,7 @@ describe('createTodoContinuationHook', () => {
   describe('tool toggle', () => {
     test('calling auto_continue execute with { enabled: true } sets state', async () => {
       const ctx = createMockContext();
-      const hook = createTodoContinuationHook(ctx);
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
 
       const result = await hook.tool.auto_continue.execute({ enabled: true });
 
@@ -107,7 +107,7 @@ describe('createTodoContinuationHook', () => {
 
     test('calling auto_continue execute with { enabled: false } disables', async () => {
       const ctx = createMockContext();
-      const hook = createTodoContinuationHook(ctx);
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
 
       const result = await hook.tool.auto_continue.execute({ enabled: false });
 
@@ -2039,6 +2039,314 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain('disabled by user command');
     });
 
+    test('/auto-continue false explicitly disables without toggling', async () => {
+      const ctx = createMockContext();
+      const hook = createTodoContinuationHook(ctx);
+      const output = { parts: [] as Array<{ type: string; text?: string }> };
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'auto-continue',
+          sessionID: 'session-123',
+          arguments: 'false',
+        },
+        output,
+      );
+
+      expect(output.parts).toHaveLength(1);
+      expect(output.parts[0].text).toContain('disabled by user command');
+    });
+
+    test('/auto-continue rejects unknown arguments without changing state', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const output = { parts: [] as Array<{ type: string; text?: string }> };
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'auto-continue',
+          sessionID: 'session-123',
+          arguments: 'maybe',
+        },
+        output,
+      );
+
+      expect(output.parts).toHaveLength(1);
+      expect(output.parts[0].text).toContain('unknown argument "maybe"');
+      expect(output.parts[0].text).toContain('Usage: /auto-continue [on|off]');
+      expect(output.parts[0].text).not.toContain(
+        '[Auto-continue: enabled for this work batch',
+      );
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
+    });
+
+    test('/stop-continuation hard-disables auto continuation', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Working...' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx);
+      const output = { parts: [] as Array<{ type: string; text?: string }> };
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'stop-continuation',
+          sessionID: 'session-123',
+          arguments: '',
+        },
+        output,
+      );
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(output.parts).toHaveLength(1);
+      expect(output.parts[0].text).toContain(
+        'disabled by /stop-continuation command',
+      );
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('/stop-continuation preserves template output for broader cleanup', async () => {
+      const ctx = createMockContext();
+      const hook = createTodoContinuationHook(ctx);
+      const output = {
+        parts: [
+          {
+            type: 'text',
+            text: 'Stop all continuation mechanisms for the current session.',
+          },
+        ] as Array<{ type: string; text?: string }>,
+      };
+
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'stop-continuation',
+          sessionID: 'session-123',
+          arguments: '',
+        },
+        output,
+      );
+
+      expect(output.parts).toHaveLength(2);
+      expect(output.parts[0].text).toContain(
+        'Stop all continuation mechanisms',
+      );
+      expect(output.parts[1].text).toContain(
+        'disabled by /stop-continuation command',
+      );
+    });
+
+    test('/stop-continuation prevents autoEnable from re-enabling the session', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Working...' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        autoEnable: true,
+        autoEnableThreshold: 1,
+      });
+      const output = { parts: [] as Array<{ type: string; text?: string }> };
+
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'stop-continuation',
+          sessionID: 'session-123',
+          arguments: '',
+        },
+        output,
+      );
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(output.parts[0].text).toContain(
+        'disabled by /stop-continuation command',
+      );
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('legacy auto_continue disable suppresses autoEnable globally', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Working...' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        autoEnable: true,
+        autoEnableThreshold: 1,
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: false });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('/auto-continue on clears legacy global autoEnable suppression', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx);
+      const enableOutput = {
+        parts: [] as Array<{ type: string; text?: string }>,
+      };
+
+      await hook.tool.auto_continue.execute({ enabled: false });
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'auto-continue',
+          sessionID: 'session-123',
+          arguments: 'on',
+        },
+        enableOutput,
+      );
+
+      expect(enableOutput.parts).toHaveLength(1);
+      expect(enableOutput.parts[0].text).toContain(
+        '[Auto-continue: enabled for this work batch',
+      );
+    });
+
+    test('/auto-continue on clears stop-continuation suppression', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx);
+      const stopOutput = {
+        parts: [] as Array<{ type: string; text?: string }>,
+      };
+      const enableOutput = {
+        parts: [] as Array<{ type: string; text?: string }>,
+      };
+
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'stop-continuation',
+          sessionID: 'session-123',
+          arguments: '',
+        },
+        stopOutput,
+      );
+      await hook.handleCommandExecuteBefore(
+        {
+          command: 'auto-continue',
+          sessionID: 'session-123',
+          arguments: 'on',
+        },
+        enableOutput,
+      );
+
+      expect(enableOutput.parts).toHaveLength(1);
+      expect(enableOutput.parts[0].text).toContain(
+        '[Auto-continue: enabled for this work batch',
+      );
+    });
+
     test('/auto-continue resets consecutive continuations on toggle', async () => {
       const ctx = createMockContext({
         todoResult: {
@@ -3371,7 +3679,7 @@ describe('createTodoContinuationHook', () => {
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
-    test('auto-enable resets consecutive counter and suppress window', async () => {
+    test('auto-enable does not override legacy tool disable', async () => {
       const ctx = createAutoEnableCtx([
         { id: '1', content: 't1', status: 'pending', priority: 'high' },
         { id: '2', content: 't2', status: 'pending', priority: 'high' },
@@ -3412,8 +3720,8 @@ describe('createTodoContinuationHook', () => {
       // Reset mock
       ctx.client.session.prompt.mockClear();
 
-      // Fire idle again — auto-enable should trigger (4 todos >= 4),
-      // resetting counter and suppress window
+      // Fire idle again — legacy tool disable is treated as an explicit user
+      // stop, so config autoEnable must not immediately restart the session.
       await hook.handleEvent({
         event: {
           type: 'session.idle',
@@ -3423,8 +3731,7 @@ describe('createTodoContinuationHook', () => {
 
       await delay(60);
 
-      // Should continue (suppressed window was cleared by auto-enable)
-      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
     test('auto-enable counts incomplete todos only, not completed', async () => {

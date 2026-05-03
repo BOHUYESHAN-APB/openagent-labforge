@@ -10,6 +10,16 @@ import { detectUserIntent, shouldSkipContinuation } from './user-intent';
 
 const HOOK_NAME = 'todo-continuation';
 const COMMAND_NAME = 'auto-continue';
+const STOP_COMMAND_NAME = 'stop-continuation';
+const AUTO_ON_ARGS = new Set(['on', 'true', 'enable', 'enabled', 'yes', '1']);
+const AUTO_OFF_ARGS = new Set([
+  'off',
+  'false',
+  'disable',
+  'disabled',
+  'no',
+  '0',
+]);
 
 const CONTINUATION_PROMPT =
   '[Auto-continue: enabled for this work batch - there are incomplete todos remaining. Continue with the next uncompleted item. Press Esc to cancel. If the work is complete, user has taken over, or you are about to stop/finalize, call auto_continue with enabled=false before your final response. If you need user input or review for the next item, ask instead of proceeding.]';
@@ -100,6 +110,10 @@ interface ContinuationState {
   reviewVerdictBySession: Map<string, StoredReviewVerdict>;
   // Track if review was already injected to avoid duplicates
   reviewInjectedBySession: Set<string>;
+  // Sessions explicitly stopped by the user/review must not be re-enabled by
+  // config.todoContinuation.autoEnable until the user turns auto-continue on.
+  autoEnableSuppressedSessionIds: Set<string>;
+  autoEnableSuppressedGlobally: boolean;
 }
 
 /**
@@ -225,6 +239,8 @@ function resetState(state: ContinuationState): void {
   state.notificationBusyUntilBySession.clear();
   state.reviewVerdictBySession.clear();
   state.reviewInjectedBySession.clear();
+  state.autoEnableSuppressedSessionIds.clear();
+  state.autoEnableSuppressedGlobally = false;
 }
 
 export function createTodoContinuationHook(
@@ -286,6 +302,8 @@ export function createTodoContinuationHook(
     notificationBusyUntilBySession: new Map<string, number>(),
     reviewVerdictBySession: new Map(),
     reviewInjectedBySession: new Set(),
+    autoEnableSuppressedSessionIds: new Set(),
+    autoEnableSuppressedGlobally: false,
   };
 
   const hygiene = createTodoHygiene({
@@ -542,6 +560,7 @@ export function createTodoContinuationHook(
   function disableContinuationForSession(
     sessionID: string,
     reason: string,
+    suppressAutoEnable = true,
   ): void {
     setContinuationEnabled(state, sessionID, false);
     setConsecutiveContinuations(state, sessionID, 0);
@@ -549,13 +568,16 @@ export function createTodoContinuationHook(
     clearNotificationState(sessionID);
     state.reviewVerdictBySession.delete(sessionID);
     state.reviewInjectedBySession.delete(sessionID);
+    if (suppressAutoEnable) {
+      state.autoEnableSuppressedSessionIds.add(sessionID);
+    }
     log(`[${HOOK_NAME}] Auto-continue disabled: ${reason}`, {
       sessionID,
     });
   }
 
   function disableContinuationForCompletedBatch(sessionID: string): void {
-    disableContinuationForSession(sessionID, 'auto-review approved');
+    disableContinuationForSession(sessionID, 'auto-review approved', false);
   }
 
   function disableContinuationForReviewStop(
@@ -605,11 +627,22 @@ export function createTodoContinuationHook(
       setConsecutiveContinuations(state, sessionID, 0);
 
       if (enabled) {
+        if (sessionID) {
+          state.autoEnableSuppressedSessionIds.delete(sessionID);
+        } else {
+          state.autoEnableSuppressedSessionIds.clear();
+          state.autoEnableSuppressedGlobally = false;
+        }
         state.suppressUntil = 0;
         log(`[${HOOK_NAME}] Auto-continue enabled`, { maxContinuations });
         return `Auto-continue enabled. Will auto-continue for up to ${maxContinuations} consecutive injections.`;
       }
 
+      if (sessionID) {
+        state.autoEnableSuppressedSessionIds.add(sessionID);
+      } else {
+        state.autoEnableSuppressedGlobally = true;
+      }
       // Cancel any pending timer on disable
       cancelPendingTimer(state);
       log(`[${HOOK_NAME}] Auto-continue disabled`);
@@ -662,7 +695,12 @@ export function createTodoContinuationHook(
 
       // Auto-enable check: if configured, not yet enabled, and enough
       // todos exist, automatically enable auto-continue.
-      if (autoEnable && !isContinuationEnabled(state, sessionID)) {
+      if (
+        autoEnable &&
+        !isContinuationEnabled(state, sessionID) &&
+        !state.autoEnableSuppressedGlobally &&
+        !state.autoEnableSuppressedSessionIds.has(sessionID)
+      ) {
         try {
           const todosResult = await ctx.client.session.todo({
             path: { id: sessionID },
@@ -1029,6 +1067,7 @@ export function createTodoContinuationHook(
         state.orchestratorSessionIds.delete(deletedSessionId);
         state.enabledBySession.delete(deletedSessionId);
         state.consecutiveContinuationsBySession.delete(deletedSessionId);
+        state.autoEnableSuppressedSessionIds.delete(deletedSessionId);
         clearNotificationState(deletedSessionId);
         if (state.orchestratorSessionIds.size === 0) {
           resetState(state);
@@ -1049,7 +1088,7 @@ export function createTodoContinuationHook(
     },
     output: { parts: Array<{ type: string; text?: string }> },
   ): Promise<void> {
-    if (input.command !== COMMAND_NAME) {
+    if (input.command !== COMMAND_NAME && input.command !== STOP_COMMAND_NAME) {
       return;
     }
 
@@ -1057,24 +1096,50 @@ export function createTodoContinuationHook(
     // first-idle heuristic — slash commands only fire in main chat)
     registerOrchestratorSession(input.sessionID);
 
-    // Clear template text — hook handles everything directly
+    if (input.command === STOP_COMMAND_NAME) {
+      disableContinuationForSession(
+        input.sessionID,
+        `/${STOP_COMMAND_NAME} command`,
+      );
+      // Keep the prompt template intact so the AI-executed command still
+      // performs its broader documented work (Ralph/boulder cleanup). The
+      // hook only hard-stops todo auto-continuation deterministically.
+      output.parts.push(
+        createInternalAgentTextPart(
+          '[Auto-continue: disabled by /stop-continuation command.]',
+        ),
+      );
+      return;
+    }
+
+    // Clear template text — /auto-continue is handled entirely in this hook.
     output.parts.length = 0;
 
-    // Accept explicit on/off argument, toggle only when no arg
+    // Accept explicit on/off argument, toggle only when no arg. Unknown
+    // arguments are rejected so commands like `/auto-continue false` never
+    // accidentally toggle auto mode on.
     const arg = input.arguments.trim().toLowerCase();
     let newEnabled: boolean;
-    if (arg === 'on') {
+    if (!arg) {
+      newEnabled = !isContinuationEnabled(state, input.sessionID);
+    } else if (AUTO_ON_ARGS.has(arg)) {
       newEnabled = true;
-    } else if (arg === 'off') {
+    } else if (AUTO_OFF_ARGS.has(arg)) {
       newEnabled = false;
     } else {
-      newEnabled = !isContinuationEnabled(state, input.sessionID);
+      output.parts.push(
+        createInternalAgentTextPart(
+          `[Auto-continue: unknown argument "${arg}". Usage: /auto-continue [on|off].]`,
+        ),
+      );
+      return;
     }
 
     setContinuationEnabled(state, input.sessionID, newEnabled);
     setConsecutiveContinuations(state, input.sessionID, 0);
 
     if (!newEnabled) {
+      state.autoEnableSuppressedSessionIds.add(input.sessionID);
       // Cancel any pending timer on disable
       cancelPendingTimer(state);
       output.parts.push(
@@ -1087,6 +1152,8 @@ export function createTodoContinuationHook(
     }
 
     // Clear suppress window on explicit re-enable
+    state.autoEnableSuppressedSessionIds.delete(input.sessionID);
+    state.autoEnableSuppressedGlobally = false;
     state.suppressUntil = 0;
 
     log(`[${HOOK_NAME}] Enabled via /${COMMAND_NAME} command`, {
