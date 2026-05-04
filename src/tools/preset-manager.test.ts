@@ -355,7 +355,7 @@ describe('createPresetManager', () => {
 
       const text = getOutputText(output);
       expect(text).toContain('cannot contain spaces');
-      expect(text).toContain('/preset cheap');
+      expect(text).toContain('/ol-preset cheap');
       expect(ctx.client.config.update).not.toHaveBeenCalled();
     });
 
@@ -557,11 +557,12 @@ describe('createPresetManager', () => {
 
       manager.registerCommand(opencodeConfig);
 
-      const command = (opencodeConfig.command as Record<string, unknown>)
-        .preset as { template: string; description: string };
+      const command = (opencodeConfig.command as Record<string, unknown>)[
+        'ol-preset'
+      ] as { template: string; description: string };
       expect(command).toBeDefined();
       expect(command.template).toContain('presets');
-      expect(command.description).toContain('/preset');
+      expect(command.description).toContain('/ol-preset');
     });
 
     test('does not overwrite existing preset command', () => {
@@ -570,14 +571,14 @@ describe('createPresetManager', () => {
       const manager = createPresetManager(ctx, config);
       const existing = { template: 'custom', description: 'custom' };
       const opencodeConfig: Record<string, unknown> = {
-        command: { preset: existing },
+        command: { 'ol-preset': existing },
       };
 
       manager.registerCommand(opencodeConfig);
 
-      expect((opencodeConfig.command as Record<string, unknown>).preset).toBe(
-        existing,
-      );
+      expect(
+        (opencodeConfig.command as Record<string, unknown>)['ol-preset'],
+      ).toBe(existing);
     });
   });
 

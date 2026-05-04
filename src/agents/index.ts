@@ -18,12 +18,10 @@ import { getAgentMcpList } from '../config/agent-mcps';
 // New primary agents
 import { createAtlasAgent } from './atlas';
 import { createBioOrchestratorAgent } from './bio-orchestrator';
-import { createDeepWorkerAgent } from './deep-worker';
-import { createPrometheusAgent } from './prometheus';
-
 // Existing agents
 import { createCouncilAgent } from './council';
 import { createCouncillorAgent } from './councillor';
+import { createDeepWorkerAgent } from './deep-worker';
 import { createDesignerAgent } from './designer';
 import { createExplorerAgent } from './explorer';
 import { createFixerAgent } from './fixer';
@@ -38,6 +36,7 @@ import {
   createOrchestratorAgent,
   resolvePrompt,
 } from './orchestrator';
+import { createPrometheusAgent } from './prometheus';
 import { createReviewerAgent } from './reviewer';
 
 export type { AgentDefinition } from './orchestrator';
@@ -209,7 +208,6 @@ function getAgentToolPermissions(
       return { write: 'deny', edit: 'deny', bash: 'deny' };
     case 'VISUAL':
       return { write: 'deny', edit: 'deny', bash: 'deny' };
-    case 'FULL':
     default:
       return {};
   }
@@ -399,13 +397,10 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
     .filter(([name]) => !disabled.has(name))
     .map(([name, factory]) => {
       const customPrompts = loadAgentPrompt(name, config?.preset);
-      const resolved = getModelForAgent(name) ?? (DEFAULT_MODELS[name] as string);
+      const resolved =
+        getModelForAgent(name) ?? (DEFAULT_MODELS[name] as string);
       const model = Array.isArray(resolved) ? resolved[0] : resolved;
-      return factory(
-        model,
-        customPrompts.prompt,
-        customPrompts.appendPrompt,
-      );
+      return factory(model, customPrompts.prompt, customPrompts.appendPrompt);
     });
 
   // 2b. Discover unknown keys in config.agents as custom subagents.
@@ -635,7 +630,7 @@ export function getAgentConfigs(
         mode: 'subagent',
         hidden: true,
         description:
-          'Upstream plan agent (hidden by openagent-labforge, use prometheus instead)',
+          'Upstream plan agent (hidden by openagent-labforge, use planner instead)',
       },
     ]);
   }

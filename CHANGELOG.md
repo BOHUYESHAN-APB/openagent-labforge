@@ -10,6 +10,23 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.7 - 2026-05-05
+
+### Changed / 变更
+
+- Standardized LabForge slash commands around the `ol-` prefix to reduce
+  collisions with other OpenCode plugins. Primary commands now include
+  `/ol-preset`, `/ol-auto-continue`, `/ol-interview`, `/ol-ralph-loop`,
+  `/ol-cancel-ralph`, and `/ol-stop-continuation`; selected legacy hook command
+  names remain accepted for compatibility.
+- 统一 LabForge 斜杠指令使用 `ol-` 前缀，降低与其他 OpenCode 插件发生指令冲突的概率。主要指令包括 `/ol-preset`、`/ol-auto-continue`、`/ol-interview`、`/ol-ralph-loop`、`/ol-cancel-ralph`、`/ol-stop-continuation`；部分旧的 hook 型无前缀指令仍保留兼容入口。
+
+- Added plain-English agent display names for mythological/internal roles while
+  keeping internal IDs stable: `engineer` (`orchestrator`), `planner`
+  (`prometheus`), `executor` (`atlas`), `bio-analyst` (`bio-orchestrator`),
+  `requirements-analyst` (`metis`), and `plan-reviewer` (`momus`).
+- 为神话名/内部名 agent 增加更易懂的英文显示名，同时保持内部 ID 兼容：`engineer` (`orchestrator`)、`planner` (`prometheus`)、`executor` (`atlas`)、`bio-analyst` (`bio-orchestrator`)、`requirements-analyst` (`metis`)、`plan-reviewer` (`momus`)。
+
 ## v1.0.6 - 2026-05-04
 
 ### Added / 新增

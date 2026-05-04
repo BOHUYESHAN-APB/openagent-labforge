@@ -9,8 +9,10 @@ import { createTodoHygiene } from './todo-hygiene';
 import { detectUserIntent, shouldSkipContinuation } from './user-intent';
 
 const HOOK_NAME = 'todo-continuation';
-const COMMAND_NAME = 'auto-continue';
-const STOP_COMMAND_NAME = 'stop-continuation';
+const COMMAND_NAME = 'ol-auto-continue';
+const LEGACY_COMMAND_NAME = 'auto-continue';
+const STOP_COMMAND_NAME = 'ol-stop-continuation';
+const LEGACY_STOP_COMMAND_NAME = 'stop-continuation';
 const AUTO_ON_ARGS = new Set(['on', 'true', 'enable', 'enabled', 'yes', '1']);
 const AUTO_OFF_ARGS = new Set([
   'off',
@@ -1088,7 +1090,12 @@ export function createTodoContinuationHook(
     },
     output: { parts: Array<{ type: string; text?: string }> },
   ): Promise<void> {
-    if (input.command !== COMMAND_NAME && input.command !== STOP_COMMAND_NAME) {
+    if (
+      input.command !== COMMAND_NAME &&
+      input.command !== LEGACY_COMMAND_NAME &&
+      input.command !== STOP_COMMAND_NAME &&
+      input.command !== LEGACY_STOP_COMMAND_NAME
+    ) {
       return;
     }
 
@@ -1096,7 +1103,10 @@ export function createTodoContinuationHook(
     // first-idle heuristic — slash commands only fire in main chat)
     registerOrchestratorSession(input.sessionID);
 
-    if (input.command === STOP_COMMAND_NAME) {
+    if (
+      input.command === STOP_COMMAND_NAME ||
+      input.command === LEGACY_STOP_COMMAND_NAME
+    ) {
       disableContinuationForSession(
         input.sessionID,
         `/${STOP_COMMAND_NAME} command`,
@@ -1106,17 +1116,17 @@ export function createTodoContinuationHook(
       // hook only hard-stops todo auto-continuation deterministically.
       output.parts.push(
         createInternalAgentTextPart(
-          '[Auto-continue: disabled by /stop-continuation command.]',
+          '[Auto-continue: disabled by /ol-stop-continuation command.]',
         ),
       );
       return;
     }
 
-    // Clear template text — /auto-continue is handled entirely in this hook.
+    // Clear template text — /ol-auto-continue is handled entirely in this hook.
     output.parts.length = 0;
 
     // Accept explicit on/off argument, toggle only when no arg. Unknown
-    // arguments are rejected so commands like `/auto-continue false` never
+    // arguments are rejected so commands like `/ol-auto-continue false` never
     // accidentally toggle auto mode on.
     const arg = input.arguments.trim().toLowerCase();
     let newEnabled: boolean;
@@ -1129,7 +1139,7 @@ export function createTodoContinuationHook(
     } else {
       output.parts.push(
         createInternalAgentTextPart(
-          `[Auto-continue: unknown argument "${arg}". Usage: /auto-continue [on|off].]`,
+          `[Auto-continue: unknown argument "${arg}". Usage: /ol-auto-continue [on|off].]`,
         ),
       );
       return;

@@ -42,7 +42,7 @@ describe('start work hook', () => {
 
     const text = output.parts[0]?.text ?? '';
 
-    expect(text).toContain('No matching Prometheus plan found');
+    expect(text).toContain('No matching planner plan found');
     expect(text).toContain(getProjectPlansDir(workspaceRoot));
     expect(text).not.toContain('/start-work');
   });
@@ -71,7 +71,8 @@ describe('start work hook', () => {
 
     const text = output.parts[0]?.text ?? '';
 
-    expect(text).toContain('@atlas');
+    expect(text).toContain('@executor');
+    expect(text).toContain('internal id: atlas');
     expect(text).toContain('test-plan');
     expect(text).toContain('s1');
     expect(text).not.toContain('/start-work');

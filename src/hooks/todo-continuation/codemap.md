@@ -46,7 +46,7 @@ hosts todo-state hygiene reminders after relevant tool actions.
 
 ### Command path
 
-1. `handleCommandExecuteBefore` intercepts `/auto-continue` before runtime
+1. `handleCommandExecuteBefore` intercepts `/ol-auto-continue` before runtime
    execution.
 2. It toggles enabled state (`on`, `off`, or flip), clears timers as needed,
    and injects a direct status response into output parts.

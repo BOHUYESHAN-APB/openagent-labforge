@@ -1,4 +1,3 @@
-import type { PluginConfig } from '../config';
 import { type AgentDefinition, resolvePrompt } from './orchestrator';
 
 /**
@@ -84,6 +83,7 @@ Use session reuse for follow-up tasks with same specialist.
 
   return {
     name: 'atlas',
+    displayName: 'executor',
     description:
       'Plan executor that coordinates parallel task execution across specialist agents.',
     config: {

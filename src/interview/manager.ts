@@ -28,7 +28,7 @@ import type {
  *
  * 2. **Per-session mode** (default, port=0, dashboard:false):
  *    Upstream behavior. Each process runs its own interview server on a random
- *    port. Lazy startup on first /interview command.
+ *    port. Lazy startup on first /ol-interview command.
  */
 export function createInterviewManager(
   ctx: PluginInput,

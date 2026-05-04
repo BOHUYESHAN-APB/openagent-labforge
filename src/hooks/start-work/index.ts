@@ -40,33 +40,36 @@ export function createStartWorkHook(ctx: PluginInput) {
       ? getProgressForPlan(activeState.active_plan)
       : null;
 
-    let isActivePlan = false;
-    const selectedPlan =
-      activeState && activePlanProgress && !activePlanProgress.isComplete
-        ? ((isActivePlan = true),
-          {
-            name: activeState.plan_name,
-            path: activeState.active_plan,
-            progress: activePlanProgress,
-          })
-        : findPlanFile(workspaceRoot, parsed.planName);
+    const shouldResumeActivePlan = Boolean(
+      activeState && activePlanProgress && !activePlanProgress.isComplete,
+    );
+    let selectedPlan = findPlanFile(workspaceRoot, parsed.planName);
+    if (shouldResumeActivePlan && activeState && activePlanProgress) {
+      selectedPlan = {
+        name: activeState.plan_name,
+        path: activeState.active_plan,
+        modifiedAt: '',
+        progress: activePlanProgress,
+      };
+    }
 
     if (!selectedPlan) {
       output.parts.push({ type: 'text', text: noPlanMessage(workspaceRoot) });
       return;
     }
 
-    const state = isActivePlan
-      ? appendSessionId(
-          { ...activeState!, agent: activeState!.agent || EXECUTOR_AGENT },
-          input.sessionID,
-        )
-      : createBoulderState({
-          planPath: selectedPlan.path,
-          sessionID: input.sessionID,
-          agent: EXECUTOR_AGENT,
-          worktreePath: parsed.worktreePath,
-        });
+    const state =
+      shouldResumeActivePlan && activeState
+        ? appendSessionId(
+            { ...activeState, agent: activeState.agent || EXECUTOR_AGENT },
+            input.sessionID,
+          )
+        : createBoulderState({
+            planPath: selectedPlan.path,
+            sessionID: input.sessionID,
+            agent: EXECUTOR_AGENT,
+            worktreePath: parsed.worktreePath,
+          });
 
     const nextState = parsed.worktreePath
       ? { ...state, worktree_path: parsed.worktreePath }
@@ -130,13 +133,13 @@ function noPlanMessage(workspaceRoot: string): string {
     )
     .join('\n');
 
-  return `## No matching Prometheus plan found
+  return `## No matching planner plan found
 
 Expected plan files under:
 - ${getProjectPlansDir(workspaceRoot)}
 - .sisyphus/plans/ (legacy compatibility)
 
-${planList ? `Available plans:\n${planList}\n\n` : ''}Ask Prometheus to create and save a plan first. The planner must end with:
+${planList ? `Available plans:\n${planList}\n\n` : ''}Ask the planner agent (internal id: prometheus) to create and save a plan first. The planner must end with:
 
 Plan saved to: ${getProjectPlansDir(workspaceRoot)}/<plan-name>.md
 Next command: /ol-start-work <plan-name>`;
@@ -157,10 +160,10 @@ function buildStartWorkContext(input: {
 }): string {
   return `## OL START WORK
 
-You are starting a plan execution session. Use Atlas behavior for execution.
+You are starting a plan execution session. Use executor behavior for execution.
 
 ### Runtime context
-- Executor agent: @atlas
+- Executor agent: @executor (internal id: atlas)
 - Plan name: ${input.planName}
 - Plan file: ${input.planPath}
 - Boulder state: ${input.boulderPath}
@@ -177,5 +180,5 @@ ${input.worktreePath ? `- Worktree path: ${input.worktreePath}\n` : ''}
 7. Use @council only for multi-model consensus/review on high-risk decisions; do not use council as the executor.
 8. Run the final review wave before claiming completion.
 
-If the UI agent selector did not switch automatically, tell the user to switch the visible agent to Atlas, but continue with this injected execution context.`;
+If the UI agent selector did not switch automatically, tell the user to switch the visible agent to executor, but continue with this injected execution context.`;
 }

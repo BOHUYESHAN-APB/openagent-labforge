@@ -39,7 +39,8 @@ import type {
   InterviewState,
 } from './types';
 
-const COMMAND_NAME = 'interview';
+const COMMAND_NAME = 'ol-interview';
+const LEGACY_COMMAND_NAME = 'interview';
 const DEFAULT_MAX_QUESTIONS = 2;
 
 function isTruthyEnvFlag(value: string | undefined): boolean {
@@ -527,9 +528,7 @@ export function createInterviewService(
         path: { id: interview.sessionID },
         body: {
           parts: [createInternalAgentTextPart(prompt)],
-          ...(model
-            ? { model: parseModelReference(model) ?? undefined }
-            : {}),
+          ...(model ? { model: parseModelReference(model) ?? undefined } : {}),
         },
       });
       promptSent = true;
@@ -544,7 +543,10 @@ export function createInterviewService(
     input: { command: string; sessionID: string; arguments: string },
     output: { parts: Array<{ type: string; text?: string }> },
   ): Promise<void> {
-    if (input.command !== COMMAND_NAME) {
+    if (
+      input.command !== COMMAND_NAME &&
+      input.command !== LEGACY_COMMAND_NAME
+    ) {
       return;
     }
 
@@ -557,7 +559,7 @@ export function createInterviewService(
       if (!interview || interview.status !== 'active') {
         output.parts.push(
           createInternalAgentTextPart(
-            'The user ran /interview without an idea. Ask them for the product idea in one sentence.',
+            'The user ran /ol-interview without an idea. Ask them for the product idea in one sentence.',
           ),
         );
         return;
@@ -700,7 +702,7 @@ export function createInterviewService(
 
       items.push({
         fileName: entry,
-        resumeCommand: `/interview ${baseName}`,
+        resumeCommand: `/ol-interview ${baseName}`,
         title,
         summary:
           summary.length > 120 ? `${summary.slice(0, 120)}\u2026` : summary,
@@ -762,9 +764,7 @@ export function createInterviewService(
         path: { id: interview.sessionID },
         body: {
           parts: [createInternalAgentTextPart(prompt)],
-          ...(model
-            ? { model: parseModelReference(model) ?? undefined }
-            : {}),
+          ...(model ? { model: parseModelReference(model) ?? undefined } : {}),
         },
       });
       promptSent = true;

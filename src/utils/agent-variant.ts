@@ -1,4 +1,5 @@
 import {
+  AGENT_ALIASES,
   ALL_AGENT_NAMES,
   getAgentOverride,
   getCustomAgentNames,
@@ -86,6 +87,11 @@ export function resolveRuntimeAgentName(
     return normalized;
   }
 
+  const aliasedName = AGENT_ALIASES[normalized];
+  if (aliasedName) {
+    return aliasedName;
+  }
+
   for (const internalName of getRuntimeAgentNames(config)) {
     const displayName = getAgentOverride(config, internalName)?.displayName;
     if (!displayName) {
@@ -109,7 +115,19 @@ export type DisplayNameMentionRewriter = (text: string) => string;
 export function createDisplayNameMentionRewriter(
   config: PluginConfig | undefined,
 ): DisplayNameMentionRewriter {
-  const replacements: Array<{ regex: RegExp; internalName: string }> = [];
+  const replacementsByDisplayName = new Map<string, string>();
+
+  for (const [displayName, internalName] of Object.entries(AGENT_ALIASES)) {
+    if (displayName === internalName) {
+      continue;
+    }
+
+    if (!getRuntimeAgentNames(config).includes(internalName)) {
+      continue;
+    }
+
+    replacementsByDisplayName.set(displayName, internalName);
+  }
 
   for (const internalName of getRuntimeAgentNames(config)) {
     const displayName = getAgentOverride(config, internalName)?.displayName;
@@ -122,14 +140,15 @@ export function createDisplayNameMentionRewriter(
       continue;
     }
 
-    replacements.push({
-      regex: new RegExp(
-        `(^|[^\\w.])@${escapeRegExp(normalizedDisplayName)}\\b`,
-        'g',
-      ),
-      internalName,
-    });
+    replacementsByDisplayName.set(normalizedDisplayName, internalName);
   }
+
+  const replacements = [...replacementsByDisplayName.entries()].map(
+    ([displayName, internalName]) => ({
+      regex: new RegExp(`(^|[^\\w.])@${escapeRegExp(displayName)}\\b`, 'g'),
+      internalName,
+    }),
+  );
 
   if (replacements.length === 0) {
     return (text) => text;

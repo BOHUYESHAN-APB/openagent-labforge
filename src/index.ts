@@ -212,7 +212,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     ensureGlobalPluginConfigFile();
     config = loadPluginConfig(ctx.directory);
 
-    // Safety net: if a runtime preset was set via /preset command and
+    // Safety net: if a runtime preset was set via /ol-preset command and
     // OpenCode ever fully re-runs the plugin function (not just the
     // config() hook), override config.preset so agents are created with
     // the correct models. Currently only the config() hook re-runs after
@@ -635,7 +635,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         }
       }
 
-      // Runtime preset override: if /preset switched to a runtime preset,
+      // Runtime preset override: if /ol-preset switched to a runtime preset,
       // override the model/variant/temperature from the preset's agent
       // config. This runs after the normal model resolution because the
       // config() hook re-runs with stale modelArrayMap after dispose(),
@@ -805,17 +805,19 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         agentConfigEntry.permission = agentPermission;
       }
 
-      // Register /auto-continue command so OpenCode recognizes it.
+      // Register /ol-auto-continue command so OpenCode recognizes it.
       // Actual handling is done by command.execute.before hook below
       // (no LLM round-trip — injected directly into output.parts).
       const configCommand = opencodeConfig.command as
         | Record<string, unknown>
         | undefined;
-      if (!configCommand?.['auto-continue']) {
+      if (!configCommand?.['ol-auto-continue']) {
         if (!opencodeConfig.command) {
           opencodeConfig.command = {};
         }
-        (opencodeConfig.command as Record<string, unknown>)['auto-continue'] = {
+        (opencodeConfig.command as Record<string, unknown>)[
+          'ol-auto-continue'
+        ] = {
           template: 'Call the auto_continue tool with enabled=true',
           description:
             'Enable auto-continuation — orchestrator keeps working through incomplete todos',
@@ -893,30 +895,31 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         };
       }
 
-      // Register workflow commands (/ol-start-work, /ralph-loop, /cancel-ralph, /stop-continuation)
+      // Register workflow commands (/ol-start-work, /ol-ralph-loop, /ol-cancel-ralph, /ol-stop-continuation)
       if (!configCommand?.['ol-start-work']) {
         (opencodeConfig.command as Record<string, unknown>)['ol-start-work'] = {
           template: START_WORK_TEMPLATE,
-          description: 'Start work session from Prometheus plan',
+          description: 'Start work session from planner-saved plan',
           argumentHint: '[plan-name] [--worktree <path>]',
         };
       }
-      if (!configCommand?.['ralph-loop']) {
-        (opencodeConfig.command as Record<string, unknown>)['ralph-loop'] = {
+      if (!configCommand?.['ol-ralph-loop']) {
+        (opencodeConfig.command as Record<string, unknown>)['ol-ralph-loop'] = {
           template: RALPH_LOOP_TEMPLATE,
           description: 'Start self-referential loop until task completion',
           argumentHint: '"task description" [--max-iterations=N]',
         };
       }
-      if (!configCommand?.['cancel-ralph']) {
-        (opencodeConfig.command as Record<string, unknown>)['cancel-ralph'] = {
-          template: CANCEL_RALPH_TEMPLATE,
-          description: 'Cancel active Ralph Loop',
-        };
+      if (!configCommand?.['ol-cancel-ralph']) {
+        (opencodeConfig.command as Record<string, unknown>)['ol-cancel-ralph'] =
+          {
+            template: CANCEL_RALPH_TEMPLATE,
+            description: 'Cancel active Ralph Loop',
+          };
       }
-      if (!configCommand?.['stop-continuation']) {
+      if (!configCommand?.['ol-stop-continuation']) {
         (opencodeConfig.command as Record<string, unknown>)[
-          'stop-continuation'
+          'ol-stop-continuation'
         ] = {
           template: STOP_CONTINUATION_TEMPLATE,
           description: 'Stop all continuation mechanisms for current session',
@@ -1025,7 +1028,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       );
     },
 
-    // Direct interception of /auto-continue command — bypasses LLM
+    // Direct interception of /ol-auto-continue command — bypasses LLM
     // round-trip
     'command.execute.before': async (input, output) => {
       await todoContinuationHook.handleCommandExecuteBefore(

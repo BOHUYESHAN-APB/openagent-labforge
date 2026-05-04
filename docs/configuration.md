@@ -85,7 +85,7 @@ All config files support **JSONC** (JSON with Comments):
 
 ### Runtime Preset Switching
 
-Presets can also be switched at runtime without restarting using the `/preset` command. See [Preset Switching](preset-switching.md) for details.
+Presets can also be switched at runtime without restarting using the `/ol-preset` command. See [Preset Switching](preset-switching.md) for details.
 
 | `presets` | object | — | Named preset configurations |
 |-----------|--------|---|-----------------------------|

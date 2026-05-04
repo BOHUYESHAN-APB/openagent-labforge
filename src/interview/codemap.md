@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-- Implement the `/interview` command flow:
+- Implement the `/ol-interview` command flow:
   - command registration and pre-exec interception,
   - interactive stateful interview prompts,
   - markdown document generation/persistence,

@@ -142,7 +142,7 @@ export function renderDashboardPage(
               ? 'status-file'
               : `status-${item.status}`;
             const resumeHint = isDisconnected
-              ? `<div class="resume-row" style="margin-top:8px"><code class="resume-cmd">/interview ${escapeHtml(item.resumeSlug)}</code><button class="copy-btn" data-cmd="/interview ${escapeHtml(item.resumeSlug)}" title="Copy command">Copy</button></div>`
+              ? `<div class="resume-row" style="margin-top:8px"><code class="resume-cmd">/ol-interview ${escapeHtml(item.resumeSlug)}</code><button class="copy-btn" data-cmd="/ol-interview ${escapeHtml(item.resumeSlug)}" title="Copy command">Copy</button></div>`
               : '';
             return `<a class="interview-card" href="${escapeHtml(item.url)}">
           <div class="card-header">
@@ -194,7 +194,7 @@ export function renderDashboardPage(
   const totalCount = interviews.length + unrecoveredFiles.length;
   const emptyState =
     totalCount === 0
-      ? '<p class="muted" style="text-align:center;padding:48px 0">No interviews yet. Start one with <code>/interview</code> in your OpenCode session.</p>'
+      ? '<p class="muted" style="text-align:center;padding:48px 0">No interviews yet. Start one with <code>/ol-interview</code> in your OpenCode session.</p>'
       : '';
 
   const activeSection =
@@ -376,7 +376,7 @@ export function renderDashboardPage(
       </div>
       <div class="info-box">
         <strong>Interviews</strong> — live sessions and recovered files. State is pushed from OpenCode sessions to this dashboard.<br>
-        <strong>Files without session</strong> — <code>.md</code> files in <code>${escapeHtml(outputFolder)}</code> with no frontmatter. Resume with <code>/interview &lt;name&gt;</code>.
+        <strong>Files without session</strong> — <code>.md</code> files in <code>${escapeHtml(outputFolder)}</code> with no frontmatter. Resume with <code>/ol-interview &lt;name&gt;</code>.
       </div>
       <details style="margin-bottom:24px">
         <summary style="cursor:pointer;font-size:13px;color:rgba(255,255,255,0.4);user-select:none">Settings</summary>
@@ -1503,7 +1503,7 @@ export function renderInterviewPage(
           var showResume = data.mode === 'session-disconnected';
           resumeRow.style.display = showResume ? 'flex' : 'none';
          if (showResume) {
-             document.getElementById('resumeCmd').textContent = '/interview ' + resumeSlug;
+             document.getElementById('resumeCmd').textContent = '/ol-interview ' + resumeSlug;
           }
         }
 

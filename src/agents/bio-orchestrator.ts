@@ -164,6 +164,7 @@ Launch multiple agents in parallel when tasks are independent.
 
   return {
     name: 'bio-orchestrator',
+    displayName: 'bio-analyst',
     description:
       'Bioinformatics specialist orchestrator for genomics, proteomics, and computational biology tasks.',
     config: {

@@ -1,4 +1,4 @@
-export const START_WORK_TEMPLATE = `You are starting an OpenAgent Labforge work session from a Prometheus plan.
+export const START_WORK_TEMPLATE = `You are starting an OpenAgent Labforge work session from a planner-saved plan.
 
 ## COMMAND
 
@@ -12,9 +12,9 @@ The command hook should have:
 2. Created or updated .opencode/openagent-labforge/boulder.json.
 3. Appended the current session ID to boulder state.
 4. Injected the selected plan path, progress, and executor context.
-5. Selected Atlas as the execution agent when the host supports backend switching.
+5. Selected the executor agent (display name: executor, internal id: atlas) when the host supports backend switching.
 
-If the hook reports no matching plan, do not invent work. Ask the user to ask Prometheus to create a saved plan first.
+If the hook reports no matching plan, do not invent work. Ask the user to ask the planner agent (internal id: prometheus) to create a saved plan first.
 
 ## EXECUTION CONTRACT
 
@@ -60,4 +60,4 @@ When working in a worktree and ALL plan tasks are complete:
 - Do not stop just because one wave is complete if plan checkboxes remain unchecked.
 - Do not mark a plan checkbox [x] until the task is verified.
 - Do not claim completion without evidence.
-- If the visible UI agent did not switch to Atlas, tell the user to switch it manually, but continue following this injected execution context.`;
+- If the visible UI agent did not switch to executor, tell the user to switch it manually, but continue following this injected execution context.`;

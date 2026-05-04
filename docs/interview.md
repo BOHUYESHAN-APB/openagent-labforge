@@ -1,17 +1,17 @@
 # Interview
 
-`/interview` opens a local browser UI for refining a feature idea inside the same OpenCode session.
+`/ol-interview` opens a local browser UI for refining a feature idea inside the same OpenCode session.
 
 Use it when chat feels too loose and you want a cleaner question/answer flow plus a markdown spec saved in your repo.
 
-> Tip: `/interview` usually works well with a fast model. If the flow feels slower than it should, switch models in OpenCode with `Ctrl+X`, then `m`, and pick a faster one.
+> Tip: `/ol-interview` usually works well with a fast model. If the flow feels slower than it should, switch models in OpenCode with `Ctrl+X`, then `m`, and pick a faster one.
 
 ## Quick start
 
 Start a new interview:
 
 ```text
-/interview build a kanban app for design teams
+/ol-interview build a kanban app for design teams
 ```
 
 What happens:
@@ -33,13 +33,13 @@ And the browser UI looks like this:
 Resume an existing interview:
 
 ```text
-/interview interview/kanban-design-tool.md
+/ol-interview interview/kanban-design-tool.md
 ```
 
 You can also resume by basename if it exists in the configured output folder:
 
 ```text
-/interview kanban-design-tool
+/ol-interview kanban-design-tool
 ```
 
 ## What the browser UI gives you
@@ -142,7 +142,7 @@ When `port` is `0` (or unset) and `dashboard` is `false` (or unset), each OpenCo
 ```
 
 - one interview server per OpenCode process
-- server starts lazily on first `/interview` command
+- server starts lazily on first `/ol-interview` command
 - random port assigned by the OS
 - all state is local to the session
 
@@ -199,7 +199,7 @@ Any OpenCode process can become the dashboard. The first process to bind the con
 
 #### Session registration
 
-Sessions register their project directory with the dashboard so it knows where to scan for interview files. This happens automatically on first `/interview` command or session event — no manual setup needed.
+Sessions register their project directory with the dashboard so it knows where to scan for interview files. This happens automatically on first `/ol-interview` command or session event — no manual setup needed.
 
 The dashboard also scans your home directory's output folder by default, so interviews created from a home-directory OpenCode session are always visible.
 

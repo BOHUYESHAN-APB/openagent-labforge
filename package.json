@@ -1,6 +1,6 @@
 {
   "name": "openagent-labforge",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Lightweight agent orchestration plugin for OpenCode with Bio Skills and advanced memory management",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

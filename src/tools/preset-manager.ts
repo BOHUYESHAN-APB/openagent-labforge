@@ -13,10 +13,11 @@ import {
 } from '../config/runtime-preset';
 import { createInternalAgentTextPart } from '../utils';
 
-const COMMAND_NAME = 'preset';
+const COMMAND_NAME = 'ol-preset';
+const LEGACY_COMMAND_NAME = 'preset';
 
 /**
- * Creates a preset manager for the /preset slash command.
+ * Creates a preset manager for the /ol-preset slash command.
  *
  * Uses the OpenCode SDK's client.config.update() to change agent models
  * and temperatures without restarting. The server invalidates its agent
@@ -24,7 +25,7 @@ const COMMAND_NAME = 'preset';
  *
  * Note: activePreset is tracked in-memory only and resets on plugin reload.
  * If the user manually edits config or another mechanism changes agents,
- * this tracker may become stale until the next /preset call.
+ * this tracker may become stale until the next /ol-preset call.
  */
 export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
   // Sync from module-level state in case of plugin re-init — the runtime
@@ -33,7 +34,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
     getActiveRuntimePreset() ?? config.preset ?? null;
 
   /**
-   * Handle the /preset command from command.execute.before hook.
+   * Handle the /ol-preset command from command.execute.before hook.
    *
    * - No arguments: list available presets
    * - With argument: switch to the named preset
@@ -46,7 +47,10 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
     },
     output: { parts: Array<{ type: string; text?: string }> },
   ): Promise<void> {
-    if (input.command !== COMMAND_NAME) {
+    if (
+      input.command !== COMMAND_NAME &&
+      input.command !== LEGACY_COMMAND_NAME
+    ) {
       return;
     }
 
@@ -67,7 +71,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       const suggestion = arg.split(/\s+/)[0];
       output.parts.push(
         createInternalAgentTextPart(
-          `Preset names cannot contain spaces. Did you mean: /preset ${suggestion}?`,
+          `Preset names cannot contain spaces. Did you mean: /ol-preset ${suggestion}?`,
         ),
       );
       return;
@@ -78,7 +82,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
   }
 
   /**
-   * Register the /preset command in the OpenCode config.
+   * Register the /ol-preset command in the OpenCode config.
    */
   function registerCommand(opencodeConfig: Record<string, unknown>): void {
     const configCommand = opencodeConfig.command as
@@ -91,7 +95,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       (opencodeConfig.command as Record<string, unknown>)[COMMAND_NAME] = {
         template: 'List available presets and switch between them',
         description:
-          'Switch agent presets at runtime (e.g., /preset cheap, /preset powerful)',
+          'Switch agent presets at runtime (e.g., /ol-preset cheap, /ol-preset powerful)',
       };
     }
   }
@@ -306,7 +310,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       lines.push(`  ${name}${marker}`);
       lines.push(models);
     }
-    lines.push('\nUsage: /preset <name> to switch.');
+    lines.push('\nUsage: /ol-preset <name> to switch.');
 
     return lines.join('\n');
   }

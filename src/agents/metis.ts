@@ -1,4 +1,3 @@
-import type { PluginConfig } from '../config';
 import { type AgentDefinition, resolvePrompt } from './orchestrator';
 
 /**
@@ -81,6 +80,7 @@ Present findings as:
 
   return {
     name: 'metis',
+    displayName: 'requirements-analyst',
     description:
       'Pre-planning consultant who analyzes requirements for gaps, ambiguities, and potential failure points.',
     config: {

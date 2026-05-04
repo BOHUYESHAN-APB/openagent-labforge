@@ -1,34 +1,40 @@
 // Agent names
 export const AGENT_ALIASES: Record<string, string> = {
-  explore: "explorer",
-  "frontend-ui-ux-engineer": "designer",
+  engineer: 'orchestrator',
+  explore: 'explorer',
+  'frontend-ui-ux-engineer': 'designer',
+  planner: 'prometheus',
+  executor: 'atlas',
+  'bio-analyst': 'bio-orchestrator',
+  'requirements-analyst': 'metis',
+  'plan-reviewer': 'momus',
 };
 
 export const SUBAGENT_NAMES = [
-  "explorer",
-  "librarian",
-  "oracle",
-  "designer",
-  "fixer",
-  "observer",
-  "council",
-  "councillor",
+  'explorer',
+  'librarian',
+  'oracle',
+  'designer',
+  'fixer',
+  'observer',
+  'council',
+  'councillor',
   // New subagents from Omo/OLD-2
-  "metis",
-  "momus",
-  "multimodal-looker",
-  "reviewer",
+  'metis',
+  'momus',
+  'multimodal-looker',
+  'reviewer',
 ] as const;
 
-export const ORCHESTRATOR_NAME = "orchestrator" as const;
+export const ORCHESTRATOR_NAME = 'orchestrator' as const;
 
 // Primary agents (visible in UI)
 export const PRIMARY_AGENT_NAMES = [
-  "orchestrator",
-  "deep-worker",
-  "prometheus",
-  "atlas",
-  "bio-orchestrator",
+  'orchestrator',
+  'deep-worker',
+  'prometheus',
+  'atlas',
+  'bio-orchestrator',
 ] as const;
 
 export const ALL_AGENT_NAMES = [
@@ -52,29 +58,29 @@ export type AgentName = (typeof ALL_AGENT_NAMES)[number];
 // Which agents each agent type can spawn via delegation.
 // councillor is internal — only CouncilManager spawns it.
 export const ORCHESTRATABLE_AGENTS = [
-  "explorer",
-  "librarian",
-  "oracle",
-  "designer",
-  "fixer",
-  "observer",
-  "council",
+  'explorer',
+  'librarian',
+  'oracle',
+  'designer',
+  'fixer',
+  'observer',
+  'council',
   // New subagents
-  "metis",
-  "momus",
-  "multimodal-looker",
-  "reviewer",
+  'metis',
+  'momus',
+  'multimodal-looker',
+  'reviewer',
 ] as const;
 
 /** Agents that cannot be disabled even if listed in disabled_agents config. */
 export const PROTECTED_AGENTS = new Set([
-  "orchestrator",
-  "councillor",
+  'orchestrator',
+  'councillor',
   // Primary agents are protected
-  "deep-worker",
-  "prometheus",
-  "atlas",
-  "bio-orchestrator",
+  'deep-worker',
+  'prometheus',
+  'atlas',
+  'bio-orchestrator',
 ]);
 
 /**
@@ -82,17 +88,17 @@ export const PROTECTED_AGENTS = new Set([
  * This is used for delegation validation at runtime.
  */
 export function getOrchestratableAgents(
-  disabledAgents?: Set<string>
+  disabledAgents?: Set<string>,
 ): string[] {
   return ORCHESTRATABLE_AGENTS.filter((name) => !disabledAgents?.has(name));
 }
 
 export const SUBAGENT_DELEGATION_RULES: Record<AgentName, readonly string[]> = {
   orchestrator: ORCHESTRATABLE_AGENTS,
-  "deep-worker": ["explorer", "librarian", "oracle"],
+  'deep-worker': ['explorer', 'librarian', 'oracle'],
   prometheus: [], // Planner cannot spawn subagents
-  atlas: ["explorer", "librarian", "oracle", "fixer"],
-  "bio-orchestrator": ORCHESTRATABLE_AGENTS,
+  atlas: ['explorer', 'librarian', 'oracle', 'fixer'],
+  'bio-orchestrator': ORCHESTRATABLE_AGENTS,
   fixer: [],
   designer: [],
   explorer: [],
@@ -103,7 +109,7 @@ export const SUBAGENT_DELEGATION_RULES: Record<AgentName, readonly string[]> = {
   councillor: [],
   metis: [],
   momus: [],
-  "multimodal-looker": [],
+  'multimodal-looker': [],
   reviewer: [],
 };
 
@@ -112,24 +118,24 @@ export const SUBAGENT_DELEGATION_RULES: Record<AgentName, readonly string[]> = {
 export const DEFAULT_MODELS: Record<AgentName, string | undefined> = {
   // Primary agents
   orchestrator: undefined,
-  "deep-worker": undefined,
-  prometheus: "openai/gpt-5.5",
-  atlas: "openai/gpt-5.5",
-  "bio-orchestrator": undefined,
+  'deep-worker': undefined,
+  prometheus: 'openai/gpt-5.5',
+  atlas: 'openai/gpt-5.5',
+  'bio-orchestrator': undefined,
   // Subagents
-  oracle: "openai/gpt-5.5",
-  librarian: "openai/gpt-5.4-mini",
-  explorer: "openai/gpt-5.4-mini",
-  designer: "openai/gpt-5.4-mini",
-  fixer: "openai/gpt-5.4-mini",
-  observer: "openai/gpt-5.4-mini",
-  council: "openai/gpt-5.4-mini",
-  councillor: "openai/gpt-5.4-mini",
+  oracle: 'openai/gpt-5.5',
+  librarian: 'openai/gpt-5.4-mini',
+  explorer: 'openai/gpt-5.4-mini',
+  designer: 'openai/gpt-5.4-mini',
+  fixer: 'openai/gpt-5.4-mini',
+  observer: 'openai/gpt-5.4-mini',
+  council: 'openai/gpt-5.4-mini',
+  councillor: 'openai/gpt-5.4-mini',
   // New subagents
-  metis: "openai/gpt-5.4-mini",
-  momus: "openai/gpt-5.5",
-  "multimodal-looker": "openai/gpt-5.4-mini",
-  reviewer: "openai/gpt-5.5",
+  metis: 'openai/gpt-5.4-mini',
+  momus: 'openai/gpt-5.5',
+  'multimodal-looker': 'openai/gpt-5.4-mini',
+  reviewer: 'openai/gpt-5.5',
 };
 
 // Polling configuration
@@ -161,4 +167,4 @@ export const STABLE_POLLS_THRESHOLD = 3;
 
 /** Agents that are disabled by default. Users must explicitly enable them
  *  by removing from disabled_agents and configuring an appropriate model. */
-export const DEFAULT_DISABLED_AGENTS: string[] = ["observer"];
+export const DEFAULT_DISABLED_AGENTS: string[] = ['observer'];

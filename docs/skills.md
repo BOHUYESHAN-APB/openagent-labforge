@@ -1,8 +1,19 @@
 # Skills
 
-Skills are specialized capabilities you can assign to agents. Unlike MCPs (which are running servers), skills are **prompt-based tool configurations** — instructions injected into an agent's system prompt that describe how to use a particular tool.
+Skills are specialized prompt-guidance packages you can assign to agents or load
+on demand. Unlike MCPs, which are running servers, skills are instruction bundles
+that change **how an agent approaches a task**.
 
-Skills are installed via the `oh-my-opencode-slim` installer or manually with `npx skills add`.
+Skills are not the same as `/ol-preset` runtime model presets:
+
+| Concept | Example | Effect |
+|---------|---------|--------|
+| Runtime preset | `/ol-preset powerful` | Changes agent models/providers/settings |
+| Skill / guidance | `/ol-karpathy` or `karpathy-guidelines` | Changes task behavior and review criteria |
+
+OpenAgent LabForge bundles several skills locally. Some can also be installed or
+managed through the OpenCode/skills ecosystem, but the bundled skills below ship
+with this plugin.
 
 ---
 
@@ -18,8 +29,33 @@ Skills are installed via the `oh-my-opencode-slim` installer or manually with `n
 
 | Skill | Description | Assigned to by default |
 |-------|-------------|----------------------|
+| [`karpathy-guidelines`](#karpathy-guidelines) | Coding behavior guardrails: think first, keep changes simple, edit surgically, verify goals | On demand via `/ol-karpathy` or skill loading |
 | [`simplify`](#simplify) | Behavior-preserving code simplification | `oracle` |
 | [`codemap`](#codemap) | Repository codemap generation | `orchestrator` |
+
+---
+
+## karpathy-guidelines
+
+**Behavioral coding guidelines migrated from
+[andrej-karpathy-skills](https://github.com/vtroisWhite/andrej-karpathy-skills).**
+
+`karpathy-guidelines` is a bundled skill for reducing common LLM coding mistakes:
+
+1. Think before coding — surface assumptions and ambiguity before editing.
+2. Simplicity first — avoid speculative features and unnecessary abstractions.
+3. Surgical changes — only touch lines required by the user request.
+4. Goal-driven execution — define success criteria and verify them.
+
+There are two ways to use it:
+
+| Method | Use when |
+|--------|----------|
+| `/ol-karpathy [task-or-review-target]` | You want a user-facing prompt command to apply the guidelines to the current task or review |
+| `skill(name="karpathy-guidelines")` | An agent or orchestrator workflow explicitly loads skills |
+
+This skill does **not** switch models or presets. Use `/ol-preset` for runtime model
+configuration.
 
 ---
 

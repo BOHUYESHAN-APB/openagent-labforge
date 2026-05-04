@@ -7,7 +7,7 @@ Auto-continue the orchestrator when it stops with incomplete todos. Opt-in only 
 | Tool / Command | Description |
 |----------------|-------------|
 | `auto_continue` | Toggle auto-continuation. Call with `{ enabled: true }` to activate, `{ enabled: false }` to disable |
-| `/auto-continue` | Slash command shortcut. Accepts `on`, `off`, or toggles with no argument |
+| `/ol-auto-continue` | Slash command shortcut. Accepts `on`, `off`, or toggles with no argument. Legacy `/auto-continue` is accepted by the hook but not registered as the primary command |
 
 ## How It Works
 

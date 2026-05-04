@@ -1968,7 +1968,7 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts).toHaveLength(0);
     });
 
-    test('/auto-continue enables and injects continuation when incomplete todos', async () => {
+    test('/ol-auto-continue enables and injects continuation when incomplete todos', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -1985,7 +1985,11 @@ describe('createTodoContinuationHook', () => {
       const output = { parts: [] as Array<{ type: string; text?: string }> };
 
       await hook.handleCommandExecuteBefore(
-        { command: 'auto-continue', sessionID: 'session-123', arguments: '' },
+        {
+          command: 'ol-auto-continue',
+          sessionID: 'session-123',
+          arguments: '',
+        },
         output,
       );
 
@@ -1996,7 +2000,7 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain(SLIM_INTERNAL_INITIATOR_MARKER);
     });
 
-    test('/auto-continue enables but no continuation when all todos complete', async () => {
+    test('/ol-auto-continue enables but no continuation when all todos complete', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2013,7 +2017,11 @@ describe('createTodoContinuationHook', () => {
       const output = { parts: [] as Array<{ type: string; text?: string }> };
 
       await hook.handleCommandExecuteBefore(
-        { command: 'auto-continue', sessionID: 'session-123', arguments: '' },
+        {
+          command: 'ol-auto-continue',
+          sessionID: 'session-123',
+          arguments: '',
+        },
         output,
       );
 
@@ -2021,7 +2029,7 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain('No incomplete todos right now');
     });
 
-    test('/auto-continue toggles off when already enabled', async () => {
+    test('/ol-auto-continue toggles off when already enabled', async () => {
       const ctx = createMockContext();
       const hook = createTodoContinuationHook(ctx);
       const output = { parts: [] as Array<{ type: string; text?: string }> };
@@ -2031,7 +2039,11 @@ describe('createTodoContinuationHook', () => {
 
       // Toggle off via command
       await hook.handleCommandExecuteBefore(
-        { command: 'auto-continue', sessionID: 'session-123', arguments: '' },
+        {
+          command: 'ol-auto-continue',
+          sessionID: 'session-123',
+          arguments: '',
+        },
         output,
       );
 
@@ -2039,7 +2051,7 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain('disabled by user command');
     });
 
-    test('/auto-continue false explicitly disables without toggling', async () => {
+    test('/ol-auto-continue false explicitly disables without toggling', async () => {
       const ctx = createMockContext();
       const hook = createTodoContinuationHook(ctx);
       const output = { parts: [] as Array<{ type: string; text?: string }> };
@@ -2048,7 +2060,7 @@ describe('createTodoContinuationHook', () => {
 
       await hook.handleCommandExecuteBefore(
         {
-          command: 'auto-continue',
+          command: 'ol-auto-continue',
           sessionID: 'session-123',
           arguments: 'false',
         },
@@ -2059,7 +2071,7 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain('disabled by user command');
     });
 
-    test('/auto-continue rejects unknown arguments without changing state', async () => {
+    test('/ol-auto-continue rejects unknown arguments without changing state', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2078,7 +2090,7 @@ describe('createTodoContinuationHook', () => {
       await hook.tool.auto_continue.execute({ enabled: true });
       await hook.handleCommandExecuteBefore(
         {
-          command: 'auto-continue',
+          command: 'ol-auto-continue',
           sessionID: 'session-123',
           arguments: 'maybe',
         },
@@ -2087,7 +2099,9 @@ describe('createTodoContinuationHook', () => {
 
       expect(output.parts).toHaveLength(1);
       expect(output.parts[0].text).toContain('unknown argument "maybe"');
-      expect(output.parts[0].text).toContain('Usage: /auto-continue [on|off]');
+      expect(output.parts[0].text).toContain(
+        'Usage: /ol-auto-continue [on|off]',
+      );
       expect(output.parts[0].text).not.toContain(
         '[Auto-continue: enabled for this work batch',
       );
@@ -2102,7 +2116,7 @@ describe('createTodoContinuationHook', () => {
       expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
-    test('/stop-continuation hard-disables auto continuation', async () => {
+    test('/ol-stop-continuation hard-disables auto continuation', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2129,7 +2143,7 @@ describe('createTodoContinuationHook', () => {
       await hook.tool.auto_continue.execute({ enabled: true });
       await hook.handleCommandExecuteBefore(
         {
-          command: 'stop-continuation',
+          command: 'ol-stop-continuation',
           sessionID: 'session-123',
           arguments: '',
         },
@@ -2145,12 +2159,12 @@ describe('createTodoContinuationHook', () => {
 
       expect(output.parts).toHaveLength(1);
       expect(output.parts[0].text).toContain(
-        'disabled by /stop-continuation command',
+        'disabled by /ol-stop-continuation command',
       );
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
-    test('/stop-continuation preserves template output for broader cleanup', async () => {
+    test('/ol-stop-continuation preserves template output for broader cleanup', async () => {
       const ctx = createMockContext();
       const hook = createTodoContinuationHook(ctx);
       const output = {
@@ -2164,7 +2178,7 @@ describe('createTodoContinuationHook', () => {
 
       await hook.handleCommandExecuteBefore(
         {
-          command: 'stop-continuation',
+          command: 'ol-stop-continuation',
           sessionID: 'session-123',
           arguments: '',
         },
@@ -2176,11 +2190,11 @@ describe('createTodoContinuationHook', () => {
         'Stop all continuation mechanisms',
       );
       expect(output.parts[1].text).toContain(
-        'disabled by /stop-continuation command',
+        'disabled by /ol-stop-continuation command',
       );
     });
 
-    test('/stop-continuation prevents autoEnable from re-enabling the session', async () => {
+    test('/ol-stop-continuation prevents autoEnable from re-enabling the session', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2210,7 +2224,7 @@ describe('createTodoContinuationHook', () => {
 
       await hook.handleCommandExecuteBefore(
         {
-          command: 'stop-continuation',
+          command: 'ol-stop-continuation',
           sessionID: 'session-123',
           arguments: '',
         },
@@ -2225,7 +2239,7 @@ describe('createTodoContinuationHook', () => {
       await delay(60);
 
       expect(output.parts[0].text).toContain(
-        'disabled by /stop-continuation command',
+        'disabled by /ol-stop-continuation command',
       );
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
@@ -2269,7 +2283,7 @@ describe('createTodoContinuationHook', () => {
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
-    test('/auto-continue on clears legacy global autoEnable suppression', async () => {
+    test('/ol-auto-continue on clears legacy global autoEnable suppression', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2290,7 +2304,7 @@ describe('createTodoContinuationHook', () => {
       await hook.tool.auto_continue.execute({ enabled: false });
       await hook.handleCommandExecuteBefore(
         {
-          command: 'auto-continue',
+          command: 'ol-auto-continue',
           sessionID: 'session-123',
           arguments: 'on',
         },
@@ -2303,7 +2317,7 @@ describe('createTodoContinuationHook', () => {
       );
     });
 
-    test('/auto-continue on clears stop-continuation suppression', async () => {
+    test('/ol-auto-continue on clears stop-continuation suppression', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2326,7 +2340,7 @@ describe('createTodoContinuationHook', () => {
 
       await hook.handleCommandExecuteBefore(
         {
-          command: 'stop-continuation',
+          command: 'ol-stop-continuation',
           sessionID: 'session-123',
           arguments: '',
         },
@@ -2334,7 +2348,7 @@ describe('createTodoContinuationHook', () => {
       );
       await hook.handleCommandExecuteBefore(
         {
-          command: 'auto-continue',
+          command: 'ol-auto-continue',
           sessionID: 'session-123',
           arguments: 'on',
         },
@@ -2347,7 +2361,7 @@ describe('createTodoContinuationHook', () => {
       );
     });
 
-    test('/auto-continue resets consecutive continuations on toggle', async () => {
+    test('/ol-auto-continue resets consecutive continuations on toggle', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -2408,7 +2422,7 @@ describe('createTodoContinuationHook', () => {
       );
     });
 
-    test('/auto-continue with todo fetch failure → enables without continuation', async () => {
+    test('/ol-auto-continue with todo fetch failure → enables without continuation', async () => {
       const ctx = createMockContext();
       ctx.client.session.todo = mock(async () => {
         throw new Error('Network error');
@@ -3115,7 +3129,7 @@ describe('createTodoContinuationHook', () => {
         // Enable via tool
         await hook.tool.auto_continue.execute({ enabled: true });
 
-        // /auto-continue on → should KEEP enabled (not toggle to off)
+        // /ol-auto-continue on → should KEEP enabled (not toggle to off)
         const output = {
           parts: [] as Array<{ type: string; text?: string }>,
         };

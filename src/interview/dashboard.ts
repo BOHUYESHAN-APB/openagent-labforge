@@ -401,7 +401,7 @@ export function createDashboardServer(config: DashboardConfig): {
 
         items.push({
           fileName: entry,
-          resumeCommand: `/interview ${baseName}`,
+          resumeCommand: `/ol-interview ${baseName}`,
           title,
           summary:
             summary.length > 120 ? `${summary.slice(0, 120)}\u2026` : summary,

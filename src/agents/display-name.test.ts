@@ -184,6 +184,44 @@ describe('displayName', () => {
     expect(sdkConfigs.orchestrator.hidden).toBe(true);
   });
 
+  test('exposes default plain-English names for primary agents', () => {
+    const sdkConfigs = getAgentConfigs() as Record<
+      string,
+      { hidden?: boolean; mode?: string }
+    >;
+
+    expect(sdkConfigs.engineer).toBeDefined();
+    expect(sdkConfigs.engineer.mode).toBe('primary');
+    expect(sdkConfigs.orchestrator.hidden).toBe(true);
+
+    expect(sdkConfigs.planner).toBeDefined();
+    expect(sdkConfigs.planner.mode).toBe('primary');
+    expect(sdkConfigs.prometheus.hidden).toBe(true);
+
+    expect(sdkConfigs.executor).toBeDefined();
+    expect(sdkConfigs.executor.mode).toBe('primary');
+    expect(sdkConfigs.atlas.hidden).toBe(true);
+
+    expect(sdkConfigs['bio-analyst']).toBeDefined();
+    expect(sdkConfigs['bio-analyst'].mode).toBe('primary');
+    expect(sdkConfigs['bio-orchestrator'].hidden).toBe(true);
+  });
+
+  test('exposes default plain-English names for planning review subagents', () => {
+    const sdkConfigs = getAgentConfigs() as Record<
+      string,
+      { hidden?: boolean; mode?: string }
+    >;
+
+    expect(sdkConfigs['requirements-analyst']).toBeDefined();
+    expect(sdkConfigs['requirements-analyst'].mode).toBe('subagent');
+    expect(sdkConfigs.metis.hidden).toBe(true);
+
+    expect(sdkConfigs['plan-reviewer']).toBeDefined();
+    expect(sdkConfigs['plan-reviewer'].mode).toBe('subagent');
+    expect(sdkConfigs.momus.hidden).toBe(true);
+  });
+
   test('keeps internal-only council agents hidden even with displayName configured', () => {
     const config: PluginConfig = {
       disabled_agents: [],

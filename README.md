@@ -15,11 +15,11 @@ OpenAgent LabForge is a lightweight agent orchestration plugin that extends Open
 
 **Key differentiators from base OpenCode:**
 
-- 5 primary agents with distinct roles (orchestrator, deep-worker, prometheus, atlas, bio-orchestrator)
+- 5 primary agents with distinct roles (engineer, deep-worker, planner, executor, bio-analyst)
 - Three-tier prompt system: Heavy / Light / Turbo, switchable at runtime
 - Bioinformatics-first: dedicated agent, 439 domain skills, 2 integrated bio MCPs
 - Checkpoint mechanism: light (same-session) + heavy (cross-session) recovery
-- 13 slash commands for workflow control
+- 14 slash commands for workflow control
 - All runtime prompts injected via system channel — user messages remain pure
 
 ---
@@ -100,11 +100,11 @@ See [`openagent-labforge.example.jsonc`](openagent-labforge.example.jsonc) for t
 
 | Agent | Display | Role | Mode Support |
 |-------|---------|------|--------------|
-| `orchestrator` | Ultraworker | Main engineering orchestrator | Heavy / Light / Turbo |
+| `engineer` (`orchestrator`) | Ultraworker | Main engineering agent | Heavy / Light / Turbo |
 | `deep-worker` | Deep Agent | Autonomous deep worker | Heavy / Light / Turbo |
-| `prometheus` | Plan Builder | Strategic planner | Light |
-| `atlas` | Plan Executor | Plan execution coordinator | Light |
-| `bio-orchestrator` | Bio Ultraworker | Bioinformatics specialist | Heavy / Light / Turbo |
+| `planner` (`prometheus`) | Plan Builder | Strategic planner | Light |
+| `executor` (`atlas`) | Plan Executor | Plan execution coordinator | Light |
+| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | Bioinformatics analysis agent | Heavy / Light / Turbo |
 
 ### Subagents (hidden, delegated to)
 
@@ -116,10 +116,10 @@ See [`openagent-labforge.example.jsonc`](openagent-labforge.example.jsonc) for t
 | `designer` | UI/UX specialist |
 | `fixer` | Fast execution for bounded tasks |
 | `observer` | Visual analysis (images, PDFs) |
-| `council` | Multi-LLM consensus engine |
+| `council` | Multi-LLM consensus/review engine |
 | `councillor` | Council member (internal) |
-| `metis` | Pre-planning consultant |
-| `momus` | Plan reviewer (5-dimension scoring) |
+| `requirements-analyst` (`metis`) | Pre-planning consultant |
+| `plan-reviewer` (`momus`) | Plan reviewer (5-dimension scoring) |
 | `multimodal-looker` | Media analysis |
 | `reviewer` | Code review (4-layer analysis) |
 
@@ -139,6 +139,19 @@ Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 
 ## Command System
 
+OpenAgent LabForge has two different concepts that should not be confused:
+
+- **Preset switching** (`/ol-preset`) changes model/provider/settings for agents at
+  runtime. It is configuration control.
+- **Guidance commands** such as `/ol-karpathy` inject task behavior rules into the
+  current session. They do not change models, providers, or agent presets.
+
+The project is derived from OMO / oh-my-openagent ideas, but user-facing
+LabForge user-facing commands use the `ol-` prefix to avoid collisions with other
+OpenCode plugins. Some legacy unprefixed hook commands are still accepted for
+backward compatibility, but they are not registered or documented as primary
+commands.
+
 ### Mode Commands (direct execution)
 | Command | Description |
 |---------|-------------|
@@ -156,18 +169,31 @@ Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 ### Workflow Commands (AI-executed)
 | Command | Description |
 |---------|-------------|
-| `/ol-start-work [plan-name] [--worktree <path>]` | Start plan execution with Atlas (hook-backed) |
-| `/ralph-loop "task" [--max-iterations=N]` | Self-referential loop until completion |
-| `/cancel-ralph` | Cancel active Ralph Loop |
-| `/stop-continuation` | Stop all continuation mechanisms |
+| `/ol-start-work [plan-name] [--worktree <path>]` | Start plan execution with executor / internal `atlas` (hook-backed) |
+| `/ol-ralph-loop "task" [--max-iterations=N]` | Self-referential loop until completion |
+| `/ol-cancel-ralph` | Cancel active Ralph Loop |
+| `/ol-stop-continuation` | Stop all continuation mechanisms |
 
 ### Utility Commands
 | Command | Description |
 |---------|-------------|
-| `/auto-continue [on\|off]` | Toggle or explicitly enable/disable auto-continuation |
-| `/preset [name]` | Switch agent presets |
-| `/interview [idea]` | Start product interview |
-| `/ol-karpathy [task-or-review-target]` | Apply Karpathy coding guidelines as a prompt command |
+| `/ol-auto-continue [on\|off]` | Toggle or explicitly enable/disable auto-continuation |
+| `/ol-preset [name]` | Switch runtime model/provider presets for agents; does not inject coding guidance |
+| `/ol-interview [idea]` | Start product interview |
+| `/ol-karpathy [task-or-review-target]` | Apply Karpathy coding guidelines as task/review guidance; does not change model presets |
+
+### Command Execution Modes
+
+| Type | Commands | Behavior |
+|------|----------|----------|
+| Prompt-template | `/ol-checkpoint`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | Registered command template is sent to the AI to execute |
+| Mixed template + hook | `/ol-stop-continuation` | Template performs broad cleanup; hook hard-disables todo auto-continuation |
+| Hook-driven | `/ol-auto-continue`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo` | `command.execute.before` handles the command directly and replaces the LLM template output |
+
+`/ol-preset` and `/ol-karpathy` intentionally live in different categories:
+`/ol-preset` changes agent runtime configuration; `/ol-karpathy` applies the fully
+migrated Andrej Karpathy prompt guidelines from
+[`karpathy-guidelines`](src/skills/karpathy-guidelines/SKILL.md).
 
 ### Guidance Skills
 
@@ -180,6 +206,13 @@ behavior without manually loading a skill. The full prompt is also available as
 the `karpathy-guidelines` skill for agents that support skill loading. It is
 especially useful before implementation, refactoring, code review, or any task
 where assumptions, overengineering, or broad accidental diffs are likely.
+
+See also:
+
+- [`docs/commands.md`](docs/commands.md) for the full command execution-mode
+  taxonomy and `ol-` prefix policy.
+- [`docs/plan-workflow.md`](docs/plan-workflow.md) for planner plan files,
+  `/ol-start-work`, executor behavior, boulder state, and the role of `council`.
 
 ### Media / Visual QA Tools
 
@@ -386,13 +419,13 @@ bun run build
 
 | 代理 | 显示名 | 角色 | 模式 |
 |------|--------|------|------|
-| `orchestrator` | Ultraworker | 工程主编排器 | 重量/轻量/极速 |
+| `engineer` (`orchestrator`) | Ultraworker | 工程主代理 | 重量/轻量/极速 |
 | `deep-worker` | Deep Agent | 自主深度工作者 | 重量/轻量/极速 |
-| `prometheus` | Plan Builder | 战略规划师 | 轻量 |
-| `atlas` | Plan Executor | 计划执行协调员 | 轻量 |
-| `bio-orchestrator` | Bio Ultraworker | 生物信息学专家 | 重量/轻量/极速 |
+| `planner` (`prometheus`) | Plan Builder | 战略规划师 | 轻量 |
+| `executor` (`atlas`) | Plan Executor | 计划执行协调员 | 轻量 |
+| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | 生物信息学分析代理 | 重量/轻量/极速 |
 
-**12 个子代理（隐藏）**：explorer, librarian, oracle, designer, fixer, observer, council, councillor, metis, momus, multimodal-looker, reviewer
+**12 个子代理（隐藏）**：explorer, librarian, oracle, designer, fixer, observer, council, councillor, requirements-analyst (`metis`), plan-reviewer (`momus`), multimodal-looker, reviewer
 
 ### 三层模式系统
 

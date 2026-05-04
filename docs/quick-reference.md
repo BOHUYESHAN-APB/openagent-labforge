@@ -13,20 +13,24 @@
 | Doc | Contents |
 |-----|----------|
 | [Council Agent](council.md) | Multi-LLM consensus, presets, role prompts, timeouts |
-| [Interview](interview.md) | `/interview` command, browser UI, dashboard mode, multi-session coordination |
+| [Command System](commands.md) | Prompt-template vs hook-driven commands, `ol-` prefix policy, `/ol-preset` vs `/ol-karpathy` |
+| [Interview](interview.md) | `/ol-interview` command, browser UI, dashboard mode, multi-session coordination |
 | [Multiplexer Integration](multiplexer-integration.md) | Real-time pane monitoring, layouts, troubleshooting |
-| [Todo Continuation](todo-continuation.md) | `auto_continue`, `/auto-continue`, cooldowns, safety gates |
-| [Preset Switching](preset-switching.md) | `/preset` command for runtime agent model switching |
+| [Plan Workflow](plan-workflow.md) | planner plan files, `/ol-start-work`, executor behavior, boulder resume state |
+| [Todo Continuation](todo-continuation.md) | `auto_continue`, `/ol-auto-continue`, cooldowns, safety gates |
+| [Preset Switching](preset-switching.md) | `/ol-preset` command for runtime agent model/provider switching |
+| [Skills](skills.md) | `karpathy-guidelines`, `simplify`, `codemap` — prompt guidance vs runtime presets |
 | [Codemap Skill](codemap.md) | Hierarchical codemap generation |
 
 ## ⚙️ Config & Reference
 
 | Doc | Contents |
 |-----|----------|
-| [Skills](skills.md) | `simplify`, `agent-browser`, `codemap` — skills assignment syntax |
+| [Skills](skills.md) | Skill assignment syntax and bundled guidance skills |
 | [MCPs](mcps.md) | `websearch`, `context7`, `grep_app` — permissions per agent, global disable |
 | [Tools](tools.md) | Background tasks, LSP, code search (`ast_grep`), formatters |
 | [Configuration](configuration.md) | Config files, prompt overriding, JSONC, full option reference table |
+| [Documentation Refactor Plan](documentation-refactor.md) | Tracks inherited OMO/Slim wording and target LabForge documentation structure |
 
 ## 💡 Author's Setup
 

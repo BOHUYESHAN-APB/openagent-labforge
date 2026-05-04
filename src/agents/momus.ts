@@ -1,4 +1,3 @@
-import type { PluginConfig } from '../config';
 import { type AgentDefinition, resolvePrompt } from './orchestrator';
 
 /**
@@ -90,6 +89,7 @@ Present review as:
 
   return {
     name: 'momus',
+    displayName: 'plan-reviewer',
     description:
       'Plan reviewer who validates plan quality with scoring and constructive feedback.',
     config: {

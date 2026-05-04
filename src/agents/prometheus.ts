@@ -1,4 +1,3 @@
-import type { PluginConfig } from '../config';
 import { type AgentDefinition, resolvePrompt } from './orchestrator';
 
 /**
@@ -87,6 +86,7 @@ Plans should be structured as markdown with:
 
   return {
     name: 'prometheus',
+    displayName: 'planner',
     description:
       'Strategic planner for complex projects. Creates detailed, executable plans with parallel execution waves.',
     config: {
