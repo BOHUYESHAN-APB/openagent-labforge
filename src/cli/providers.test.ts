@@ -156,8 +156,8 @@ describe('providers', () => {
     // Explorer should have no bundled skills by default
     expect(agents.explorer.skills).toEqual([]);
 
-    // Fixer should have no bundled skills by default
-    expect(agents.fixer.skills).toEqual([]);
+    // Fixer should have karpathy-guidelines skill
+    expect(agents.fixer.skills).toEqual(['karpathy-guidelines']);
   });
 
   test('generateLiteConfig includes mcps field', () => {
