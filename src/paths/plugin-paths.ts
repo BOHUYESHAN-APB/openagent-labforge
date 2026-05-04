@@ -39,6 +39,10 @@ export function getProjectCheckpointDir(workspaceRoot: string): string {
   return join(getProjectStateDir(workspaceRoot), 'checkpoints');
 }
 
+export function getProjectImagesDir(workspaceRoot: string): string {
+  return join(getProjectStateDir(workspaceRoot), 'images');
+}
+
 export function getGlobalStateDir(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,

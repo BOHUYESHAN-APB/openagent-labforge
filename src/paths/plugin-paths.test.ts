@@ -11,6 +11,7 @@ import {
   getOpenCodeDataDir,
   getPackageResourceDir,
   getProjectCheckpointDir,
+  getProjectImagesDir,
   getProjectMcpDir,
   getProjectMcpServersDir,
   getProjectMemoryDir,
@@ -40,6 +41,9 @@ describe('plugin paths', () => {
     );
     expect(getProjectCheckpointDir(root)).toBe(
       join(root, '.opencode', 'openagent-labforge', 'checkpoints'),
+    );
+    expect(getProjectImagesDir(root)).toBe(
+      join(root, '.opencode', 'openagent-labforge', 'images'),
     );
   });
 

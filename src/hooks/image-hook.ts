@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, extname, join } from 'node:path';
+import { getProjectImagesDir } from '../paths/plugin-paths';
 
 // Debounce: only run cleanup every 10 minutes per directory
 const lastCleanupByDir = new Map<string, number>();
@@ -185,9 +186,9 @@ export function processImageAttachments(args: {
     }
   }
 
-  // Save images inside the project's .opencode/images/ directory.
-  // This is within the workspace so the read tool won't require extra permissions.
-  const saveDir = join(workDir, '.opencode', 'images');
+  // Save images inside the plugin-owned project state directory.
+  // This keeps generated runtime files under .opencode/openagent-labforge/.
+  const saveDir = getProjectImagesDir(workDir);
 
   if (messagesWithImages.length === 0) {
     if (existsSync(saveDir)) cleanupAllSessions(saveDir);
@@ -215,7 +216,7 @@ export function processImageAttachments(args: {
       log(`[image-hook] failed to create target image directory: ${e}`);
     }
 
-    // Save each image to .opencode/images/ and collect paths
+    // Save each image to the plugin-owned images directory and collect paths.
     const savedPaths: string[] = [];
     for (const p of imageParts) {
       const url = p.url as string | undefined;

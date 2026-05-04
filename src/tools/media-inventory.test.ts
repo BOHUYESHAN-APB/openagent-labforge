@@ -52,7 +52,31 @@ describe('media_inventory tool', () => {
       permission: 'read',
       patterns: [dir],
       always: [dir],
-      metadata: {},
+      metadata: { external: false },
+    });
+  });
+
+  test('does not offer sticky always permission for external roots', async () => {
+    const runtimeDir = makeTempDir();
+    const externalDir = makeTempDir();
+    dirs.push(runtimeDir, externalDir);
+    writeFileSync(path.join(externalDir, 'external.png'), 'png bytes');
+
+    const mediaInventory = createMediaInventoryTool({
+      directory: runtimeDir,
+    } as any);
+    const ctx = makeContext({ directory: runtimeDir });
+    const result = await mediaInventory.execute(
+      { path: externalDir, recursive: false },
+      ctx as any,
+    );
+
+    expect(result).toContain(path.join(externalDir, 'external.png'));
+    expect(ctx.ask).toHaveBeenCalledWith({
+      permission: 'read',
+      patterns: [externalDir],
+      always: [],
+      metadata: { external: true },
     });
   });
 

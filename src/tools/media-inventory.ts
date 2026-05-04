@@ -64,6 +64,14 @@ function humanSize(bytes: number): string {
   return `${(kib / 1024).toFixed(1)} MiB`;
 }
 
+function isPathInsideOrEqual(parent: string, child: string): boolean {
+  const relative = path.relative(parent, child);
+  return (
+    relative === '' ||
+    (!relative.startsWith('..') && !path.isAbsolute(relative))
+  );
+}
+
 function collectMediaFiles(args: {
   root: string;
   workspaceRoot: string;
@@ -297,11 +305,15 @@ Use this before reading or delegating generated plots, screenshots, UI captures,
         ),
       );
 
+      const allowAlways = isPathInsideOrEqual(workspaceRoot, root)
+        ? [root]
+        : [];
+
       await toolContext.ask({
         permission: 'read',
         patterns: [root],
-        always: [root],
-        metadata: {},
+        always: allowAlways,
+        metadata: { external: allowAlways.length === 0 },
       });
 
       let stat: ReturnType<typeof statSync>;
