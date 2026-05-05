@@ -11,13 +11,22 @@ English | [中文](#中文)
 
 ## Overview
 
-OpenAgent LabForge is a lightweight agent orchestration plugin that extends OpenCode with **17 specialized agents** (5 primary + 12 subagents), a three-tier prompt system, bioinformatics capabilities, and a checkpoint-based memory architecture.
+OpenAgent LabForge is a lightweight agent orchestration system that currently
+ships as a full OpenCode plugin. It extends OpenCode with **17 specialized
+agents** (5 primary + 12 subagents), a three-tier prompt system, optional
+bioinformatics capabilities, and a checkpoint-based memory architecture.
+
+> Repository naming note: the current GitHub repository is still named
+> `openagent-labforge-bio` for historical release continuity. The product and
+> package name are `openagent-labforge`; bio is the first discipline pack, not
+> the product boundary. See
+> [`docs/architecture/repository-rename.md`](docs/architecture/repository-rename.md).
 
 **Key differentiators from base OpenCode:**
 
 - 5 primary agents with distinct roles (engineer, deep-worker, planner, executor, bio-analyst)
 - Three-tier prompt system: Heavy / Light / Turbo, switchable at runtime
-- Bioinformatics-first: dedicated agent, 439 domain skills, 2 integrated bio MCPs
+- Optional bioinformatics discipline pack: dedicated agent, 439 domain skills, 2 integrated bio MCPs
 - Checkpoint mechanism: light (same-session) + heavy (cross-session) recovery
 - 14 slash commands for workflow control
 - All runtime prompts injected via system channel — user messages remain pure
@@ -62,6 +71,15 @@ Then register the plugin in your OpenCode config:
 ```
 
 > See [OpenCode Plugin Docs](https://opencode.ai/docs/zh-cn/plugins/) for full plugin loading options.
+
+Host-specific docs:
+
+- [OpenCode plugin guide](docs/opencode/README.md) /
+  [中文](docs/opencode/README.zh-CN.md)
+- [DeepSeek-TUI adapter guide](docs/deepseek-tui/README.md) /
+  [中文](docs/deepseek-tui/README.zh-CN.md)
+- [Host adapter architecture](docs/architecture/adapters.md) /
+  [中文](docs/architecture/adapters.zh-CN.md)
 
 ---
 

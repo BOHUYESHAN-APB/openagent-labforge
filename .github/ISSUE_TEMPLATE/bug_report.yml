@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible LabForge problem
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include enough detail to reproduce it.
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host
+      options:
+        - OpenCode plugin
+        - DeepSeek-TUI adapter
+        - Shared core / docs
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: LabForge version / commit
+      placeholder: v1.0.8 or commit hash
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: What did you run, and what happened?
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Remove secrets, tokens, local credentials, and private data.
+      render: text

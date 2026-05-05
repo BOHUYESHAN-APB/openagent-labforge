@@ -1,0 +1,35 @@
+name: DeepSeek-TUI adapter task
+description: Track a DeepSeek-TUI adapter issue without implying runtime plugin parity
+title: "dstui: "
+labels: [deepseek-tui, adapter]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        DeepSeek-TUI is currently an adapter target using commands, skills, MCP,
+        hooks, and optional runtime API. It is not a full LabForge runtime plugin.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Adapter surface
+      options:
+        - Slash command files
+        - Skills / load_skill
+        - MCP config / tools
+        - Shell hooks
+        - Runtime API client
+        - Install / uninstall manifest
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Install/uninstall safety notes
+      description: Mention manifest, ownership marker, hash, backup, or conflict behavior if files are generated.

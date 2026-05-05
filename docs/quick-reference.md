@@ -7,6 +7,8 @@
 | Doc | Contents |
 |-----|----------|
 | [Installation Guide](installation.md) | CLI flags, `--reset`, auth, troubleshooting |
+| [OpenCode Plugin Guide](opencode/README.md) | OpenCode-specific plugin behavior, command prefix, display names |
+| [DeepSeek-TUI Adapter Guide](deepseek-tui/README.md) | DSTUI command/skill/MCP adapter boundaries and install safety |
 
 ## ✨ Features
 
@@ -31,6 +33,9 @@
 | [Tools](tools.md) | Background tasks, LSP, code search (`ast_grep`), formatters |
 | [Configuration](configuration.md) | Config files, prompt overriding, JSONC, full option reference table |
 | [Documentation Refactor Plan](documentation-refactor.md) | Tracks inherited OMO/Slim wording and target LabForge documentation structure |
+| [Host Adapter Architecture](architecture/adapters.md) | OpenCode full plugin vs DeepSeek-TUI adapter, Node-compatible TS direction |
+| [Discipline Packs](architecture/discipline-packs.md) | Bio as the first optional discipline pack and future science packs |
+| [Repository Rename Plan](architecture/repository-rename.md) | `openagent-labforge-bio` historical name and future rename checklist |
 
 ## 💡 Author's Setup
 

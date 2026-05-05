@@ -10,6 +10,35 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.9 - 2026-05-06
+
+### Added / 新增
+
+- Added DeepSeek-TUI adapter groundwork with TypeScript manifest/file-naming
+  helpers and tests. The adapter is documented as a file/MCP/skill projection,
+  not a first-class runtime plugin.
+- 新增 DeepSeek-TUI adapter 基础结构，包括 TypeScript manifest/file-naming helper 与测试。文档明确说明该 adapter 是 file/MCP/skill 投影，不是一等 runtime plugin。
+
+- Added bilingual host-specific documentation for OpenCode and DeepSeek-TUI, plus
+  architecture notes for host adapters, discipline packs, and repository rename
+  planning.
+- 新增 OpenCode 与 DeepSeek-TUI 的中英文宿主文档，并补充 host adapter、discipline pack、仓库改名计划等架构说明。
+
+- Added GitHub issue templates and bilingual contributing guides.
+- 新增 GitHub issue templates 与中英文贡献指南。
+
+### Changed / 变更
+
+- Documented `openagent-labforge-bio` as a historical repository name. The
+  product/package remains `openagent-labforge`; bio is now framed as the first
+  optional discipline pack rather than the product boundary.
+- 将 `openagent-labforge-bio` 明确记录为历史仓库名。产品/package 仍为 `openagent-labforge`；bio 被定位为第一个可选 discipline pack，而不是产品边界。
+
+- Clarified generated DeepSeek-TUI file naming: command files should use
+  `ol-*.md` to preserve slash command names, while non-command managed Markdown
+  assets may use the `.ol.md` suffix for human-readable ownership.
+- 明确 DeepSeek-TUI 生成文件命名：command 文件使用 `ol-*.md` 以保留 slash command 名；非 command 的受管 Markdown 资产可使用 `.ol.md` 后缀作为人类可读的 ownership 标记。
+
 ## v1.0.8 - 2026-05-05
 
 - Fixed the default agent regression introduced by display-name migration: the

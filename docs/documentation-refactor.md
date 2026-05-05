@@ -22,6 +22,11 @@ target structure for bringing docs in line with the current design.
 5. **Document actual implementation, not upstream aspiration.** If a behavior is
    inherited from OMO but implemented differently here, describe the LabForge
    behavior first and mention OMO only as lineage.
+6. **Separate host docs.** OpenCode is a full plugin host; DeepSeek-TUI is a
+   file/MCP/skill adapter target. Do not mix the two in one runtime guide.
+7. **Treat bio as a discipline pack.** The `openagent-labforge-bio` repository
+   name is historical; future docs should describe bio as the first optional
+   discipline pack.
 
 ## Target information architecture
 
@@ -32,6 +37,11 @@ target structure for bringing docs in line with the current design.
 | Runtime presets | [`preset-switching.md`](preset-switching.md) | Partially updated; still needs examples aligned with LabForge config defaults. |
 | Skills | [`skills.md`](skills.md) | Partially updated; now includes `karpathy-guidelines`. |
 | Installation | [`installation.md`](installation.md) | Needs major rewrite from oh-my-opencode-slim installer docs to LabForge source-build/release workflow. |
+| OpenCode host | [`opencode/README.md`](opencode/README.md) | Added; separates OpenCode full plugin behavior from adapter docs. |
+| DeepSeek-TUI host | [`deepseek-tui/README.md`](deepseek-tui/README.md) | Added; documents DSTUI as file/MCP/skill adapter target, not plugin host. |
+| Adapter architecture | [`architecture/adapters.md`](architecture/adapters.md) | Added; documents TypeScript/Node-compatible direction and host boundaries. |
+| Discipline packs | [`architecture/discipline-packs.md`](architecture/discipline-packs.md) | Added; tracks bio-to-pack migration and future science packs. |
+| Repository rename | [`architecture/repository-rename.md`](architecture/repository-rename.md) | Added; tracks `openagent-labforge-bio` to `openagent-labforge` migration. |
 | Configuration | [`configuration.md`](configuration.md) | Needs name/path cleanup and current schema alignment. |
 | MCPs | [`mcps.md`](mcps.md) and [`storage-and-mcp.md`](storage-and-mcp.md) | Needs LabForge bio MCP and project-local MCP path alignment. |
 | Visual/media QA | README + future dedicated doc | Needs dedicated doc when SVG/browser-rendered visual QA lands. |
@@ -49,6 +59,8 @@ target structure for bringing docs in line with the current design.
 - Examples that imply generated packages or old npm names are the recommended
   install path; current production path is source build / source-only GitHub
   releases.
+- Repository URLs that still point at `openagent-labforge-bio` without noting
+  the historical naming context.
 
 ## Recommended refactor order
 
@@ -61,6 +73,8 @@ target structure for bringing docs in line with the current design.
    project-local MCP storage.
 5. **Advanced workflows** — visual QA, SVG QA, bio figure QA, script hygiene,
    council usage, and multi-agent plan execution.
+6. **Host adapter docs** — maintain OpenCode and DeepSeek-TUI docs separately;
+   DeepSeek-TUI docs should never imply full runtime plugin parity.
 
 ## Review rule
 

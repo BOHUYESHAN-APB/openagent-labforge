@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a LabForge improvement
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - OpenCode plugin
+        - DeepSeek-TUI adapter
+        - Discipline packs
+        - MCP / tools
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow or limitation should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Design constraints
+      options:
+        - label: Keep TypeScript / Node-compatible runtime unless a host runtime requires otherwise.
+        - label: Do not assume DeepSeek-TUI has a first-class plugin API.
+        - label: Keep bio as a discipline pack boundary where possible.
