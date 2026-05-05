@@ -74,9 +74,13 @@ export const semantic_scholar_fastmcp: McpConfig = {
     'semantic-scholar-fastmcp<3.0',
     'semantic-scholar-fastmcp',
   ],
-  enabled: true,
+  // Disabled by default because uvx-backed FastMCP startup can exceed the
+  // OpenCode SDK initialize request timeout on warm restarts. Users can opt in
+  // explicitly once their local uv/Python environment is prepared.
+  enabled: false,
   environment: {
     SEMANTIC_SCHOLAR_ENABLE_HTTP_BRIDGE: '0',
+    UV_NO_PROGRESS: '1',
   },
   timeout: LOCAL_MCP_STARTUP_TIMEOUT_MS,
 };

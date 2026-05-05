@@ -384,6 +384,13 @@
         "type": "string"
       }
     },
+    "enabled_mcps": {
+      "description": "Opt in to built-in MCP servers that are shipped disabled by default. Use this for slow or environment-sensitive local MCPs such as semantic_scholar_fastmcp.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "multiplexer": {
       "type": "object",
       "properties": {

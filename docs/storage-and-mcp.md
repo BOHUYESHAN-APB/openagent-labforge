@@ -81,6 +81,39 @@ Windows command rules:
 - `npx`, `npm`, `bunx`, `pnpm`, `yarn` run through `cmd /c`
 - `uv`, `uvx`, `node`, `python` run directly
 
+`semantic_scholar_fastmcp` is opt-in. It uses `uvx` and can take longer than
+OpenCode's MCP initialize request timeout while preparing or refreshing its
+Python environment, especially on Windows restarts. Enable it only when needed
+and after the local `uv` cache is warm/stable.
+
+```jsonc
+{
+  "enabled_mcps": ["semantic_scholar_fastmcp"]
+}
+```
+
+If it remains unstable in a repository, leave it disabled and use web/literature
+search tools that do not require a local `uvx` startup path.
+
+### Local MCP concurrency notes
+
+Do not assume local stdio MCPs are shared across independent OpenCode
+processes.
+
+- Same project, multiple terminals: if they attach to the same running OpenCode
+  server, they can share that server's MCP clients. If they start separate
+  OpenCode processes, each process starts its own local MCPs.
+- Different projects: OpenCode instance state is project-scoped, so plugin state
+  and MCP clients are separate per project. However, package-manager caches such
+  as `uvx` and `npx` are global/user-level and can still contend during startup.
+- Fixed-port MCPs can conflict across projects or processes unless configured
+  with distinct ports. Stdio MCPs avoid port conflicts, but slow package-manager
+  startup and cache locks can still cause timeouts.
+
+For fragile local MCPs, prefer one OpenCode server with multiple attached
+clients, or keep the MCP disabled until the session that needs it explicitly
+enables it.
+
 Linux/macOS command rules:
 
 - run commands directly, without `cmd /c`

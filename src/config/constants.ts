@@ -27,6 +27,7 @@ export const SUBAGENT_NAMES = [
 ] as const;
 
 export const ORCHESTRATOR_NAME = 'orchestrator' as const;
+export const DEFAULT_VISIBLE_AGENT_NAME = 'engineer' as const;
 
 // Primary agents (visible in UI)
 export const PRIMARY_AGENT_NAMES = [

@@ -102,11 +102,35 @@ describe('createBuiltinMcps', () => {
     expect('url' in context7).toBe(true);
   });
 
-  test('grep_app MCP has correct structure', () => {
+  test('semantic scholar MCP is opt-in because uvx startup is fragile', () => {
     const mcps = createBuiltinMcps();
-    const grep_app = mcps.grep_app;
+    const semanticScholar = mcps.semantic_scholar_fastmcp;
 
-    expect(grep_app).toBeDefined();
-    expect('url' in grep_app).toBe(true);
+    expect(semanticScholar).toBeDefined();
+    expect(semanticScholar.type).toBe('local');
+    expect(semanticScholar.enabled).toBe(false);
+    if (semanticScholar.type === 'local') {
+      expect(semanticScholar.environment).toMatchObject({
+        SEMANTIC_SCHOLAR_ENABLE_HTTP_BRIDGE: '0',
+        UV_NO_PROGRESS: '1',
+      });
+    }
+  });
+
+  test('enables opt-in built-in MCPs from enabled list', () => {
+    const mcps = createBuiltinMcps([], ['semantic_scholar_fastmcp']);
+    const semanticScholar = mcps.semantic_scholar_fastmcp;
+
+    expect(semanticScholar).toBeDefined();
+    expect(semanticScholar.enabled).toBe(true);
+  });
+
+  test('disabled list takes precedence over enabled list', () => {
+    const mcps = createBuiltinMcps(
+      ['semantic_scholar_fastmcp'],
+      ['semantic_scholar_fastmcp'],
+    );
+
+    expect(mcps.semantic_scholar_fastmcp).toBeUndefined();
   });
 });

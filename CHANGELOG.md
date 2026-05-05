@@ -10,6 +10,19 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.8 - 2026-05-05
+
+- Fixed the default agent regression introduced by display-name migration: the
+  plugin now defaults OpenCode to visible `engineer` instead of hidden internal
+  `orchestrator`, preventing fallback to the bio-specific agent.
+- 修复 display-name 迁移引入的默认代理回归：插件现在将 OpenCode 默认代理设置为可见的 `engineer`，而不是隐藏的内部 `orchestrator`，避免回退到生物信息学专用代理。
+
+- Made `semantic_scholar_fastmcp` opt-in instead of starting by default. Logs
+  showed `uvx`/FastMCP could continue initializing after OpenCode's 60s MCP SDK
+  initialize request timeout and fail with `MCP error -32001` on restarts; users
+  can still enable it explicitly after preparing a stable local uv/Python cache.
+- 将 `semantic_scholar_fastmcp` 改为显式启用，而不是默认启动。日志显示 `uvx`/FastMCP 在 OpenCode 的 60 秒 MCP SDK 初始化请求超时后仍继续启动，并可能在重启后报 `MCP error -32001`；用户仍可在本地 uv/Python 缓存稳定后手动启用。
+
 ## v1.0.7 - 2026-05-05
 
 ### Changed / 变更

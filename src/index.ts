@@ -35,6 +35,7 @@ import {
 } from './commands/index.js';
 import {
   type AgentOverrideConfig,
+  applyDefaultAgent,
   deepMerge,
   ensureGlobalPluginConfigFile,
   loadPluginConfig,
@@ -309,7 +310,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         )
       : {};
 
-    mcps = createBuiltinMcps(config.disabled_mcps, config.websearch);
+    mcps = createBuiltinMcps(
+      config.disabled_mcps,
+      config.enabled_mcps,
+      config.websearch,
+    );
     webfetch = createWebfetchTool(ctx);
 
     // Initialize Checkpoint Manager
@@ -499,14 +504,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
     config: async (opencodeConfig: Record<string, unknown>) => {
       // Only set default_agent if not already configured by the user
-      // and the plugin config doesn't explicitly disable this behavior
-      if (
-        config.setDefaultAgent !== false &&
-        !(opencodeConfig as { default_agent?: string }).default_agent
-      ) {
-        (opencodeConfig as { default_agent?: string }).default_agent =
-          'orchestrator';
-      }
+      // and the plugin config doesn't explicitly disable this behavior.
+      applyDefaultAgent(opencodeConfig, config.setDefaultAgent !== false);
 
       // Merge Agent configs — per-agent shallow merge to preserve
       // user-supplied fields (e.g. tools, permission) from opencode.json

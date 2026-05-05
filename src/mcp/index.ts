@@ -42,21 +42,27 @@ const allBuiltinMcps: Record<McpName, McpConfig> = {
  */
 export function createBuiltinMcps(
   disabledMcps: readonly string[] = [],
+  enabledMcps: readonly string[] = [],
   websearchConfig?: WebsearchConfig,
 ): Record<string, McpConfig> {
   const disabledSet = new Set(disabledMcps);
+  const enabledSet = new Set(enabledMcps);
   const mcps: Record<string, McpConfig> = {};
 
   for (const [name, builtin] of Object.entries(allBuiltinMcps)) {
     if (disabledSet.has(name)) continue;
 
+    const baseConfig = enabledSet.has(name)
+      ? { ...builtin, enabled: true }
+      : builtin;
+
     const normalized =
-      builtin.type === 'local'
+      baseConfig.type === 'local'
         ? {
-            ...builtin,
-            command: normalizeLocalMcpCommand(builtin.command),
+            ...baseConfig,
+            command: normalizeLocalMcpCommand(baseConfig.command),
           }
-        : builtin;
+        : baseConfig;
 
     mcps[name] = normalized;
   }

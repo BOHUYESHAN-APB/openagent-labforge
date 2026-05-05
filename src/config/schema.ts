@@ -263,9 +263,7 @@ export const CheckpointCleanupConfigSchema = z.object({
     .number()
     .min(0)
     .default(100)
-    .describe(
-      'Maximum total size of checkpoint storage in MB (0 = unlimited)',
-    ),
+    .describe('Maximum total size of checkpoint storage in MB (0 = unlimited)'),
 });
 
 export type CheckpointCleanupConfig = z.infer<
@@ -349,21 +347,33 @@ export const ModelPreferencesConfigSchema = z.object({
     ),
 });
 
-export type ModelPreferencesConfig = z.infer<typeof ModelPreferencesConfigSchema>;
+export type ModelPreferencesConfig = z.infer<
+  typeof ModelPreferencesConfigSchema
+>;
 
 // Prompt mode configuration (heavy/light/turbo)
 export const PromptModeConfigSchema = z.object({
   defaultMode: z
     .enum(['heavy', 'light', 'turbo'])
     .default('light')
-    .describe('Default prompt mode: heavy (Omo 542 lines), light (OMOS 200-300 lines), turbo (OLD-2 58 lines)'),
+    .describe(
+      'Default prompt mode: heavy (Omo 542 lines), light (OMOS 200-300 lines), turbo (OLD-2 58 lines)',
+    ),
   allowModeSwitch: z
     .boolean()
     .default(true)
-    .describe('Allow runtime mode switching via /ol-light, /ol-heavy, /ol-turbo commands'),
+    .describe(
+      'Allow runtime mode switching via /ol-light, /ol-heavy, /ol-turbo commands',
+    ),
   applyToAgents: z
     .array(z.string())
-    .default(['orchestrator', 'bio-orchestrator', 'deep-worker', 'prometheus', 'atlas'])
+    .default([
+      'orchestrator',
+      'bio-orchestrator',
+      'deep-worker',
+      'prometheus',
+      'atlas',
+    ])
     .describe('Agents that use mode system. Default: all primary agents'),
 });
 
@@ -442,6 +452,13 @@ export const PluginConfigSchema = z
           "By default, 'observer' is disabled. Remove it from this list and configure a vision-capable model to enable.",
       ),
     disabled_mcps: z.array(z.string()).optional(),
+    enabled_mcps: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Opt in to built-in MCP servers that are shipped disabled by default. ' +
+          'Use this for slow or environment-sensitive local MCPs such as semantic_scholar_fastmcp.',
+      ),
     // Multiplexer config (new unified config - preferred)
     multiplexer: MultiplexerConfigSchema.optional(),
     // Legacy tmux config (for backward compatibility)
