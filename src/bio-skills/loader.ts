@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface BioSkillMetadata {
@@ -7,6 +7,8 @@ export interface BioSkillMetadata {
   category: string;
   filePath: string;
   content: string;
+  toolType?: string;
+  primaryTool?: string;
 }
 
 /**
@@ -86,6 +88,8 @@ function parseSkillFile(
       category,
       filePath,
       content,
+      toolType: frontmatter.tool_type,
+      primaryTool: frontmatter.primary_tool,
     };
   } catch {
     return null;
@@ -104,7 +108,10 @@ function extractFrontmatter(content: string): Record<string, string> {
     if (colonIndex === -1) continue;
 
     const key = line.slice(0, colonIndex).trim();
-    const value = line.slice(colonIndex + 1).trim().replace(/^["']|["']$/g, '');
+    const value = line
+      .slice(colonIndex + 1)
+      .trim()
+      .replace(/^["']|["']$/g, '');
 
     if (key && value) {
       result[key] = value;

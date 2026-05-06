@@ -19,7 +19,19 @@ export function formatCatalogForPrompt(categories: BioSkillCategory[]): string {
   ];
 
   for (const cat of categories) {
-    lines.push(`- **${cat.name}** (${cat.skillCount} skills)`);
+    const details: string[] = [];
+    if (cat.toolTypes && cat.toolTypes.length > 0) {
+      details.push(`tools: ${cat.toolTypes.join(', ')}`);
+    }
+    if (cat.primaryTools && cat.primaryTools.length > 0) {
+      details.push(`primary: ${cat.primaryTools.slice(0, 4).join(', ')}`);
+    }
+    if (cat.sampleSkills && cat.sampleSkills.length > 0) {
+      details.push(`samples: ${cat.sampleSkills.join(', ')}`);
+    }
+
+    const suffix = details.length > 0 ? ` — ${details.join(' | ')}` : '';
+    lines.push(`- **${cat.name}** (${cat.skillCount} skills)${suffix}`);
   }
 
   lines.push('');
@@ -60,6 +72,12 @@ export function formatLoadedSkillsForPrompt(
     lines.push(`## ${skill.name}`);
     lines.push(`Category: ${skill.category}`);
     lines.push(`Description: ${skill.description}`);
+    if (skill.toolType) {
+      lines.push(`Tool type: ${skill.toolType}`);
+    }
+    if (skill.primaryTool) {
+      lines.push(`Primary tool: ${skill.primaryTool}`);
+    }
     lines.push(`Path: ${skill.filePath}`);
     lines.push('');
   }

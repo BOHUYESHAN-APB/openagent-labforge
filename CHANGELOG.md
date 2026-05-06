@@ -10,6 +10,34 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.12 - 2026-05-06
+
+### Added / 新增
+
+- Added a machine-readable bio skills catalog pipeline. The build now generates
+  `resources/bioSkills/catalog.json`, so the bio skill system has a lightweight
+  registry/catalog layer instead of relying only on recursive category scans.
+- 新增 machine-readable 的 bio skills catalog 流程。构建阶段现在会生成
+  `resources/bioSkills/catalog.json`，让 bio skill 系统具备轻量 registry/catalog
+  层，而不再只依赖递归扫描分类目录。
+
+### Changed / 变更
+
+- Enriched bio skill metadata extraction with `toolType` and `primaryTool`, and
+  expanded category catalog summaries to include representative skills and tool
+  families.
+- 扩展 bio skill 元数据提取：新增 `toolType` 与 `primaryTool`，并让分类 catalog
+  摘要包含代表性 skill 和工具族信息。
+
+- `scanBioSkillsCatalog()` now prefers a generated `catalog.json` and only falls
+  back to on-disk scanning when the generated catalog is unavailable.
+- `scanBioSkillsCatalog()` 现在优先读取生成好的 `catalog.json`，只有在 catalog
+  不存在时才回退到磁盘扫描。
+
+- Added focused tests for the new bio catalog metadata and generated catalog
+  read/build flow.
+- 为新的 bio catalog 元数据与生成 catalog 读写流程补充了聚焦测试。
+
 ## v1.0.11 - 2026-05-06
 
 ### Added / 新增

@@ -1,15 +1,24 @@
-export { scanBioSkillsCatalog, type BioSkillCategory } from './catalog';
 export {
+  BIO_SKILLS_CATALOG_FILE_NAME,
+  type BioSkillCatalogFile,
+  type BioSkillCatalogRecord,
+  type BioSkillCatalogSkillSummary,
+  type BioSkillCategory,
+  buildBioSkillsCatalog,
+  readGeneratedBioSkillsCatalog,
+  scanBioSkillsCatalog,
+} from './catalog';
+export {
+  formatCatalogForPrompt,
+  formatLoadedSkillsForPrompt,
+} from './formatter';
+export {
+  type BioSkillMetadata,
   countSkillFilesInCategory,
   loadCategorySkills,
-  type BioSkillMetadata,
 } from './loader';
 export {
   BioSkillsSessionManager,
   type LoadedCategory,
 } from './session-manager';
-export {
-  formatCatalogForPrompt,
-  formatLoadedSkillsForPrompt,
-} from './formatter';
 export { createLoadBioSkillsTool } from './tool';
