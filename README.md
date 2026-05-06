@@ -12,8 +12,8 @@ English | [中文](#中文)
 ## Overview
 
 ExtendAI Lab is a lightweight agent orchestration system that currently
-ships as a full OpenCode plugin. It extends OpenCode with **17 specialized
-agents** (5 primary + 12 subagents), a three-tier prompt system, optional
+ships as a full OpenCode plugin. It extends OpenCode with **18 specialized
+agents** (6 primary + 12 subagents), a three-tier prompt system, optional
 bioinformatics capabilities, and a checkpoint-based memory architecture.
 
 > Repository naming note: the current GitHub repository is still named
@@ -26,7 +26,7 @@ bioinformatics capabilities, and a checkpoint-based memory architecture.
 
 - 5 primary agents with distinct roles (engineer, deep-worker, planner, executor, bio-analyst)
 - Three-tier prompt system: Heavy / Light / Turbo, switchable at runtime
-- Optional bioinformatics discipline pack: dedicated agent, 439 domain skills, 2 integrated bio MCPs
+- Optional biological-science discipline foundation: dedicated bio expert, chem overlap module, 439 domain skills, 2 integrated bio MCPs
 - Checkpoint mechanism: light (same-session) + heavy (cross-session) recovery
 - 14 slash commands for workflow control
 - All runtime prompts injected via system channel — user messages remain pure
@@ -122,7 +122,7 @@ See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for the current f
 | `deep-worker` | Deep Agent | Autonomous deep worker | Heavy / Light / Turbo |
 | `planner` (`prometheus`) | Plan Builder | Strategic planner | Light |
 | `executor` (`atlas`) | Plan Executor | Plan execution coordinator | Light |
-| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | Bioinformatics analysis agent | Heavy / Light / Turbo |
+| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | Biological science expert for bioinformatics, experimental design, study strategy, and validation planning | Heavy / Light / Turbo |
 
 ### Subagents (hidden, delegated to)
 
@@ -433,7 +433,7 @@ bun run build
 
 ### 代理系统
 
-**5 个主代理（UI 可见）**：
+**6 个主代理（UI 可见）**：
 
 | 代理 | 显示名 | 角色 | 模式 |
 |------|--------|------|------|
@@ -441,7 +441,7 @@ bun run build
 | `deep-worker` | Deep Agent | 自主深度工作者 | 重量/轻量/极速 |
 | `planner` (`prometheus`) | Plan Builder | 战略规划师 | 轻量 |
 | `executor` (`atlas`) | Plan Executor | 计划执行协调员 | 轻量 |
-| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | 生物信息学分析代理 | 重量/轻量/极速 |
+| `bio-analyst` (`bio-orchestrator`) | Bio Ultraworker | 生物科学主专家，负责生信分析、实验设计、研究策略与验证规划 | 重量/轻量/极速 |
 
 **12 个子代理（隐藏）**：explorer, librarian, oracle, designer, fixer, observer, council, councillor, requirements-analyst (`metis`), plan-reviewer (`momus`), multimodal-looker, reviewer
 

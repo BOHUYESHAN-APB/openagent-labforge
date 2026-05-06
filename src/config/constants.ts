@@ -46,12 +46,12 @@ export const ALL_AGENT_NAMES = [
 // Agent name type (for use in DEFAULT_MODELS)
 export type AgentName = (typeof ALL_AGENT_NAMES)[number];
 
-// Subagent delegation rules: which agents can spawn which subagents
-// orchestrator: can spawn all subagents (full delegation)
+// Delegation rules: which agents can spawn which other agents/modules
+// orchestrator: can spawn all orchestratable specialists/modules (full delegation)
 // deep-worker: can spawn explorer, librarian, oracle for autonomous work
 // prometheus: read-only planner, cannot spawn subagents
-// atlas: plan executor, can spawn explorer, librarian, oracle, fixer
-// bio-orchestrator: bioinformatics specialist, can spawn all subagents
+// atlas: plan executor, can spawn core specialists plus science modules
+// bio-orchestrator: biological science specialist, can spawn all orchestratable specialists/modules
 // fixer: leaf node — prompt forbids delegation; use grep/glob for lookups
 // designer: can spawn explorer (for research during design)
 // explorer/librarian/oracle: cannot spawn any subagents (leaf nodes)
@@ -66,6 +66,7 @@ export const ORCHESTRATABLE_AGENTS = [
   'fixer',
   'observer',
   'council',
+  'bio-orchestrator',
   // New subagents
   'metis',
   'momus',
@@ -98,7 +99,7 @@ export const SUBAGENT_DELEGATION_RULES: Record<AgentName, readonly string[]> = {
   orchestrator: ORCHESTRATABLE_AGENTS,
   'deep-worker': ['explorer', 'librarian', 'oracle'],
   prometheus: [], // Planner cannot spawn subagents
-  atlas: ['explorer', 'librarian', 'oracle', 'fixer'],
+  atlas: ['explorer', 'librarian', 'oracle', 'fixer', 'bio-orchestrator'],
   'bio-orchestrator': ORCHESTRATABLE_AGENTS,
   fixer: [],
   designer: [],

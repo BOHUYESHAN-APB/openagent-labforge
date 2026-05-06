@@ -10,6 +10,34 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.11 - 2026-05-06
+
+### Added / 新增
+
+- Added a small new research-design skill layer under the existing
+  `experimental-design` category:
+  `research-question-framing`, `hypothesis-structuring`, and
+  `validation-strategy`.
+- 在现有 `experimental-design` 分类下新增一小组研究设计 skills：
+  `research-question-framing`、`hypothesis-structuring`、
+  `validation-strategy`。
+
+### Changed / 变更
+
+- Upgraded `bio-analyst` from a narrower bioinformatics operator framing toward a
+  broader biological-science expert role with stronger support for experimental
+  design, hypothesis formation, study strategy, and validation planning.
+- 将 `bio-analyst` 从较窄的生信执行者定位，补强为更广义的生物科学主专家，增强对实验设计、假设形成、研究策略与验证规划的支持。
+
+- Calibrated expert prompts so they keep disciplinary bias without becoming a
+  rigid identity lock, reducing the risk of over-biasing large models.
+- 调整专家提示词：保留学科偏向，但避免刚性身份锁死，降低对大模型造成过度偏置的风险。
+
+- Kept the experimental computational chemistry agent code in-repo but disabled
+  it from registration and public docs for this release; chemistry overlap is
+  currently handled through the existing `chemoinformatics` skills.
+- 本版保留了实验性的计算化学 agent 代码，但不注册、不对外显示；当前 chemistry overlap 仍通过现有 `chemoinformatics` skills 处理。
+
 ## v1.0.9 - 2026-05-06
 
 ### Added / 新增

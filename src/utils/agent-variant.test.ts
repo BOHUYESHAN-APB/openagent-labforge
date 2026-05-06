@@ -215,9 +215,11 @@ describe('rewriteDisplayNameMentions', () => {
     expect(
       rewriteDisplayNameMentions(
         undefined,
-        'route bio work to @bio-analyst and reviews to @plan-reviewer',
+        'route bio work to @bio-analyst, chemistry overlap work to chemoinformatics skills, and reviews to @plan-reviewer',
       ),
-    ).toBe('route bio work to @bio-orchestrator and reviews to @momus');
+    ).toBe(
+      'route bio work to @bio-orchestrator, chemistry overlap work to chemoinformatics skills, and reviews to @momus',
+    );
   });
 
   test('does not rewrite embedded text such as email addresses', () => {
