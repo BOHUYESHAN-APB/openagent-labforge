@@ -11,7 +11,7 @@ Skills are not the same as `/ol-preset` runtime model presets:
 | Runtime preset | `/ol-preset powerful` | Changes agent models/providers/settings |
 | Skill / guidance | `/ol-karpathy` or `karpathy-guidelines` | Changes task behavior and review criteria |
 
-OpenAgent LabForge bundles several skills locally. Some can also be installed or
+ExtendAI Lab bundles several skills locally. Some can also be installed or
 managed through the OpenCode/skills ecosystem, but the bundled skills below ship
 with this plugin.
 
@@ -99,7 +99,7 @@ See **[Codemap Skill](codemap.md)** for full documentation including manual comm
 
 ## Skills Assignment
 
-Control which skills each agent can use in `~/.config/opencode/oh-my-opencode-slim.json` (or `.jsonc`):
+Control which skills each agent can use in `~/.config/opencode/extendai-lab.json` (or `.jsonc`):
 
 | Syntax | Meaning |
 |--------|---------|

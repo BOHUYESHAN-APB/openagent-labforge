@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { stripJsonComments } from '../../cli/config-manager';
+import { SUPPORTED_PACKAGE_NAMES } from '../../config/product';
 import { log } from '../../utils/logger';
 import { getCurrentRuntimePackageJsonPath } from './checker';
 import { CACHE_DIR, PACKAGE_NAME } from './constants';
@@ -119,7 +120,7 @@ export function resolveInstallContext(
     const nodeModulesDir = path.dirname(packageDir);
 
     if (
-      path.basename(packageDir) === PACKAGE_NAME &&
+      SUPPORTED_PACKAGE_NAMES.includes(path.basename(packageDir) as never) &&
       path.basename(nodeModulesDir) === 'node_modules'
     ) {
       const installDir = path.dirname(nodeModulesDir);

@@ -4,13 +4,13 @@ Load a checkpoint and resume work from it.
 
 ### PHASE 0: RESOLVE CHECKPOINT SOURCE
 Determine which checkpoint to load:
-- No argument: Read \`.opencode/openagent-labforge/checkpoints/latest.md\`
-- Session ID argument: Read \`.opencode/openagent-labforge/checkpoints/by-session/$ARGUMENTS.md\`
+- No argument: Read \`.opencode/extendai-lab/checkpoints/latest.md\`, falling back to legacy \`.opencode/openagent-labforge/checkpoints/latest.md\` if needed
+- Session ID argument: Read \`.opencode/extendai-lab/checkpoints/by-session/$ARGUMENTS.md\`, falling back to legacy \`.opencode/openagent-labforge/checkpoints/by-session/$ARGUMENTS.md\` if needed
 - Path argument: Read that file directly
 
 ### PHASE 1: LOAD CHECKPOINT CONTEXT
 1. Read the checkpoint markdown file
-2. Read \`.opencode/openagent-labforge/checkpoints/latest.meta.json\` if exists
+2. Read \`.opencode/extendai-lab/checkpoints/latest.meta.json\` if exists, falling back to legacy \`.opencode/openagent-labforge/checkpoints/latest.meta.json\`
 3. Extract: goal, current state, pending tasks, key decisions, resume instructions
 
 ### PHASE 2: REBUILD EXECUTION STATE
@@ -39,4 +39,4 @@ If checkpoint has \`latest.meta.json\`, update:
 - If checkpoint not found, inform user clearly
 - Preserve all context from checkpoint
 - Create todos from pending tasks immediately
-- Do not modify original checkpoint files`
+- Do not modify original checkpoint files`;

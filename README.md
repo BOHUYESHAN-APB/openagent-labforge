@@ -1,4 +1,4 @@
-# OpenAgent LabForge
+# ExtendAI Lab
 
 > Bioinformatics + Engineering dual-track AI agent orchestration plugin for [OpenCode](https://github.com/anomalyco/opencode)
 
@@ -11,14 +11,14 @@ English | [中文](#中文)
 
 ## Overview
 
-OpenAgent LabForge is a lightweight agent orchestration system that currently
+ExtendAI Lab is a lightweight agent orchestration system that currently
 ships as a full OpenCode plugin. It extends OpenCode with **17 specialized
 agents** (5 primary + 12 subagents), a three-tier prompt system, optional
 bioinformatics capabilities, and a checkpoint-based memory architecture.
 
 > Repository naming note: the current GitHub repository is still named
 > `openagent-labforge-bio` for historical release continuity. The product and
-> package name are `openagent-labforge`; bio is the first discipline pack, not
+> package name are `extendai-lab`; bio is the first discipline pack, not
 > the product boundary. See
 > [`docs/architecture/repository-rename.md`](docs/architecture/repository-rename.md).
 
@@ -66,7 +66,7 @@ Then register the plugin in your OpenCode config:
 
 ```jsonc
 {
-  "plugin": ["openagent-labforge"]
+  "plugin": ["extendai-lab"]
 }
 ```
 
@@ -85,7 +85,7 @@ Host-specific docs:
 
 ## Configuration
 
-Create `openagent-labforge.jsonc` in your project root or `~/.config/opencode/`:
+Create `extendai-lab.jsonc` in `~/.config/opencode/`, or create `.opencode/extendai-lab.jsonc` inside your project for repository-local overrides:
 
 ```jsonc
 {
@@ -108,7 +108,7 @@ Create `openagent-labforge.jsonc` in your project root or `~/.config/opencode/`:
 }
 ```
 
-See [`openagent-labforge.example.jsonc`](openagent-labforge.example.jsonc) for the full configuration reference.
+See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for the current full configuration reference. Legacy `openagent-labforge*.json/jsonc` files remain readable during the compatibility window and are planned to be removed in `v1.0.16`.
 
 ---
 
@@ -157,7 +157,7 @@ Switch at runtime: `/ol-light`, `/ol-heavy`, `/ol-turbo`
 
 ## Command System
 
-OpenAgent LabForge has two different concepts that should not be confused:
+ExtendAI Lab has two different concepts that should not be confused:
 
 - **Preset switching** (`/ol-preset`) changes model/provider/settings for agents at
   runtime. It is configuration control.
@@ -288,7 +288,7 @@ For one or two target files, the main agent can call `read` directly after
 | [UniProt MCP](https://github.com/TakumiY235/uniprot-mcp-server) | MIT | Project install required |
 | [BioNext MCP](https://github.com/Cherine0205/BioNext-mcp) | MIT | Project install required |
 
-Project-installed MCPs should live under `.opencode/openagent-labforge/mcp/servers/` in the active repository. They are not started by default because they require clone/build steps and project-local environments.
+Project-installed MCPs should live under `.opencode/extendai-lab/mcp/servers/` in the active repository. Legacy `.opencode/openagent-labforge/...` paths remain readable during the compatibility window and are planned for removal in `v1.0.16`.
 
 ### Recommended Bio MCPs (user-installable)
 
@@ -298,7 +298,7 @@ Project-installed MCPs should live under `.opencode/openagent-labforge/mcp/serve
 | [ChatSpatial](https://github.com/cafferychen777/ChatSpatial) | 33 | Spatial transcriptomics | `pip install chatspatial` |
 | [BioThings MCP](https://github.com/longevity-genie/biothings-mcp) | 31 | Genetics, variants | See repo |
 | [gget MCP](https://github.com/longevity-genie/gget-mcp) | 27 | Bioinformatics functions | See repo |
-| [Semantic Scholar](https://github.com/zongmin-yu/semantic-scholar-fastmcp) | — | Academic paper search | Bundled (enabled by default) |
+| [Semantic Scholar](https://github.com/zongmin-yu/semantic-scholar-fastmcp) | — | Academic paper search | Bundled (opt-in via `enabled_mcps`) |
 
 > PubMed (NCBI) and Semantic Scholar (Allen AI) serve different databases and can coexist.
 
@@ -392,7 +392,7 @@ bun run check:ci
 
 ### 概述
 
-OpenAgent LabForge 是 [OpenCode](https://github.com/anomalyco/opencode) 的轻量级代理编排插件，扩展为 **17 个代理**（5 主 + 12 子），支持三层提示词系统、生物信息学能力和检查点记忆架构。
+ExtendAI Lab 是 [OpenCode](https://github.com/anomalyco/opencode) 的轻量级代理编排系统，当前以完整 OpenCode 插件形式交付，扩展为 **17 个代理**（5 主 + 12 子），支持三层提示词系统、可选生物信息学能力和检查点记忆架构。
 
 **核心特性**：
 - 5 个主代理各司其职（编排、深度执行、规划、计划执行、生物信息学）

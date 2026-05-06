@@ -8,6 +8,9 @@ import {
   getGlobalMcpDir,
   getGlobalMemoryDir,
   getGlobalStateDir,
+  getLegacyGlobalDataDirs,
+  getLegacyGlobalStateDirs,
+  getLegacyProjectStateDirs,
   getOpenCodeDataDir,
   getPackageResourceDir,
   getProjectBoulderFile,
@@ -30,48 +33,54 @@ describe('plugin paths', () => {
   test('resolves project-scoped state directories', () => {
     const root = join('repo');
     expect(getProjectStateDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge'),
+      join(root, '.opencode', 'extendai-lab'),
     );
+    expect(getLegacyProjectStateDirs(root)).toEqual([
+      join(root, '.opencode', 'openagent-labforge'),
+    ]);
     expect(getProjectMcpDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'mcp'),
+      join(root, '.opencode', 'extendai-lab', 'mcp'),
     );
     expect(getProjectMcpServersDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'mcp', 'servers'),
+      join(root, '.opencode', 'extendai-lab', 'mcp', 'servers'),
     );
     expect(getProjectMemoryDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'memory'),
+      join(root, '.opencode', 'extendai-lab', 'memory'),
     );
     expect(getProjectCheckpointDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'checkpoints'),
+      join(root, '.opencode', 'extendai-lab', 'checkpoints'),
     );
     expect(getProjectPlansDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'plans'),
+      join(root, '.opencode', 'extendai-lab', 'plans'),
     );
     expect(getProjectBoulderFile(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'boulder.json'),
+      join(root, '.opencode', 'extendai-lab', 'boulder.json'),
     );
     expect(getProjectImagesDir(root)).toBe(
-      join(root, '.opencode', 'openagent-labforge', 'images'),
+      join(root, '.opencode', 'extendai-lab', 'images'),
     );
   });
 
   test('resolves Windows global state under APPDATA', () => {
     const env = { APPDATA: 'C:\\Users\\me\\AppData\\Roaming' };
     expect(getGlobalStateDir('win32', env)).toBe(
-      join(env.APPDATA, 'opencode', 'openagent-labforge'),
+      join(env.APPDATA, 'opencode', 'extendai-lab'),
     );
+    expect(getLegacyGlobalStateDirs('win32', env)).toEqual([
+      join(env.APPDATA, 'opencode', 'openagent-labforge'),
+    ]);
     expect(getGlobalMemoryDir('win32', env)).toBe(
-      join(env.APPDATA, 'opencode', 'openagent-labforge', 'memory'),
+      join(env.APPDATA, 'opencode', 'extendai-lab', 'memory'),
     );
     expect(getGlobalMcpDir('win32', env)).toBe(
-      join(env.APPDATA, 'opencode', 'openagent-labforge', 'mcp'),
+      join(env.APPDATA, 'opencode', 'extendai-lab', 'mcp'),
     );
   });
 
   test('resolves Linux global state under XDG_CONFIG_HOME', () => {
     const env = { XDG_CONFIG_HOME: '/home/me/.config' };
     expect(getGlobalStateDir('linux', env)).toBe(
-      join(env.XDG_CONFIG_HOME, 'opencode', 'openagent-labforge'),
+      join(env.XDG_CONFIG_HOME, 'opencode', 'extendai-lab'),
     );
   });
 
@@ -79,16 +88,19 @@ describe('plugin paths', () => {
     const env = { XDG_DATA_HOME: '/home/me/.local/share' };
     expect(getOpenCodeDataDir(env)).toBe(join(env.XDG_DATA_HOME, 'opencode'));
     expect(getGlobalDataDir(env)).toBe(
-      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge'),
+      join(env.XDG_DATA_HOME, 'opencode', 'extendai-lab'),
     );
+    expect(getLegacyGlobalDataDirs(env)).toEqual([
+      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge'),
+    ]);
     expect(getGlobalLogDir(env)).toBe(
-      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'logs'),
+      join(env.XDG_DATA_HOME, 'opencode', 'extendai-lab', 'logs'),
     );
     expect(getGlobalDashboardDir(env)).toBe(
-      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'dashboard'),
+      join(env.XDG_DATA_HOME, 'opencode', 'extendai-lab', 'dashboard'),
     );
     expect(getGlobalBgTasksDir(env)).toBe(
-      join(env.XDG_DATA_HOME, 'opencode', 'openagent-labforge', 'bg-tasks'),
+      join(env.XDG_DATA_HOME, 'opencode', 'extendai-lab', 'bg-tasks'),
     );
   });
 });

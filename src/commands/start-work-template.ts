@@ -1,4 +1,4 @@
-export const START_WORK_TEMPLATE = `You are starting an OpenAgent Labforge work session from a planner-saved plan.
+export const START_WORK_TEMPLATE = `You are starting an ExtendAI Lab work session from a planner-saved plan.
 
 ## COMMAND
 
@@ -8,8 +8,8 @@ export const START_WORK_TEMPLATE = `You are starting an OpenAgent Labforge work 
 ## WHAT THE HOOK ALREADY DID
 
 The command hook should have:
-1. Located a plan file under .opencode/openagent-labforge/plans/ or legacy .sisyphus/plans/.
-2. Created or updated .opencode/openagent-labforge/boulder.json.
+1. Located a plan file under .opencode/extendai-lab/plans/ or legacy .opencode/openagent-labforge/plans/ or .sisyphus/plans/.
+2. Created or updated .opencode/extendai-lab/boulder.json.
 3. Appended the current session ID to boulder state.
 4. Injected the selected plan path, progress, and executor context.
 5. Selected the executor agent (display name: executor, internal id: atlas) when the host supports backend switching.

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping with OpenAgent LabForge.
+Thanks for helping with ExtendAI Lab.
 
 中文版本见 [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md)。
 

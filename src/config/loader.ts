@@ -2,9 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { stripJsonComments } from '../cli/config-io';
 import { getConfigSearchDirs } from '../cli/paths';
+import { CONFIG_BASENAME, LEGACY_CONFIG_BASENAMES } from './product';
 import { type PluginConfig, PluginConfigSchema } from './schema';
 
-const PROMPTS_DIR_NAME = 'openagent-labforge';
+const PROMPTS_DIR_NAMES = [CONFIG_BASENAME, ...LEGACY_CONFIG_BASENAMES];
 const PRESETS_DIR_NAME = 'presets';
 
 /**
@@ -30,7 +31,7 @@ export function loadModelPreset(
         return JSON.parse(content);
       } catch (error) {
         console.warn(
-          `[openagent-labforge] Error loading preset ${presetName} from ${presetPath}:`,
+          `[extendai-lab] Error loading preset ${presetName} from ${presetPath}:`,
           error instanceof Error ? error.message : String(error),
         );
       }
@@ -56,7 +57,7 @@ function loadConfigFromPath(configPath: string): PluginConfig | null {
     const result = PluginConfigSchema.safeParse(rawConfig);
 
     if (!result.success) {
-      console.warn(`[openagent-labforge] Invalid config at ${configPath}:`);
+      console.warn(`[extendai-lab] Invalid config at ${configPath}:`);
       console.warn(result.error.format());
       return null;
     }
@@ -70,7 +71,7 @@ function loadConfigFromPath(configPath: string): PluginConfig | null {
       (error as NodeJS.ErrnoException).code !== 'ENOENT'
     ) {
       console.warn(
-        `[openagent-labforge] Error reading config from ${configPath}:`,
+        `[extendai-lab] Error reading config from ${configPath}:`,
         error.message,
       );
     }
@@ -82,7 +83,7 @@ function loadConfigFromPath(configPath: string): PluginConfig | null {
  * Find existing config file path, preferring .jsonc over .json.
  * Checks for .jsonc first, then falls back to .json.
  *
- * @param basePath - Base path without extension (e.g., /path/to/openagent-labforge)
+ * @param basePath - Base path without extension (e.g., /path/to/extendai-lab)
  * @returns Path to existing config file, or null if neither exists
  */
 function findConfigPath(basePath: string): string | null {
@@ -156,9 +157,9 @@ export function deepMerge<T extends Record<string, unknown>>(
  * Load plugin configuration from user and project config files, merging them appropriately.
  *
  * Configuration is loaded from two locations:
- * 1. User config: $OPENCODE_CONFIG_DIR/openagent-labforge.jsonc or .json,
- *    or ~/.config/opencode/openagent-labforge.jsonc or .json (or $XDG_CONFIG_HOME)
- * 2. Project config: <directory>/.opencode/openagent-labforge.jsonc or .json
+ * 1. User config: $OPENCODE_CONFIG_DIR/extendai-lab.jsonc or .json,
+ *    or ~/.config/opencode/extendai-lab.jsonc or .json (or $XDG_CONFIG_HOME)
+ * 2. Project config: <directory>/.opencode/extendai-lab.jsonc or .json
  *
  * JSONC format is preferred over JSON (allows comments and trailing commas).
  * Project config takes precedence over user config. Nested objects (agents, tmux) are
@@ -170,20 +171,32 @@ export function deepMerge<T extends Record<string, unknown>>(
 export function loadPluginConfig(directory: string): PluginConfig {
   const userConfigPath = findConfigPathInDirs(
     getConfigSearchDirs(),
-    'openagent-labforge',
+    CONFIG_BASENAME,
   );
 
-  const projectConfigBasePath = path.join(
-    directory,
-    '.opencode',
-    'openagent-labforge',
-  );
+  const legacyUserConfigPath = userConfigPath
+    ? null
+    : (LEGACY_CONFIG_BASENAMES.map((baseName) =>
+        findConfigPathInDirs(getConfigSearchDirs(), baseName),
+      ).find(Boolean) ?? null);
+
+  const projectConfigBasePaths = [
+    path.join(directory, '.opencode', CONFIG_BASENAME),
+    ...LEGACY_CONFIG_BASENAMES.map((baseName) =>
+      path.join(directory, '.opencode', baseName),
+    ),
+  ];
 
   // Find existing config files (preferring .jsonc over .json)
-  const projectConfigPath = findConfigPath(projectConfigBasePath);
+  const projectConfigPath =
+    projectConfigBasePaths
+      .map((basePath) => findConfigPath(basePath))
+      .find(Boolean) ?? null;
 
-  let config: PluginConfig = userConfigPath
-    ? (loadConfigFromPath(userConfigPath) ?? {})
+  const resolvedUserConfigPath = userConfigPath ?? legacyUserConfigPath;
+
+  let config: PluginConfig = resolvedUserConfigPath
+    ? (loadConfigFromPath(resolvedUserConfigPath) ?? {})
     : {};
 
   const projectConfig = projectConfigPath
@@ -229,7 +242,7 @@ export function loadPluginConfig(directory: string): PluginConfig {
         ? Object.keys(config.presets).join(', ')
         : 'none';
       console.warn(
-        `[openagent-labforge] Preset "${config.preset}" not found (from ${presetSource}). Available presets: ${availablePresets}`,
+        `[extendai-lab] Preset "${config.preset}" not found (from ${presetSource}). Available presets: ${availablePresets}`,
       );
     }
   }
@@ -273,10 +286,15 @@ export function loadAgentPrompt(
   const presetDirName =
     preset && /^[a-zA-Z0-9_-]+$/.test(preset) ? preset : undefined;
   const promptSearchDirs = getConfigSearchDirs().flatMap((configDir) => {
-    const promptsDir = path.join(configDir, PROMPTS_DIR_NAME);
-    return presetDirName
-      ? [path.join(promptsDir, presetDirName), promptsDir]
-      : [promptsDir];
+    const promptRoots = PROMPTS_DIR_NAMES.map((dirName) =>
+      path.join(configDir, dirName),
+    );
+
+    return promptRoots.flatMap((promptsDir) =>
+      presetDirName
+        ? [path.join(promptsDir, presetDirName), promptsDir]
+        : [promptsDir],
+    );
   });
   const result: { prompt?: string; appendPrompt?: string } = {};
 
@@ -294,7 +312,7 @@ export function loadAgentPrompt(
         return fs.readFileSync(promptPath, 'utf-8');
       } catch (error) {
         console.warn(
-          `[openagent-labforge] ${errorPrefix} ${promptPath}:`,
+          `[extendai-lab] ${errorPrefix} ${promptPath}:`,
           error instanceof Error ? error.message : String(error),
         );
       }

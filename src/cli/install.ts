@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
+import { PACKAGE_NAME, PRODUCT_DISPLAY_NAME } from '../config/product';
 import {
   addPluginToOpenCodeConfig,
   addPluginToOpenCodeTuiConfig,
@@ -36,13 +37,13 @@ const SYMBOLS = {
   star: `${YELLOW}★${RESET}`,
 };
 
-const GITHUB_REPO = 'alvinunreal/openagent-labforge';
+const GITHUB_REPO = 'BOHUYESHAN-APB/openagent-labforge-bio';
 const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 
 function printHeader(isUpdate: boolean): void {
   console.log();
   console.log(
-    `${BOLD}openagent-labforge ${isUpdate ? 'Update' : 'Install'}${RESET}`,
+    `${BOLD}${PRODUCT_DISPLAY_NAME} ${isUpdate ? 'Update' : 'Install'}${RESET}`,
   );
   console.log('='.repeat(30));
   console.log();
@@ -163,7 +164,7 @@ async function runInstall(config: InstallConfig): Promise<number> {
     const { ok } = await checkOpenCodeInstalled();
     if (!ok) return 1;
   }
-  printStep(step++, totalSteps, 'Adding openagent-labforge plugin...');
+  printStep(step++, totalSteps, `Adding ${PACKAGE_NAME} plugin...`);
   if (config.dryRun) {
     printInfo('Dry run mode - skipping plugin installation');
   } else {
@@ -199,7 +200,7 @@ async function runInstall(config: InstallConfig): Promise<number> {
     if (!handleStepResult(lspResult, 'LSP enabled')) return 1;
   }
 
-  printStep(step++, totalSteps, 'Writing openagent-labforge configuration...');
+  printStep(step++, totalSteps, `Writing ${PACKAGE_NAME} configuration...`);
   if (config.dryRun) {
     const liteConfig = generateLiteConfig(config);
     printInfo('Dry run mode - configuration that would be written:');
@@ -313,7 +314,7 @@ async function runInstall(config: InstallConfig): Promise<number> {
   const altProviders = 'For the full configuration reference, see:';
   console.log(altProviders);
   const docsUrl =
-    'https://github.com/alvinunreal/openagent-labforge/' +
+    'https://github.com/BOHUYESHAN-APB/openagent-labforge-bio/' +
     'blob/master/docs/configuration.md';
   console.log(`  ${BLUE}${docsUrl}${RESET}`);
   console.log();

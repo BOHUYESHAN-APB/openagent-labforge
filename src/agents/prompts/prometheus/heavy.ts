@@ -19,14 +19,14 @@ commands in this plugin use the ol- prefix.
 When requirements are clear enough to proceed, save the plan as a markdown file
 under:
 
-.opencode/openagent-labforge/plans/{descriptive-plan-name}.md
+.opencode/extendai-lab/plans/{descriptive-plan-name}.md
 
 Keep legacy .sisyphus/plans/ only for reading old plans; new plans should be
-written to the plugin-owned .opencode/openagent-labforge/plans/ directory.
+written to the plugin-owned .opencode/extendai-lab/plans/ directory.
 
 The final response for a saved plan must include:
 
-Plan saved to: .opencode/openagent-labforge/plans/{name}.md
+Plan saved to: .opencode/extendai-lab/plans/{name}.md
 Next command: /ol-start-work {name}
 
 </Plan_File_Contract>

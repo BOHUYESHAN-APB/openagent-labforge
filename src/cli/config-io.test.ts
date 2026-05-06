@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PACKAGE_NAME, SCHEMA_FILE_NAME } from '../config/product';
 import {
   addPluginToOpenCodeConfig,
   addPluginToOpenCodeTuiConfig,
@@ -50,7 +51,7 @@ describe('config-io', () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       join(dir, 'package.json'),
-      JSON.stringify({ name: 'openagent-labforge' }),
+      JSON.stringify({ name: PACKAGE_NAME }),
     );
   }
 
@@ -122,7 +123,7 @@ describe('config-io', () => {
     paths.ensureConfigDir();
     writeFileSync(
       configPath,
-      JSON.stringify({ plugin: ['other', 'openagent-labforge@1.0.0'] }),
+      JSON.stringify({ plugin: ['other', `${PACKAGE_NAME}@1.0.0`] }),
     );
     process.argv[1] = '';
 
@@ -130,8 +131,8 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(configPath, 'utf-8'));
-    expect(saved.plugin).toContain('openagent-labforge');
-    expect(saved.plugin).not.toContain('openagent-labforge@1.0.0');
+    expect(saved.plugin).toContain(PACKAGE_NAME);
+    expect(saved.plugin).not.toContain(`${PACKAGE_NAME}@1.0.0`);
     expect(saved.plugin.length).toBe(2);
   });
 
@@ -139,9 +140,9 @@ describe('config-io', () => {
     const configPath = join(tmpDir, 'opencode', 'opencode.json');
     const packageRoot = join(
       tmpDir,
-      'bunx-1000-openagent-labforge@latest',
+      `bunx-1000-${PACKAGE_NAME}@latest`,
       'node_modules',
-      'openagent-labforge',
+      PACKAGE_NAME,
     );
     paths.ensureConfigDir();
     writeFileSync(configPath, JSON.stringify({ plugin: [] }));
@@ -152,7 +153,7 @@ describe('config-io', () => {
 
     expect(result.success).toBe(true);
     const saved = JSON.parse(readFileSync(configPath, 'utf-8'));
-    expect(saved.plugin).toEqual(['openagent-labforge']);
+    expect(saved.plugin).toEqual([PACKAGE_NAME]);
   });
 
   test('addPluginToOpenCodeConfig stores local repo path for local dev paths', async () => {
@@ -215,7 +216,7 @@ describe('config-io', () => {
     writeFileSync(
       configPath,
       JSON.stringify({
-        plugin: ['other-plugin', objectPlugin, 'openagent-labforge@1.0.0'],
+        plugin: ['other-plugin', objectPlugin, `${PACKAGE_NAME}@1.0.0`],
       }),
     );
 
@@ -223,9 +224,9 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(configPath, 'utf-8'));
-    expect(saved.plugin).toContain('openagent-labforge');
+    expect(saved.plugin).toContain(PACKAGE_NAME);
     expect(saved.plugin).toContain('other-plugin');
-    expect(saved.plugin).not.toContain('openagent-labforge@1.0.0');
+    expect(saved.plugin).not.toContain(`${PACKAGE_NAME}@1.0.0`);
     // Non-string entries (objects) must survive the plugin refresh
     expect(saved.plugin).toContainEqual(objectPlugin);
     expect(saved.plugin.length).toBe(3);
@@ -237,7 +238,7 @@ describe('config-io', () => {
     writeFileSync(
       configPath,
       JSON.stringify({
-        plugin: ['other', ['openagent-labforge', { enabled: true }]],
+        plugin: ['other', [PACKAGE_NAME, { enabled: true }]],
       }),
     );
     process.argv[1] = '';
@@ -246,7 +247,7 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(configPath, 'utf-8'));
-    expect(saved.plugin).toEqual(['other', 'openagent-labforge']);
+    expect(saved.plugin).toEqual(['other', PACKAGE_NAME]);
   });
 
   test('addPluginToOpenCodeTuiConfig adds plugin to tui.json and removes duplicates', async () => {
@@ -254,7 +255,7 @@ describe('config-io', () => {
     paths.ensureConfigDir();
     writeFileSync(
       tuiPath,
-      JSON.stringify({ plugin: ['other', 'openagent-labforge@1.0.0'] }),
+      JSON.stringify({ plugin: ['other', `${PACKAGE_NAME}@1.0.0`] }),
     );
     process.argv[1] = '';
 
@@ -262,8 +263,8 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(tuiPath, 'utf-8'));
-    expect(saved.plugin).toContain('openagent-labforge');
-    expect(saved.plugin).not.toContain('openagent-labforge@1.0.0');
+    expect(saved.plugin).toContain(PACKAGE_NAME);
+    expect(saved.plugin).not.toContain(`${PACKAGE_NAME}@1.0.0`);
     expect(saved.plugin.length).toBe(2);
   });
 
@@ -271,9 +272,9 @@ describe('config-io', () => {
     const tuiPath = join(tmpDir, 'opencode', 'tui.json');
     const packageRoot = join(
       tmpDir,
-      'bunx-1000-openagent-labforge@latest',
+      `bunx-1000-${PACKAGE_NAME}@latest`,
       'node_modules',
-      'openagent-labforge',
+      PACKAGE_NAME,
     );
     paths.ensureConfigDir();
     writeFileSync(tuiPath, JSON.stringify({ plugin: [] }));
@@ -284,7 +285,7 @@ describe('config-io', () => {
 
     expect(result.success).toBe(true);
     const saved = JSON.parse(readFileSync(tuiPath, 'utf-8'));
-    expect(saved.plugin).toEqual(['openagent-labforge']);
+    expect(saved.plugin).toEqual([PACKAGE_NAME]);
   });
 
   test('addPluginToOpenCodeTuiConfig removes tuple plugin entries', async () => {
@@ -293,7 +294,7 @@ describe('config-io', () => {
     writeFileSync(
       tuiPath,
       JSON.stringify({
-        plugin: ['other', ['openagent-labforge', { enabled: true }]],
+        plugin: ['other', [PACKAGE_NAME, { enabled: true }]],
       }),
     );
     process.argv[1] = '';
@@ -302,7 +303,7 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(tuiPath, 'utf-8'));
-    expect(saved.plugin).toEqual(['other', 'openagent-labforge']);
+    expect(saved.plugin).toEqual(['other', PACKAGE_NAME]);
   });
 
   test('addPluginToOpenCodeTuiConfig honors OPENCODE_TUI_CONFIG', async () => {
@@ -315,7 +316,7 @@ describe('config-io', () => {
     expect(result.configPath).toBe(tuiPath);
 
     const saved = JSON.parse(readFileSync(tuiPath, 'utf-8'));
-    expect(saved.plugin).toEqual(['openagent-labforge']);
+    expect(saved.plugin).toEqual([PACKAGE_NAME]);
   });
 
   test('addPluginToOpenCodeTuiConfig does not bypass OPENCODE_TUI_CONFIG for existing default config', async () => {
@@ -332,7 +333,7 @@ describe('config-io', () => {
 
     const custom = JSON.parse(readFileSync(customTuiPath, 'utf-8'));
     const original = JSON.parse(readFileSync(defaultTuiPath, 'utf-8'));
-    expect(custom.plugin).toEqual(['openagent-labforge']);
+    expect(custom.plugin).toEqual([PACKAGE_NAME]);
     expect(original.plugin).toEqual(['default']);
   });
 
@@ -377,7 +378,7 @@ describe('config-io', () => {
     writeFileSync(
       tuiPath,
       JSON.stringify({
-        plugin: ['other-plugin', objectPlugin, 'openagent-labforge@1.0.0'],
+        plugin: ['other-plugin', objectPlugin, `${PACKAGE_NAME}@1.0.0`],
       }),
     );
 
@@ -385,16 +386,16 @@ describe('config-io', () => {
     expect(result.success).toBe(true);
 
     const saved = JSON.parse(readFileSync(tuiPath, 'utf-8'));
-    expect(saved.plugin).toContain('openagent-labforge');
+    expect(saved.plugin).toContain(PACKAGE_NAME);
     expect(saved.plugin).toContain('other-plugin');
-    expect(saved.plugin).not.toContain('openagent-labforge@1.0.0');
+    expect(saved.plugin).not.toContain(`${PACKAGE_NAME}@1.0.0`);
     // Non-string entries (objects) must survive the plugin refresh
     expect(saved.plugin).toContainEqual(objectPlugin);
     expect(saved.plugin.length).toBe(3);
   });
 
   test('writeLiteConfig writes lite config with OpenAI preset', () => {
-    const litePath = join(tmpDir, 'opencode', 'openagent-labforge.json');
+    const litePath = join(tmpDir, 'opencode', `${PACKAGE_NAME}.json`);
     paths.ensureConfigDir();
 
     const result = writeLiteConfig({
@@ -407,7 +408,7 @@ describe('config-io', () => {
 
     const saved = JSON.parse(readFileSync(litePath, 'utf-8'));
     expect(saved.$schema).toBe(
-      'https://unpkg.com/openagent-labforge@latest/openagent-labforge.schema.json',
+      `https://unpkg.com/${PACKAGE_NAME}@latest/${SCHEMA_FILE_NAME}`,
     );
     expect(saved.preset).toBe('openai');
     expect(saved.presets.openai).toBeDefined();
@@ -416,7 +417,7 @@ describe('config-io', () => {
   });
 
   test('writeLiteConfig writes selected preset', () => {
-    const litePath = join(tmpDir, 'opencode', 'openagent-labforge.json');
+    const litePath = join(tmpDir, 'opencode', `${PACKAGE_NAME}.json`);
     paths.ensureConfigDir();
 
     const result = writeLiteConfig({
@@ -487,13 +488,13 @@ describe('config-io', () => {
 
   test('detectCurrentConfig detects installed status', () => {
     const configPath = join(tmpDir, 'opencode', 'opencode.json');
-    const litePath = join(tmpDir, 'opencode', 'openagent-labforge.json');
+    const litePath = join(tmpDir, 'opencode', `${PACKAGE_NAME}.json`);
     paths.ensureConfigDir();
 
     writeFileSync(
       configPath,
       JSON.stringify({
-        plugin: ['openagent-labforge'],
+        plugin: [PACKAGE_NAME],
         provider: {
           kimi: {
             npm: '@ai-sdk/openai-compatible',

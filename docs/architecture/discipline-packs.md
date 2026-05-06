@@ -56,7 +56,7 @@ OpenCode plugin entrypoint.
 ## Repository rename plan
 
 Before renaming the GitHub repository from `openagent-labforge-bio` to
-`openagent-labforge`, confirm:
+`extendai-lab`, confirm:
 
 1. docs say bio is a discipline pack, not the whole product;
 2. package metadata points to the final repository name;

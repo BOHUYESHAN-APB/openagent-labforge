@@ -1,6 +1,6 @@
 # Host Adapter Architecture
 
-OpenAgent LabForge is moving toward a host-adapter architecture:
+ExtendAI Lab is moving toward a host-adapter architecture:
 
 - **OpenCode** remains the full runtime plugin host.
 - **DeepSeek-TUI** is an adapter target, not a full plugin host.
@@ -17,8 +17,8 @@ future product boundary.
 
 Target naming:
 
-- Product / package: `openagent-labforge`
-- Future GitHub repository: `openagent-labforge`
+- Product / package: `extendai-lab`
+- Future GitHub repository: `extendai-lab`
 - First optional discipline pack: `bio`
 - Current repository name: historical compatibility alias until migration
 

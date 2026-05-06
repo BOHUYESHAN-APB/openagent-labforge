@@ -114,7 +114,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       const hint =
         available.length > 0
           ? `Available presets: ${available.join(', ')}`
-          : 'No presets configured. Define presets in openagent-labforge.jsonc.';
+          : 'No presets configured. Define presets in extendai-lab.jsonc.';
       output.parts.push(
         createInternalAgentTextPart(
           `Preset "${presetName}" not found. ${hint}`,
@@ -287,7 +287,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
   function formatPresetList(presets: Record<string, Preset>): string {
     const names = Object.keys(presets);
     if (names.length === 0) {
-      return 'No presets configured. Define presets in openagent-labforge.jsonc under the "presets" field.';
+      return 'No presets configured. Define presets in extendai-lab.jsonc under the "presets" field.';
     }
 
     const lines = ['Available presets:'];

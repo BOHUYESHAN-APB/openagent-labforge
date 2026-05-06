@@ -1,13 +1,13 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { describe, expect, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
-import { CheckpointManager } from './manager';
 import {
   getRepositoryWorkspaces,
   loadGlobalIndex,
   registerWorkspace,
 } from './global-index';
+import { CheckpointManager } from './manager';
 
 describe('global memory index', () => {
   test('registers workspace to global index on session init', () => {
@@ -92,6 +92,45 @@ describe('global memory index', () => {
       const workspaces = getRepositoryWorkspaces('repo-4');
       expect(workspaces.filter((w) => w === root)).toHaveLength(1);
     } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('loads legacy global index during migration window', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ol-global-legacy-'));
+    const originalAppData = process.env.APPDATA;
+    process.env.APPDATA = root;
+
+    try {
+      const legacyDir = join(root, 'opencode', 'openagent-labforge', 'memory');
+      mkdirSync(legacyDir, { recursive: true });
+      writeFileSync(
+        join(legacyDir, 'global-memory-index.json'),
+        JSON.stringify({
+          repositories: [
+            {
+              repositoryId: 'legacy-repo',
+              workspaceRoots: ['D:/legacy/workspace'],
+              globalKnowledge: ['legacy-note'],
+              patterns: ['legacy-pattern'],
+              lastActivity: 123,
+            },
+          ],
+          lastUpdated: 456,
+        }),
+      );
+
+      const index = loadGlobalIndex();
+      expect(index.repositories.get('legacy-repo')?.workspaceRoots).toEqual([
+        'D:/legacy/workspace',
+      ]);
+      expect(index.lastUpdated).toBe(456);
+    } finally {
+      if (originalAppData === undefined) {
+        delete process.env.APPDATA;
+      } else {
+        process.env.APPDATA = originalAppData;
+      }
       rmSync(root, { recursive: true, force: true });
     }
   });

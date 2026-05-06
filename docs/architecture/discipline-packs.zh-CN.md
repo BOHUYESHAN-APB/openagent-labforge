@@ -49,7 +49,7 @@ interface DisciplinePack {
 
 ## 仓库改名计划
 
-把 GitHub 仓库从 `openagent-labforge-bio` 改成 `openagent-labforge` 之前，需要确认：
+把 GitHub 仓库从 `openagent-labforge-bio` 改成 `extendai-lab` 之前，需要确认：
 
 1. 文档说明 bio 是 discipline pack，不是整个产品；
 2. package metadata 指向最终仓库名；

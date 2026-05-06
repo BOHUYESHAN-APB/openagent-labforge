@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你帮助改进 OpenAgent LabForge。
+感谢你帮助改进 ExtendAI Lab。
 
 英文版本见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 

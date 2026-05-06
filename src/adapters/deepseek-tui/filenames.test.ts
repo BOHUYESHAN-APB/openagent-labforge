@@ -24,7 +24,7 @@ describe('DeepSeek-TUI adapter file naming', () => {
       sha256: 'abc123',
     });
 
-    expect(marker).toContain('openagent-labforge-managed: true');
+    expect(marker).toContain('extendai-lab-managed: true');
     expect(marker).toContain('adapter: deepseek-tui');
     expect(marker).toContain('fileId: commands/ol-engineer');
   });

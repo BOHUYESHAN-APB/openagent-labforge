@@ -1,10 +1,10 @@
 import { DEFAULT_AGENT_MCPS } from '../config/agent-mcps';
+import { PACKAGE_NAME, SCHEMA_FILE_NAME } from '../config/product';
 import { CUSTOM_SKILLS } from './custom-skills';
 import { RECOMMENDED_SKILLS } from './skills';
 import type { InstallConfig } from './types';
 
-const SCHEMA_URL =
-  'https://unpkg.com/openagent-labforge@latest/openagent-labforge.schema.json';
+const SCHEMA_URL = `https://unpkg.com/${PACKAGE_NAME}@latest/${SCHEMA_FILE_NAME}`;
 
 export const GENERATED_PRESETS = ['openai', 'opencode-go'] as const;
 

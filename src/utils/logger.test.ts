@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { PACKAGE_NAME } from '../config/product';
 import { getGlobalLogDir } from '../paths/plugin-paths';
 import {
   flushLoggerForTesting,
@@ -14,10 +15,12 @@ import {
 describe('logger', () => {
   let tmpDir: string;
   let origLogDir: string | undefined;
+  let origDataHome: string | undefined;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'logger-test-'));
     origLogDir = process.env.OPENCODE_LOG_DIR;
+    origDataHome = process.env.XDG_DATA_HOME;
     process.env.OPENCODE_LOG_DIR = tmpDir;
     resetLogger();
   });
@@ -28,6 +31,11 @@ describe('logger', () => {
       delete process.env.OPENCODE_LOG_DIR;
     } else {
       process.env.OPENCODE_LOG_DIR = origLogDir;
+    }
+    if (origDataHome === undefined) {
+      delete process.env.XDG_DATA_HOME;
+    } else {
+      process.env.XDG_DATA_HOME = origDataHome;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -42,7 +50,7 @@ describe('logger', () => {
     log('test message');
 
     const files = fs.readdirSync(tmpDir);
-    expect(files).toEqual(['openagent-labforge.20260416T143052.log']);
+    expect(files).toEqual([`${PACKAGE_NAME}.20260416T143052.log`]);
   });
 
   test('writes log message with timestamp', async () => {
@@ -50,7 +58,7 @@ describe('logger', () => {
     log('timestamped message');
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     expect(content).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]/);
     expect(content).toContain('timestamped message');
@@ -61,7 +69,7 @@ describe('logger', () => {
     log('message with data', { key: 'value', number: 42 });
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     expect(content).toContain('"key":"value"');
     expect(content).toContain('"number":42');
@@ -72,7 +80,7 @@ describe('logger', () => {
     log('message without data');
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     expect(content.trim()).toMatch(/message without data\s*$/);
   });
@@ -84,7 +92,7 @@ describe('logger', () => {
     log('third');
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
     expect(lines.length).toBe(3);
     expect(lines[0]).toContain('first');
@@ -101,8 +109,8 @@ describe('logger', () => {
 
     const files = fs.readdirSync(tmpDir).sort();
     expect(files).toEqual([
-      'openagent-labforge.session1.log',
-      'openagent-labforge.session2.log',
+      `${PACKAGE_NAME}.session1.log`,
+      `${PACKAGE_NAME}.session2.log`,
     ]);
 
     const content1 = fs.readFileSync(path.join(tmpDir, files[0]), 'utf-8');
@@ -116,7 +124,7 @@ describe('logger', () => {
     // Create 12 log files with different timestamps
     const now = Date.now();
     for (let i = 0; i < 12; i++) {
-      const fileName = `openagent-labforge.file${i}.log`;
+      const fileName = `${PACKAGE_NAME}.file${i}.log`;
       const filePath = path.join(tmpDir, fileName);
       fs.writeFileSync(filePath, `log ${i}\n`);
       // Set mtime: older files have older timestamps
@@ -129,19 +137,19 @@ describe('logger', () => {
 
     const files = fs
       .readdirSync(tmpDir)
-      .filter((f) => f.startsWith('openagent-labforge.'));
+      .filter((f) => f.startsWith(`${PACKAGE_NAME}.`));
     // Should have 10 files + current = 11 total (cleanup keeps 10, then we create 1 more)
     expect(files.length).toBeLessThanOrEqual(11);
     // The oldest files (file0, file1) should be deleted
-    expect(files).not.toContain('openagent-labforge.file0.log');
-    expect(files).not.toContain('openagent-labforge.file1.log');
+    expect(files).not.toContain(`${PACKAGE_NAME}.file0.log`);
+    expect(files).not.toContain(`${PACKAGE_NAME}.file1.log`);
     // The newest files should be kept
-    expect(files).toContain('openagent-labforge.file11.log');
+    expect(files).toContain(`${PACKAGE_NAME}.file11.log`);
     expect(files.find((f) => f.includes('current'))).toBeDefined();
   });
 
   test('cleanup preserves recent files', () => {
-    const recentFileName = 'openagent-labforge.20260415T000000.log';
+    const recentFileName = `${PACKAGE_NAME}.20260415T000000.log`;
     const recentPath = path.join(tmpDir, recentFileName);
     fs.writeFileSync(recentPath, 'recent log\n');
 
@@ -155,13 +163,13 @@ describe('logger', () => {
     const now = Date.now();
 
     // Create an old file
-    const oldFileName = 'openagent-labforge.old.log';
+    const oldFileName = `${PACKAGE_NAME}.old.log`;
     const oldPath = path.join(tmpDir, oldFileName);
     fs.writeFileSync(oldPath, 'old log\n');
     fs.utimesSync(oldPath, new Date(now - 1000000), new Date(now - 1000000));
 
     // Create a recent file
-    const recentFileName = 'openagent-labforge.recent.log';
+    const recentFileName = `${PACKAGE_NAME}.recent.log`;
     const recentPath = path.join(tmpDir, recentFileName);
     fs.writeFileSync(recentPath, 'recent log\n');
     fs.utimesSync(recentPath, new Date(now - 1000), new Date(now - 1000));
@@ -191,7 +199,7 @@ describe('logger', () => {
     expect(() => log('circular data', circular)).not.toThrow();
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     expect(content).toContain('circular data');
     expect(content).toContain('[unserializable]');
@@ -203,13 +211,55 @@ describe('logger', () => {
 
   test('getLogDir falls back to os.homedir when env not set', () => {
     delete process.env.OPENCODE_LOG_DIR;
+    const dataHome = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'logger-clean-home-'),
+    );
+    process.env.XDG_DATA_HOME = dataHome;
     try {
       expect(getLogDir()).toBe(getGlobalLogDir());
     } finally {
+      fs.rmSync(dataHome, { recursive: true, force: true });
       if (origLogDir === undefined) {
         delete process.env.OPENCODE_LOG_DIR;
       } else {
         process.env.OPENCODE_LOG_DIR = origLogDir;
+      }
+      if (origDataHome === undefined) {
+        delete process.env.XDG_DATA_HOME;
+      } else {
+        process.env.XDG_DATA_HOME = origDataHome;
+      }
+    }
+  });
+
+  test('getLogDir prefers legacy existing directory during migration window', () => {
+    delete process.env.OPENCODE_LOG_DIR;
+    const dataHome = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'logger-data-home-'),
+    );
+    process.env.XDG_DATA_HOME = dataHome;
+
+    try {
+      const legacyDir = path.join(
+        dataHome,
+        'opencode',
+        'openagent-labforge',
+        'logs',
+      );
+      fs.mkdirSync(legacyDir, { recursive: true });
+
+      expect(getLogDir()).toBe(legacyDir);
+    } finally {
+      fs.rmSync(dataHome, { recursive: true, force: true });
+      if (origLogDir === undefined) {
+        delete process.env.OPENCODE_LOG_DIR;
+      } else {
+        process.env.OPENCODE_LOG_DIR = origLogDir;
+      }
+      if (origDataHome === undefined) {
+        delete process.env.XDG_DATA_HOME;
+      } else {
+        process.env.XDG_DATA_HOME = origDataHome;
       }
     }
   });
@@ -224,7 +274,7 @@ describe('logger', () => {
     });
     await flushLoggerForTesting();
 
-    const logPath = path.join(tmpDir, 'openagent-labforge.session1.log');
+    const logPath = path.join(tmpDir, `${PACKAGE_NAME}.session1.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     expect(content).toContain('"nested":');
     expect(content).toContain('"array":[1,2,3]');

@@ -1,6 +1,6 @@
-# OpenCode Plugin 指南
+# OpenCode 宿主指南
 
-OpenCode 是 OpenAgent LabForge 的主要完整 runtime 宿主。
+OpenCode 是 ExtendAI Lab 的主要完整 runtime 宿主。
 
 英文版本：[`README.md`](README.md)
 
@@ -12,11 +12,11 @@ OpenCode 集成是真正的 plugin：
 - 注册 plugin tools 和 MCP definitions；
 - 拦截 hook-driven slash commands；
 - 管理 checkpoints、todo continuation、plan workflow、runtime state；
-- 项目状态归属 `.opencode/openagent-labforge/`。
+- 项目状态归属 `.opencode/extendai-lab/`，并在兼容窗口内继续读取旧的 `.opencode/openagent-labforge/` 状态。
 
 ## 当前仓库名
 
-当前 GitHub 仓库仍叫 `openagent-labforge-bio`，这是为了历史 release 连续性。package/product 名是 `openagent-labforge`，未来等 bio 拆成 discipline pack 后再迁移 GitHub 仓库名，移除 `-bio`。
+当前 GitHub 仓库仍叫 `openagent-labforge-bio`，这是为了历史 release 连续性。package/product 名是 `extendai-lab`，未来等 bio 拆成 discipline pack 后再迁移 GitHub 仓库名，移除 `-bio`。
 
 ## 命令前缀
 
@@ -44,3 +44,12 @@ OpenCode adapter 为兼容性保留内部 ID：
 | `plan-reviewer` | `momus` |
 
 不要轻易重命名内部 ID；历史 sessions、config、presets、checkpoints、boulder state 可能仍引用它们。
+
+## 建议阅读文档
+
+- [安装指南](../installation.md)
+- [配置参考](../configuration.md)
+- [命令系统](../commands.md)
+- [计划工作流](../plan-workflow.md)
+- [存储与 MCP](../storage-and-mcp.md)
+- [仓库改名计划](../architecture/repository-rename.md)

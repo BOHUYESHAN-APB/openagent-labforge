@@ -1,6 +1,6 @@
 # Command System
 
-OpenAgent LabForge has three command execution styles. The distinction matters
+ExtendAI Lab has three command execution styles. The distinction matters
 because some commands are sent to the model as prompt templates, while others are
 handled directly by plugin hooks before the model sees them.
 

@@ -1,17 +1,18 @@
+import { readFile } from 'node:fs/promises';
 import type { TuiPluginModule } from '@opencode-ai/plugin/tui';
 import type { JSX } from '@opentui/solid';
 import { createElement, insert, setProp } from '@opentui/solid';
 
-const PLUGIN_NAME = 'openagent-labforge';
-const PLUGIN_LABEL = 'OMOS';
+const PLUGIN_NAME = 'extendai-lab';
+const PLUGIN_LABEL = 'ExtendAI Lab';
 
 type Child = JSX.Element | string | number | null | undefined | false;
 
 async function readPackageVersion(): Promise<string | undefined> {
   try {
-    const packageJson = (await Bun.file(
-      new URL('../package.json', import.meta.url),
-    ).json()) as { version?: unknown };
+    const packageJson = JSON.parse(
+      await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version?: unknown };
 
     return typeof packageJson.version === 'string'
       ? packageJson.version

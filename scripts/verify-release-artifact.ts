@@ -11,14 +11,15 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PACKAGE_NAME, SCHEMA_FILE_NAME } from '../src/config/product';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const distDir = path.join(repoRoot, 'dist');
 
 const suspiciousPathPatterns = [
-  /\/Users\/[^\s'"`]+(?:node_modules|oh-my-opencode-slim)[^\s'"`]*/,
-  /\/home\/[^\s'"`]+(?:node_modules|oh-my-opencode-slim)[^\s'"`]*/,
+  /\/Users\/[^\s'"`]+(?:node_modules|extendai-lab|openagent-labforge)[^\s'"`]*/,
+  /\/home\/[^\s'"`]+(?:node_modules|extendai-lab|openagent-labforge)[^\s'"`]*/,
 ];
 
 const packagedRequiredFiles = [
@@ -28,7 +29,10 @@ const packagedRequiredFiles = [
   'dist/index.js',
   'dist/index.d.ts',
   'dist/cli/index.js',
-  'oh-my-opencode-slim.schema.json',
+  SCHEMA_FILE_NAME,
+  'openagent-labforge.schema.json',
+  'extendai-lab.example.jsonc',
+  'openagent-labforge.example.jsonc',
   'src/skills/simplify/SKILL.md',
   'src/skills/codemap/SKILL.md',
   'src/skills/karpathy-guidelines/SKILL.md',
@@ -150,7 +154,7 @@ function verifyFreshInstall(tarballPath: string) {
     const installedEntry = path.join(
       installDir,
       'node_modules',
-      'oh-my-opencode-slim',
+      PACKAGE_NAME,
       'dist',
       'index.js',
     );
@@ -165,7 +169,7 @@ function verifyFreshInstall(tarballPath: string) {
     }
 
     const smokeScript = [
-      "import pkg from 'oh-my-opencode-slim';",
+      `import pkg from '${PACKAGE_NAME}';`,
       "if (typeof pkg !== 'function') throw new Error('default export is not a function');",
       "console.log('package loads');",
       'process.exit(0);',

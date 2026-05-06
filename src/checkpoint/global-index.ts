@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getGlobalMemoryDir } from '../paths/plugin-paths';
+import {
+  getGlobalMemoryDir,
+  getLegacyGlobalStateDirs,
+} from '../paths/plugin-paths';
 
 export interface GlobalMemoryIndex {
   repositories: Map<string, RepositoryIndex>;
@@ -30,9 +33,21 @@ function globalIndexFile(): string {
   return join(getGlobalMemoryDir(), 'global-memory-index.json');
 }
 
+function globalIndexCandidates(): string[] {
+  return [
+    globalIndexFile(),
+    ...getLegacyGlobalStateDirs().map((dir) =>
+      join(dir, 'memory', 'global-memory-index.json'),
+    ),
+  ];
+}
+
 export function loadGlobalIndex(): GlobalMemoryIndex {
-  const filePath = globalIndexFile();
-  if (!existsSync(filePath)) {
+  const filePath = globalIndexCandidates().find((candidate) =>
+    existsSync(candidate),
+  );
+
+  if (!filePath) {
     return {
       repositories: new Map(),
       lastUpdated: Date.now(),

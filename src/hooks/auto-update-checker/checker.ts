@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stripJsonComments } from '../../cli/config-manager';
+import { SUPPORTED_PACKAGE_NAMES } from '../../config/product';
 import { log } from '../../utils/logger';
 import {
   INSTALLED_PACKAGE_JSON,
@@ -20,6 +21,20 @@ import type {
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
+}
+
+function includesSupportedPackageName(value: string): boolean {
+  return SUPPORTED_PACKAGE_NAMES.some((name) => value.includes(name));
+}
+
+function findSupportedPackageName(value: string): string | null {
+  return SUPPORTED_PACKAGE_NAMES.find((name) => value === name) ?? null;
+}
+
+function findPinnedPackageName(value: string): string | null {
+  return (
+    SUPPORTED_PACKAGE_NAMES.find((name) => value.startsWith(`${name}@`)) ?? null
+  );
 }
 
 function getPluginEntries(config: OpencodeConfig): string[] {
@@ -86,7 +101,10 @@ function getLocalDevPath(directory: string): string | null {
       const plugins = getPluginEntries(config);
 
       for (const entry of plugins) {
-        if (entry.startsWith('file://') && entry.includes(PACKAGE_NAME)) {
+        if (
+          entry.startsWith('file://') &&
+          includesSupportedPackageName(entry)
+        ) {
           try {
             return fileURLToPath(entry);
           } catch {
@@ -113,7 +131,12 @@ function findPackageJsonUp(startPath: string): string | null {
         try {
           const content = fs.readFileSync(pkgPath, 'utf-8');
           const pkg = JSON.parse(content) as PackageJson;
-          if (pkg.name === PACKAGE_NAME) return pkgPath;
+          if (
+            typeof pkg.name === 'string' &&
+            SUPPORTED_PACKAGE_NAMES.includes(pkg.name as never)
+          ) {
+            return pkgPath;
+          }
         } catch {
           /* empty */
         }
@@ -173,14 +196,23 @@ export function findPluginEntry(directory: string): PluginEntryInfo | null {
       const plugins = getPluginEntries(config);
 
       for (const entry of plugins) {
-        if (entry === PACKAGE_NAME) {
-          return { entry, isPinned: false, pinnedVersion: null, configPath };
+        const exactPackageName = findSupportedPackageName(entry);
+        if (exactPackageName) {
+          return {
+            entry,
+            packageName: exactPackageName,
+            isPinned: false,
+            pinnedVersion: null,
+            configPath,
+          };
         }
-        if (entry.startsWith(`${PACKAGE_NAME}@`)) {
-          const pinnedVersion = entry.slice(PACKAGE_NAME.length + 1);
+        const pinnedPackageName = findPinnedPackageName(entry);
+        if (pinnedPackageName) {
+          const pinnedVersion = entry.slice(pinnedPackageName.length + 1);
           const isPinned = pinnedVersion !== 'latest';
           return {
             entry,
+            packageName: pinnedPackageName,
             isPinned,
             pinnedVersion: isPinned ? pinnedVersion : null,
             configPath,
@@ -247,7 +279,8 @@ export function updatePinnedVersion(
     if (!fs.existsSync(configPath)) return false;
 
     const content = fs.readFileSync(configPath, 'utf-8');
-    const newEntry = `${PACKAGE_NAME}@${newVersion}`;
+    const entryPackageName = findPinnedPackageName(oldEntry) ?? PACKAGE_NAME;
+    const newEntry = `${entryPackageName}@${newVersion}`;
 
     // Check if the old entry actually exists as a quoted string
     const escapedOldEntry = oldEntry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

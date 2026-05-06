@@ -9,11 +9,17 @@ import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import {
+  LEGACY_SCHEMA_FILE_NAMES,
+  PACKAGE_NAME,
+  PRODUCT_DISPLAY_NAME,
+  SCHEMA_FILE_NAME,
+} from '../src/config/product';
 import { PluginConfigSchema } from '../src/config/schema';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
-const outputPath = join(rootDir, 'openagent-labforge.schema.json');
+const outputPath = join(rootDir, SCHEMA_FILE_NAME);
 
 const schema = z.toJSONSchema(PluginConfigSchema, {
   // Use 'input' so defaulted fields are optional in the schema,
@@ -24,12 +30,15 @@ const schema = z.toJSONSchema(PluginConfigSchema, {
 const jsonSchema = {
   ...schema,
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  title: 'openagent-labforge',
-  description:
-    'Configuration schema for openagent-labforge plugin for OpenCode',
+  title: PACKAGE_NAME,
+  description: `Configuration schema for ${PRODUCT_DISPLAY_NAME} plugin for OpenCode`,
 };
 
 const json = JSON.stringify(jsonSchema, null, 2);
 writeFileSync(outputPath, `${json}\n`);
+
+for (const legacyFileName of LEGACY_SCHEMA_FILE_NAMES) {
+  writeFileSync(join(rootDir, legacyFileName), `${json}\n`);
+}
 
 console.log(`✅ Schema written to ${outputPath}`);

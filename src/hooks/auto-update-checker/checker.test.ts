@@ -1,5 +1,6 @@
 import { describe, expect, mock, spyOn, test } from 'bun:test';
 import * as fs from 'node:fs';
+import { PACKAGE_NAME } from '../../config/product';
 
 // Mock logger to avoid noise
 mock.module('../../utils/logger', () => ({
@@ -88,7 +89,7 @@ describe('auto-update-checker/checker', () => {
           }
           if (p.includes('package.json')) {
             return JSON.stringify({
-              name: 'openagent-labforge',
+              name: PACKAGE_NAME,
               version: '1.2.3-dev',
             });
           }
@@ -115,7 +116,7 @@ describe('auto-update-checker/checker', () => {
       );
       const readSpy = spyOn(fs, 'readFileSync').mockReturnValue(
         JSON.stringify({
-          plugin: ['openagent-labforge'],
+          plugin: [PACKAGE_NAME],
         }),
       );
 
@@ -125,7 +126,8 @@ describe('auto-update-checker/checker', () => {
 
       const entry = findPluginEntry('/test');
       expect(entry).not.toBeNull();
-      expect(entry?.entry).toBe('openagent-labforge');
+      expect(entry?.entry).toBe(PACKAGE_NAME);
+      expect(entry?.packageName).toBe(PACKAGE_NAME);
       expect(entry?.isPinned).toBe(false);
       expect(entry?.pinnedVersion).toBeNull();
 
@@ -139,7 +141,7 @@ describe('auto-update-checker/checker', () => {
       );
       const readSpy = spyOn(fs, 'readFileSync').mockReturnValue(
         JSON.stringify({
-          plugin: ['openagent-labforge@1.0.0'],
+          plugin: [`${PACKAGE_NAME}@1.0.0`],
         }),
       );
 
@@ -149,6 +151,7 @@ describe('auto-update-checker/checker', () => {
 
       const entry = findPluginEntry('/test');
       expect(entry).not.toBeNull();
+      expect(entry?.packageName).toBe(PACKAGE_NAME);
       expect(entry?.isPinned).toBe(true);
       expect(entry?.pinnedVersion).toBe('1.0.0');
 

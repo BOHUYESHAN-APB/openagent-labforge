@@ -22,7 +22,7 @@ Every managed Markdown file should start with a marker like:
 
 ```md
 <!--
-openagent-labforge-managed: true
+extendai-lab-managed: true
 adapter: deepseek-tui
 packageVersion: 1.0.8
 adapterVersion: 0.1.0

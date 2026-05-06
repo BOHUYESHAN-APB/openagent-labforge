@@ -1,3 +1,5 @@
+import { PACKAGE_NAME } from '../../config/product';
+
 export type DeepSeekAdapterFileKind =
   | 'command'
   | 'skill'
@@ -25,7 +27,7 @@ export interface DeepSeekInstalledFile {
 
 export interface DeepSeekInstallManifest {
   schemaVersion: 1;
-  packageName: 'openagent-labforge';
+  packageName: typeof PACKAGE_NAME;
   packageVersion: string;
   adapter: 'deepseek-tui';
   adapterVersion: string;
@@ -44,7 +46,7 @@ export interface OwnershipMarkerInput {
 export function renderOwnershipMarker(input: OwnershipMarkerInput): string {
   return [
     '<!--',
-    'openagent-labforge-managed: true',
+    `${PACKAGE_NAME}-managed: true`,
     'adapter: deepseek-tui',
     `packageVersion: ${input.packageVersion}`,
     `adapterVersion: ${input.adapterVersion}`,
@@ -63,7 +65,7 @@ export function createEmptyDeepSeekManifest(input: {
 }): DeepSeekInstallManifest {
   return {
     schemaVersion: 1,
-    packageName: 'openagent-labforge',
+    packageName: PACKAGE_NAME,
     packageVersion: input.packageVersion,
     adapter: 'deepseek-tui',
     adapterVersion: input.adapterVersion,

@@ -25,7 +25,11 @@ Execute these tools to collect current state:
 
 ### PHASE 3: WRITE CHECKPOINT FILES
 
-Write to \`.opencode/openagent-labforge/checkpoints/\`:
+Write to \`.opencode/extendai-lab/checkpoints/\`.
+
+Legacy \`.opencode/openagent-labforge/checkpoints/\` may still exist during the
+compatibility window and should be treated as readable fallback state, but new
+checkpoint writes should target \`.opencode/extendai-lab/checkpoints/\`:
 
 **File 1: \`latest.md\`** - Main checkpoint content with these sections:
 \`\`\`

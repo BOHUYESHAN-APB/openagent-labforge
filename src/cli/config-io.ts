@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { PACKAGE_NAME, SUPPORTED_PACKAGE_NAMES } from '../config/product';
 import {
   ensureConfigDir,
   ensureOpenCodeConfigDir,
@@ -22,8 +23,6 @@ import type {
   InstallConfig,
   OpenCodeConfig,
 } from './types';
-
-const PACKAGE_NAME = 'openagent-labforge';
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
@@ -63,7 +62,7 @@ function findPackageRoot(startPath: string): string | null {
           name?: string;
         };
 
-        if (packageJson.name === PACKAGE_NAME) {
+        if (SUPPORTED_PACKAGE_NAMES.includes(packageJson.name as never)) {
           return currentPath;
         }
       } catch {
@@ -81,7 +80,9 @@ function findPackageRoot(startPath: string): string | null {
 
 function isPackageManagerInstall(path: string): boolean {
   const normalizedPath = normalizePathForMatch(path);
-  return normalizedPath.includes(`/node_modules/${PACKAGE_NAME}`);
+  return SUPPORTED_PACKAGE_NAMES.some((packageName) =>
+    normalizedPath.includes(`/node_modules/${packageName}`),
+  );
 }
 
 function isLocalPackageRootEntry(entry: string): boolean {
@@ -106,10 +107,12 @@ function isLocalPackageRootEntry(entry: string): boolean {
 
 function isPluginEntry(entry: string): boolean {
   return (
-    entry === PACKAGE_NAME ||
-    entry.startsWith(`${PACKAGE_NAME}@`) ||
-    (entry.startsWith('file://') && entry.includes(PACKAGE_NAME)) ||
-    isLocalPackageRootEntry(entry)
+    SUPPORTED_PACKAGE_NAMES.some(
+      (packageName) =>
+        entry === packageName ||
+        entry.startsWith(`${packageName}@`) ||
+        (entry.startsWith('file://') && entry.includes(packageName)),
+    ) || isLocalPackageRootEntry(entry)
   );
 }
 
@@ -235,7 +238,7 @@ export async function addPluginToOpenCodeConfig(): Promise<ConfigMergeResult> {
 
     const pluginEntry = getPluginEntry();
 
-    // Remove existing openagent-labforge entries
+    // Remove existing LabForge entries (current and legacy package names)
     const filteredPlugins = plugins.filter(
       (plugin) => !isMatchingPluginEntry(plugin),
     );

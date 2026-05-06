@@ -1,6 +1,6 @@
 # 宿主 Adapter 架构
 
-OpenAgent LabForge 正在转向“宿主 adapter”架构：
+ExtendAI Lab 正在转向“宿主 adapter”架构：
 
 - **OpenCode** 仍然是完整 runtime plugin 宿主。
 - **DeepSeek-TUI** 是 adapter 目标，不是完整 plugin 宿主。
@@ -14,8 +14,8 @@ OpenAgent LabForge 正在转向“宿主 adapter”架构：
 
 目标命名：
 
-- 产品 / package：`openagent-labforge`
-- 未来 GitHub 仓库：`openagent-labforge`
+- 产品 / package：`extendai-lab`
+- 未来 GitHub 仓库：`extendai-lab`
 - 第一个可选学科包：`bio`
 - 当前仓库名：迁移完成前的历史兼容别名
 

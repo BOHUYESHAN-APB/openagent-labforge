@@ -7,7 +7,7 @@ origin-bio = git@github.com:BOHUYESHAN-APB/openagent-labforge-bio.git
 ```
 
 That repository name is now a historical artifact. The product and npm package
-name are already `openagent-labforge`, and future work should move the GitHub
+name are moving to `extendai-lab`, and future work should move the GitHub
 repository to the same neutral name.
 
 Chinese version: [`repository-rename.zh-CN.md`](repository-rename.zh-CN.md)
@@ -30,7 +30,7 @@ checked deliberately.
 
 ```text
 Current: BOHUYESHAN-APB/openagent-labforge-bio
-Target:  BOHUYESHAN-APB/openagent-labforge
+Target:  BOHUYESHAN-APB/extendai-lab
 ```
 
 ## Migration checklist
@@ -50,5 +50,5 @@ Use this wording while migration is pending:
 
 > The current GitHub repository is still named `openagent-labforge-bio` for
 > historical release continuity. The product/package name is
-> `openagent-labforge`; bio is the first discipline pack, not the product
+> `extendai-lab`; bio is the first discipline pack, not the product
 > boundary.

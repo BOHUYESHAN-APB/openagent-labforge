@@ -421,7 +421,7 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
     const override = getAgentOverride(config, name);
     if (!hasCustomAgentModel(override)) {
       console.warn(
-        `[openagent-labforge] Custom agent '${name}' skipped: 'model' is required`,
+        `[extendai-lab] Custom agent '${name}' skipped: 'model' is required`,
       );
       return [];
     }
@@ -630,7 +630,7 @@ export function getAgentConfigs(
         mode: 'subagent',
         hidden: true,
         description:
-          'Upstream plan agent (hidden by openagent-labforge, use planner instead)',
+          'Upstream plan agent (hidden by ExtendAI Lab, use planner instead)',
       },
     ]);
   }
@@ -641,7 +641,7 @@ export function getAgentConfigs(
         mode: 'subagent',
         hidden: true,
         description:
-          'Upstream build agent (hidden by openagent-labforge, use orchestrator/deep-worker instead)',
+          'Upstream build agent (hidden by ExtendAI Lab, use orchestrator/deep-worker instead)',
       },
     ]);
   }

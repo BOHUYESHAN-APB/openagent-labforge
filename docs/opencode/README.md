@@ -1,6 +1,6 @@
-# OpenCode Plugin Guide
+# OpenCode Host Guide
 
-OpenCode is the primary full-runtime host for OpenAgent LabForge.
+OpenCode is the primary full-runtime host for ExtendAI Lab.
 
 Chinese version: [`README.zh-CN.md`](README.zh-CN.md)
 
@@ -12,12 +12,13 @@ The OpenCode integration is a real plugin:
 - registers plugin tools and MCP definitions;
 - intercepts hook-driven slash commands;
 - manages checkpoints, todo continuation, plan workflow, and runtime state;
-- owns project state under `.opencode/openagent-labforge/`.
+- owns project state under `.opencode/extendai-lab/` while still reading legacy
+  `.opencode/openagent-labforge/` state during the compatibility window.
 
 ## Current repository name
 
 The current GitHub repository is still `openagent-labforge-bio` for historical
-release continuity. The package/product name is `openagent-labforge`, and future
+release continuity. The package/product name is `extendai-lab`, and future
 repository migration should remove `-bio` after bio becomes a discipline pack.
 
 ## Command prefix
@@ -48,3 +49,12 @@ The OpenCode adapter keeps internal IDs stable for compatibility:
 
 Do not rename internal IDs casually; historical sessions, config, presets,
 checkpoints, and boulder state may still refer to them.
+
+## Recommended docs
+
+- [Installation guide](../installation.md)
+- [Configuration reference](../configuration.md)
+- [Command system](../commands.md)
+- [Plan workflow](../plan-workflow.md)
+- [Storage and MCP](../storage-and-mcp.md)
+- [Repository rename plan](../architecture/repository-rename.md)

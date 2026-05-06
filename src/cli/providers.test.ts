@@ -24,7 +24,7 @@ describe('providers', () => {
     });
 
     expect(config.$schema).toBe(
-      'https://unpkg.com/openagent-labforge@latest/openagent-labforge.schema.json',
+      'https://unpkg.com/extendai-lab@latest/extendai-lab.schema.json',
     );
     expect(config.preset).toBe('openai');
     expect((config.presets as any)['opencode-go']).toBeDefined();

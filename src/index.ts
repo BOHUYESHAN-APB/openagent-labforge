@@ -40,6 +40,7 @@ import {
   ensureGlobalPluginConfigFile,
   loadPluginConfig,
   type MultiplexerConfig,
+  PACKAGE_NAME,
 } from './config';
 import { parseList } from './config/agent-mcps';
 import { AGENT_ALIASES } from './config/constants';
@@ -122,14 +123,14 @@ async function appLog(
 ): Promise<void> {
   try {
     await ctx.client.app.log({
-      body: { service: 'openagent-labforge', level, message },
+      body: { service: 'extendai-lab', level, message },
     });
   } catch {
     // client.app.log may deadlock or be unavailable; stderr is the
     // fallback
     const prefix =
       level === 'error' ? 'ERROR' : level === 'warn' ? 'WARN' : 'INFO';
-    console.error(`[openagent-labforge] ${prefix}: ${message}`);
+    console.error(`[extendai-lab] ${prefix}: ${message}`);
   }
 }
 
@@ -433,7 +434,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     await appLog(
       ctx,
       'error',
-      `INIT FAILED: ${String(err)}. Report at github.com/alvinunreal/openagent-labforge/issues/310`,
+      `INIT FAILED: ${String(err)}. Report at github.com/BOHUYESHAN-APB/openagent-labforge-bio/issues`,
     );
     throw err;
   }
@@ -459,7 +460,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       `  mcps:   ${mcpCount} (expected >=${mcpThreshold})`,
       'This usually means a dependency failed to resolve (jsdom, etc).',
       'If you recently updated opencode, see:',
-      '  github.com/alvinunreal/openagent-labforge/issues/310',
+      '  github.com/BOHUYESHAN-APB/openagent-labforge-bio/issues',
     ].join('\n');
     log(`[plugin] WARN: ${msg}`);
     await appLog(ctx, 'warn', msg);
@@ -483,7 +484,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   });
 
   return {
-    name: 'openagent-labforge',
+    name: PACKAGE_NAME,
 
     agent: agents,
 

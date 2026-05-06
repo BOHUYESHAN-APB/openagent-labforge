@@ -1,6 +1,6 @@
 # Documentation Refactor Plan
 
-OpenAgent LabForge started from OMO / oh-my-openagent and
+ExtendAI Lab started from OMO / oh-my-openagent and
 oh-my-opencode-slim ideas, but it now has its own command prefix, runtime
 storage layout, bioinformatics features, media QA tools, and plan workflow. Some
 documentation still uses inherited names or concepts. This page tracks the
@@ -8,7 +8,7 @@ target structure for bringing docs in line with the current design.
 
 ## Current principles
 
-1. **Use LabForge names.** Public docs should say OpenAgent LabForge, not
+1. **Use current product names.** Public docs should say ExtendAI Lab, not
    oh-my-opencode-slim, unless explicitly discussing upstream lineage.
 2. **Use the `ol-` command prefix for LabForge commands.** Do not document new
    workflow usage as `/start-work`; use `/ol-start-work`. Prefer prefixed
@@ -17,8 +17,8 @@ target structure for bringing docs in line with the current design.
 3. **Separate configuration from guidance.** `/ol-preset` changes runtime
    model/provider configuration; `/ol-karpathy` injects task behavior guidance.
 4. **Keep plugin-owned files under plugin-owned paths.** Project state belongs
-   under `.opencode/openagent-labforge/`; global logs/data belong under the
-   OpenCode data directory’s `openagent-labforge/` subfolder.
+   under `.opencode/extendai-lab/`; global logs/data belong under the
+   OpenCode data directory’s `extendai-lab/` subfolder.
 5. **Document actual implementation, not upstream aspiration.** If a behavior is
    inherited from OMO but implemented differently here, describe the LabForge
    behavior first and mention OMO only as lineage.
@@ -36,12 +36,12 @@ target structure for bringing docs in line with the current design.
 | Plan execution | [`plan-workflow.md`](plan-workflow.md) | Added; documents planner plans, `/ol-start-work`, executor behavior, boulder, and council. |
 | Runtime presets | [`preset-switching.md`](preset-switching.md) | Partially updated; still needs examples aligned with LabForge config defaults. |
 | Skills | [`skills.md`](skills.md) | Partially updated; now includes `karpathy-guidelines`. |
-| Installation | [`installation.md`](installation.md) | Needs major rewrite from oh-my-opencode-slim installer docs to LabForge source-build/release workflow. |
+| Installation | [`installation.md`](installation.md) | Rewritten to the current source-build / release workflow, but still needs broader host-specific examples. |
 | OpenCode host | [`opencode/README.md`](opencode/README.md) | Added; separates OpenCode full plugin behavior from adapter docs. |
 | DeepSeek-TUI host | [`deepseek-tui/README.md`](deepseek-tui/README.md) | Added; documents DSTUI as file/MCP/skill adapter target, not plugin host. |
 | Adapter architecture | [`architecture/adapters.md`](architecture/adapters.md) | Added; documents TypeScript/Node-compatible direction and host boundaries. |
 | Discipline packs | [`architecture/discipline-packs.md`](architecture/discipline-packs.md) | Added; tracks bio-to-pack migration and future science packs. |
-| Repository rename | [`architecture/repository-rename.md`](architecture/repository-rename.md) | Added; tracks `openagent-labforge-bio` to `openagent-labforge` migration. |
+| Repository rename | [`architecture/repository-rename.md`](architecture/repository-rename.md) | Added; tracks `openagent-labforge-bio` to `extendai-lab` migration. |
 | Configuration | [`configuration.md`](configuration.md) | Needs name/path cleanup and current schema alignment. |
 | MCPs | [`mcps.md`](mcps.md) and [`storage-and-mcp.md`](storage-and-mcp.md) | Needs LabForge bio MCP and project-local MCP path alignment. |
 | Visual/media QA | README + future dedicated doc | Needs dedicated doc when SVG/browser-rendered visual QA lands. |
@@ -49,10 +49,10 @@ target structure for bringing docs in line with the current design.
 
 ## Known inherited wording to clean up
 
-- `oh-my-opencode-slim` package/config names in installation, configuration,
-  skills, MCP, multiplexer, and todo docs.
-- OMO/Sisyphus names where LabForge now uses friendly names such as
-  engineer, planner, executor, and `.opencode/openagent-labforge/` paths.
+- Remaining inherited `oh-my-opencode-slim` package/config names in configuration,
+  interview, multiplexer, MCP, maintainer, council, and codemap docs.
+- OMO/Sisyphus names where ExtendAI Lab now uses friendly names such as
+  engineer, planner, executor, and `.opencode/extendai-lab/` paths.
 - Legacy `/start-work` references; use `/ol-start-work` in user-facing docs.
 - Skill docs that list only `simplify` and `codemap`; include
   `karpathy-guidelines` and media/browser skills where relevant.

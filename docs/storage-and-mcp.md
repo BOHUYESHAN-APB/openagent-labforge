@@ -1,6 +1,6 @@
 # Storage and MCP layout
 
-openagent-labforge uses three storage scopes. Keep these scopes separate.
+ExtendAI Lab uses three storage scopes. Keep these scopes separate.
 
 ## 1. Package resources (read-only)
 
@@ -21,7 +21,7 @@ install location.
 Project-specific state lives under the active repository/workspace:
 
 ```text
-<repo>/.opencode/openagent-labforge/
+<repo>/.opencode/extendai-lab/
 ├── checkpoints/
 ├── memory/
 │   ├── repository.json
@@ -45,9 +45,9 @@ and project-specific plans/handoffs. This directory is safe to `.gitignore`.
 Global state lives under OpenCode's user config area:
 
 ```text
-Windows: %APPDATA%/opencode/openagent-labforge/
-Linux:   ${XDG_CONFIG_HOME:-~/.config}/opencode/openagent-labforge/
-macOS:   ${XDG_CONFIG_HOME:-~/.config}/opencode/openagent-labforge/
+Windows: %APPDATA%/opencode/extendai-lab/
+Linux:   ${XDG_CONFIG_HOME:-~/.config}/opencode/extendai-lab/
+macOS:   ${XDG_CONFIG_HOME:-~/.config}/opencode/extendai-lab/
 ```
 
 Use this scope for cross-repo memory indexes, user preferences, global MCP
@@ -123,7 +123,7 @@ Linux/macOS command rules:
 Large or source-based MCPs should be installed into the repository state tree:
 
 ```text
-<repo>/.opencode/openagent-labforge/mcp/servers/<server-name>/
+<repo>/.opencode/extendai-lab/mcp/servers/<server-name>/
 ```
 
 Examples:
@@ -140,8 +140,12 @@ that OpenCode will try to start directly.
 The checkpoint API currently has in-memory stores. Durable storage should map
 to the project/global scopes above:
 
-- session memory -> `<repo>/.opencode/openagent-labforge/memory/sessions/`
-- repository memory -> `<repo>/.opencode/openagent-labforge/memory/repository.json`
-- workspace memory -> `<repo>/.opencode/openagent-labforge/memory/workspace.json`
+- session memory -> `<repo>/.opencode/extendai-lab/memory/sessions/`
+- repository memory -> `<repo>/.opencode/extendai-lab/memory/repository.json`
+- workspace memory -> `<repo>/.opencode/extendai-lab/memory/workspace.json`
+
+Compatibility note: legacy `openagent-labforge` state directories are still read
+as fallback during the migration window and are planned to be removed in
+`v1.0.16`.
 - cross-repo index -> global `memory/repositories.json`
 - user preferences -> global `memory/user-preferences.json`

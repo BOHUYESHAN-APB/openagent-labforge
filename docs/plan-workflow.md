@@ -1,6 +1,6 @@
 # Plan Workflow
 
-OpenAgent LabForge’s plan workflow is derived from OMO / oh-my-openagent ideas,
+ExtendAI Lab’s plan workflow is derived from OMO / oh-my-openagent ideas,
 but uses LabForge-owned paths and the `ol-` command prefix.
 
 ## Agent roles
@@ -20,8 +20,8 @@ but uses LabForge-owned paths and the `ol-` command prefix.
 New LabForge plans should be saved under the plugin-owned project state folder:
 
 ```text
-.opencode/openagent-labforge/plans/<plan-name>.md
-.opencode/openagent-labforge/boulder.json
+.opencode/extendai-lab/plans/<plan-name>.md
+.opencode/extendai-lab/boulder.json
 ```
 
 Legacy OMO paths may still be read for compatibility:
@@ -31,14 +31,14 @@ Legacy OMO paths may still be read for compatibility:
 .sisyphus/boulder.json
 ```
 
-New files should use `.opencode/openagent-labforge/`, not `.sisyphus/`.
+New files should use `.opencode/extendai-lab/`, not `.sisyphus/`. Legacy `.opencode/openagent-labforge/` paths remain readable during the compatibility window.
 
 ## Planner contract
 
 When the planner agent (internal id `prometheus`) has enough information to
 create an execution plan, it should:
 
-1. Write a markdown plan file to `.opencode/openagent-labforge/plans/`.
+1. Write a markdown plan file to `.opencode/extendai-lab/plans/`.
 2. Use top-level structured checkboxes for executable progress:
    - `- [ ] 1. Implementation task`
    - `- [ ] 2. Implementation task`
@@ -50,7 +50,7 @@ create an execution plan, it should:
 4. End with the exact handoff:
 
 ```text
-Plan saved to: .opencode/openagent-labforge/plans/<plan-name>.md
+Plan saved to: .opencode/extendai-lab/plans/<plan-name>.md
 Next command: /ol-start-work <plan-name>
 ```
 

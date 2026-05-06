@@ -1,4 +1,5 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
+import { PACKAGE_NAME, PRODUCT_DISPLAY_NAME } from '../config/product';
 import { install } from './install';
 import { getGeneratedPresetNames, isGeneratedPresetName } from './providers';
 import type { BooleanArg, InstallArgs } from './types';
@@ -38,9 +39,9 @@ function parseArgs(args: string[]): InstallArgs {
 
 function printHelp(): void {
   console.log(`
-openagent-labforge installer
+${PRODUCT_DISPLAY_NAME} installer
 
-Usage: bunx openagent-labforge install [OPTIONS]
+Usage: bunx ${PACKAGE_NAME} install [OPTIONS]
 
 Options:
   --skills=yes|no        Install recommended and bundled skills (default: yes)
@@ -57,10 +58,10 @@ OpenAI is active unless --preset selects another generated preset.
 For the full config reference, see docs/configuration.md.
 
 Examples:
-  bunx openagent-labforge install
-  bunx openagent-labforge install --no-tui --skills=yes
-  bunx openagent-labforge install --preset=opencode-go
-  bunx openagent-labforge install --reset
+  bunx ${PACKAGE_NAME} install
+  bunx ${PACKAGE_NAME} install --no-tui --skills=yes
+  bunx ${PACKAGE_NAME} install --preset=opencode-go
+  bunx ${PACKAGE_NAME} install --reset
 `);
 }
 

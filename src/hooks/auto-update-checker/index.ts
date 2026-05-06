@@ -1,4 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import { PRODUCT_DISPLAY_NAME } from '../../config/product';
 import { crossSpawn } from '../../utils/compat';
 import { log } from '../../utils/logger';
 import { preparePackageUpdate, resolveInstallContext } from './cache';
@@ -101,7 +102,7 @@ async function runBackgroundUpdateCheck(
   if (pluginInfo.isPinned) {
     showToast(
       ctx,
-      `OMO-Slim ${latestVersion}`,
+      `${PRODUCT_DISPLAY_NAME} ${latestVersion}`,
       `v${latestVersion} available.\nVersion is pinned. Update your plugin config to apply.`,
       'info',
       8000,
@@ -113,7 +114,7 @@ async function runBackgroundUpdateCheck(
   if (!autoUpdate) {
     showToast(
       ctx,
-      `OMO-Slim ${latestVersion}`,
+      `${PRODUCT_DISPLAY_NAME} ${latestVersion}`,
       `v${latestVersion} available. Auto-update is disabled.`,
       'info',
       8000,
@@ -122,11 +123,14 @@ async function runBackgroundUpdateCheck(
     return;
   }
 
-  const installDir = preparePackageUpdate(latestVersion, PACKAGE_NAME);
+  const installDir = preparePackageUpdate(
+    latestVersion,
+    pluginInfo.packageName ?? PACKAGE_NAME,
+  );
   if (!installDir) {
     showToast(
       ctx,
-      `OMO-Slim ${latestVersion}`,
+      `${PRODUCT_DISPLAY_NAME} ${latestVersion}`,
       `v${latestVersion} available. Auto-update could not prepare the active install.`,
       'info',
       8000,
@@ -140,7 +144,7 @@ async function runBackgroundUpdateCheck(
   if (installSuccess) {
     showToast(
       ctx,
-      'OMO-Slim Updated!',
+      `${PRODUCT_DISPLAY_NAME} Updated!`,
       `v${currentVersion} → v${latestVersion}\nRestart OpenCode to apply.`,
       'success',
       8000,
@@ -151,7 +155,7 @@ async function runBackgroundUpdateCheck(
   } else {
     showToast(
       ctx,
-      `OMO-Slim ${latestVersion}`,
+      `${PRODUCT_DISPLAY_NAME} ${latestVersion}`,
       `v${latestVersion} available, but auto-update failed to install it. Check logs or retry manually.`,
       'error',
       8000,

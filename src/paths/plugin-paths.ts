@@ -1,8 +1,7 @@
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-const PLUGIN_STATE_DIR = 'openagent-labforge';
+import { LEGACY_PLUGIN_STATE_DIRS, PLUGIN_STATE_DIR } from '../config/product';
 
 function getDefaultDataHome(): string {
   return join(homedir(), '.local', 'share');
@@ -21,6 +20,19 @@ export function getPackageResourceDir(
 
 export function getProjectStateDir(workspaceRoot: string): string {
   return join(workspaceRoot, '.opencode', PLUGIN_STATE_DIR);
+}
+
+export function getLegacyProjectStateDirs(workspaceRoot: string): string[] {
+  return LEGACY_PLUGIN_STATE_DIRS.map((dir) =>
+    join(workspaceRoot, '.opencode', dir),
+  );
+}
+
+export function getProjectStateSearchDirs(workspaceRoot: string): string[] {
+  return [
+    getProjectStateDir(workspaceRoot),
+    ...getLegacyProjectStateDirs(workspaceRoot),
+  ];
 }
 
 export function getProjectMcpDir(workspaceRoot: string): string {
@@ -70,6 +82,27 @@ export function getGlobalStateDir(
   );
 }
 
+export function getLegacyGlobalStateDirs(
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return LEGACY_PLUGIN_STATE_DIRS.map((dir) => {
+    if (platform === 'win32') {
+      return join(
+        env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'),
+        'opencode',
+        dir,
+      );
+    }
+
+    return join(
+      env.XDG_CONFIG_HOME ?? join(homedir(), '.config'),
+      'opencode',
+      dir,
+    );
+  });
+}
+
 export function getGlobalMemoryDir(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
@@ -94,8 +127,22 @@ export function getGlobalDataDir(env: NodeJS.ProcessEnv = process.env): string {
   return join(getOpenCodeDataDir(env), PLUGIN_STATE_DIR);
 }
 
+export function getLegacyGlobalDataDirs(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return LEGACY_PLUGIN_STATE_DIRS.map((dir) =>
+    join(getOpenCodeDataDir(env), dir),
+  );
+}
+
 export function getGlobalLogDir(env: NodeJS.ProcessEnv = process.env): string {
   return join(getGlobalDataDir(env), 'logs');
+}
+
+export function getLegacyGlobalLogDirs(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return getLegacyGlobalDataDirs(env).map((dir) => join(dir, 'logs'));
 }
 
 export function getGlobalDashboardDir(
@@ -108,4 +155,10 @@ export function getGlobalBgTasksDir(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   return join(getGlobalDataDir(env), 'bg-tasks');
+}
+
+export function getLegacyGlobalBgTasksDirs(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return getLegacyGlobalDataDirs(env).map((dir) => join(dir, 'bg-tasks'));
 }

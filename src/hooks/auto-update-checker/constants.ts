@@ -1,8 +1,9 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { getOpenCodeConfigPaths } from '../../cli/config-manager';
+import { PACKAGE_NAME } from '../../config/product';
 
-export const PACKAGE_NAME = 'openagent-labforge';
+export { PACKAGE_NAME };
 export const NPM_REGISTRY_URL = `https://registry.npmjs.org/-/package/${PACKAGE_NAME}/dist-tags`;
 export const NPM_FETCH_TIMEOUT = 5000;
 

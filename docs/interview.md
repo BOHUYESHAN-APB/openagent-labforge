@@ -133,11 +133,9 @@ When `port` is `0` (or unset) and `dashboard` is `false` (or unset), each OpenCo
 
 ```jsonc
 {
-  "oh-my-opencode-slim": {
-    "interview": {}
-    // or explicitly:
-    // "interview": { "port": 0 }
-  }
+  "interview": {}
+  // or explicitly:
+  // "interview": { "port": 0 }
 }
 ```
 
@@ -215,14 +213,12 @@ The dashboard page includes a settings panel for:
 
 ```jsonc
 {
-  "oh-my-opencode-slim": {
-    "interview": {
-      "maxQuestions": 2,
-      "outputFolder": "interview",
-      "autoOpenBrowser": true,
-      "port": 0,
-      "dashboard": false
-    }
+  "interview": {
+    "maxQuestions": 2,
+    "outputFolder": "interview",
+    "autoOpenBrowser": true,
+    "port": 0,
+    "dashboard": false
   }
 }
 ```

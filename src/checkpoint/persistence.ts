@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getProjectMemoryDir } from '../paths/plugin-paths';
+import {
+  getLegacyProjectStateDirs,
+  getProjectMemoryDir,
+} from '../paths/plugin-paths';
 import type {
   CheckpointStorage,
   RepositoryMemory,
@@ -8,8 +11,7 @@ import type {
   WorkspaceMemory,
 } from './types';
 
-interface PersistedWorkspaceMemory
-  extends Omit<WorkspaceMemory, 'sessions'> {
+interface PersistedWorkspaceMemory extends Omit<WorkspaceMemory, 'sessions'> {
   sessionIDs: string[];
 }
 
@@ -28,7 +30,18 @@ function storageFile(workspaceRoot: string): string {
   return join(getProjectMemoryDir(workspaceRoot), 'checkpoint-state.json');
 }
 
-export function loadCheckpointStorage(workspaceRoot: string): CheckpointStorage {
+function storageFileCandidates(workspaceRoot: string): string[] {
+  return [
+    storageFile(workspaceRoot),
+    ...getLegacyProjectStateDirs(workspaceRoot).map((dir) =>
+      join(dir, 'memory', 'checkpoint-state.json'),
+    ),
+  ];
+}
+
+export function loadCheckpointStorage(
+  workspaceRoot: string,
+): CheckpointStorage {
   const storage: CheckpointStorage = {
     workingMemory: new Map(),
     conversationMemory: new Map(),
@@ -37,8 +50,10 @@ export function loadCheckpointStorage(workspaceRoot: string): CheckpointStorage 
     repositoryMemory: new Map(),
   };
 
-  const filePath = storageFile(workspaceRoot);
-  if (!existsSync(filePath)) return storage;
+  const filePath = storageFileCandidates(workspaceRoot).find((candidate) =>
+    existsSync(candidate),
+  );
+  if (!filePath) return storage;
 
   const persisted = JSON.parse(
     readFileSync(filePath, 'utf-8'),

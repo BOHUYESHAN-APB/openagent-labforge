@@ -8,6 +8,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
+  getLegacyProjectStateDirs,
   getProjectBoulderFile,
   getProjectPlansDir,
 } from '../paths/plugin-paths';
@@ -56,6 +57,9 @@ export function ensureProjectPlansDir(workspaceRoot: string): string {
 export function readBoulderState(workspaceRoot: string): BoulderState | null {
   for (const filePath of [
     getProjectBoulderFile(workspaceRoot),
+    ...getLegacyProjectStateDirs(workspaceRoot).map((dir) =>
+      join(dir, 'boulder.json'),
+    ),
     getLegacyBoulderFile(workspaceRoot),
   ]) {
     if (!existsSync(filePath)) continue;
@@ -101,6 +105,9 @@ export function appendSessionId(
 export function listPlanFiles(workspaceRoot: string): PlanFile[] {
   const dirs = [
     getProjectPlansDir(workspaceRoot),
+    ...getLegacyProjectStateDirs(workspaceRoot).map((dir) =>
+      join(dir, 'plans'),
+    ),
     getLegacyPlansDir(workspaceRoot),
   ];
   const seen = new Set<string>();

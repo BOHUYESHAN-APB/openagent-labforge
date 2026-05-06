@@ -1,6 +1,7 @@
 import { describe, expect, mock, spyOn, test } from 'bun:test';
 import * as fs from 'node:fs';
 import path from 'node:path';
+import { LEGACY_PACKAGE_NAMES, PACKAGE_NAME } from '../../config/product';
 
 // Mock logger to avoid noise
 mock.module('../../utils/logger', () => ({
@@ -29,14 +30,10 @@ const MOCK_BASE = path.join(
   '.cache',
   'opencode',
   'packages',
-  'openagent-labforge@latest',
+  `${PACKAGE_NAME}@latest`,
 );
 const MOCK_PKG_JSON = path.join(MOCK_BASE, 'package.json');
-const MOCK_NODE_MODULES = path.join(
-  MOCK_BASE,
-  'node_modules',
-  'openagent-labforge',
-);
+const MOCK_NODE_MODULES = path.join(MOCK_BASE, 'node_modules', PACKAGE_NAME);
 const MOCK_RUNTIME_PKG = path.join(MOCK_NODE_MODULES, 'package.json');
 
 describe('auto-update-checker/cache', () => {
@@ -95,7 +92,7 @@ describe('auto-update-checker/cache', () => {
           if (p === MOCK_PKG_JSON) {
             return JSON.stringify({
               dependencies: {
-                'openagent-labforge': '0.9.1',
+                [PACKAGE_NAME]: '0.9.1',
               },
             });
           }
@@ -115,7 +112,7 @@ describe('auto-update-checker/cache', () => {
 
       const result = preparePackageUpdate(
         '0.9.11',
-        'openagent-labforge',
+        PACKAGE_NAME,
         MOCK_RUNTIME_PKG,
       );
 
@@ -127,7 +124,7 @@ describe('auto-update-checker/cache', () => {
       expect(writtenData.length).toBeGreaterThan(0);
       expect(JSON.parse(writtenData[0])).toEqual({
         dependencies: {
-          'openagent-labforge': '0.9.11',
+          [PACKAGE_NAME]: '0.9.11',
         },
       });
 
@@ -143,7 +140,7 @@ describe('auto-update-checker/cache', () => {
       const legacyNodeModules = path.join(
         CACHE_DIR,
         'node_modules',
-        'openagent-labforge',
+        LEGACY_PACKAGE_NAMES[0],
       );
 
       const existsSpy = spyOn(fs, 'existsSync').mockImplementation(
@@ -152,7 +149,7 @@ describe('auto-update-checker/cache', () => {
       const readSpy = spyOn(fs, 'readFileSync').mockReturnValue(
         JSON.stringify({
           dependencies: {
-            'openagent-labforge': '1.0.1',
+            [LEGACY_PACKAGE_NAMES[0]]: '1.0.1',
           },
         }),
       );
@@ -162,7 +159,11 @@ describe('auto-update-checker/cache', () => {
         `./cache?test=${importCounter++}`
       );
 
-      const result = preparePackageUpdate('1.0.1', 'openagent-labforge', null);
+      const result = preparePackageUpdate(
+        '1.0.1',
+        LEGACY_PACKAGE_NAMES[0],
+        null,
+      );
 
       expect(result).toBe(CACHE_DIR);
       expect(writeSpy).not.toHaveBeenCalled();

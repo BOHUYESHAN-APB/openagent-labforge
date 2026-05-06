@@ -1,9 +1,15 @@
 import * as fs from 'node:fs';
 import { appendFile } from 'node:fs/promises';
 import * as path from 'node:path';
-import { getGlobalBgTasksDir, getGlobalLogDir } from '../paths/plugin-paths';
+import { PACKAGE_NAME } from '../config/product';
+import {
+  getGlobalBgTasksDir,
+  getGlobalLogDir,
+  getLegacyGlobalBgTasksDirs,
+  getLegacyGlobalLogDirs,
+} from '../paths/plugin-paths';
 
-const LOG_PREFIX = 'openagent-labforge.';
+const LOG_PREFIX = `${PACKAGE_NAME}.`;
 const LOG_SUFFIX = '.log';
 const MAX_LOG_FILES = 10; // Keep only the 10 most recent log files
 const BG_TASK_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -11,14 +17,38 @@ const BG_TASK_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 let logFile: string | null = null;
 let writeChain: Promise<void> = Promise.resolve();
 
+function firstExistingDir(candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // Ignore unreadable candidates
+    }
+  }
+
+  return null;
+}
+
 function getLogDir(): string {
-  return process.env.OPENCODE_LOG_DIR ?? getGlobalLogDir();
+  if (process.env.OPENCODE_LOG_DIR) {
+    return process.env.OPENCODE_LOG_DIR;
+  }
+
+  return (
+    firstExistingDir([getGlobalLogDir(), ...getLegacyGlobalLogDirs()]) ??
+    getGlobalLogDir()
+  );
 }
 
 function getBgTaskDir(): string {
   return process.env.OPENCODE_LOG_DIR
     ? path.join(process.env.OPENCODE_LOG_DIR, 'bg-tasks')
-    : getGlobalBgTasksDir();
+    : (firstExistingDir([
+        getGlobalBgTasksDir(),
+        ...getLegacyGlobalBgTasksDirs(),
+      ]) ?? getGlobalBgTasksDir());
 }
 
 function cleanupOldLogs(logDir: string): void {

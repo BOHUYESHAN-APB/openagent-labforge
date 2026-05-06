@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { LEGACY_PACKAGE_NAMES, PACKAGE_NAME } from '../../config/product';
 import { extractZip } from '../../utils';
 import { crossWrite } from '../../utils/compat';
 
@@ -40,12 +41,16 @@ export function getCacheDir(): string {
   if (process.platform === 'win32') {
     const localAppData = process.env.LOCALAPPDATA || process.env.APPDATA;
     const base = localAppData || join(homedir(), 'AppData', 'Local');
-    return join(base, 'openagent-labforge', 'bin');
+    const preferred = join(base, PACKAGE_NAME, 'bin');
+    const legacy = LEGACY_PACKAGE_NAMES.map((name) => join(base, name, 'bin'));
+    return [preferred, ...legacy].find((dir) => existsSync(dir)) ?? preferred;
   }
 
   const xdgCache = process.env.XDG_CACHE_HOME;
   const base = xdgCache || join(homedir(), '.cache');
-  return join(base, 'openagent-labforge', 'bin');
+  const preferred = join(base, PACKAGE_NAME, 'bin');
+  const legacy = LEGACY_PACKAGE_NAMES.map((name) => join(base, name, 'bin'));
+  return [preferred, ...legacy].find((dir) => existsSync(dir)) ?? preferred;
 }
 
 export function getBinaryName(): string {
@@ -65,7 +70,7 @@ export async function downloadAstGrep(
 
   if (!platformInfo) {
     console.error(
-      `[openagent-labforge] Unsupported platform for ast-grep: ${platformKey}`,
+      `[extendai-lab] Unsupported platform for ast-grep: ${platformKey}`,
     );
     return null;
   }
@@ -82,7 +87,7 @@ export async function downloadAstGrep(
   const assetName = `app-${arch}-${os}.zip`;
   const downloadUrl = `https://github.com/${REPO}/releases/download/${version}/${assetName}`;
 
-  console.log(`[openagent-labforge] Downloading ast-grep binary...`);
+  console.log(`[extendai-lab] Downloading ast-grep binary...`);
 
   try {
     if (!existsSync(cacheDir)) {
@@ -109,12 +114,12 @@ export async function downloadAstGrep(
       chmodSync(binaryPath, 0o755);
     }
 
-    console.log(`[openagent-labforge] ast-grep binary ready.`);
+    console.log(`[extendai-lab] ast-grep binary ready.`);
 
     return binaryPath;
   } catch (err) {
     console.error(
-      `[openagent-labforge] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`,
+      `[extendai-lab] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`,
     );
     return null;
   }
