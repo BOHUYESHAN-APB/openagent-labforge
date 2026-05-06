@@ -1,4 +1,5 @@
 import type { OpencodeClient } from "./types"
+import { QUESTION_DENIED_SESSION_PERMISSION } from "../../shared/question-denied-session-permission"
 
 export async function createSyncSession(
   client: OpencodeClient,
@@ -11,8 +12,12 @@ export async function createSyncSession(
 
   const createResult = await client.session.create({
     body: {
-      parentID: input.parentSessionID,
+      // NOTE: parentID is intentionally NOT passed to prevent child session
+      // from inheriting the full parent conversation context. Subagent sessions
+      // must start clean with their own isolated context.
+      // parentID: input.parentSessionID,
       title: `${input.description} (@${input.agentToUse} subagent)`,
+      permission: QUESTION_DENIED_SESSION_PERMISSION,
     } as Record<string, unknown>,
     query: {
       directory: parentDirectory,

@@ -79,7 +79,9 @@ export function applyToolConfig(params: {
     };
   }
   const sisyphus = agentByKey(params.agentResult, "sisyphus");
+  log("[tool-config] sisyphus lookup result:", sisyphus ? "FOUND" : "NOT FOUND");
   if (sisyphus) {
+    log("[tool-config] sisyphus before:", sisyphus.permission);
     sisyphus.permission = {
       ...sisyphus.permission,
       call_omo_agent: "deny",
@@ -89,6 +91,7 @@ export function applyToolConfig(params: {
       teammate: "allow",
       ...denyTodoTools,
     };
+    log("[tool-config] sisyphus after:", sisyphus.permission);
   }
   const hephaestus = agentByKey(params.agentResult, "hephaestus");
   if (hephaestus) {
@@ -100,15 +103,19 @@ export function applyToolConfig(params: {
       ...denyTodoTools,
     };
   }
+  // Prometheus: plan-only agent. Read, explore, question. NO task delegation, NO write/edit/bash.
   const prometheus = agentByKey(params.agentResult, "prometheus");
   if (prometheus) {
     prometheus.permission = {
       ...prometheus.permission,
       call_omo_agent: "deny",
-      task: "allow",
-      question: questionPermission,
-      "task_*": "allow",
-      teammate: "allow",
+      task: "deny",
+      write: "deny",
+      edit: "deny",
+      bash: "deny",
+      question: "allow",
+      "task_*": "deny",
+      teammate: "deny",
       ...denyTodoTools,
     };
   }
@@ -124,6 +131,7 @@ export function applyToolConfig(params: {
   }
 
   // orchestrators - wase, bio-autopilot, bio-orchestrator, orchestrator, engineering-orchestrator, bio-planner, bio-methodologist, bio-pipeline-operator
+  // Also bio support agents: wet-lab-designer, paper-evidence-synthesizer
   for (const orchestratorName of [
     "wase",
     "orchestrator",
@@ -133,6 +141,8 @@ export function applyToolConfig(params: {
     "bio-planner",
     "bio-methodologist",
     "bio-pipeline-operator",
+    "wet-lab-designer",
+    "paper-evidence-synthesizer",
   ]) {
     const orchestrator = agentByKey(params.agentResult, orchestratorName);
     if (orchestrator) {

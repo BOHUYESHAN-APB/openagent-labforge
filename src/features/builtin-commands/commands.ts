@@ -72,7 +72,7 @@ Timestamp: $TIMESTAMP
 <user-request>
 $ARGUMENTS
 </user-request>`,
-    argumentHint: "[filter]",
+    argumentHint: "[l1|l2|l3|recent]",
   },
   "ol-compress-context": {
     description: "(builtin) Inspect or trigger the Labforge L1/L2/L3 compression stack for the current session",

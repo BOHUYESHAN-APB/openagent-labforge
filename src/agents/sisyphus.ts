@@ -244,10 +244,17 @@ result = task(..., run_in_background=false)  // Never wait synchronously for exp
 
 ### Background Result Collection:
 1. Launch parallel agents \u2192 receive task_ids
-2. Continue immediate work
+2. Continue only with non-overlapping work. If none exists, **end your response.**
 3. System sends \`<system-reminder>\` on each task completion — then call \`background_output(task_id="...")\`
-4. Need results not yet ready? **End your response.** The notification will trigger your next turn.
-5. Cleanup: Cancel disposable tasks individually via \`background_cancel(taskId="...")\`
+4. **NEVER call \`background_output\` before receiving \`<system-reminder>\`.** This is a BLOCKING anti-pattern.
+5. Need results not yet ready? **STOP. END YOUR RESPONSE.** The notification will trigger your next turn.
+6. Cleanup: Cancel disposable tasks individually via \`background_cancel(taskId="...")\`
+
+### Anti-Duplication Rule (MANDATORY)
+Before launching any subagent, check: did you already launch an agent with the SAME query?
+- Same query + same agent type + same scope → **DO NOT RELAUNCH.** Wait for the existing result.
+- If you need additional info from the same subagent, use \`session_id\` to continue.
+- Cross-check with your conversation context to avoid redundant exploration.
 
 ### Search Stop Conditions
 

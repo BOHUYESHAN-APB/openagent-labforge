@@ -61,28 +61,7 @@ export function createToolRegistry(args: {
     ctx,
     managers.backgroundManager,
     pluginConfig.disabled_agents ?? [],
-    {
-      directory: ctx.directory,
-      agentOverrides: pluginConfig.agents,
-      syncPollTimeoutMs: pluginConfig.background_task?.syncPollTimeoutMs,
-      onSyncSessionCreated: async (event) => {
-        log("[index] onSyncSessionCreated callback (call_omo_agent)", {
-          sessionID: event.sessionID,
-          parentID: event.parentID,
-          title: event.title,
-        })
-        await managers.tmuxSessionManager.onSessionCreated({
-          type: "session.created",
-          properties: {
-            info: {
-              id: event.sessionID,
-              parentID: event.parentID,
-              title: event.title,
-            },
-          },
-        })
-      },
-    },
+    pluginConfig.agents,
   )
 
   const isMultimodalLookerEnabled = !(pluginConfig.disabled_agents ?? []).some(

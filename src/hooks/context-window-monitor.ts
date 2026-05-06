@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { log } from "../shared/logger"
 import { createSystemDirective, SystemDirectiveTypes } from "../shared/system-directive"
+import { subagentSessions } from "../features/claude-code-session-state"
 import {
   buildCompressionDirectiveText,
   resolveCompressionProfile,
@@ -19,34 +20,39 @@ import { writeFileAtomically, writeJSONAtomically } from "../shared/write-file-a
 
 const PRESETS = {
   conservative: {
-    twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 },
-    fourHundredK: { keepRecentMessagesL1: 220, keepRecentMessagesL2: 160, keepRecentMessagesL3: 100 },
-    oneMillion: { keepRecentMessagesL1: 550, keepRecentMessagesL2: 400, keepRecentMessagesL3: 250 }
+    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 65, keepRecentMessagesL3: 40 },
+    fourHundredK: { keepRecentMessagesL1: 130, keepRecentMessagesL2: 95, keepRecentMessagesL3: 55 },
+    oneMillion: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 60 }
   },
   "conservative-plus": {
-    twoHundredK: { keepRecentMessagesL1: 110, keepRecentMessagesL2: 80, keepRecentMessagesL3: 50 },
-    fourHundredK: { keepRecentMessagesL1: 220, keepRecentMessagesL2: 160, keepRecentMessagesL3: 100 },
-    oneMillion: { keepRecentMessagesL1: 550, keepRecentMessagesL2: 400, keepRecentMessagesL3: 250 }
+    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 65, keepRecentMessagesL3: 40 },
+    fourHundredK: { keepRecentMessagesL1: 130, keepRecentMessagesL2: 95, keepRecentMessagesL3: 55 },
+    oneMillion: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 60 }
   },
   balanced: {
-    twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 },
-    fourHundredK: { keepRecentMessagesL1: 200, keepRecentMessagesL2: 140, keepRecentMessagesL3: 80 },
-    oneMillion: { keepRecentMessagesL1: 500, keepRecentMessagesL2: 350, keepRecentMessagesL3: 200 }
+    twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 75, keepRecentMessagesL3: 50 },
+    fourHundredK: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 130, keepRecentMessagesL3: 80 },
+    oneMillion: { keepRecentMessagesL1: 250, keepRecentMessagesL2: 180, keepRecentMessagesL3: 100 }
+  },
+  "semi-aggressive": {
+    twoHundredK: { keepRecentMessagesL1: 50, keepRecentMessagesL2: 35, keepRecentMessagesL3: 25 },
+    fourHundredK: { keepRecentMessagesL1: 70, keepRecentMessagesL2: 50, keepRecentMessagesL3: 35 },
+    oneMillion: { keepRecentMessagesL1: 80, keepRecentMessagesL2: 50, keepRecentMessagesL3: 30 }
   },
   "balanced-plus": {
-    twoHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 40 },
-    fourHundredK: { keepRecentMessagesL1: 200, keepRecentMessagesL2: 140, keepRecentMessagesL3: 80 },
-    oneMillion: { keepRecentMessagesL1: 500, keepRecentMessagesL2: 350, keepRecentMessagesL3: 200 }
+    twoHundredK: { keepRecentMessagesL1: 70, keepRecentMessagesL2: 50, keepRecentMessagesL3: 35 },
+    fourHundredK: { keepRecentMessagesL1: 100, keepRecentMessagesL2: 70, keepRecentMessagesL3: 45 },
+    oneMillion: { keepRecentMessagesL1: 150, keepRecentMessagesL2: 100, keepRecentMessagesL3: 50 }
   },
   aggressive: {
-    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 },
-    fourHundredK: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 70 },
-    oneMillion: { keepRecentMessagesL1: 450, keepRecentMessagesL2: 300, keepRecentMessagesL3: 175 }
+    twoHundredK: { keepRecentMessagesL1: 55, keepRecentMessagesL2: 40, keepRecentMessagesL3: 28 },
+    fourHundredK: { keepRecentMessagesL1: 80, keepRecentMessagesL2: 55, keepRecentMessagesL3: 35 },
+    oneMillion: { keepRecentMessagesL1: 120, keepRecentMessagesL2: 80, keepRecentMessagesL3: 40 }
   },
   "aggressive-plus": {
-    twoHundredK: { keepRecentMessagesL1: 90, keepRecentMessagesL2: 60, keepRecentMessagesL3: 35 },
-    fourHundredK: { keepRecentMessagesL1: 180, keepRecentMessagesL2: 120, keepRecentMessagesL3: 70 },
-    oneMillion: { keepRecentMessagesL1: 450, keepRecentMessagesL2: 300, keepRecentMessagesL3: 175 }
+    twoHundredK: { keepRecentMessagesL1: 55, keepRecentMessagesL2: 40, keepRecentMessagesL3: 28 },
+    fourHundredK: { keepRecentMessagesL1: 80, keepRecentMessagesL2: 55, keepRecentMessagesL3: 35 },
+    oneMillion: { keepRecentMessagesL1: 120, keepRecentMessagesL2: 80, keepRecentMessagesL3: 40 }
   },
 }
 
@@ -142,7 +148,9 @@ function inferContextLimit(providerID: string, modelID: string | undefined, mode
 
   // Return null for unknown models to avoid incorrect assumptions
   // Caller should handle null and use a conservative default
-  return null
+  // For models without cached context info, use 1M as safe default (covers DeepSeek V4, GPT-5, etc.)
+  log("[context-window-monitor] No context limit found for model, using default 1M", { providerID, modelID })
+  return 1_000_000
 }
 
 function formatCompactTokens(tokens: number): string {
@@ -737,6 +745,12 @@ export function createContextWindowMonitorHook(
       }
     }
     if (!sessionID) return
+
+    // Subagent sessions must NOT receive main-agent context directives.
+    // Injecting compression directives, file paths, or tool-output references
+    // into subagent prompts causes task drift (e.g., explore agent searching
+    // TEMP directories instead of executing its scoped task).
+    if (subagentSessions.has(sessionID)) return
 
     const cached = tokenCache.get(sessionID)
     if (!cached) return

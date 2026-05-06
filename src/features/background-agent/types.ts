@@ -68,6 +68,8 @@ export interface LaunchInput {
   model?: { providerID: string; modelID: string; variant?: string }
   /** Fallback chain for runtime retry on model errors */
   fallbackChain?: FallbackEntry[]
+  /** Session permission override for the child session */
+  sessionPermission?: { allow: string[]; deny: string[] }
   isUnstableAgent?: boolean
   skills?: string[]
   skillContent?: string

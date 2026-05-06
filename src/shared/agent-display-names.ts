@@ -120,7 +120,7 @@ export function stripInvisibleAgentCharacters(agentName: string): string {
   return agentName.replace(INVISIBLE_AGENT_CHARACTERS_REGEX, "")
 }
 
-function stripAgentListSortPrefix(agentName: string): string {
+export function stripAgentListSortPrefix(agentName: string): string {
   return stripInvisibleAgentCharacters(agentName)
 }
 

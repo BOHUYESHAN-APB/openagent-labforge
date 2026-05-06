@@ -1,9 +1,9 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { OhMyOpenCodeConfig } from "../../config"
-import { captureMagicContextSnapshot, formatMagicContextSidebar } from "../../features/magic-context/tui-snapshot"
-import { getSessionPendingOps, executePendingOps } from "../../features/magic-context/storage/pending-ops-storage"
-import { getSessionTags } from "../../features/magic-context/storage/tags-storage"
-import { getSessionCompartments } from "../../features/magic-context/storage/compartments-storage"
+import { captureMagicContextSnapshot, formatMagicContextSidebar } from "./tui-snapshot"
+import { getSessionPendingOps, executePendingOps } from "./storage/pending-ops-storage"
+import { getSessionTags } from "./storage/tags-storage"
+import { getSessionCompartments } from "./storage/compartments-storage"
 import { log } from "../../shared/logger"
 
 /**

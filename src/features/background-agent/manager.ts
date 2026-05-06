@@ -48,7 +48,7 @@ import { join } from "node:path"
 import { pruneStaleTasksAndNotifications } from "./task-poller"
 import { checkAndInterruptStaleTasks } from "./task-poller"
 import { clearSessionFallbackChain, setSessionFallbackChain } from "../../hooks/model-fallback/hook"
-import { getRuntimeAgentName } from "../../shared/agent-display-names"
+import { stripAgentListSortPrefix } from "../../shared/agent-display-names"
 
 type OpencodeClient = PluginInput["client"]
 
@@ -350,7 +350,7 @@ export class BackgroundManager {
       ? { providerID: input.model.providerID, modelID: input.model.modelID }
       : undefined
     const launchVariant = input.model?.variant
-    const runtimeAgentName = getRuntimeAgentName(input.agent)
+    const runtimeAgentName = stripAgentListSortPrefix(input.agent)
 
     promptWithModelSuggestionRetry(this.client, {
       path: { id: sessionID },
@@ -626,7 +626,7 @@ export class BackgroundManager {
       ? { providerID: existingTask.model.providerID, modelID: existingTask.model.modelID }
       : undefined
     const resumeVariant = existingTask.model?.variant
-    const runtimeAgentName = getRuntimeAgentName(existingTask.agent)
+    const runtimeAgentName = stripAgentListSortPrefix(existingTask.agent)
 
     this.client.session.promptAsync({
       path: { id: existingTask.sessionID },
@@ -864,7 +864,10 @@ export class BackgroundManager {
         }
 
         this.cleanupPendingByParent(task)
-        this.tasks.delete(task.id)
+        // Do NOT delete from this.tasks here — session.deleted fires after
+        // tryCompleteTask marks the task as "completed" but before the caller
+        // can retrieve results via background_output.  Terminal-state tasks
+        // are cleaned up by the completion timer (TASK_CLEANUP_DELAY_MS).
         this.clearNotificationsForTask(task.id)
         const toastManager = getTaskToastManager()
         if (toastManager) {
@@ -1373,7 +1376,7 @@ Use \`background_output(task_id="${task.id}")\` to retrieve this result when rea
         })
 
         try {
-          const runtimeAgent = agent ? getRuntimeAgentName(agent) : undefined
+          const runtimeAgent = agent ? stripAgentListSortPrefix(agent) : undefined
           await this.client.session.promptAsync({
             path: { id: task.parentSessionID },
             body: {

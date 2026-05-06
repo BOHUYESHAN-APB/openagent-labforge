@@ -43,13 +43,19 @@ export type {
   ModelResolutionRequest,
   ModelResolutionProvenance,
   ModelResolutionResult,
+  DelegatedModelConfig,
 } from "./model-resolution-types"
+export * from "./session-prompt-params-state"
+export * from "./session-prompt-params-helpers"
+export * from "./session-tools-store"
+export * from "./question-denied-session-permission"
 export * from "./model-availability"
 export * from "./fallback-model-availability"
 export * from "./connected-providers-cache"
 export * from "./session-utils"
 export * from "./tmux"
 export * from "./model-suggestion-retry"
+export * from "./subagent-error-handler"
 export * from "./opencode-server-auth"
 export * from "./opencode-http-api"
 export * from "./port-utils"

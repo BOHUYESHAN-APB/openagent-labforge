@@ -9,6 +9,7 @@ import {
 import { SUBAGENT_OUTPUT_HANDLING_CAPABILITY } from "./subagent-output-handling"
 import { BIO_SKILL_MANDATE, BIO_SKILL_ROUTER } from "./bio-skill-guidance"
 import { STAGE_COMPLETION_CAPABILITY } from "./stage-completion-capability"
+import { EXECUTOR_REVIEW_GATE } from "./executor-review-gate"
 
 const MODE: AgentMode = "all"
 
@@ -361,6 +362,8 @@ ${BIO_SKILL_MANDATE}
 ${BIO_SKILL_ROUTER}
 
 ${STAGE_COMPLETION_CAPABILITY}
+
+${EXECUTOR_REVIEW_GATE}
 
 ${INFORMATION_INTEGRITY_CAPABILITY}
 

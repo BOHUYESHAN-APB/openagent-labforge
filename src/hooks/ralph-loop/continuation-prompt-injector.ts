@@ -8,7 +8,7 @@ import {
 	normalizeSDKResponse,
 	resolveInheritedPromptTools,
 } from "../../shared"
-import { getRuntimeAgentName } from "../../shared/agent-display-names"
+import { stripAgentListSortPrefix } from "../../shared/agent-display-names"
 
 type MessageInfo = {
 	agent?: string
@@ -73,7 +73,7 @@ export async function injectContinuationPrompt(
 	await ctx.client.session.promptAsync({
 		path: { id: options.sessionID },
 		body: {
-			...(agent !== undefined ? { agent: getRuntimeAgentName(agent) } : {}),
+			...(agent !== undefined ? { agent: stripAgentListSortPrefix(agent) } : {}),
 			...(model !== undefined ? { model } : {}),
 			...(inheritedTools ? { tools: inheritedTools } : {}),
 			parts: [createInternalAgentTextPart(options.prompt)],

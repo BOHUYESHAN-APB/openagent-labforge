@@ -1,11 +1,11 @@
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { OhMyOpenCodeConfig } from "../../config"
-import { getSessionTags } from "../../features/magic-context/storage/tags-storage"
-import { getSessionPendingOps } from "../../features/magic-context/storage/pending-ops-storage"
-import { loadSessionMeta } from "../../features/magic-context/storage/session-meta-storage"
-import { getSessionCompartments } from "../../features/magic-context/storage/compartments-storage"
-import { listMemories } from "../../features/magic-context/storage/memory-storage"
-import { getRemainingTtl, formatTtl } from "../../features/magic-context/ttl-tracker"
+import { getSessionTags } from "./storage/tags-storage"
+import { getSessionPendingOps } from "./storage/pending-ops-storage"
+import { loadSessionMeta } from "./storage/session-meta-storage"
+import { getSessionCompartments } from "./storage/compartments-storage"
+import { listMemories } from "./storage/memory-storage"
+import { getRemainingTtl, formatTtl } from "./ttl-tracker"
 
 export interface MagicContextSnapshot {
   sessionId: string

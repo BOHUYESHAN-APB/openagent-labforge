@@ -1,12 +1,45 @@
 import type { BackgroundTask, LaunchInput, ResumeInput } from "./types"
 import type { OpencodeClient, OnSubagentSessionCreated, QueueItem } from "./constants"
-import { TMUX_CALLBACK_DELAY_MS } from "./constants"
 import { log, getAgentToolRestrictions, promptWithModelSuggestionRetry, createInternalAgentTextPart } from "../../shared"
-import { getRuntimeAgentName } from "../../shared/agent-display-names"
+import { QUESTION_DENIED_SESSION_PERMISSION } from "../../shared/question-denied-session-permission"
 import { subagentSessions } from "../claude-code-session-state"
 import { getTaskToastManager } from "../task-toast-manager"
 import { isInsideTmux } from "../../shared/tmux"
+import { stripAgentListSortPrefix } from "../../shared/agent-display-names"
 import type { ConcurrencyManager } from "./concurrency"
+
+export const FALLBACK_AGENT = "general"
+
+export function isAgentNotFoundError(error: unknown): boolean {
+  const message =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null && typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : String(error)
+  return (
+    message.includes("Agent not found") ||
+    message.includes("agent.name")
+  )
+}
+
+export function buildFallbackBody(
+  originalBody: Record<string, unknown>,
+  fallbackAgent: string,
+): Record<string, unknown> {
+  return {
+    ...originalBody,
+    agent: fallbackAgent,
+    tools: {
+      task: false,
+      call_omo_agent: true,
+      question: false,
+      ...getAgentToolRestrictions(fallbackAgent),
+    },
+  }
+}
 
 export interface SpawnerContext {
   client: OpencodeClient
@@ -52,6 +85,7 @@ export async function startTask(
 
   const parentSession = await client.session.get({
     path: { id: input.parentSessionID },
+    query: { directory },
   }).catch((err) => {
     log(`[background-agent] Failed to get parent session: ${err}`)
     return null
@@ -59,9 +93,12 @@ export async function startTask(
   const parentDirectory = parentSession?.data?.directory ?? directory
   log(`[background-agent] Parent dir: ${parentSession?.data?.directory}, using: ${parentDirectory}`)
 
+  const effectivePermission = input.sessionPermission ?? QUESTION_DENIED_SESSION_PERMISSION
   const createResult = await client.session.create({
     body: {
-      parentID: input.parentSessionID,
+      // NOTE: parentID intentionally omitted to prevent parent context inheritance.
+      // Subagent sessions start clean.
+      ...(effectivePermission ? { permission: effectivePermission } : {}),
     } as Record<string, unknown>,
     query: {
       directory: parentDirectory,
@@ -78,29 +115,6 @@ export async function startTask(
 
   const sessionID = createResult.data.id
   subagentSessions.add(sessionID)
-
-  log("[background-agent] tmux callback check", {
-    hasCallback: !!onSubagentSessionCreated,
-    tmuxEnabled,
-    isInsideTmux: isInsideTmux(),
-    sessionID,
-    parentID: input.parentSessionID,
-  })
-
-  if (onSubagentSessionCreated && tmuxEnabled && isInsideTmux()) {
-    log("[background-agent] Invoking tmux callback NOW", { sessionID })
-    await onSubagentSessionCreated({
-      sessionID,
-      parentID: input.parentSessionID,
-      title: input.description,
-    }).catch((err) => {
-      log("[background-agent] Failed to spawn tmux pane:", err)
-    })
-    log("[background-agent] tmux callback completed, waiting")
-    await new Promise(r => setTimeout(r, TMUX_CALLBACK_DELAY_MS))
-  } else {
-    log("[background-agent] SKIP tmux callback - conditions not met")
-  }
 
   task.status = "running"
   task.startedAt = new Date()
@@ -128,30 +142,82 @@ export async function startTask(
   })
 
   const launchModel = input.model
-    ? { providerID: input.model.providerID, modelID: input.model.modelID }
+    ? {
+        providerID: input.model.providerID,
+        modelID: input.model.modelID,
+      }
     : undefined
   const launchVariant = input.model?.variant
-  const runtimeAgentName = getRuntimeAgentName(input.agent)
+  const normalizedAgent = stripAgentListSortPrefix(input.agent)
 
-  promptWithModelSuggestionRetry(client, {
-    path: { id: sessionID },
-    body: {
-      agent: runtimeAgentName,
-      ...(launchModel ? { model: launchModel } : {}),
-      ...(launchVariant ? { variant: launchVariant } : {}),
-      system: input.skillContent,
-      tools: {
-        task: false,
-        call_omo_agent: true,
-        question: false,
-        ...getAgentToolRestrictions(input.agent),
-      },
-      parts: [createInternalAgentTextPart(input.prompt)],
+  // When model includes reasoningEffort/temperature/thinking params, apply via session prompt params.
+  // LaunchInput.model is the model identifier; extended params come through DelegatedModelConfig elsewhere.
+  // applySessionPromptParams is called in sync/background executor paths with the full DelegatedModelConfig.
+
+  const promptBody = {
+    agent: normalizedAgent,
+    ...(launchModel ? { model: launchModel } : {}),
+    ...(launchVariant ? { variant: launchVariant } : {}),
+    system: input.skillContent,
+    tools: {
+      task: false,
+      call_omo_agent: true,
+      question: false,
+      ...getAgentToolRestrictions(normalizedAgent),
     },
-  }).catch((error) => {
+    parts: [createInternalAgentTextPart(input.prompt)],
+  }
+
+  // Must fire BEFORE tmux callback: attach client needs session activity to render TUI.
+  const promptChain = promptWithModelSuggestionRetry(client, {
+    path: { id: sessionID },
+    body: promptBody,
+  }).catch(async (error) => {
+    if (isAgentNotFoundError(error) && input.agent !== FALLBACK_AGENT) {
+      log("[background-agent] Agent not found, retrying with fallback agent", {
+        original: input.agent,
+        fallback: FALLBACK_AGENT,
+        taskId: task.id,
+      })
+      try {
+        await promptWithModelSuggestionRetry(client, {
+          path: { id: sessionID },
+          body: buildFallbackBody(promptBody, FALLBACK_AGENT),
+        })
+        task.agent = FALLBACK_AGENT
+        return
+      } catch (retryError) {
+        log("[background-agent] Fallback agent also failed:", retryError)
+        onTaskError(task, retryError instanceof Error ? retryError : new Error(String(retryError)))
+        return
+      }
+    }
     log("[background-agent] promptAsync error:", error)
     onTaskError(task, error instanceof Error ? error : new Error(String(error)))
   })
+
+  void promptChain
+
+  log("[background-agent] tmux callback check", {
+    hasCallback: !!onSubagentSessionCreated,
+    tmuxEnabled,
+    isInsideTmux: isInsideTmux(),
+    sessionID,
+    parentID: input.parentSessionID,
+  })
+
+  if (onSubagentSessionCreated && tmuxEnabled && isInsideTmux()) {
+    log("[background-agent] Invoking tmux callback (fire-and-forget)", { sessionID })
+    void onSubagentSessionCreated({
+      sessionID,
+      parentID: input.parentSessionID,
+      title: input.description,
+    }).catch((err) => {
+      log("[background-agent] Failed to spawn tmux pane:", err)
+    })
+  } else {
+    log("[background-agent] SKIP tmux callback - conditions not met")
+  }
 }
 
 export async function resumeTask(
@@ -214,26 +280,52 @@ export async function resumeTask(
   })
 
   const resumeModel = task.model
-    ? { providerID: task.model.providerID, modelID: task.model.modelID }
+    ? {
+        providerID: task.model.providerID,
+        modelID: task.model.modelID,
+      }
     : undefined
   const resumeVariant = task.model?.variant
-  const runtimeAgentName = getRuntimeAgentName(task.agent)
+
+  // applySessionPromptParams is called in sync/background executor paths with the full DelegatedModelConfig.
+  // task.model is the model identifier; extended params aren't available here.
+
+  const resumeBody = {
+    agent: task.agent,
+    ...(resumeModel ? { model: resumeModel } : {}),
+    ...(resumeVariant ? { variant: resumeVariant } : {}),
+    tools: {
+      task: false,
+      call_omo_agent: true,
+      question: false,
+      ...getAgentToolRestrictions(task.agent),
+    },
+    parts: [createInternalAgentTextPart(input.prompt)],
+  }
 
   client.session.promptAsync({
     path: { id: task.sessionID },
-    body: {
-      agent: runtimeAgentName,
-      ...(resumeModel ? { model: resumeModel } : {}),
-      ...(resumeVariant ? { variant: resumeVariant } : {}),
-      tools: {
-        task: false,
-        call_omo_agent: true,
-        question: false,
-        ...getAgentToolRestrictions(task.agent),
-      },
-      parts: [createInternalAgentTextPart(input.prompt)],
-    },
-  }).catch((error) => {
+    body: resumeBody,
+  }).catch(async (error) => {
+    if (isAgentNotFoundError(error) && task.agent !== FALLBACK_AGENT) {
+      log("[background-agent] Resume agent not found, retrying with fallback agent", {
+        original: task.agent,
+        fallback: FALLBACK_AGENT,
+        taskId: task.id,
+      })
+      try {
+        await promptWithModelSuggestionRetry(client, {
+          path: { id: task.sessionID! },
+          body: buildFallbackBody(resumeBody, FALLBACK_AGENT),
+        })
+        task.agent = FALLBACK_AGENT
+        return
+      } catch (retryError) {
+        log("[background-agent] Resume fallback agent also failed:", retryError)
+        onTaskError(task, retryError instanceof Error ? retryError : new Error(String(retryError)))
+        return
+      }
+    }
     log("[background-agent] resume prompt error:", error)
     onTaskError(task, error instanceof Error ? error : new Error(String(error)))
   })

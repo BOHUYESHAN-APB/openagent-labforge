@@ -2,19 +2,12 @@ export const ALLOWED_AGENTS = [
   "explore",
   "librarian",
   "oracle",
-  "hephaestus",
-  "article-writer",
-  "scientific-writer",
+  "general",
   "bio-orchestrator",
-  "github-scout",
-  "tech-scout",
-  "metis",
-  "momus",
-  "multimodal-looker",
   "bio-methodologist",
-  "wet-lab-designer",
   "bio-pipeline-operator",
   "paper-evidence-synthesizer",
+  "wet-lab-designer",
 ] as const
 
 export const CALL_OMO_AGENT_DESCRIPTION = `Compatibility wrapper for specialized agents. run_in_background REQUIRED (true=async with task_id, false=sync).

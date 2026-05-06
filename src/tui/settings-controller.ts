@@ -1570,7 +1570,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
                 {
                   title: text("Balanced", "均衡"),
                   value: "balanced",
-                  description: text("Current recommended default.", "当前推荐默认值。"),
+                  description: text("Standard compression profile.", "标准压缩配置。"),
+                },
+                {
+                  title: text("Semi-Aggressive", "半激进 ★"),
+                  value: "semi-aggressive",
+                  description: text("Recommended default. Earlier pruning.", "推荐默认值，更早剪枝。"),
                 },
                 {
                   title: text("Aggressive", "激进"),
@@ -2001,6 +2006,7 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
       | "conservative"
       | "conservative-plus"
       | "balanced"
+      | "semi-aggressive"
       | "balanced-plus"
       | "aggressive"
       | "aggressive-plus"
@@ -2071,7 +2077,12 @@ export function createSettingsController(api: TuiPluginApi, directory: string) {
                 {
                   title: text("Balanced", "均衡"),
                   value: "balanced",
-                  description: text("Recommended default. For 1M/400K/200K models.", "推荐默认值。适用于 1M/400K/200K 模型。"),
+                  description: text("Standard compression profile. For 1M/400K/200K models.", "标准压缩配置。适用于 1M/400K/200K 模型。"),
+                },
+                {
+                  title: text("Semi-Aggressive", "半激进 ★"),
+                  value: "semi-aggressive",
+                  description: text("Recommended default. Earlier pruning, cost-optimized for DeepSeek V4.", "推荐默认值。更早剪枝，针对 DeepSeek V4 优化成本。"),
                 },
                 {
                   title: text("Balanced Plus", "均衡 Plus"),

@@ -30,17 +30,30 @@ export const AGENT_DISPLAY_PRESETS = {
     "wase",
     "atlas",
     "hephaestus",           // 深度执行
-    "bio-pipeline-operator", // 生信执行
+    "oracle",               // 架构顾问（子 agent）
+    "librarian",            // 文档专家（子 agent）
+    "explore",              // 代码探索（子 agent）
+    "bio-pipeline-operator", // 生信流程执行
     // bio-autopilot 通过领域开关控制
   ],
 } as const
 
 /**
  * Domain-specific agents - controlled by enable_domains configuration
+ * Engineering agents are shown by default via presets.
+ * All bio agents are gated behind the bioinformatics domain switch.
  */
 export const DOMAIN_AGENTS = {
-  bioinformatics: ["bio-autopilot"],
-  engineering: [],  // 工程类 agent 默认都显示
+  bioinformatics: [
+    "bio-autopilot",
+    "bio-orchestrator",
+    "bio-planner",
+    "bio-methodologist",
+    "bio-pipeline-operator",
+    "wet-lab-designer",
+    "paper-evidence-synthesizer",
+  ],
+  engineering: [],
 } as const
 
 /**
@@ -116,8 +129,8 @@ export const AgentDisplayConfigSchema = z.object({
   /** Domain enablement (default: both enabled) */
   enable_domains: EnableDomainsSchema.optional(),
 
-  /** Hide upstream commands (default: both hidden) */
-  hide_upstream_commands: HideUpstreamCommandsSchema.optional(),
+  /** Hide upstream commands (always hidden by default unless explicitly overridden) */
+  hide_upstream_commands: HideUpstreamCommandsSchema.default({ plan: true, build: true }),
 
   /** Intelligent routing configuration (default: enabled) */
   intelligent_routing: IntelligentRoutingSchema.optional(),

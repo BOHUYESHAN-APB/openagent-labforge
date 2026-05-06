@@ -51,6 +51,7 @@ import {
   setSessionAgent,
   setUltraworkAutonomousSession,
   updateSessionAgent,
+  subagentSessions,
 } from "../features/claude-code-session-state"
 import { getAgentConfigKey } from "../shared/agent-display-names"
 import { applyUltraworkModelOverrideOnMessage } from "./ultrawork-model-override"
@@ -390,11 +391,12 @@ export function createChatMessageHandler(args: {
       }
     }
 
+    const isSubagentSession = subagentSessions.has(input.sessionID)
     const soulRules = loadSoulRules({ directory: ctx.directory, pluginConfig })
     const injectOnce = pluginConfig.soul?.inject_once ?? true
     const alreadyInjected = soulInjectedSessions.has(input.sessionID)
 
-    if (soulRules.content && (!injectOnce || !alreadyInjected)) {
+    if (soulRules.content && (!injectOnce || !alreadyInjected) && !isSubagentSession) {
       const promptText = output.parts
         .filter((part) => part.type === "text" && part.text)
         .map((part) => part.text ?? "")
@@ -469,12 +471,15 @@ export function createChatMessageHandler(args: {
       isStageManagedAutonomousSession,
       runtimeState: runtimeWorkflowState,
     })
-    const stageManagedContext = buildStageManagedPromptContext({
-      directory: ctx.directory,
-      sessionID: input.sessionID,
-      agent: activeAgent,
-      promptMode: stageManagedPromptMode,
-    })
+    const shouldInjectStageManagedContext = !isSubagentSession || isStageManagedAutonomousSession
+    const stageManagedContext = shouldInjectStageManagedContext
+      ? buildStageManagedPromptContext({
+          directory: ctx.directory,
+          sessionID: input.sessionID,
+          agent: activeAgent,
+          promptMode: stageManagedPromptMode,
+        })
+      : null
     if (stageManagedContext) {
       contextCollector.register(input.sessionID, {
         id: "stage-managed-prompt",

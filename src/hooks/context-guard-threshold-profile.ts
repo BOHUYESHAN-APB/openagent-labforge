@@ -2,6 +2,7 @@ export type ContextGuardProfile =
   | "conservative"
   | "conservative-plus"
   | "balanced"
+  | "semi-aggressive"
   | "balanced-plus"
   | "aggressive"
   | "aggressive-plus"
@@ -157,6 +158,50 @@ const PRESETS: Record<ContextGuardProfile, ContextGuardPreset> = {
       preemptiveBioRatio: 0.62,
     },
     defaultPreemptiveRatio: 0.78,
+  },
+  "semi-aggressive": {
+    noticeRatio: 0.42,
+    fuseRatio: 0.56,
+    severeRatio: 0.68,
+    oneMillion: {
+      l1Tokens: 160_000,
+      l2Tokens: 240_000,
+      l3Tokens: 550_000,
+      preemptiveEngineeringTokens: 240_000,
+      preemptiveBioTokens: 210_000,
+    },
+    fourHundredK: {
+      l1Tokens: 150_000,
+      l2Tokens: 220_000,
+      l3Tokens: 300_000,
+      preemptiveEngineeringRatio: 0.55,
+      preemptiveBioRatio: 0.48,
+    },
+    twoHundredK: {
+      l1Tokens: 110_000,
+      l2Tokens: 140_000,
+      l3Tokens: 150_000,
+      preemptiveEngineeringRatio: 0.62,
+      preemptiveBioRatio: 0.55,
+      keepRecentMessagesL1: 90,
+      keepRecentMessagesL2: 65,
+      keepRecentMessagesL3: 40,
+    },
+    oneHundredSeventyK: {
+      l1Tokens: 85_000,
+      l2Tokens: 110_000,
+      l3Tokens: 130_000,
+      preemptiveEngineeringRatio: 0.65,
+      preemptiveBioRatio: 0.58,
+    },
+    oneHundredTwentyEightK: {
+      l1Tokens: 60_000,
+      l2Tokens: 80_000,
+      l3Tokens: 100_000,
+      preemptiveEngineeringRatio: 0.67,
+      preemptiveBioRatio: 0.60,
+    },
+    defaultPreemptiveRatio: 0.74,
   },
   aggressive: {
     noticeRatio: 0.40,
@@ -342,13 +387,15 @@ export function resolveContextGuardProfile(
   if (
     rawProfile === "conservative" ||
     rawProfile === "conservative-plus" ||
+    rawProfile === "balanced" ||
+    rawProfile === "semi-aggressive" ||
     rawProfile === "balanced-plus" ||
     rawProfile === "aggressive" ||
     rawProfile === "aggressive-plus"
   ) {
     return rawProfile
   }
-  return "balanced"
+  return "semi-aggressive"
 }
 
 function applyThresholdOverrides(

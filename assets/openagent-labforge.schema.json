@@ -5935,6 +5935,10 @@
           "additionalProperties": false
         },
         "hide_upstream_commands": {
+          "default": {
+            "plan": true,
+            "build": true
+          },
           "type": "object",
           "properties": {
             "plan": {
@@ -6027,6 +6031,7 @@
       },
       "required": [
         "agent_display_mode",
+        "hide_upstream_commands",
         "disabled_agents",
         "enabled_agents"
       ],
