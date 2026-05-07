@@ -1375,7 +1375,7 @@ describe('createTodoContinuationHook', () => {
       expect(onReviewOutcome).toHaveBeenCalledWith({
         sessionID: 'session-approve',
         verdict: 'approve',
-        findings: 'Work batch approved after structured auto-review.',
+        findings: 'complete.',
       });
 
       const rejectCtx = createMockContext({
@@ -1469,6 +1469,78 @@ describe('createTodoContinuationHook', () => {
         sessionID: 'session-needs-user',
         verdict: 'needs_user',
         findings: 'choose migration strategy',
+      });
+    });
+
+    test('high pressure review injects restart-safe handoff requirement and approve summary callback', async () => {
+      const onBatchSummary = mock(async () => {});
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [
+                {
+                  type: 'text',
+                  text: '[APPROVE] Delivered the fix. Next step if reopened: validate on a fresh long session.',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        onBatchSummary,
+        contextPressure: {
+          getState: () => ({
+            level: 3,
+            ratio: 0.82,
+            totalTokens: 164000,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l3-checkpoint-heavy',
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-high-pressure-review' },
+        },
+      });
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+      expect(
+        ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
+      ).toContain('High Pressure Finish Requirement');
+      expect(
+        ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
+      ).toContain('restart-safe handoff');
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-high-pressure-review' },
+        },
+      });
+
+      expect(onBatchSummary).toHaveBeenCalledWith({
+        sessionID: 'session-high-pressure-review',
+        summary:
+          'Delivered the fix. Next step if reopened: validate on a fresh long session.',
       });
     });
 

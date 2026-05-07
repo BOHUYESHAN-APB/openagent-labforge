@@ -60,6 +60,33 @@ Then create new todos for each finding and continue working.
 **DO** treat [NEEDS_USER] and [BLOCKED] as stop points: explain what is needed from the user.
 ]`;
 
+function buildReviewPrompt(args?: {
+  level: number;
+  ratio: number;
+  totalTokens: number;
+  contextLimit: number;
+  strategy: string;
+}): string {
+  if (!args || args.level < 2) {
+    return REVIEW_PROMPT;
+  }
+
+  return `${REVIEW_PROMPT}
+
+## High Pressure Finish Requirement
+
+Current session is under context pressure L${args.level} (${Math.round(
+    args.ratio * 100,
+  )}% = ${args.totalTokens.toLocaleString()} / ${args.contextLimit.toLocaleString()} tokens; strategy ${args.strategy}).
+
+If you output [APPROVE], your brief summary MUST also function as a restart-safe handoff:
+- what was actually delivered
+- the most important remaining risk/assumption
+- the exact next step if this work is reopened later
+
+Keep that handoff delta-only and concise. Do not expand into a long recap.`;
+}
+
 type ReviewVerdict = 'approve' | 'reject' | 'needs_user' | 'blocked' | 'none';
 type StoredReviewVerdict = Exclude<ReviewVerdict, 'none'> | 'pending';
 
@@ -126,9 +153,14 @@ function parseReviewVerdict(text: string): {
   verdict: ReviewVerdict;
   findings: string;
 } {
-  const approveMatch = text.match(/\[APPROVE\]/i);
+  const approveMatch = text.match(/\[APPROVE\](.*)$/is);
   if (approveMatch) {
-    return { verdict: 'approve', findings: '' };
+    return {
+      verdict: 'approve',
+      findings:
+        approveMatch[1]?.trim() ||
+        'Work batch approved after structured auto-review.',
+    };
   }
 
   const rejectMatch = text.match(/\[REJECT(?::\s*(.*?))?\]/is);
@@ -284,6 +316,10 @@ export function createTodoContinuationHook(
         strategy: string;
       }) => void | Promise<void>;
     };
+    onBatchSummary?: (args: {
+      sessionID: string;
+      summary: string;
+    }) => void | Promise<void>;
   },
 ): {
   tool: Record<string, unknown>;
@@ -836,10 +872,14 @@ export function createTodoContinuationHook(
                 .join(' ');
               const { verdict, findings } = parseReviewVerdict(text);
               if (verdict === 'approve') {
+                await config?.onBatchSummary?.({
+                  sessionID,
+                  summary: findings,
+                });
                 await config?.onReviewOutcome?.({
                   sessionID,
                   verdict,
-                  findings: 'Work batch approved after structured auto-review.',
+                  findings,
                 });
                 disableContinuationForCompletedBatch(sessionID);
                 return; // Allow stop
@@ -904,12 +944,21 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Injecting auto-review prompt`, { sessionID });
         state.reviewInjectedBySession.add(sessionID);
         state.reviewVerdictBySession.set(sessionID, 'pending');
+        const reviewPrompt = buildReviewPrompt(
+          config?.contextPressure?.getState(sessionID)
+            ? {
+                ...config.contextPressure.getState(sessionID)!,
+                strategy:
+                  config.contextPressure.getRecommendedStrategy(sessionID),
+              }
+            : undefined,
+        );
         state.isAutoInjecting = true;
         try {
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
-              parts: [createInternalAgentTextPart(REVIEW_PROMPT)],
+              parts: [createInternalAgentTextPart(reviewPrompt)],
             },
           });
           incrementConsecutiveContinuations(state, sessionID);

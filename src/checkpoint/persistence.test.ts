@@ -228,4 +228,45 @@ describe('checkpoint persistence', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test('records approved batch summaries into repository, workspace, conversation, and session memory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ol-batch-summary-'));
+    try {
+      const manager = new CheckpointManager(root);
+      manager.initializeSession(
+        'session-summary',
+        root,
+        'repo-summary',
+        'conversation-summary',
+      );
+
+      const checkpoint = manager.recordBatchSummary(
+        'session-summary',
+        'Delivered the migration and the next step is to validate against a fresh session.',
+      );
+
+      expect(checkpoint).not.toBeNull();
+      expect(
+        manager.sessionMemory.get('session-summary')?.metadata.lastBatchSummary,
+      ).toMatchObject({
+        checkpointID: checkpoint?.id,
+      });
+      expect(
+        manager.workspaceMemory.get(root)?.globalContext.lastBatchSummary,
+      ).toMatchObject({
+        sessionID: 'session-summary',
+      });
+      expect(
+        manager.repositoryMemory.get('repo-summary')?.globalKnowledge,
+      ).toContain(checkpoint?.summary);
+      expect(manager.repositoryMemory.get('repo-summary')?.patterns).toContain(
+        'batch-summary:auto-review-approved',
+      );
+      expect(
+        manager.conversationMemory.get('conversation-summary')?.summary,
+      ).toBe(checkpoint?.summary);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

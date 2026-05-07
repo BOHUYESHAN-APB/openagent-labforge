@@ -374,6 +374,58 @@ export class CheckpointManager {
     return checkpoint;
   }
 
+  recordBatchSummary(sessionID: string, summaryText: string): ContextCheckpoint | null {
+    const session = this.sessionMemory.get(sessionID);
+    if (!session) {
+      return null;
+    }
+
+    const normalizedSummary =
+      summaryText.trim() || 'Completed work batch summary unavailable.';
+    const summary = `Completed work batch summary: ${normalizedSummary}`;
+    const checkpoint = this.createCheckpoint(
+      sessionID,
+      summary,
+      ['Batch approved after structured auto-review.'],
+      ['Resume only from net-new changes if the work is reopened later.'],
+      0,
+      session.conversationID,
+    );
+
+    this.workingMemory.addDecision(sessionID, summary);
+    this.workingMemory.setContext(sessionID, 'lastBatchSummary', {
+      summary: normalizedSummary,
+      checkpointID: checkpoint.id,
+      timestamp: Date.now(),
+    });
+    this.sessionMemory.setMetadata(sessionID, 'lastBatchSummary', {
+      summary: normalizedSummary,
+      checkpointID: checkpoint.id,
+    });
+    this.workspaceMemory.setGlobalContext(session.workspaceRoot, 'lastBatchSummary', {
+      sessionID,
+      summary: normalizedSummary,
+      checkpointID: checkpoint.id,
+    });
+
+    if (session.conversationID) {
+      this.conversationMemory.updateSummary(session.conversationID, summary);
+    }
+
+    if (session.repositoryId) {
+      this.repositoryMemory.addKnowledge(session.repositoryId, summary);
+      this.repositoryMemory.addPattern(
+        session.repositoryId,
+        'batch-summary:auto-review-approved',
+      );
+      addGlobalKnowledge(session.repositoryId, summary);
+      addGlobalPattern(session.repositoryId, 'batch-summary:auto-review-approved');
+    }
+
+    this.persist();
+    return checkpoint;
+  }
+
   getRepositoryCheckpoints(repositoryId: string): ContextCheckpoint[] {
     const workspaceRoots = getRepositoryWorkspaces(repositoryId);
     const checkpoints: ContextCheckpoint[] = [];

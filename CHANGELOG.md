@@ -10,6 +10,26 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.15 - 2026-05-07
+
+### Added / 新增
+
+- Added a non-pressure batch-summary memory write path so approved work batches now
+  persist concise completion summaries into session, workspace, repository,
+  conversation, and global memory layers.
+- 新增一条非 pressure 的 batch-summary 记忆写入路径：已批准的工作批次现在会把简洁完成总结持久化到 session、workspace、repository、conversation 与 global memory 层。
+
+### Changed / 变更
+
+- High-pressure auto-review now requires a restart-safe handoff when approving a
+  batch, so L2/L3 sessions cannot end with a shallow summary only.
+- 高压 auto-review 在批准批次时现在会强制要求 restart-safe handoff，因此 L2/L3 会话不能只用浅层总结就结束。
+
+- Pressure-aware continuation, auto-pause persistence, review outcome memory,
+  and approved batch summaries are now connected into the same todo/review/
+  checkpoint chain instead of being separate partial flows.
+- pressure-aware continuation、auto-pause 持久化、review outcome memory 与批准批次 summary 现在被接进同一条 todo/review/checkpoint 主链路，而不再是彼此割裂的局部流程。
+
 ## v1.0.14 - 2026-05-07
 
 ### Added / 新增
@@ -36,6 +56,11 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
   memory layers, and auto mode no longer silently reports “no incomplete todos”
   when todo verification itself fails.
 - review 结果与 auto-pause 原因现在会写入跨会话记忆层；当 todo 校验本身失败时，自动模式也不再误报 “no incomplete todos”。
+
+- High-pressure review now requires a restart-safe handoff on approve, and
+  approved batch summaries are persisted into session/workspace/repository/
+  conversation/global memory as a non-pressure write path.
+- 高压 review 现在会在 approve 时强制要求 restart-safe handoff；而且已批准批次的 summary 也会作为一条非 pressure 写入路径，被持久化到 session/workspace/repository/conversation/global memory。
 
 - Restored `engineer` as the default agent. Added `defaultAgentName` for the
   actual default-agent fallback, kept `defaultVisibleAgent` as a compatibility
