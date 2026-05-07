@@ -11,10 +11,18 @@ import { DEFAULT_VISIBLE_AGENT_NAME } from './constants';
 export function applyDefaultAgent(
   opencodeConfig: Record<string, unknown>,
   setDefaultAgent: boolean,
+  preferredDefaultAgent?: string,
 ): void {
   if (!setDefaultAgent) return;
   if ((opencodeConfig as { default_agent?: string }).default_agent) return;
 
   (opencodeConfig as { default_agent?: string }).default_agent =
-    DEFAULT_VISIBLE_AGENT_NAME;
+    preferredDefaultAgent || DEFAULT_VISIBLE_AGENT_NAME;
+}
+
+export function resolvePreferredDefaultAgent(
+  config: { defaultAgentName?: string; defaultVisibleAgent?: string } | undefined,
+): string | undefined {
+  if (!config) return undefined;
+  return config.defaultAgentName || config.defaultVisibleAgent;
 }

@@ -54,6 +54,7 @@ import {
   createApplyPatchHook,
   createAutoUpdateCheckerHook,
   createChatHeadersHook,
+  createContextPressureHook,
   createDelegateTaskRetryHook,
   createFilterAvailableSkillsHook,
   createJsonErrorRecoveryHook,
@@ -180,6 +181,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let multiplexerSessionManager: MultiplexerSessionManager;
   let autoUpdateChecker: ReturnType<typeof createAutoUpdateCheckerHook>;
   let phaseReminderHook: ReturnType<typeof createPhaseReminderHook>;
+  let contextPressureHook: ReturnType<typeof createContextPressureHook>;
   let filterAvailableSkillsHook: ReturnType<
     typeof createFilterAvailableSkillsHook
   >;
@@ -320,6 +322,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
     // Initialize Checkpoint Manager
     checkpointManager = new CheckpointManager(ctx.directory);
+    checkpointManager.initializeSession(
+      'plugin-root',
+      ctx.directory,
+      ctx.directory,
+      `workspace:${ctx.directory}`,
+    );
 
     // Run checkpoint cleanup on startup
     const cleanupConfig = config.checkpoint ?? {
@@ -371,6 +379,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Initialize phase reminder hook for workflow compliance
     phaseReminderHook = createPhaseReminderHook();
 
+    // Initialize context pressure hook using OpenCode-native token/context stats
+    contextPressureHook = createContextPressureHook(ctx, {
+      enabled: config.compression?.enabled !== false,
+      profiles: config.compression?.profiles,
+    });
+
     // Initialize available skills filter hook
     filterAvailableSkillsHook = createFilterAvailableSkillsHook(ctx, config);
 
@@ -407,6 +421,56 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       cooldownMs: config.todoContinuation?.cooldownMs ?? 3000,
       autoEnable: config.todoContinuation?.autoEnable ?? false,
       autoEnableThreshold: config.todoContinuation?.autoEnableThreshold ?? 4,
+      onReviewOutcome: ({ sessionID, verdict, findings }) => {
+        checkpointManager.ensureSession(
+          sessionID,
+          ctx.directory,
+          ctx.directory,
+          `workspace:${ctx.directory}`,
+        );
+        checkpointManager.recordReviewOutcome(sessionID, verdict, findings);
+      },
+      onAutoPause: ({ sessionID, reason, details }) => {
+        checkpointManager.ensureSession(
+          sessionID,
+          ctx.directory,
+          ctx.directory,
+          `workspace:${ctx.directory}`,
+        );
+        checkpointManager.recordAutoPause(sessionID, reason, details);
+      },
+      contextPressure: {
+        getState: (sessionID) => contextPressureHook.getState(sessionID),
+        shouldForceCheckpoint: (sessionID) =>
+          contextPressureHook.shouldForceCheckpoint(sessionID),
+        getRecommendedStrategy: (sessionID) =>
+          contextPressureHook.getRecommendedStrategy(sessionID),
+        onForceCheckpoint: ({
+          sessionID,
+          level,
+          ratio,
+          totalTokens,
+          contextLimit,
+          strategy,
+        }) => {
+          checkpointManager.ensureSession(
+            sessionID,
+            ctx.directory,
+            ctx.directory,
+            `workspace:${ctx.directory}`,
+          );
+          checkpointManager.recordPressureCheckpoint(
+            sessionID,
+            {
+              level,
+              ratio,
+              totalTokens,
+              contextLimit,
+            },
+            strategy,
+          );
+        },
+      },
     });
     taskSessionManagerHook = createTaskSessionManagerHook(ctx, {
       maxSessionsPerAgent: config.sessionManager?.maxSessionsPerAgent ?? 2,
@@ -506,7 +570,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     config: async (opencodeConfig: Record<string, unknown>) => {
       // Only set default_agent if not already configured by the user
       // and the plugin config doesn't explicitly disable this behavior.
-      applyDefaultAgent(opencodeConfig, config.setDefaultAgent !== false);
+      applyDefaultAgent(
+        opencodeConfig,
+        config.setDefaultAgent !== false,
+        config.defaultAgentName || config.defaultVisibleAgent,
+      );
 
       // Merge Agent configs — per-agent shallow merge to preserve
       // user-supplied fields (e.g. tools, permission) from opencode.json
@@ -959,6 +1027,9 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       // Runtime model fallback for foreground agents (rate-limit detection)
       await foregroundFallback.handleEvent(input.event);
 
+      // Track real token/context usage from OpenCode message.updated events
+      await contextPressureHook.handleEvent(input);
+
       // Todo-continuation: auto-continue orchestrator on incomplete todos
       await todoContinuationHook.handleEvent(input);
 
@@ -1105,6 +1176,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       if (agent) {
         sessionAgentMap.set(input.sessionID, agent);
       }
+      contextPressureHook.handleChatMessage({
+        sessionID: input.sessionID,
+        agent,
+      });
       todoContinuationHook.handleChatMessage({
         sessionID: input.sessionID,
         agent,
@@ -1171,6 +1246,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         input,
         output,
       );
+
+      await contextPressureHook.handleSystemTransform(input, output);
 
       // Inject mode-specific prompt variants for primary agents
       if (input.sessionID) {

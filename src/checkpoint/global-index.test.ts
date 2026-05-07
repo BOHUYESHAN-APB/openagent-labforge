@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  addGlobalKnowledge,
+  addGlobalPattern,
   getRepositoryWorkspaces,
   loadGlobalIndex,
   registerWorkspace,
@@ -131,6 +133,22 @@ describe('global memory index', () => {
       } else {
         process.env.APPDATA = originalAppData;
       }
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('stores global knowledge and patterns for repository memory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ol-global-pattern-'));
+    try {
+      registerWorkspace('repo-knowledge', root);
+      addGlobalKnowledge('repo-knowledge', 'Pressure checkpoint summary');
+      addGlobalPattern('repo-knowledge', 'context-pressure:l2-checkpoint-light');
+
+      const index = loadGlobalIndex();
+      const repo = index.repositories.get('repo-knowledge');
+      expect(repo?.globalKnowledge).toContain('Pressure checkpoint summary');
+      expect(repo?.patterns).toContain('context-pressure:l2-checkpoint-light');
+    } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });

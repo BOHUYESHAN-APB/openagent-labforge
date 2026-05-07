@@ -35,6 +35,14 @@ export class WorkspaceMemoryStore {
     }
   }
 
+  setRepositoryId(workspaceRoot: string, repositoryId: string): void {
+    const memory = this.get(workspaceRoot);
+    if (memory) {
+      memory.repositoryId = repositoryId;
+      memory.lastActivity = Date.now();
+    }
+  }
+
   setGlobalContext(workspaceRoot: string, key: string, value: unknown): void {
     const memory = this.get(workspaceRoot);
     if (memory) {

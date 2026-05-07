@@ -16,9 +16,11 @@ ships as a full OpenCode plugin. It extends OpenCode with **18 specialized
 agents** (6 primary + 12 subagents), a three-tier prompt system, optional
 bioinformatics capabilities, and a checkpoint-based memory architecture.
 
-Current default visible expert is `bio-analyst`. The engineering main expert
-`engineer` remains available and can be selected explicitly when engineering is
-the dominant workflow.
+Current default agent remains `engineer`. `bio-analyst` is available as the
+biological-science expert, but it is not used as the default agent unless you
+configure it explicitly. If you only want one visible expert to appear more
+prominently in UI ordering, use `preferredVisibleAgent` instead of changing
+`default_agent`.
 
 > Repository naming note: the current GitHub repository is still named
 > `openagent-labforge-bio` for historical release continuity. The product and
@@ -116,6 +118,13 @@ Create `extendai-lab.jsonc` in `~/.config/opencode/`, or create `.opencode/exten
 
 ```jsonc
 {
+  // Default agent behavior
+  "defaultAgentName": "engineer",
+
+  // Optional: make one visible primary expert appear first in UI ordering
+  // without changing default_agent
+  // "preferredVisibleAgent": "bio-analyst",
+
   // Prompt mode: "light" (default), "heavy", "turbo"
   "promptMode": {
     "defaultMode": "light",
@@ -136,6 +145,34 @@ Create `extendai-lab.jsonc` in `~/.config/opencode/`, or create `.opencode/exten
 ```
 
 See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for the current full configuration reference. Legacy `openagent-labforge*.json/jsonc` files remain readable during the compatibility window and are planned to be removed in `v1.0.16`.
+
+### Context pressure / compression guidance
+
+ExtendAI Lab does **not** guess model-family context sizes. Instead, it uses the
+actual `provider/model -> limit.context` values reported by OpenCode for the
+current session and computes L1/L2/L3 pressure ratios from that real limit.
+
+- `engineering` default thresholds: `0.50 / 0.65 / 0.80`
+- `bio` default thresholds: `0.55 / 0.70 / 0.85`
+
+These ratios can be tuned in config:
+
+```jsonc
+{
+  "compression": {
+    "enabled": true,
+    "profiles": {
+      "engineering": { "l1": 0.5, "l2": 0.65, "l3": 0.8 },
+      "bio": { "l1": 0.55, "l2": 0.7, "l3": 0.85 }
+    }
+  }
+}
+```
+
+When pressure reaches L2/L3, ExtendAI Lab now prefers a checkpoint/compress-first
+continuation path. If no compression plugin is active, it explicitly nudges the
+agent toward concise summary/handoff/restart-safe behavior instead of pretending
+compression already happened.
 
 ---
 

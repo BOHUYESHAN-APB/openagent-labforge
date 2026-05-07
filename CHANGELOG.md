@@ -10,6 +10,39 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.14 - 2026-05-07
+
+### Added / 新增
+
+- Context-pressure monitoring now uses the real provider/model context limit
+  reported by OpenCode, supports configurable engineering/bio L1/L2/L3 ratios,
+  and records pressure-triggered checkpoints into session, workspace,
+  repository, conversation, and global repository memory.
+- 上下文压力监控现在基于 OpenCode 实际报告的 provider/model context limit，支持可配置的 engineering/bio L1/L2/L3 比例，并将压力触发的 checkpoint 写入 session、workspace、repository、conversation 与 global repository memory。
+
+- Added focused tests for threshold overrides, pressure-driven forcing, and the
+  new memory-writing paths.
+- 为阈值覆盖、压力驱动 forcing、以及新的记忆写入链路补充了聚焦测试。
+
+### Changed / 变更
+
+- L2/L3 pressure now triggers checkpoint-first continuation in auto mode instead
+  of only passive prompt hints. When no compression plugin is active, the agent
+  is guided toward concise summary/handoff/restart-safe behavior rather than
+  pretending compression happened.
+- L2/L3 压力现在会在自动模式中触发 checkpoint-first continuation，而不再只是被动提示。若当前没有压缩插件，系统会引导 agent 转向简洁 summary / handoff / restart-safe 行为，而不是假装已经完成压缩。
+
+- Review outcomes and auto-pause reasons are now persisted into cross-session
+  memory layers, and auto mode no longer silently reports “no incomplete todos”
+  when todo verification itself fails.
+- review 结果与 auto-pause 原因现在会写入跨会话记忆层；当 todo 校验本身失败时，自动模式也不再误报 “no incomplete todos”。
+
+- Restored `engineer` as the default agent. Added `defaultAgentName` for the
+  actual default-agent fallback, kept `defaultVisibleAgent` as a compatibility
+  alias during migration, and introduced `preferredVisibleAgent` to control UI
+  prominence/order without changing `default_agent`.
+- 恢复 `engineer` 为默认 agent。新增 `defaultAgentName` 作为真正的默认 agent 回退配置，保留 `defaultVisibleAgent` 作为迁移期兼容别名，并新增 `preferredVisibleAgent` 用来控制 UI 中谁更突出/更靠前，而不改变 `default_agent`。
+
 ## v1.0.13 - 2026-05-07
 
 ### Added / 新增

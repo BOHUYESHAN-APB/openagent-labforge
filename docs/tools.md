@@ -61,6 +61,32 @@ See:
 
 ---
 
+## Context Pressure Strategy
+
+ExtendAI Lab uses the **actual context limit reported by OpenCode for the current
+provider/model/session**. It does not guess limits from model family names.
+
+Pressure levels are ratio-based:
+
+- engineering default: `L1=0.50`, `L2=0.65`, `L3=0.80`
+- bio default: `L1=0.55`, `L2=0.70`, `L3=0.85`
+
+These ratios are applied to the real `limit.context` value OpenCode exposes for
+the active model. This matters because the same model family may have different
+effective context limits across providers or account types.
+
+Current behavior:
+
+- L1: keep outputs concise and avoid unnecessary recap
+- L2: prefer checkpoint/light-compression behavior before starting a large new phase
+- L3: force checkpoint/compress-first continuation and prepare restart-ready
+  summary/handoff behavior if no compression plugin is active
+
+Configuration lives under `compression.profiles.engineering` and
+`compression.profiles.bio` in `extendai-lab.jsonc`.
+
+---
+
 ## Todo Continuation
 
 Auto-continue has its own guide now:

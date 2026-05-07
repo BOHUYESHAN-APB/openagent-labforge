@@ -252,6 +252,38 @@ export function createTodoContinuationHook(
     cooldownMs?: number;
     autoEnable?: boolean;
     autoEnableThreshold?: number;
+    onReviewOutcome?: (args: {
+      sessionID: string;
+      verdict: 'approve' | 'reject' | 'needs_user' | 'blocked';
+      findings: string;
+    }) => void | Promise<void>;
+    onAutoPause?: (args: {
+      sessionID: string;
+      reason: string;
+      details: string;
+    }) => void | Promise<void>;
+    contextPressure?: {
+      getState: (
+        sessionID: string,
+      ) =>
+        | {
+            level: number;
+            ratio: number;
+            totalTokens: number;
+            contextLimit: number;
+          }
+        | undefined;
+      shouldForceCheckpoint: (sessionID: string) => boolean;
+      getRecommendedStrategy: (sessionID: string) => string;
+      onForceCheckpoint?: (args: {
+        sessionID: string;
+        level: number;
+        ratio: number;
+        totalTokens: number;
+        contextLimit: number;
+        strategy: string;
+      }) => void | Promise<void>;
+    };
   },
 ): {
   tool: Record<string, unknown>;
@@ -595,6 +627,15 @@ export function createTodoContinuationHook(
     });
   }
 
+  async function pauseAutoMode(
+    sessionID: string,
+    reason: string,
+    details: string,
+  ): Promise<void> {
+    await config?.onAutoPause?.({ sessionID, reason, details });
+    disableContinuationForSession(sessionID, `auto pause: ${reason}`);
+  }
+
   function registerOrchestratorSession(sessionID: string): void {
     state.orchestratorSessionIds.add(sessionID);
   }
@@ -766,6 +807,11 @@ export function createTodoContinuationHook(
           sessionID,
           error: error instanceof Error ? error.message : String(error),
         });
+        await pauseAutoMode(
+          sessionID,
+          'todo-fetch-failed',
+          error instanceof Error ? error.message : String(error),
+        );
         return;
       }
 
@@ -790,10 +836,20 @@ export function createTodoContinuationHook(
                 .join(' ');
               const { verdict, findings } = parseReviewVerdict(text);
               if (verdict === 'approve') {
+                await config?.onReviewOutcome?.({
+                  sessionID,
+                  verdict,
+                  findings: 'Work batch approved after structured auto-review.',
+                });
                 disableContinuationForCompletedBatch(sessionID);
                 return; // Allow stop
               }
               if (verdict === 'reject') {
+                await config?.onReviewOutcome?.({
+                  sessionID,
+                  verdict,
+                  findings,
+                });
                 state.reviewVerdictBySession.set(sessionID, 'reject');
                 state.reviewInjectedBySession.delete(sessionID);
                 setConsecutiveContinuations(state, sessionID, 0);
@@ -820,6 +876,11 @@ export function createTodoContinuationHook(
                 return;
               }
               if (verdict === 'needs_user' || verdict === 'blocked') {
+                await config?.onReviewOutcome?.({
+                  sessionID,
+                  verdict,
+                  findings,
+                });
                 state.reviewVerdictBySession.set(sessionID, verdict);
                 disableContinuationForReviewStop(sessionID, verdict, findings);
                 return;
@@ -889,6 +950,11 @@ export function createTodoContinuationHook(
           sessionID,
           error: error instanceof Error ? error.message : String(error),
         });
+        await pauseAutoMode(
+          sessionID,
+          'message-fetch-failed',
+          error instanceof Error ? error.message : String(error),
+        );
         return;
       }
 
@@ -896,6 +962,11 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Skipped: last message is question`, {
           sessionID,
         });
+        await pauseAutoMode(
+          sessionID,
+          'awaiting-user-answer',
+          'The last assistant message is a question, so auto mode must wait for user input.',
+        );
         return;
       }
 
@@ -906,6 +977,11 @@ export function createTodoContinuationHook(
           consecutive: getConsecutiveContinuations(state, sessionID),
           max: maxContinuations,
         });
+        await pauseAutoMode(
+          sessionID,
+          'max-continuations-reached',
+          `Reached ${getConsecutiveContinuations(state, sessionID)} consecutive auto continuations (max ${maxContinuations}).`,
+        );
         return;
       }
 
@@ -924,6 +1000,58 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Skipped: timer pending or injection in flight`, {
           sessionID,
         });
+        return;
+      }
+
+      const pressureState = config?.contextPressure?.getState(sessionID);
+      if (
+        pressureState &&
+        config?.contextPressure?.shouldForceCheckpoint(sessionID)
+      ) {
+        const strategy =
+          config.contextPressure.getRecommendedStrategy(sessionID);
+        log(`[${HOOK_NAME}] Context pressure forcing checkpoint-first flow`, {
+          sessionID,
+          level: pressureState.level,
+          ratio: pressureState.ratio,
+          strategy,
+        });
+
+        await config.contextPressure.onForceCheckpoint?.({
+          sessionID,
+          level: pressureState.level,
+          ratio: pressureState.ratio,
+          totalTokens: pressureState.totalTokens,
+          contextLimit: pressureState.contextLimit,
+          strategy,
+        });
+
+        state.isAutoInjecting = true;
+        try {
+          await ctx.client.session.prompt({
+            path: { id: sessionID },
+            body: {
+              parts: [
+                createInternalAgentTextPart(
+                  `[Context-pressure forcing: current session is at L${pressureState.level} (${Math.round(
+                    pressureState.ratio * 100,
+                  )}% of model context, ${pressureState.totalTokens.toLocaleString()} / ${pressureState.contextLimit.toLocaleString()} tokens). Before continuing normal todos, perform the recommended ${strategy} response now: checkpoint/compress first, then continue with delta-only updates. Do not stop after checkpointing; continue the batch unless blocked or user input is required.]`,
+                ),
+              ],
+            },
+          });
+          incrementConsecutiveContinuations(state, sessionID);
+        } catch (error) {
+          log(
+            `[${HOOK_NAME}] Error: failed to inject context-pressure continuation`,
+            {
+              sessionID,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
+        } finally {
+          state.isAutoInjecting = false;
+        }
         return;
       }
 
@@ -1172,6 +1300,7 @@ export function createTodoContinuationHook(
 
     // Check for incomplete todos to decide on immediate continuation
     let hasIncompleteTodos = false;
+    let todoFetchFailed = false;
     try {
       const todosResult = await ctx.client.session.todo({
         path: { id: input.sessionID },
@@ -1181,6 +1310,7 @@ export function createTodoContinuationHook(
         (t) => !TERMINAL_TODO_STATUSES.includes(t.status),
       );
     } catch (error) {
+      todoFetchFailed = true;
       log(`[${HOOK_NAME}] Warning: failed to fetch todos in command hook`, {
         sessionID: input.sessionID,
         error: error instanceof Error ? error.message : String(error),
@@ -1191,6 +1321,12 @@ export function createTodoContinuationHook(
       output.parts.push(
         createInternalAgentTextPart(
           `${CONTINUATION_PROMPT} [Auto-continue enabled: up to ${maxContinuations} continuations.]`,
+        ),
+      );
+    } else if (todoFetchFailed) {
+      output.parts.push(
+        createInternalAgentTextPart(
+          `[Auto-continue: enabled for up to ${maxContinuations} continuations, but todos could not be verified right now. Auto mode is enabled; retry when todo access succeeds.]`,
         ),
       );
     } else {

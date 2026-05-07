@@ -62,6 +62,41 @@ const BIO_PROFILE: ContextPressureProfile = {
   keepRecentMessages: 12,
 };
 
+function normalizeThresholds(
+  thresholds?: Partial<ContextPressureThresholds>,
+  fallback: ContextPressureThresholds = DEFAULT_THRESHOLDS,
+): ContextPressureThresholds {
+  const l1 = thresholds?.l1 ?? fallback.l1;
+  const l2 = thresholds?.l2 ?? fallback.l2;
+  const l3 = thresholds?.l3 ?? fallback.l3;
+  if (!(l1 > 0 && l1 < l2 && l2 < l3 && l3 < 1)) {
+    return fallback;
+  }
+  return { l1, l2, l3 };
+}
+
+export function buildPressureProfiles(config?: {
+  engineering?: Partial<ContextPressureThresholds>;
+  bio?: Partial<ContextPressureThresholds>;
+}): {
+  engineering: ContextPressureProfile;
+  bio: ContextPressureProfile;
+} {
+  return {
+    engineering: {
+      ...ENGINEERING_PROFILE,
+      thresholds: normalizeThresholds(
+        config?.engineering,
+        ENGINEERING_PROFILE.thresholds,
+      ),
+    },
+    bio: {
+      ...BIO_PROFILE,
+      thresholds: normalizeThresholds(config?.bio, BIO_PROFILE.thresholds),
+    },
+  };
+}
+
 export class ContextPressureMonitor {
   private stateBySession = new Map<string, ContextPressureState>();
   private profileBySession = new Map<string, ContextPressureProfile>();

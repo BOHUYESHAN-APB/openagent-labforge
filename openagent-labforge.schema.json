@@ -8,6 +8,21 @@
     "setDefaultAgent": {
       "type": "boolean"
     },
+    "defaultAgentName": {
+      "description": "Preferred default agent name used only when default_agent is not already configured. Defaults to engineer.",
+      "type": "string",
+      "minLength": 1
+    },
+    "defaultVisibleAgent": {
+      "description": "Deprecated alias for defaultAgentName. Used only when default_agent is not already configured.",
+      "type": "string",
+      "minLength": 1
+    },
+    "preferredVisibleAgent": {
+      "description": "Visible primary agent to place first in UI ordering without changing default_agent. Use this to make one expert more prominent while keeping engineer as the default agent.",
+      "type": "string",
+      "minLength": 1
+    },
     "scoringEngineVersion": {
       "type": "string",
       "enum": [
@@ -606,7 +621,7 @@
       "properties": {
         "enabled": {
           "default": false,
-          "description": "Enable automatic context compression",
+          "description": "Enable context-pressure awareness and automatic checkpoint/compression guidance",
           "type": "boolean"
         },
         "strategy": {
@@ -630,6 +645,76 @@
           "description": "Number of recent messages to preserve from compression",
           "type": "number",
           "minimum": 1
+        },
+        "profiles": {
+          "description": "Optional per-profile L1/L2/L3 ratios. Ratios are applied to the actual context limit reported by OpenCode for the current provider/model/session.",
+          "type": "object",
+          "properties": {
+            "engineering": {
+              "default": {
+                "l1": 0.5,
+                "l2": 0.65,
+                "l3": 0.8
+              },
+              "description": "Context-pressure thresholds for engineer/default workflows. Uses actual host-reported context limits rather than guessing model sizes.",
+              "type": "object",
+              "properties": {
+                "l1": {
+                  "default": 0.5,
+                  "description": "L1 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                },
+                "l2": {
+                  "default": 0.65,
+                  "description": "L2 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                },
+                "l3": {
+                  "default": 0.8,
+                  "description": "L3 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                }
+              }
+            },
+            "bio": {
+              "default": {
+                "l1": 0.55,
+                "l2": 0.7,
+                "l3": 0.85
+              },
+              "description": "Context-pressure thresholds for biological-science workflows. Uses actual host-reported context limits rather than guessing model sizes.",
+              "type": "object",
+              "properties": {
+                "l1": {
+                  "default": 0.5,
+                  "description": "L1 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                },
+                "l2": {
+                  "default": 0.65,
+                  "description": "L2 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                },
+                "l3": {
+                  "default": 0.8,
+                  "description": "L3 context-pressure ratio threshold (0-1)",
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                }
+              }
+            }
+          }
         }
       }
     },

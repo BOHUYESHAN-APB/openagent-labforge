@@ -61,6 +61,34 @@ What it does **not** install yet:
 - hook snippets
 - runtime API integration
 
+## Default agent vs visible emphasis
+
+The current product config separates these concerns:
+
+- `defaultAgentName` = actual fallback default agent
+- `preferredVisibleAgent` = which visible primary expert should appear first or
+  feel more prominent in host-facing ordering
+
+For example, you can keep engineering as the default agent while still making
+the biological expert feel more prominent in the visible list:
+
+```jsonc
+{
+  "defaultAgentName": "engineer",
+  "preferredVisibleAgent": "bio-analyst"
+}
+```
+
+The current DeepSeek-TUI command pack still installs both `ol-engineer.md` and
+`ol-bio.md`; this config split is about host/default semantics, not command file
+presence.
+
+During the current migration window:
+
+- `defaultAgentName` is the preferred field for fallback default-agent behavior.
+- `defaultVisibleAgent` is kept only as a compatibility alias.
+- `preferredVisibleAgent` is the preferred field for visible ordering/prominence.
+
 ## Naming rule for generated files
 
 DeepSeek command names come from Markdown file stems. Therefore command files

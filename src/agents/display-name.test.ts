@@ -207,6 +207,16 @@ describe('displayName', () => {
     expect(sdkConfigs['bio-orchestrator'].hidden).toBe(true);
   });
 
+  test('can reorder visible primary agents without changing internal defaults', () => {
+    const config: PluginConfig = {
+      preferredVisibleAgent: 'bio-analyst',
+    };
+
+    const agents = createAgents(config);
+    expect(agents[0]?.name).toBe('bio-orchestrator');
+    expect(agents[1]?.name).toBe('orchestrator');
+  });
+
   test('exposes default plain-English names for planning review subagents', () => {
     const sdkConfigs = getAgentConfigs() as Record<
       string,

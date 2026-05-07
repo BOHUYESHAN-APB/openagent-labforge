@@ -1,4 +1,12 @@
 {
+  // ========== 默认 agent / 可见顺序 ==========
+  // 真正的默认 agent（当 OpenCode 配置里未显式设置 default_agent 时生效）
+  "defaultAgentName": "engineer",
+
+  // 只影响主专家在 UI 中的顺序/突出程度，不改变 default_agent
+  // 例如保持工程主线为默认 agent，但让 bio-analyst 更靠前显示
+  // "preferredVisibleAgent": "bio-analyst",
+
   // ========== 模型配置 ==========
   "model_preferences": {
     // 启用自定义模型配置
@@ -97,6 +105,22 @@
   "compression": {
     "enabled": false, // 全局开关（默认禁用）
     "strategy": "auto", // auto | manual | hybrid
-    "thresholdTokens": 100000
+    "thresholdTokens": 100000,
+
+    // L1/L2/L3 比例阈值永远基于 OpenCode 实际上报的当前 provider/model
+    // context limit 计算，不要按模型家族名去猜。
+    // 例如同样是 GPT-5.5，在不同 provider / 账号方案下 context limit 可能不同。
+    "profiles": {
+      "engineering": {
+        "l1": 0.5,
+        "l2": 0.65,
+        "l3": 0.8
+      },
+      "bio": {
+        "l1": 0.55,
+        "l2": 0.7,
+        "l3": 0.85
+      }
+    }
   }
 }

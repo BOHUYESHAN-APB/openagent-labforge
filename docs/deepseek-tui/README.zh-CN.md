@@ -58,6 +58,31 @@ bunx extendai-lab uninstall dstui --force
 - hook snippets
 - runtime API 集成
 
+## 默认 agent 与默认更突出显示的区别
+
+当前产品配置已经把这两个概念分开：
+
+- `defaultAgentName` = 真正的默认 agent 回退值
+- `preferredVisibleAgent` = 哪个可见主专家应该排在更前/更突出
+
+例如，你可以保持工程主线仍然是默认 agent，但让生物专家在可见列表中更靠前：
+
+```jsonc
+{
+  "defaultAgentName": "engineer",
+  "preferredVisibleAgent": "bio-analyst"
+}
+```
+
+当前 DeepSeek-TUI command pack 仍然会同时安装 `ol-engineer.md` 和
+`ol-bio.md`；这个配置拆分讨论的是宿主默认语义，不是 command 文件是否存在。
+
+当前迁移窗口内：
+
+- `defaultAgentName` 是推荐写法，用于默认 agent 回退行为；
+- `defaultVisibleAgent` 仅作为兼容别名保留；
+- `preferredVisibleAgent` 是推荐写法，用于可见顺序/突出程度控制。
+
 ## 生成文件命名规则
 
 DeepSeek command 名来自 Markdown 文件名 stem。因此 command 文件必须保留预期 slash command 名：

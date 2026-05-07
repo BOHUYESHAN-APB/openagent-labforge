@@ -75,6 +75,31 @@ Today this manages a small command pack under `~/.deepseek/commands/`, three
 minimal skills under `~/.deepseek/skills/`, and a manifest under
 `~/.deepseek/extendai-lab/`. MCP/hooks are planned later.
 
+## Default agent vs visible emphasis
+
+These are now separate concepts:
+
+- `defaultAgentName`: chooses the fallback default agent when `default_agent`
+  is not already configured by the user.
+- `preferredVisibleAgent`: only affects which visible primary expert should be
+  ordered first / made more prominent in UI-facing registration.
+
+Recommended baseline:
+
+```jsonc
+{
+  "defaultAgentName": "engineer",
+  "preferredVisibleAgent": "bio-analyst"
+}
+```
+
+That keeps engineering as the default agent while allowing the biological expert
+to appear first in visible expert ordering.
+
+During the current migration window, `defaultVisibleAgent` is still accepted as
+a compatibility alias, but new config should use `defaultAgentName` and
+`preferredVisibleAgent` instead.
+
 ## Config file naming
 
 Primary config basenames now use `extendai-lab`:

@@ -115,6 +115,59 @@ describe('createTodoContinuationHook', () => {
     });
   });
 
+  describe('context pressure forcing', () => {
+    test('injects checkpoint-first continuation when context pressure reaches L2', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      const onForceCheckpoint = mock(async () => {});
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio: 0.71,
+            totalTokens: 142000,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      ctx.client.session.prompt.mockClear();
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(1);
+      const continuationCall = contCall(ctx.client.session.prompt);
+      const text = continuationCall[0]?.body?.parts?.[0]?.text ?? '';
+      expect(text).toContain('Context-pressure forcing');
+      expect(text).toContain('L2');
+      expect(text).toContain('l2-checkpoint-light');
+    });
+  });
+
   describe('todo hygiene routing', () => {
     test('does not inject hygiene reminder for unknown non-orchestrator session', async () => {
       const ctx = createMockContext({
@@ -798,6 +851,54 @@ describe('createTodoContinuationHook', () => {
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
+    test('last assistant question pauses auto mode with surfaced reason', async () => {
+      const onAutoPause = mock(async () => {});
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Should I continue?' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        onAutoPause,
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-question' },
+        },
+      });
+
+      expect(onAutoPause).toHaveBeenCalledWith({
+        sessionID: 'session-question',
+        reason: 'awaiting-user-answer',
+        details:
+          'The last assistant message is a question, so auto mode must wait for user input.',
+      });
+
+      ctx.client.session.prompt.mockClear();
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-question' },
+        },
+      });
+      await delay(60);
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
     test('question detection with question mark → skip', async () => {
       const ctx = createMockContext({
         todoResult: {
@@ -914,6 +1015,55 @@ describe('createTodoContinuationHook', () => {
 
       await delay(60);
 
+      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('max continuations reached pauses auto mode with surfaced reason', async () => {
+      const onAutoPause = mock(async () => {});
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Working...' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 20,
+        maxContinuations: 1,
+        onAutoPause,
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-max' },
+        },
+      });
+      await delay(30);
+
+      ctx.client.session.prompt.mockClear();
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-max' },
+        },
+      });
+
+      expect(onAutoPause).toHaveBeenCalledWith({
+        sessionID: 'session-max',
+        reason: 'max-continuations-reached',
+        details: 'Reached 1 consecutive auto continuations (max 1).',
+      });
+      await delay(30);
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
@@ -1179,6 +1329,147 @@ describe('createTodoContinuationHook', () => {
       await delay(60);
 
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('review outcome callback receives approve/reject/needs_user verdicts', async () => {
+      const onReviewOutcome = mock(async () => {});
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: '[APPROVE] complete.' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        onReviewOutcome,
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-approve' },
+        },
+      });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-approve' },
+        },
+      });
+
+      expect(onReviewOutcome).toHaveBeenCalledWith({
+        sessionID: 'session-approve',
+        verdict: 'approve',
+        findings: 'Work batch approved after structured auto-review.',
+      });
+
+      const rejectCtx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: '[REJECT: run tests first]' }],
+            },
+          ],
+        },
+      });
+      const rejectHook = createTodoContinuationHook(rejectCtx, {
+        cooldownMs: 50,
+        onReviewOutcome,
+      });
+      await rejectHook.tool.auto_continue.execute({ enabled: true });
+      await rejectHook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-reject' },
+        },
+      });
+      await rejectHook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-reject' },
+        },
+      });
+
+      expect(onReviewOutcome).toHaveBeenCalledWith({
+        sessionID: 'session-reject',
+        verdict: 'reject',
+        findings: 'run tests first',
+      });
+
+      const needsUserCtx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [
+                {
+                  type: 'text',
+                  text: '[NEEDS_USER: choose migration strategy]',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      const needsUserHook = createTodoContinuationHook(needsUserCtx, {
+        cooldownMs: 50,
+        onReviewOutcome,
+      });
+      await needsUserHook.tool.auto_continue.execute({ enabled: true });
+      await needsUserHook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-needs-user' },
+        },
+      });
+      await needsUserHook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-needs-user' },
+        },
+      });
+
+      expect(onReviewOutcome).toHaveBeenCalledWith({
+        sessionID: 'session-needs-user',
+        verdict: 'needs_user',
+        findings: 'choose migration strategy',
+      });
     });
 
     test('review reject forces rework instead of disabling auto', async () => {
@@ -2437,7 +2728,10 @@ describe('createTodoContinuationHook', () => {
 
       // Should still enable but skip continuation (no todos fetched)
       expect(output.parts).toHaveLength(1);
-      expect(output.parts[0].text).toContain('No incomplete todos right now');
+      expect(output.parts[0].text).toContain(
+        'todos could not be verified right now',
+      );
+      expect(output.parts[0].text).not.toContain('No incomplete todos right now');
     });
   });
 

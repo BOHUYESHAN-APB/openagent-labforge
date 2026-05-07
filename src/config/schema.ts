@@ -293,11 +293,34 @@ export const BioSkillsConfigSchema = z.object({
 export type BioSkillsConfig = z.infer<typeof BioSkillsConfigSchema>;
 
 // Compression configuration (global toggle)
+const CompressionThresholdsSchema = z.object({
+  l1: z
+    .number()
+    .gt(0)
+    .lt(1)
+    .default(0.5)
+    .describe('L1 context-pressure ratio threshold (0-1)'),
+  l2: z
+    .number()
+    .gt(0)
+    .lt(1)
+    .default(0.65)
+    .describe('L2 context-pressure ratio threshold (0-1)'),
+  l3: z
+    .number()
+    .gt(0)
+    .lt(1)
+    .default(0.8)
+    .describe('L3 context-pressure ratio threshold (0-1)'),
+});
+
 export const CompressionConfigSchema = z.object({
   enabled: z
     .boolean()
     .default(false)
-    .describe('Enable automatic context compression'),
+    .describe(
+      'Enable context-pressure awareness and automatic checkpoint/compression guidance',
+    ),
   strategy: z
     .enum(['auto', 'manual', 'hybrid'])
     .default('auto')
@@ -314,6 +337,27 @@ export const CompressionConfigSchema = z.object({
     .min(1)
     .default(10)
     .describe('Number of recent messages to preserve from compression'),
+  profiles: z
+    .object({
+      engineering: CompressionThresholdsSchema.default({
+        l1: 0.5,
+        l2: 0.65,
+        l3: 0.8,
+      }).describe(
+        'Context-pressure thresholds for engineer/default workflows. Uses actual host-reported context limits rather than guessing model sizes.',
+      ),
+      bio: CompressionThresholdsSchema.default({
+        l1: 0.55,
+        l2: 0.7,
+        l3: 0.85,
+      }).describe(
+        'Context-pressure thresholds for biological-science workflows. Uses actual host-reported context limits rather than guessing model sizes.',
+      ),
+    })
+    .optional()
+    .describe(
+      'Optional per-profile L1/L2/L3 ratios. Ratios are applied to the actual context limit reported by OpenCode for the current provider/model/session.',
+    ),
 });
 
 export type CompressionConfig = z.infer<typeof CompressionConfigSchema>;
@@ -431,6 +475,27 @@ export const PluginConfigSchema = z
   .object({
     preset: z.string().optional(),
     setDefaultAgent: z.boolean().optional(),
+    defaultAgentName: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Preferred default agent name used only when default_agent is not already configured. Defaults to engineer.',
+      ),
+    defaultVisibleAgent: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Deprecated alias for defaultAgentName. Used only when default_agent is not already configured.',
+      ),
+    preferredVisibleAgent: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Visible primary agent to place first in UI ordering without changing default_agent. Use this to make one expert more prominent while keeping engineer as the default agent.',
+      ),
     scoringEngineVersion: z.enum(['v1', 'v2-shadow', 'v2']).optional(),
     balanceProviderUsage: z.boolean().optional(),
     autoUpdate: z

@@ -54,6 +54,35 @@ function normalizeDisplayName(displayName: string): string {
   return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
 }
 
+function reorderPrimaryAgentFactories(config?: PluginConfig):
+  [PrimaryAgentName, (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName]][] {
+  const entries = Object.entries(PRIMARY_AGENT_FACTORIES) as [
+    PrimaryAgentName,
+    (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName],
+  ][];
+
+  const preferredVisibleAgent = config?.preferredVisibleAgent?.trim();
+  if (!preferredVisibleAgent) return entries;
+
+  const preferredInternalName =
+    preferredVisibleAgent === 'engineer'
+      ? 'orchestrator'
+      : preferredVisibleAgent === 'planner'
+        ? 'prometheus'
+        : preferredVisibleAgent === 'executor'
+          ? 'atlas'
+          : preferredVisibleAgent === 'bio-analyst'
+            ? 'bio-orchestrator'
+            : undefined;
+
+  if (!preferredInternalName) return entries;
+
+  const preferredEntry = entries.find(([name]) => name === preferredInternalName);
+  if (!preferredEntry) return entries;
+
+  return [preferredEntry, ...entries.filter(([name]) => name !== preferredInternalName)];
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -356,10 +385,7 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
 
   // 1. Create all primary agents (orchestrator + new primary agents)
   const primaryAgents = (
-    Object.entries(PRIMARY_AGENT_FACTORIES) as [
-      PrimaryAgentName,
-      (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName],
-    ][]
+    reorderPrimaryAgentFactories(config)
   )
     .filter(([name]) => !disabled.has(name))
     .map(([name, factory]) => {
