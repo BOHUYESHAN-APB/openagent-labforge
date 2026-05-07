@@ -21,6 +21,7 @@ Thanks for helping with ExtendAI Lab.
    - `docs/opencode/README.md`
    - `docs/deepseek-tui/README.md`
    - `docs/architecture/adapters.md`
+   - `docs/architecture/engineering-modules.md`
 3. Keep changes surgical. Do not refactor adjacent code unless required.
 
 ## Validation
@@ -38,6 +39,8 @@ test runs.
 ## Documentation rules
 
 - Keep OpenCode and DeepSeek-TUI docs separate.
+- Reusable prompt-discipline rules should first land in `docs/engineering-modules/`
+  instead of only being scattered across prompts.
 - Use `ol-` for LabForge slash commands.
 - Mention internal IDs only when needed for compatibility.
 - Document limitations explicitly; do not imply DeepSeek-TUI has full plugin
@@ -50,3 +53,14 @@ Do not commit generated packages such as `*.tgz`.
 
 DeepSeek-TUI adapter files must be uninstallable through a manifest and ownership
 marker. Do not generate unmanaged files into user directories.
+
+## Adding reusable prompt/rigor modules
+
+If a new behavior should apply across multiple agents or workflows:
+
+1. Add or update the relevant document under `docs/engineering-modules/`
+2. Keep the module cross-agent and reusable
+3. Only then wire small targeted prompt changes to consume it
+
+Do not start by copying large prompt paragraphs into multiple agents without a
+shared module document.

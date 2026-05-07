@@ -10,6 +10,33 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.13 - 2026-05-07
+
+### Added / 新增
+
+- Added a minimal DeepSeek-TUI install/uninstall workflow in the CLI. The
+  adapter can now write and remove a small managed command pack and bundled
+  skill pack under `~/.deepseek/`, tracked by a manifest with ownership markers
+  and hashes.
+- 新增 DeepSeek-TUI 最小安装/卸载流程。CLI 现在可以在 `~/.deepseek/` 下写入并移除一组受管 command 与小型 skill pack，并通过 manifest、ownership marker 与 hash 进行跟踪。
+
+- Added a standardized diagnostics strategy module to the engineering module
+  docs, formalizing: use LSP when available, otherwise use the language's own
+  diagnostics/checkers, then layer tests/build/runtime verification on top.
+- 新增标准化 diagnostics strategy 模块文档，明确诊断策略：有 LSP 时优先用 LSP；没有时使用语言自身的诊断/检查链；再叠加 tests/build/runtime 验证。
+
+### Changed / 变更
+
+- Switched the default visible expert from `engineer` to `bio-analyst`. The
+  engineering path remains available, but the product now opens with the
+  biological-science expert visible by default.
+- 将默认可见专家从 `engineer` 调整为 `bio-analyst`。工程主线仍然可用，但产品现在默认先显示生物科学主专家。
+
+- Clarified DeepSeek-TUI adapter scope in README/install docs: current support is
+  limited to basic command/skill file installation and safe uninstall, while
+  MCP/hooks/runtime integration remain future work.
+- 在 README/安装文档中进一步明确 DeepSeek-TUI adapter 的当前范围：本版只支持基础 command/skill 文件安装与安全卸载，MCP/hooks/runtime 集成仍留待后续版本。
+
 ## v1.0.12 - 2026-05-06
 
 ### Added / 新增

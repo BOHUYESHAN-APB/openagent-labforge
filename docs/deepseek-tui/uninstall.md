@@ -7,14 +7,15 @@ Chinese version: [`uninstall.zh-CN.md`](uninstall.zh-CN.md)
 
 ## Manifest location
 
-The planned manifest location is:
+The current manifest location is:
 
 ```text
-~/.deepseek/labforge/install-manifest.json
+~/.deepseek/extendai-lab/install-manifest.json
 ```
 
-The manifest records all generated commands, skills, MCP snippets, hook snippets,
-docs, backups, and stale files from prior versions.
+The manifest records generated commands, generated skills, and backups today. It is designed to
+expand later for MCP snippets, hook snippets, docs, and stale files
+from prior versions.
 
 ## Ownership marker
 
@@ -44,7 +45,11 @@ The uninstaller may delete a file only when all of these are true:
 4. the current hash matches the manifest hash.
 
 If the user changed the file, the default action is to preserve it and print a
-warning. A future `--force` flag may remove it, ideally after writing a backup.
+warning. The implemented `--force` flag may remove it, but it should first write
+a backup.
+
+If any managed files are preserved, the manifest should also be retained. This
+keeps future cleanup safe instead of forgetting which files are still owned.
 
 ## Update rules
 

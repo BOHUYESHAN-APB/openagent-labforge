@@ -89,6 +89,20 @@ packages/adapters/deepseek-tui/
 packages/mcp-server/
 ```
 
+## Reusable engineering modules
+
+Host adapters should reuse shared engineering modules where possible instead of
+copying large prompt paragraphs across agents.
+
+The first standardized family is documented in:
+
+- [`../engineering-modules/README.md`](../engineering-modules/README.md)
+- [`../engineering-modules/scientific-rigor.md`](../engineering-modules/scientific-rigor.md)
+- [`../engineering-modules/anti-overconfidence.md`](../engineering-modules/anti-overconfidence.md)
+
+These modules are intended to support staged injection or on-demand loading in
+the future, while remaining reviewable as engineering documents today.
+
 ## DeepSeek-TUI adapter principle
 
 DeepSeek-TUI currently consumes placed files and external servers:

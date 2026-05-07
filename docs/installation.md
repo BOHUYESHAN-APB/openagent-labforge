@@ -52,6 +52,29 @@ bunx extendai-lab install
 
 The legacy CLI alias remains available during the compatibility window.
 
+## DeepSeek-TUI adapter (current minimal scope)
+
+DeepSeek-TUI is not a first-class plugin host yet. The current LabForge support
+is a minimal file-based adapter that installs a small command pack plus a safe
+manifest for uninstall.
+
+```bash
+bunx extendai-lab install dstui
+bunx extendai-lab uninstall dstui
+```
+
+Optional examples:
+
+```bash
+bunx extendai-lab install dstui --dry-run
+bunx extendai-lab install dstui --target-root=/custom/.deepseek
+bunx extendai-lab uninstall dstui --force
+```
+
+Today this manages a small command pack under `~/.deepseek/commands/`, three
+minimal skills under `~/.deepseek/skills/`, and a manifest under
+`~/.deepseek/extendai-lab/`. MCP/hooks are planned later.
+
 ## Config file naming
 
 Primary config basenames now use `extendai-lab`:

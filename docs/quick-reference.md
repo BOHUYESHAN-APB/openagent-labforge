@@ -35,6 +35,7 @@
 | [Documentation Refactor Plan](documentation-refactor.md) | Tracks inherited OMO/Slim wording and target LabForge documentation structure |
 | [Host Adapter Architecture](architecture/adapters.md) | OpenCode full plugin vs DeepSeek-TUI adapter, Node-compatible TS direction |
 | [Discipline Packs](architecture/discipline-packs.md) | Bio as the first optional discipline pack and future science packs |
+| [Engineering Modules](architecture/engineering-modules.md) | Reusable prompt-discipline docs such as scientific rigor, anti-overconfidence, and diagnostics strategy |
 | [Repository Rename Plan](architecture/repository-rename.md) | `openagent-labforge-bio` historical name and future rename checklist |
 
 ## 💡 Author's Setup

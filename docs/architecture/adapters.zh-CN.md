@@ -82,6 +82,18 @@ packages/adapters/deepseek-tui/
 packages/mcp-server/
 ```
 
+## 可复用 engineering modules
+
+不同宿主 adapter 应尽量复用共享的 engineering modules，而不是把大量 prompt 段落复制到各个 agent 里。
+
+第一批标准化模块文档见：
+
+- [`../engineering-modules/README.zh-CN.md`](../engineering-modules/README.zh-CN.md)
+- [`../engineering-modules/scientific-rigor.zh-CN.md`](../engineering-modules/scientific-rigor.zh-CN.md)
+- [`../engineering-modules/anti-overconfidence.zh-CN.md`](../engineering-modules/anti-overconfidence.zh-CN.md)
+
+这些模块当前先作为工程文档存在，未来再逐步演进为阶段性注入或按需读取。
+
 ## DeepSeek-TUI adapter 原则
 
 DeepSeek-TUI 当前主要消费放置文件和外部服务：

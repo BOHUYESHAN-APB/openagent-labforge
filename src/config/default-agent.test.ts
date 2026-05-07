@@ -3,13 +3,13 @@ import { DEFAULT_VISIBLE_AGENT_NAME } from './constants';
 import { applyDefaultAgent } from './default-agent';
 
 describe('applyDefaultAgent', () => {
-  test('defaults to visible engineer agent when unset', () => {
+  test('defaults to visible bio-analyst agent when unset', () => {
     const config: Record<string, unknown> = {};
 
     applyDefaultAgent(config, true);
 
     expect(config.default_agent).toBe(DEFAULT_VISIBLE_AGENT_NAME);
-    expect(config.default_agent).toBe('engineer');
+    expect(config.default_agent).toBe('bio-analyst');
   });
 
   test('does not override user configured default agent', () => {

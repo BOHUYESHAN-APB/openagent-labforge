@@ -4,6 +4,14 @@ This adapter is planned as a file/MCP/skill projection of LabForge workflows
 into DeepSeek-TUI. It is **not** a first-class runtime plugin, because
 DeepSeek-TUI currently does not auto-load plugins.
 
+Current implementation status:
+
+- minimal command-pack install/uninstall is available from the LabForge CLI;
+- a small bundled skill pack is installed alongside the command pack;
+- MCP snippets and hook snippets are still future work;
+- manifest + ownership marker + hash rules already apply to the current command pack.
+- when uninstall preserves user-modified files, the manifest is intentionally retained so later cleanup remains safe.
+
 Chinese version: [`README.zh-CN.md`](README.zh-CN.md)
 
 ## Supported extension paths
@@ -18,6 +26,40 @@ DeepSeek-TUI supports these practical extension surfaces:
 
 LabForge should install adapter assets through those surfaces and track every
 installed file in a manifest.
+
+## Current minimal install surface
+
+At the moment the CLI supports a small, safe command-pack installer:
+
+```bash
+bunx extendai-lab install dstui
+bunx extendai-lab uninstall dstui
+```
+
+Optional examples:
+
+```bash
+bunx extendai-lab install dstui --dry-run
+bunx extendai-lab install dstui --target-root=/custom/.deepseek
+bunx extendai-lab uninstall dstui --force
+```
+
+What it currently installs:
+
+- `~/.deepseek/commands/ol-engineer.md`
+- `~/.deepseek/commands/ol-bio.md`
+- `~/.deepseek/commands/ol-plan.md`
+- `~/.deepseek/commands/ol-review.md`
+- `~/.deepseek/skills/extendai-lab-scientific-rigor/SKILL.md`
+- `~/.deepseek/skills/extendai-lab-anti-overconfidence/SKILL.md`
+- `~/.deepseek/skills/extendai-lab-bio-research-design/SKILL.md`
+- `~/.deepseek/extendai-lab/install-manifest.json`
+
+What it does **not** install yet:
+
+- MCP config snippets
+- hook snippets
+- runtime API integration
 
 ## Naming rule for generated files
 

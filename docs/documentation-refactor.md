@@ -41,6 +41,7 @@ target structure for bringing docs in line with the current design.
 | DeepSeek-TUI host | [`deepseek-tui/README.md`](deepseek-tui/README.md) | Added; documents DSTUI as file/MCP/skill adapter target, not plugin host. |
 | Adapter architecture | [`architecture/adapters.md`](architecture/adapters.md) | Added; documents TypeScript/Node-compatible direction and host boundaries. |
 | Discipline packs | [`architecture/discipline-packs.md`](architecture/discipline-packs.md) | Added; tracks bio-to-pack migration and future science packs. |
+| Engineering modules | `architecture/engineering-modules.md` + `engineering-modules/*` | Added; standardizes reusable prompt-discipline docs before staged injection/runtime loading. |
 | Repository rename | [`architecture/repository-rename.md`](architecture/repository-rename.md) | Added; tracks `openagent-labforge-bio` to `extendai-lab` migration. |
 | Configuration | [`configuration.md`](configuration.md) | Needs name/path cleanup and current schema alignment. |
 | MCPs | [`mcps.md`](mcps.md) and [`storage-and-mcp.md`](storage-and-mcp.md) | Needs LabForge bio MCP and project-local MCP path alignment. |

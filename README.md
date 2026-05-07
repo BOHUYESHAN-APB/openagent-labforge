@@ -16,6 +16,10 @@ ships as a full OpenCode plugin. It extends OpenCode with **18 specialized
 agents** (6 primary + 12 subagents), a three-tier prompt system, optional
 bioinformatics capabilities, and a checkpoint-based memory architecture.
 
+Current default visible expert is `bio-analyst`. The engineering main expert
+`engineer` remains available and can be selected explicitly when engineering is
+the dominant workflow.
+
 > Repository naming note: the current GitHub repository is still named
 > `openagent-labforge-bio` for historical release continuity. The product and
 > package name are `extendai-lab`; bio is the first discipline pack, not
@@ -71,6 +75,29 @@ Then register the plugin in your OpenCode config:
 ```
 
 > See [OpenCode Plugin Docs](https://opencode.ai/docs/zh-cn/plugins/) for full plugin loading options.
+
+### DeepSeek-TUI adapter (current minimal scope)
+
+DeepSeek-TUI is currently supported only through a minimal file-based adapter,
+not a runtime plugin. The current CLI can install/uninstall a small command pack:
+
+```bash
+bunx extendai-lab install dstui
+bunx extendai-lab uninstall dstui
+```
+
+This currently manages:
+
+- `~/.deepseek/commands/ol-engineer.md`
+- `~/.deepseek/commands/ol-bio.md`
+- `~/.deepseek/commands/ol-plan.md`
+- `~/.deepseek/commands/ol-review.md`
+- `~/.deepseek/skills/extendai-lab-scientific-rigor/SKILL.md`
+- `~/.deepseek/skills/extendai-lab-anti-overconfidence/SKILL.md`
+- `~/.deepseek/skills/extendai-lab-bio-research-design/SKILL.md`
+- `~/.deepseek/extendai-lab/install-manifest.json`
+
+It does not yet install MCP snippets or hooks.
 
 Host-specific docs:
 

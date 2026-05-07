@@ -1,11 +1,14 @@
 export type BooleanArg = 'yes' | 'no';
 
 export interface InstallArgs {
+  target?: 'opencode' | 'dstui';
   tui: boolean;
   skills?: BooleanArg;
   preset?: string;
   dryRun?: boolean;
   reset?: boolean;
+  force?: boolean;
+  targetRoot?: string;
 }
 
 export interface OpenCodeConfig {

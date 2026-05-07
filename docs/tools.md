@@ -44,6 +44,23 @@ Includes Prettier, Biome, `gofmt`, `rustfmt`, `ruff`, and 20+ others.
 
 ---
 
+## Diagnostics Strategy
+
+Diagnostics policy should follow this order:
+
+1. use LSP diagnostics when a reliable LSP path exists;
+2. otherwise use the language's own diagnostics/check tools;
+3. then layer tests/build/runtime verification on top as needed.
+
+This matters especially for ecosystems where OpenCode LSP coverage is incomplete
+or uneven, such as some R/statistics-heavy workflows.
+
+See:
+
+- [Engineering Modules: diagnostics strategy](engineering-modules/diagnostics-strategy.md)
+
+---
+
 ## Todo Continuation
 
 Auto-continue has its own guide now:
