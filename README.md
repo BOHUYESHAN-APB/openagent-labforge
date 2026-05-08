@@ -101,6 +101,26 @@ This currently manages:
 
 It does not yet install MCP snippets or hooks.
 
+### Compatibility doctor / status
+
+The CLI now exposes a lightweight compatibility doctor/status baseline for the
+three open-source-first targets:
+
+```bash
+bunx extendai-lab doctor
+bunx extendai-lab status
+```
+
+This currently reports:
+
+- phase-1 runtime order: OpenCode -> OpenClaude -> Codex
+- detected config roots for OpenCode / OpenClaude / Codex / Claude-family later target
+- capability matrix summary per runtime
+- optional compat SDK probe results
+
+For now, `install openclaude` and `install codex` remain status-first/dry-run
+entry points rather than full write/install flows.
+
 Host-specific docs:
 
 - [OpenCode plugin guide](docs/opencode/README.md) /
@@ -142,9 +162,9 @@ Create `extendai-lab.jsonc` in `~/.config/opencode/`, or create `.opencode/exten
     "profile": "openai"
   },
 
-  // Subagent cost/cache policy: full | minimal | custom | main-only
+  // Subagent cost/cache policy: ultra-minimal | minimal | full | custom | main-only
   "subagentPolicy": {
-    "mode": "minimal"
+    "mode": "ultra-minimal"
   }
 }
 ```
@@ -191,6 +211,9 @@ sessions can lower cache hit rates and raise cost.
 Use `subagentPolicy.mode` to tune this behavior. Real changes to registered
 child agents normally require updating config and reloading/restarting the
 plugin; `/ol-subagents` reports the currently loaded policy and cache guidance.
+The default is now `ultra-minimal`: serve the three open-source coding CLIs with
+the main agent first, and only delegate when the specialist split is clearly
+worth the wait/cache cost.
 
 OpenCode currently previews only the first line/segment of slash commands in
 some UI paths, and tab completion usually completes only the command name — not
@@ -199,7 +222,8 @@ commands instead of relying only on `argumentHint` or long descriptions:
 
 | Command | Meaning |
 |---------|---------|
-| `/ol-subagents-M` | Show guidance for `minimal` mode |
+| `/ol-subagents-UM` | Show guidance for `ultra-minimal` mode |
+| `/ol-subagents-M` | Show guidance for legacy `minimal` mode |
 | `/ol-subagents-F` | Show guidance for `full` mode |
 | `/ol-subagents-C` | Show guidance for `custom` mode |
 | `/ol-subagents-MO` | Show guidance for `main-only` mode |
@@ -212,13 +236,14 @@ commands instead of relying only on `argumentHint` or long descriptions:
 The subagent policy commands are informational for the currently loaded
 instance. To actually change registered child agents, set `subagentPolicy.mode`
 in config and reload/restart the plugin. The legacy parameterized forms such as
-`/ol-subagents M`, `/ol-auto-continue on`, and `/ol-checkpoint light` remain
+`/ol-subagents UM`, `/ol-subagents M`, `/ol-auto-continue on`, and `/ol-checkpoint light` remain
 accepted for compatibility, but the complete command forms above are easier to
 discover in today's OpenCode UI.
 
 | Mode | Use when | Behavior |
 |------|----------|----------|
-| `minimal` (`M`) | Default for token-billed/cache-sensitive APIs | Keeps only the high-leverage minimal specialists (`explorer`, `librarian`, `oracle`, `fixer`, plus `observer` when enabled) and treats other specialists as local checklists |
+| `ultra-minimal` (`UM`) | Default strict main-agent-first mode | Keeps only `explorer`, `librarian`, and `oracle` by default; pushes implementation/review work back to the main agent to avoid waiting on child sessions |
+| `minimal` (`M`) | Legacy low-agent cache-first mode | Keeps the earlier low-agent specialist set (`explorer`, `librarian`, `oracle`, `fixer`, plus `observer` when enabled) and treats other specialists as local checklists |
 | `full` (`F`) | You want all configured child agents or rely on strong provider prefix caching | Keeps normal specialist delegation available; parallel child prompts should still share the same leading context snapshot |
 | `custom` (`C`) | You want an explicit allowlist | Registers/uses only `allowedAgents`; non-allowed specialists become main-agent checklists |
 | `main-only` (`MO`) | You want to avoid built-in child sessions | Disables built-in orchestratable subagents and tells the main agent to treat specialist guidance as local checklists |
@@ -334,10 +359,46 @@ commands.
 | `/ol-auto-continue-on` | Enable auto-continuation |
 | `/ol-auto-continue-off` | Disable auto-continuation |
 | `/ol-auto-continue [on\|off]` | Legacy-compatible toggle / explicit parameter form |
-| `/ol-subagents-M`, `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO` | Show loaded subagent policy guidance for minimal/full/custom/main-only modes |
+| `/ol-subagents-UM`, `/ol-subagents-M`, `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO` | Show loaded subagent policy guidance for ultra-minimal/minimal/full/custom/main-only modes |
 | `/ol-preset [name]` | Switch runtime model/provider presets for agents; does not inject coding guidance |
 | `/ol-interview [idea]` | Start product interview |
 | `/ol-karpathy [task-or-review-target]` | Apply Karpathy coding guidelines as task/review guidance; does not change model presets |
+
+### Compatibility doctor / status
+
+Use the host-side CLI when you want compatibility diagnostics without starting
+model work:
+
+```bash
+bunx extendai-lab doctor
+bunx extendai-lab doctor --runtime=openclaude
+bunx extendai-lab doctor --runtime=openclaude --runtime-root=/tmp/openclaude-home
+bunx extendai-lab status
+bunx extendai-lab status --runtime=codex
+bunx extendai-lab install --runtime=openclaude --dry-run
+bunx extendai-lab install --runtime=openclaude --runtime-root=/tmp/openclaude-home
+bunx extendai-lab rollback --runtime=codex --manifest=.opencode/extendai-lab/backups/latest/manifest.json
+```
+
+These commands currently report:
+
+- phase-1 runtime order: OpenCode -> OpenClaude -> Codex
+- detected config roots for OpenCode / OpenClaude / Codex / later Claude target
+- capability matrix summaries per runtime
+- optional compat SDK probe results
+- dry-run install previews for runtime-scoped compat installs
+- dry-run rollback previews for runtime-scoped backup manifests
+- real apply for `install --runtime=openclaude|codex` when `--dry-run` is omitted
+- real manifest-backed restore for `rollback --runtime=<id> --manifest=...` when `--dry-run` is omitted
+- optional `--runtime-root=<path>` override so compat doctor/status/install/apply can target an isolated runtime root for testing
+
+`install openclaude` and `install codex` now support real apply when you omit
+`--dry-run`. Use `--runtime-root=<path>` for isolated testing so writes do not
+touch your real runtime home. `rollback --runtime=<id> --manifest=<path>` also
+supports real manifest-backed restore when `--dry-run` is omitted. Closed-source
+Claude remains preview-only for now. After a real apply, reload/restart the
+target runtime so plugin assets, managed MCP config, and marketplace metadata
+are re-read.
 
 ### Command Execution Modes
 

@@ -1,7 +1,13 @@
 export type BooleanArg = 'yes' | 'no';
+export type CompatRuntimeArg = 'opencode' | 'openclaude' | 'codex' | 'claude';
 
 export interface InstallArgs {
-  target?: 'opencode' | 'dstui';
+  target?: 'opencode' | 'openclaude' | 'codex' | 'claude' | 'dstui';
+  command?: 'install' | 'uninstall' | 'doctor' | 'status';
+  runtime?: CompatRuntimeArg;
+  runtimes?: CompatRuntimeArg[];
+  runtimeRoot?: string;
+  manifestPath?: string;
   tui: boolean;
   skills?: BooleanArg;
   preset?: string;

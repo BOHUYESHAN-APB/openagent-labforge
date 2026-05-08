@@ -101,6 +101,7 @@ describe('fixer agent fallback', () => {
       agents: {
         librarian: { model: 'librarian-custom-model' },
       },
+      subagentPolicy: { mode: 'minimal' },
     };
     const agents = createAgents(config);
     const fixer = agents.find((a) => a.name === 'fixer');
@@ -114,6 +115,7 @@ describe('fixer agent fallback', () => {
         librarian: { model: 'librarian-model' },
         fixer: { model: 'fixer-specific-model' },
       },
+      subagentPolicy: { mode: 'minimal' },
     };
     const agents = createAgents(config);
     const fixer = agents.find((a) => a.name === 'fixer');
@@ -246,7 +248,7 @@ describe('skill permissions', () => {
   });
 
   test('fixer does not get codemap skill allowed by default', () => {
-    const agents = createAgents();
+    const agents = createAgents({ subagentPolicy: { mode: 'minimal' } });
     const fixer = agents.find((a) => a.name === 'fixer');
     expect(fixer).toBeDefined();
     const skillPerm = (fixer?.config.permission as Record<string, unknown>)
@@ -363,20 +365,20 @@ describe('agent classification', () => {
 });
 
 describe('createAgents', () => {
-  test('creates minimal agents without config', () => {
+  test('creates ultra-minimal agents without config', () => {
     const agents = createAgents();
     const names = agents.map((a) => a.name);
     expect(names).toContain('orchestrator');
     expect(names).toContain('explorer');
-    expect(names).not.toContain('designer');
-    expect(names).toContain('oracle');
     expect(names).toContain('librarian');
-    expect(names).toContain('fixer');
+    expect(names).toContain('oracle');
+    expect(names).not.toContain('fixer');
+    expect(names).not.toContain('designer');
   });
 
-  test('creates exactly 10 agents by default (5 primary + councillor + 4 minimal subagents, observer disabled)', () => {
+  test('creates exactly 9 agents by default (5 primary + councillor + 3 ultra-minimal subagents)', () => {
     const agents = createAgents();
-    expect(agents.length).toBe(10);
+    expect(agents.length).toBe(9);
   });
 });
 
@@ -778,11 +780,50 @@ describe('PluginConfigSchema custom-agent-only prompt fields', () => {
 
     expect(result.success).toBe(true);
   });
+
+  test('accepts multi-runtime compatibility baseline config', () => {
+    const result = PluginConfigSchema.safeParse({
+      runtimeTargets: {
+        opencode: { enabled: true, priority: 100 },
+        claude: { enabled: false, configPath: '~/.claude' },
+        codex: {
+          enabled: false,
+          capabilities: ['skills', 'mcp', 'document-output'],
+        },
+      },
+      compatProviders: {
+        enabled: true,
+        autoDetect: true,
+        fallbackToOpenCodeOnly: true,
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('subagentPolicy', () => {
-  test('minimal is the default cache-sensitive subagent set', () => {
+  test('ultra-minimal is the default strict main-agent-first set', () => {
     const agents = createAgents();
+    const names = agents.map((a) => a.name);
+    const prompt = agents.find((a) => a.name === 'orchestrator')?.config.prompt;
+
+    expect(names).toContain('explorer');
+    expect(names).toContain('librarian');
+    expect(names).toContain('oracle');
+    expect(names).not.toContain('fixer');
+    expect(names).not.toContain('designer');
+    expect(names).not.toContain('council');
+    expect(names).not.toContain('observer');
+    expect(prompt).toContain('Ultra minimal / main-agent-first');
+    expect(prompt).toContain('shared-prefix snapshot');
+    expect(prompt).toContain('[SHARED_CONTEXT_START]');
+  });
+
+  test('legacy minimal keeps the low-agent cache-first specialist set', () => {
+    const agents = createAgents({
+      subagentPolicy: { mode: 'minimal' },
+    });
     const names = agents.map((a) => a.name);
     const prompt = agents.find((a) => a.name === 'orchestrator')?.config.prompt;
 
@@ -794,8 +835,6 @@ describe('subagentPolicy', () => {
     expect(names).not.toContain('council');
     expect(names).not.toContain('observer');
     expect(prompt).toContain('Minimal / cache-first');
-    expect(prompt).toContain('shared-prefix snapshot');
-    expect(prompt).toContain('[SHARED_CONTEXT_START]');
   });
 
   test('full enables configured subagents and parallel-friendly guidance', () => {
@@ -864,7 +903,9 @@ describe('subagentPolicy', () => {
   });
 
   test('orchestrator prompt includes stable shared prefix template', () => {
-    const prompt = buildOrchestratorPrompt(undefined, { mode: 'minimal' });
+    const prompt = buildOrchestratorPrompt(undefined, {
+      mode: 'ultra-minimal',
+    });
 
     expect(prompt).toContain('[SHARED_CONTEXT_START]');
     expect(prompt).toContain('project: <repo/project name, stack, root path>');
@@ -927,13 +968,13 @@ describe('disabled_agents', () => {
 
   test('agent count decreases when agents are disabled', () => {
     const agents = createAgents();
-    expect(agents.length).toBe(10); // 5 primary + councillor + 4 minimal subagents (observer disabled by default)
+    expect(agents.length).toBe(9); // 5 primary + councillor + 3 ultra-minimal subagents
 
     const disabledConfig: PluginConfig = {
       disabled_agents: ['observer', 'designer'],
     };
     const disabledAgents = createAgents(disabledConfig);
-    expect(disabledAgents.length).toBe(10); // designer already disabled by minimal policy
+    expect(disabledAgents.length).toBe(9); // observer/designer already disabled by ultra-minimal policy
   });
 
   test('getDisabledAgents respects protection rules', () => {
@@ -972,9 +1013,19 @@ describe('disabled_agents', () => {
     expect(enabled).not.toContain('janitor');
   });
 
-  test('empty disabled_agents enables observer within minimal policy', () => {
+  test('empty disabled_agents does not enable observer within ultra-minimal policy', () => {
     const config: PluginConfig = {
       disabled_agents: [],
+    };
+    const agents = createAgents(config);
+    expect(agents.length).toBe(9); // observer still excluded by ultra-minimal policy
+    expect(agents.map((a) => a.name)).not.toContain('observer');
+  });
+
+  test('empty disabled_agents enables observer within legacy minimal policy', () => {
+    const config: PluginConfig = {
+      disabled_agents: [],
+      subagentPolicy: { mode: 'minimal' },
     };
     const agents = createAgents(config);
     expect(agents.length).toBe(11); // 5 primary + councillor + 5 minimal subagents
@@ -992,6 +1043,7 @@ describe('observer agent', () => {
   test('observer is enabled when removed from disabled_agents', () => {
     const config: PluginConfig = {
       disabled_agents: [],
+      subagentPolicy: { mode: 'minimal' },
     };
     const agents = createAgents(config);
     const names = agents.map((a) => a.name);

@@ -9,9 +9,37 @@ agent/skill/MCP adapters for the rest.
 
 | Tier | Runtimes | Installer target | Notes |
 |------|----------|------------------|-------|
-| Tier 1 — full plugin compatibility | OpenCode, Claude Code / OpenClaude, Codex | Full plugin or near-full capability renderer | Initial compatibility focus. Plan hooks, agents/subagents, skills, MCP, commands, and runtime configuration as first-class surfaces. |
+| Tier 1 — full plugin compatibility | OpenCode, OpenClaude, Codex | Full plugin or near-full capability renderer | Immediate open-source-first focus. Plan hooks, agents/subagents, skills, MCP, commands, and runtime configuration as first-class surfaces. |
+| Tier 1.5 — same-family later target | Claude Code | Reuse the Claude-family renderer after the open-source baseline is stable | Closed-source Claude compatibility stays after OpenCode + OpenClaude + Codex. |
 | Tier 2 — limited adapter | DeepSeek-TUI, GitHub Copilot CLI | Conservative command/skill/MCP/instruction pack | Useful later targets, but harder to map to full hook/subagent parity. Treat plugin support as runtime-specific and detection-gated. |
 | Tier 3 — rules / modes / MCP | Cline, RooCode, KiloCode | Agent/checklist prompts, skills, MCP, rules, custom modes where supported | Do not promise full plugin, hook, or subagent lifecycle compatibility. |
+
+## Priority reference paths
+
+Keep these local repositories as the highest-priority reference set while the
+compatibility layer is being expanded:
+
+- `Future\\oh-my-claudecode`
+- `Future\\claudecode-main`
+- `Future\\codex`
+- `Future\\oh-my-codex`
+- `Future\\oh-my-openagent`
+- `Future\\oh-my-opencode-slim`
+- `Future\\openclaude`
+
+Use them as architecture references, surface maps, and install-shape examples.
+Do not treat license-restricted projects as copy sources.
+
+## Immediate implementation order
+
+1. OpenCode
+2. OpenClaude / open-source Claude-family surface
+3. Codex
+4. Closed-source Claude Code through the same Claude-family renderer later
+
+This order reflects the current product rule: serve the three open-source coding
+CLIs first, keep Codex as a core target even though it is Rust-heavy, and delay
+closed-source Claude compatibility until the open-source baseline is stable.
 
 ## Phase 1 targets
 
@@ -35,11 +63,18 @@ Reference implementations to keep in view:
   ExtendAI Lab should borrow the installation architecture pattern, not its
   license-restricted code.
 
-### Claude Code / OpenClaude
+### OpenClaude first, Claude Code later
 
-Claude Code and OpenClaude should be treated as first-class compatibility
-targets because their plugin ecosystem has a structured manifest, skills,
-agents, hooks, settings, and MCP configuration.
+OpenClaude is the first Claude-family compatibility target because it preserves
+the open-source-first product rule while still exposing a strong plugin surface.
+Closed-source Claude Code should reuse the same renderer family later, after the
+OpenCode + OpenClaude + Codex baseline is stable.
+
+Reference paths to keep nearby:
+
+- `Future\\openclaude`
+- `Future\\oh-my-claudecode`
+- `Future\\claudecode-main`
 
 The installer should render ExtendAI Lab capabilities as Claude/OpenClaude
 plugin assets rather than pretending the OpenCode plugin can run there
@@ -47,11 +82,12 @@ unchanged.
 
 Programmatic SDK/API entrypoints:
 
-- Claude Code: `@anthropic-ai/claude-agent-sdk` (official; formerly Claude
-  Code SDK). Main entrypoint: `query()`.
 - OpenClaude: `@gitlawb/openclaude/sdk` (community OpenClaude SDK subpath).
   Main entrypoints include `query()`, session helpers, and SDK MCP helpers such
   as `createSdkMcpServer()`.
+- Claude Code: `@anthropic-ai/claude-agent-sdk` (official; formerly Claude
+  Code SDK). Main entrypoint: `query()`. Keep this in the same family but later
+  in delivery order.
 
 ### Codex
 
@@ -76,6 +112,11 @@ Reference implementation:
   and `.omx/` runtime state. ExtendAI Lab's Codex renderer should start with
   the plugin manifest + skills/MCP/apps shape, then add native Codex setup only
   behind explicit install-plan and backup/rollback steps.
+
+Additional local references to keep in view:
+
+- `Future\\codex`
+- `Future\\oh-my-codex`
 
 ## Later targets
 
@@ -150,6 +191,80 @@ Every install plan should include:
 - files to back up
 - rollback manifest path
 - reload/restart requirements
+
+Implementation rule for the unified compat CLI:
+
+- follow a clear `doctor -> install-plan preview -> apply -> validate -> rollback` lifecycle;
+- keep `doctor` and `status` safe, read-only, and runtime-filterable with
+  `--runtime=<id>`;
+- keep install flows dry-run first until the apply path is explicit and backed
+  by manifest + backup logic;
+- treat rollback the same way: `rollback --runtime=<id> --manifest=<path>` should first show a dry-run restore preview before any real restore/apply step exists;
+- prefer plan/apply separation similar to the stronger installer discipline seen
+  in agent-harness-style selective installs and Hermes-style explicit state
+  boundaries.
+
+## Host-neutral memory and evolution baseline
+
+Before any runtime-specific memory integration is treated as complete, ExtendAI
+Lab should keep a shared baseline that is portable across OpenCode,
+Claude/OpenClaude, and Codex:
+
+- **raw history** stays large, lossy, and short-lived; it is useful for replay or
+  debugging, but it should not become permanent behavior by default.
+- **memory capsules** are compact, attributed records with provenance, scope,
+  confidence, validation status, tags, and rollback ids. Capsules are the unit of
+  durable cross-session learning.
+- **promoted behaviors** are reviewed, reversible rules derived from capsules.
+  They affect future behavior only after validation and should remain cheaper to
+  disable or delete than to create.
+
+Minimum capsule fields should include:
+
+- source kind (`checkpoint`, `review`, `manual`, `auto`, `tool`, `migration`)
+- scope (`session`, `workspace`, `repository`, `global`)
+- confidence (0..1)
+- validation status (`unverified`, `tested`, `reviewed`, `user-confirmed`, `rejected`)
+- provenance (`sessionID`, `conversationID`, `workspaceRoot`, `repositoryId`, timestamps)
+- rollback id for later disable/delete/revert workflows
+
+Promotion rule:
+
+- unverified or rejected capsules must not become behavior automatically;
+- promotion should require adequate confidence plus at least one validation lane
+  such as tests, review, or explicit user confirmation;
+- session-scoped capsules may be promoted only by widening scope explicitly
+  (for example `session -> workspace`) instead of silently becoming global.
+
+## Foundation architecture baseline
+
+Before wiring Claude/OpenClaude or Codex SDKs into real execution flows, the
+compatibility layer should stabilize these host-neutral building blocks:
+
+- `document-output`: all generated plans, specs, handoffs, review reports,
+  install plans, and rollback manifests must be written through a host-owned save
+  service that returns a real receipt. Agents must not claim saved files from
+  chat-only output.
+- `capability contract`: each runtime capability has required inputs,
+  validation, and fallback/degradation behavior. Missing capabilities are
+  explicit, not silently emulated.
+- `runtime adapter`: every runtime adapter implements detect, assess,
+  plan-install, validate, and rollback. Claude/OpenClaude and Codex start as
+  dry-run skeletons until their renderers are ready.
+- `install plan`: installers produce a dry-run plan before writes, including
+  managed files, warnings, required backups, reload/restart needs, and rollback
+  manifest path.
+- `backup/rollback`: runtime installs must be reversible and must only touch
+  ExtendAI Lab-managed files by default.
+
+Current degradation baseline:
+
+- `subagents -> main-only/checklists`
+- `hooks -> commands/manual workflow`
+- `mcp -> builtin-only tools`
+
+SDK/API providers are allowed to help detection or execution, but they must sit
+behind this abstraction layer. They should not directly control the architecture.
 
 ## Harness and native-helper policy
 
@@ -326,6 +441,7 @@ Future memory work should therefore separate three concepts:
 
 ## Product rule
 
-Only OpenCode, Claude Code/OpenClaude, and Codex are initial full-compatibility
-targets. Other runtimes receive conservative agent/skill/MCP/rules installation
-without promising hook or subagent mechanism parity.
+Only OpenCode, OpenClaude, and Codex are the immediate full-compatibility
+targets. Closed-source Claude Code follows later through the same Claude-family
+renderer. Other runtimes receive conservative agent/skill/MCP/rules
+installation without promising hook or subagent mechanism parity.

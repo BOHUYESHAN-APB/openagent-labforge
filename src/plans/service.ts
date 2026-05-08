@@ -1,13 +1,6 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync, statSync } from 'node:fs';
 import { findPlanFile, getPlanProgress, listPlanFiles } from '../boulder';
+import { saveDocument } from '../document-output';
 import {
   getPlanRelativePath,
   normalizePlanName,
@@ -18,54 +11,33 @@ import type { LoadPlanResult, SavePlanInput, SavePlanResult } from './types';
 export { getPlanRelativePath, normalizePlanName, resolvePlanPath };
 
 export function savePlan(input: SavePlanInput): SavePlanResult {
-  let name: string;
-  let path: string;
-  try {
-    name = normalizePlanName(input.name);
-    path = resolvePlanPath(input.workspaceRoot, name);
-  } catch (error) {
+  const result = saveDocument({
+    workspaceRoot: input.workspaceRoot,
+    kind: 'plan',
+    name: input.name,
+    content: input.content,
+    overwrite: input.overwrite,
+    format: 'markdown',
+  });
+
+  if (!result.ok) {
     return {
       ok: false,
-      code: 'invalid-name',
-      message: error instanceof Error ? error.message : 'Invalid plan name',
+      code: result.code,
+      message: result.message,
+      path: result.path,
     };
   }
 
-  const exists = existsSync(path);
-  if (exists && input.overwrite !== true) {
-    return {
-      ok: false,
-      code: 'already-exists',
-      message: `Plan already exists: ${getPlanRelativePath(name)}`,
-      path,
-    };
-  }
-
-  try {
-    mkdirSync(dirname(path), { recursive: true });
-    const tempPath = `${path}.${process.pid}.${Date.now()}.tmp`;
-    const content = input.content.endsWith('\n')
-      ? input.content
-      : `${input.content}\n`;
-    writeFileSync(tempPath, content, 'utf8');
-    renameSync(tempPath, path);
-    return {
-      ok: true,
-      name,
-      path,
-      relativePath: getPlanRelativePath(name),
-      bytes: Buffer.byteLength(content, 'utf8'),
-      overwritten: exists,
-      savedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      code: 'write-failed',
-      message: error instanceof Error ? error.message : 'Failed to write plan',
-      path,
-    };
-  }
+  return {
+    ok: true,
+    name: result.name,
+    path: result.path,
+    relativePath: result.relativePath,
+    bytes: result.bytes,
+    overwritten: result.overwritten,
+    savedAt: result.savedAt,
+  };
 }
 
 export function loadPlan(

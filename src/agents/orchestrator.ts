@@ -119,8 +119,14 @@ const MINIMAL_SUBAGENTS = [
   'observer',
 ] as const;
 
+const ULTRA_MINIMAL_SUBAGENTS = ['explorer', 'librarian', 'oracle'] as const;
+
 export function getMinimalSubagentNames(): readonly string[] {
   return MINIMAL_SUBAGENTS;
+}
+
+export function getUltraMinimalSubagentNames(): readonly string[] {
+  return ULTRA_MINIMAL_SUBAGENTS;
 }
 
 /**
@@ -129,7 +135,7 @@ export function getMinimalSubagentNames(): readonly string[] {
  * @returns The complete orchestrator prompt string
  */
 function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
-  const mode = policy?.mode ?? 'minimal';
+  const mode = policy?.mode ?? 'ultra-minimal';
 
   if (mode === 'full') {
     return `
@@ -164,15 +170,29 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 - When you would normally delegate, first compress the needed specialist framing into a short checklist and execute it yourself.`;
   }
 
-  return `
+  if (mode === 'minimal') {
+    return `
 
 ### Subagent Policy: Minimal / cache-first
-- The user environment is cache-sensitive and likely token-billed. Fresh child sessions do not inherit the main session's full context/cache and can reduce prompt-cache hit rates.
+- This is the legacy low-agent mode. It keeps a small specialist set when delegation still clearly saves time or risk.
 - Default minimal specialists are @explorer, @librarian, @oracle, @fixer, and @observer only when visual/media handling is enabled.
 - Other specialties should usually be handled as local main-agent checklists instead of fresh child sessions.
 - Before spawning a child session, ask whether the child will save more tokens/context than it costs. If not, use direct tools in the main agent.
 - When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
 - Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.`;
+  }
+
+  return `
+
+### Subagent Policy: Ultra minimal / main-agent-first
+- This is the default mode. Serve the three open-source coding CLIs with the main agent first, and treat subagents as rare exceptions.
+- Fresh child sessions often lower cache hit rate and also encourage the main agent to wait on them. Avoid that unless the specialist separation is clearly worth it.
+- Default ultra-minimal specialists are @explorer, @librarian, and @oracle only.
+- Treat @fixer, @designer, @council, @reviewer, @metis, @momus, @multimodal-looker, and most custom specialists as local main-agent checklists by default.
+- Prefer doing the work directly in the main agent with stable context, especially for implementation, routine review, and iterative development.
+- Only spawn a child when it materially improves correctness, external-doc accuracy, or independent architectural judgment.
+- When delegation is still worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
+- Prefer resuming an existing specialist session over creating a fresh one.`;
 }
 
 const SHARED_PREFIX_SNAPSHOT_TEMPLATE = `[SHARED_CONTEXT_START]

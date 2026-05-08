@@ -148,7 +148,7 @@ const HEALTH_CHECK = {
 const SUBAGENT_POLICY_COMMAND = 'ol-subagents';
 
 const SUBAGENT_POLICY_USAGE =
-  'Commands: /ol-subagents-M minimal, /ol-subagents-F full, /ol-subagents-C custom, /ol-subagents-MO main-only. Real agent registration changes require config reload/restart.';
+  'Commands: /ol-subagents-UM ultra-minimal, /ol-subagents-M minimal, /ol-subagents-F full, /ol-subagents-C custom, /ol-subagents-MO main-only. Real agent registration changes require config reload/restart.';
 
 const CHECKPOINT_LIGHT_COMMAND = 'ol-checkpoint-light';
 const CHECKPOINT_HEAVY_COMMAND = 'ol-checkpoint-heavy';
@@ -157,6 +157,9 @@ const AUTO_CONTINUE_ON_COMMAND = 'ol-auto-continue-on';
 const AUTO_CONTINUE_OFF_COMMAND = 'ol-auto-continue-off';
 
 const SUBAGENT_POLICY_ALIASES = {
+  um: 'ultra-minimal',
+  ultraminimal: 'ultra-minimal',
+  'ultra-minimal': 'ultra-minimal',
   m: 'minimal',
   minimal: 'minimal',
   f: 'full',
@@ -172,10 +175,12 @@ type SubagentPolicyMode =
   (typeof SUBAGENT_POLICY_ALIASES)[keyof typeof SUBAGENT_POLICY_ALIASES];
 
 const SUBAGENT_POLICY_COMMAND_MODES = {
+  'ol-subagents-UM': 'ultra-minimal',
   'ol-subagents-M': 'minimal',
   'ol-subagents-F': 'full',
   'ol-subagents-C': 'custom',
   'ol-subagents-MO': 'main-only',
+  'ol-subagents-um': 'ultra-minimal',
   'ol-subagents-m': 'minimal',
   'ol-subagents-f': 'full',
   'ol-subagents-c': 'custom',
@@ -186,10 +191,14 @@ const SUBAGENT_POLICY_COMMAND_DESCRIPTIONS: Record<
   keyof typeof SUBAGENT_POLICY_COMMAND_MODES,
   string
 > = {
+  'ol-subagents-UM':
+    'Subagent policy: UM=ultra-minimal, strict main-agent-first default',
   'ol-subagents-M': 'Subagent policy: M=minimal, cache-first low-agent mode',
   'ol-subagents-F': 'Subagent policy: F=full, all configured subagents',
   'ol-subagents-C': 'Subagent policy: C=custom, use allowedAgents allowlist',
   'ol-subagents-MO': 'Subagent policy: MO=main-only, disable child sessions',
+  'ol-subagents-um':
+    'Subagent policy: UM=ultra-minimal, strict main-agent-first default',
   'ol-subagents-m': 'Subagent policy: M=minimal, cache-first low-agent mode',
   'ol-subagents-f': 'Subagent policy: F=full, all configured subagents',
   'ol-subagents-c': 'Subagent policy: C=custom, use allowedAgents allowlist',
@@ -227,7 +236,7 @@ function formatSubagentPolicyStatus(
   requestedMode?: SubagentPolicyMode,
 ): string {
   const policy = config.subagentPolicy;
-  const mode = policy?.mode ?? 'minimal';
+  const mode = policy?.mode ?? 'ultra-minimal';
   const allowed = policy?.allowedAgents?.length
     ? policy.allowedAgents.join(', ')
     : '(none configured)';

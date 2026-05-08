@@ -10,6 +10,54 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.19 - 2026-05-08
+
+### Added / 新增
+
+- Added a host-owned `document-output` foundation plus a real `save_plan` path,
+  so planner-style workflows save markdown files through receipts instead of
+  chat-only claims.
+- 新增宿主拥有的 `document-output` 基础层与真实 `save_plan` 路径，使 planner
+  类工作流通过保存回执来落盘 markdown，而不是只在对话里声称已保存。
+
+- Added compatibility-foundation building blocks for the three primary runtimes:
+  capability contracts, config priority merging, runtime isolation,
+  install-plan/backup/rollback/doctor helpers, adapter skeletons, and renderer
+  registry output for plugin manifests, skills, agents, commands, MCP, and
+  shared-prefix snapshots.
+- 新增面向三大主运行时的 compatibility foundation：capability contract、配置优先级合并、
+  runtime isolation、install-plan / backup / rollback / doctor 辅助层、adapter skeleton，
+  以及可输出 plugin manifest、skills、agents、commands、MCP、shared-prefix snapshot 的
+  renderer registry。
+
+- Added a host-neutral memory/evolution baseline with memory capsules,
+  replayable summaries, mailbox/handoff messages, controlled promotion to
+  behavior, and structured reference-lesson boundaries for Hermes,
+  agent-harness, oh-my-codex, and oh-my-openagent.
+- 新增宿主无关的 memory / evolution 基线：包括 memory capsule、可回放 summary、
+  mailbox / handoff message、受控的行为晋升链路，以及针对 Hermes、agent-harness、
+  oh-my-codex、oh-my-openagent 的结构化参考边界。
+
+### Changed / 变更
+
+- Planner defaults now use the dedicated Prometheus plan-file contract instead of
+  a stale inline prompt, and `/ol-start-work` lookup now shares plan-name
+  normalization with the save path.
+- planner 默认 prompt 现在统一走 Prometheus 的 plan-file contract，不再使用陈旧的内联 prompt；
+  同时 `/ol-start-work` 的计划名查找已与保存路径共用同一套 normalization 规则。
+
+- Context-pressure and auto-continue reminders are now stronger and more
+  user-visible, while auto-review re-checks the earliest real user request and
+  ignores fake user-shaped internal/system control text.
+- context-pressure 与 auto-continue 提醒现在更强、更偏用户可见；auto-review 会重新核对最早的真实用户需求，
+  并忽略伪装成 user message 的内部/system 控制文本。
+
+- Review/validation baselines now include broader focused tests for planner,
+  compat foundation, reminder flow, memory evolution, and runtime adapters while
+  keeping optional SDK providers lazy and non-blocking for OpenCode-only users.
+- review / validation 基线现在覆盖了 planner、compat foundation、提醒链路、memory evolution 与
+  runtime adapter 的更广 focused tests，同时继续保证可选 SDK provider 保持 lazy、不会阻塞仅使用 OpenCode 的用户。
+
 ## v1.0.18 - 2026-05-07
 
 ### Added / 新增

@@ -206,10 +206,10 @@ export type SessionManagerConfig = z.infer<typeof SessionManagerConfigSchema>;
 // cost models where cache reuse matters more than child-session parallelism.
 export const SubagentPolicyConfigSchema = z.object({
   mode: z
-    .enum(['full', 'minimal', 'custom', 'main-only'])
-    .default('minimal')
+    .enum(['full', 'ultra-minimal', 'minimal', 'custom', 'main-only'])
+    .default('ultra-minimal')
     .describe(
-      'Subagent usage mode: full (all configured subagents), minimal (cache-first low-agent default), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.',
+      'Subagent usage mode: ultra-minimal (strict main-agent-first default), minimal (legacy cache-first low-agent mode), full (all configured subagents), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.',
     ),
   allowedAgents: z
     .array(z.string())
@@ -220,6 +220,30 @@ export const SubagentPolicyConfigSchema = z.object({
 });
 
 export type SubagentPolicyConfig = z.infer<typeof SubagentPolicyConfigSchema>;
+
+export const RuntimeTargetConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  configPath: z.string().min(1).optional(),
+  priority: z.number().int().min(0).max(100).default(50),
+  capabilities: z.array(z.string()).optional(),
+});
+
+export const RuntimeTargetsConfigSchema = z.object({
+  opencode: RuntimeTargetConfigSchema.optional(),
+  claude: RuntimeTargetConfigSchema.optional(),
+  openclaude: RuntimeTargetConfigSchema.optional(),
+  codex: RuntimeTargetConfigSchema.optional(),
+});
+
+export type RuntimeTargetsConfig = z.infer<typeof RuntimeTargetsConfigSchema>;
+
+export const CompatProvidersConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  autoDetect: z.boolean().default(true),
+  fallbackToOpenCodeOnly: z.boolean().default(true),
+});
+
+export type CompatProvidersConfig = z.infer<typeof CompatProvidersConfigSchema>;
 
 // Todo continuation configuration
 export const TodoContinuationConfigSchema = z.object({
@@ -552,6 +576,8 @@ export const PluginConfigSchema = z
     interview: InterviewConfigSchema.optional(),
     sessionManager: SessionManagerConfigSchema.optional(),
     subagentPolicy: SubagentPolicyConfigSchema.optional(),
+    runtimeTargets: RuntimeTargetsConfigSchema.optional(),
+    compatProviders: CompatProvidersConfigSchema.optional(),
     todoContinuation: TodoContinuationConfigSchema.optional(),
     checkpoint: CheckpointCleanupConfigSchema.optional(),
     bioSkills: BioSkillsConfigSchema.optional(),

@@ -36,6 +36,7 @@ import {
   type AgentDefinition,
   createOrchestratorAgent,
   getMinimalSubagentNames,
+  getUltraMinimalSubagentNames,
   resolvePrompt,
 } from './orchestrator';
 import { createPrometheusAgent } from './prometheus';
@@ -708,13 +709,20 @@ export function getDisabledAgents(config?: PluginConfig): Set<string> {
     }
   }
 
-  const mode = config?.subagentPolicy?.mode ?? 'minimal';
+  const mode = config?.subagentPolicy?.mode ?? 'ultra-minimal';
   const minimalAgents = new Set(getMinimalSubagentNames());
+  const ultraMinimalAgents = new Set(getUltraMinimalSubagentNames());
   const allowedAgents = new Set(config?.subagentPolicy?.allowedAgents ?? []);
 
   if (mode === 'main-only') {
     for (const name of ORCHESTRATABLE_AGENTS) {
       if (!PROTECTED_AGENTS.has(name)) {
+        disabled.add(name);
+      }
+    }
+  } else if (mode === 'ultra-minimal') {
+    for (const name of ORCHESTRATABLE_AGENTS) {
+      if (!PROTECTED_AGENTS.has(name) && !ultraMinimalAgents.has(name)) {
         disabled.add(name);
       }
     }

@@ -1,0 +1,73 @@
+import { describe, expect, test } from 'bun:test';
+import { getRuntimeCompatibilityProfile } from '../types';
+import {
+  getCapabilityRenderer,
+  renderRuntimeCapabilities,
+  SHARED_PREFIX_SNAPSHOT_MARKDOWN,
+} from './registry';
+
+describe('capability renderer registry', () => {
+  test('renders shared-prefix snapshot from stable template', () => {
+    const runtime = getRuntimeCompatibilityProfile('codex');
+    if (!runtime) throw new Error('Expected codex runtime profile');
+
+    const files = renderRuntimeCapabilities(
+      { runtime, workspaceRoot: process.cwd() },
+      ['shared-prefix-snapshot'],
+    );
+
+    expect(files).toHaveLength(1);
+    expect(files[0].relativePath).toBe('compat/shared-prefix-snapshot.md');
+    expect(files[0].content).toContain('[SHARED_CONTEXT_START]');
+    expect(files[0].content).toBe(SHARED_PREFIX_SNAPSHOT_MARKDOWN);
+  });
+
+  test('renders Claude baseline plugin assets', () => {
+    const runtime = getRuntimeCompatibilityProfile('claude-code');
+    if (!runtime) throw new Error('Expected claude runtime profile');
+
+    const files = renderRuntimeCapabilities(
+      { runtime, workspaceRoot: process.cwd() },
+      ['plugin-manifest', 'skills', 'agents', 'commands', 'mcp'],
+    );
+
+    expect(files.map((file) => file.relativePath)).toEqual(
+      expect.arrayContaining([
+        '.claude-plugin/plugin.json',
+        'skills/extendai-lab-foundation/SKILL.md',
+        'agents/extendai-lab-orchestrator.md',
+        'commands/extendai-lab-baseline.md',
+        '.mcp.json',
+      ]),
+    );
+  });
+
+  test('renders Codex plugin baseline including app and marketplace metadata', () => {
+    const runtime = getRuntimeCompatibilityProfile('codex');
+    if (!runtime) throw new Error('Expected codex runtime profile');
+
+    const files = renderRuntimeCapabilities(
+      { runtime, workspaceRoot: process.cwd() },
+      ['plugin-manifest'],
+    );
+
+    expect(files.map((file) => file.relativePath)).toEqual(
+      expect.arrayContaining([
+        '.codex-plugin/plugin.json',
+        '.app.json',
+        '.agents/plugins/marketplace.json',
+      ]),
+    );
+  });
+
+  test('unknown renderer requests return no files', () => {
+    const runtime = getRuntimeCompatibilityProfile('opencode');
+    if (!runtime) throw new Error('Expected opencode runtime profile');
+    expect(getCapabilityRenderer('hooks')).toBeUndefined();
+    expect(
+      renderRuntimeCapabilities({ runtime, workspaceRoot: process.cwd() }, [
+        'hooks',
+      ]),
+    ).toEqual([]);
+  });
+});

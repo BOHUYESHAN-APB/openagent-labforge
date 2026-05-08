@@ -535,11 +535,12 @@
       "type": "object",
       "properties": {
         "mode": {
-          "default": "minimal",
-          "description": "Subagent usage mode: full (all configured subagents), minimal (cache-first low-agent default), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.",
+          "default": "ultra-minimal",
+          "description": "Subagent usage mode: ultra-minimal (strict main-agent-first default), minimal (legacy cache-first low-agent mode), full (all configured subagents), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.",
           "type": "string",
           "enum": [
             "full",
+            "ultra-minimal",
             "minimal",
             "custom",
             "main-only"
@@ -551,6 +552,128 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "runtimeTargets": {
+      "type": "object",
+      "properties": {
+        "opencode": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "configPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "priority": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "claude": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "configPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "priority": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "openclaude": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "configPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "priority": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "codex": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "type": "boolean"
+            },
+            "configPath": {
+              "type": "string",
+              "minLength": 1
+            },
+            "priority": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "compatProviders": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "autoDetect": {
+          "default": true,
+          "type": "boolean"
+        },
+        "fallbackToOpenCodeOnly": {
+          "default": true,
+          "type": "boolean"
         }
       }
     },

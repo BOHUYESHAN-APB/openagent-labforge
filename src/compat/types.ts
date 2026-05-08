@@ -26,6 +26,7 @@ export type CompatibilityCapability =
   | 'mcp'
   | 'rules'
   | 'custom-modes'
+  | 'document-output'
   | 'shared-prefix-snapshot'
   | 'backup-rollback';
 
@@ -43,7 +44,6 @@ export interface RuntimeCompatibilityProfile {
 
 export const PHASE_ONE_RUNTIME_IDS = [
   'opencode',
-  'claude-code',
   'openclaude',
   'codex',
 ] as const;
@@ -65,6 +65,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'hooks',
       'commands',
       'mcp',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],
@@ -76,7 +77,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
     displayName: 'Claude Code',
     family: 'claude',
     tier: 'full-plugin',
-    priority: 'phase-1',
+    priority: 'later',
     capabilities: [
       'plugin-manifest',
       'agents',
@@ -84,13 +85,16 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'hooks',
       'commands',
       'mcp',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],
     sdkPackage: '@anthropic-ai/claude-agent-sdk',
     installStrategy:
       'Render Claude plugin assets, skills, agents, hooks, and MCP config.',
-    notes: ['Treat OpenClaude as the same compatibility family.'],
+    notes: [
+      'Same Claude-family renderer, but closed-source Claude compatibility is intentionally sequenced after the open-source OpenClaude baseline.',
+    ],
   },
   {
     id: 'openclaude',
@@ -105,6 +109,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'hooks',
       'commands',
       'mcp',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],
@@ -112,7 +117,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
     installStrategy:
       'Reuse the Claude-family renderer with OpenClaude path detection.',
     notes: [
-      'First-class target because the extension surface is close to Claude Code.',
+      'Open-source-first Claude-family target; prioritize this before closed-source Claude Code.',
     ],
   },
   {
@@ -129,6 +134,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'commands',
       'mcp',
       'rules',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],
@@ -150,6 +156,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'commands',
       'mcp',
       'rules',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],
@@ -167,6 +174,7 @@ export const RUNTIME_COMPATIBILITY_PROFILES = [
       'commands',
       'mcp',
       'rules',
+      'document-output',
       'shared-prefix-snapshot',
       'backup-rollback',
     ],

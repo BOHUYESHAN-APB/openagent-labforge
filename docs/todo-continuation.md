@@ -17,6 +17,24 @@ Auto-continue the orchestrator when it stops with incomplete todos. Opt-in only 
 2. After the cooldown (default 3s), a continuation prompt is injected and the orchestrator resumes work
 3. Press Esc×2 during the cooldown or after injection to stop it
 
+The countdown notification is intentionally **user-visible**. It is not only an internal/system reminder; it should make unfinished work obvious in the UI before the next automatic step.
+
+When context pressure reaches forced-checkpoint territory (L2+), the hook now emits a separate **user-visible context pressure warning** before the internal checkpoint-first continuation prompt. This warning is meant to surface why the next step is pausing normal work and prioritizing checkpoint/handoff behavior.
+
+## Auto Review
+
+When all todos are complete during an auto-work batch, the orchestrator is forced through a structured auto-review before it is allowed to stop.
+
+That review now starts with its own **user-visible review notification** before the internal review prompt is injected. If the review rejects the work, or concludes that user input / an external blocker is stopping progress, the hook also emits a user-visible review status reminder instead of only relying on internal/system control prompts.
+
+That review now explicitly requires the agent to:
+
+- re-read the **earliest real user request(s)**
+- compare the finished work against the actual request, not just the latest assistant summary
+- ignore fake user-shaped system/internal control text when deciding what the user asked for
+- run diagnostics/tests/build when applicable before claiming completion
+- treat `[REJECT]`, `[NEEDS_USER]`, and `[BLOCKED]` as surfaced runtime outcomes, not just invisible internal states
+
 ## Safety Gates
 
 All of these must pass before continuation happens:

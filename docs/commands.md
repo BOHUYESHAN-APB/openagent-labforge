@@ -11,6 +11,7 @@ handled directly by plugin hooks before the model sees them.
 | Prompt-template | `/ol-checkpoint`, `/ol-checkpoint-light`, `/ol-checkpoint-heavy`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-checkpoint-resume-latest`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | The registered template is injected into the session and executed by the active AI agent. Complete checkpoint variants map back to the same checkpoint handlers. |
 | Mixed template + hook | `/ol-stop-continuation` | The template asks the agent to clean up broad continuation mechanisms; the hook also hard-disables todo auto-continuation deterministically. |
 | Hook-driven | `/ol-auto-continue`, `/ol-auto-continue-on`, `/ol-auto-continue-off`, `/ol-subagents*`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo`, `/ol-memory-*` | `command.execute.before` handles the command directly and replaces or augments the template output. |
+| CLI host-side | `extendai-lab doctor`, `extendai-lab status`, `extendai-lab install --runtime=<id>`, `extendai-lab rollback --runtime=<id>` | Node CLI reports runtime detection, compat SDK availability, install/apply and rollback/restore behavior, supports `--runtime-root=<path>` for isolated runtime targets, and prints phase-1 capability summaries without starting model work. |
 
 ## Complete commands for finite arguments
 
@@ -21,7 +22,8 @@ accepted for compatibility.
 
 | Complete command | Equivalent legacy form | Purpose |
 |------------------|------------------------|---------|
-| `/ol-subagents-M` | `/ol-subagents M` | Show loaded `minimal` subagent policy guidance |
+| `/ol-subagents-UM` | `/ol-subagents UM` | Show loaded `ultra-minimal` subagent policy guidance |
+| `/ol-subagents-M` | `/ol-subagents M` | Show loaded legacy `minimal` subagent policy guidance |
 | `/ol-subagents-F` | `/ol-subagents F` | Show loaded `full` subagent policy guidance |
 | `/ol-subagents-C` | `/ol-subagents C` | Show loaded `custom` subagent policy guidance |
 | `/ol-subagents-MO` | `/ol-subagents MO` | Show loaded `main-only` subagent policy guidance |
@@ -33,7 +35,9 @@ accepted for compatibility.
 
 Subagent policy commands are informational for the currently loaded plugin
 instance. To actually change which child agents are registered, update
-`subagentPolicy.mode` in config and reload/restart the plugin.
+`subagentPolicy.mode` in config and reload/restart the plugin. The current
+default is `ultra-minimal`, which keeps the main agent in the foreground and
+avoids child-session waiting unless delegation is clearly worth it.
 
 ## Prefix policy
 
@@ -89,8 +93,8 @@ verification.
    `/ol-memory-delete`
 6. Start-work hook — `/ol-start-work`
 7. Prompt mode handler — `/ol-light`, `/ol-heavy`, `/ol-turbo`
-8. Subagent policy status — `/ol-subagents`, `/ol-subagents-M`,
-   `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO`
+8. Subagent policy status — `/ol-subagents`, `/ol-subagents-UM`,
+   `/ol-subagents-M`, `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO`
 
 Keep command names disjoint. Hook-driven commands should clear or replace the
 template output intentionally so users do not get duplicate model instructions.

@@ -110,8 +110,14 @@ Presets can also be switched at runtime without restarting using the `/ol-preset
 | `sessionManager.maxSessionsPerAgent` | integer | `2` | Maximum remembered resumable child sessions per specialist type in the current orchestrator session (1–10). See [Session Management](session-management.md) |
 | `sessionManager.readContextMinLines` | integer | `10` | Minimum number of lines read from a file before it appears in resumable-session context (0–1000) |
 | `sessionManager.readContextMaxFiles` | integer | `8` | Maximum number of recent read-context files shown per remembered child session (0–50) |
-| `subagentPolicy.mode` | string | `"minimal"` | Subagent usage mode: `minimal`, `full`, `custom`, or `main-only`. Registered agent changes require config update plus plugin reload/restart |
+| `subagentPolicy.mode` | string | `"ultra-minimal"` | Subagent usage mode: `ultra-minimal`, `minimal`, `full`, `custom`, or `main-only`. `ultra-minimal` is the strict main-agent-first default; registered agent changes require config update plus plugin reload/restart |
 | `subagentPolicy.allowedAgents` | string[] | `[]` | Explicit orchestratable subagent allowlist used when `subagentPolicy.mode` is `custom` |
+
+Notes:
+
+- `ultra-minimal` is the new strict main-agent-first default.
+- `minimal` remains as a compatibility mode for the older low-agent cache-first behavior.
+- Use `full` only when broad delegation is intentional and you accept extra child-session cost/waiting.
 | `disabled_mcps` | string[] | `[]` | MCP server IDs to disable globally |
 | `fallback.enabled` | boolean | `false` | Enable model failover on timeout/error |
 | `fallback.timeoutMs` | number | `15000` | Time before aborting and trying next model |
