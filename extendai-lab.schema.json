@@ -531,6 +531,29 @@
         }
       }
     },
+    "subagentPolicy": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "minimal",
+          "description": "Subagent usage mode: full (all configured subagents), minimal (cache-first low-agent default), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.",
+          "type": "string",
+          "enum": [
+            "full",
+            "minimal",
+            "custom",
+            "main-only"
+          ]
+        },
+        "allowedAgents": {
+          "description": "Allowed orchestratable subagents when mode is custom. Non-allowed specialists should be treated as main-agent checklists.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "todoContinuation": {
       "type": "object",
       "properties": {

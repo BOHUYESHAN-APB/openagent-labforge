@@ -140,6 +140,11 @@ Create `extendai-lab.jsonc` in `~/.config/opencode/`, or create `.opencode/exten
   // Model presets: "openai", "deepseek", "mixed"
   "modelPreferences": {
     "profile": "openai"
+  },
+
+  // Subagent cost/cache policy: full | minimal | custom | main-only
+  "subagentPolicy": {
+    "mode": "minimal"
   }
 }
 ```
@@ -169,10 +174,74 @@ These ratios can be tuned in config:
 }
 ```
 
-When pressure reaches L2/L3, ExtendAI Lab now prefers a checkpoint/compress-first
-continuation path. If no compression plugin is active, it explicitly nudges the
-agent toward concise summary/handoff/restart-safe behavior instead of pretending
-compression already happened.
+When pressure reaches L2/L3, ExtendAI Lab prefers a checkpoint/handoff-first
+continuation path. The guidance stays tool-agnostic: it tells the agent to handle
+context pressure with whatever context-management path is actually available,
+while slowing down lossy compression enough to preserve key decisions,
+constraints, file paths, open todos, validation status, and user preferences.
+
+### Subagent cost policy
+
+Different providers expose very different cost shapes. If your plan is billed by
+high-level calls, frequent specialist delegation can be efficient because many
+child-agent/tool operations may still appear as one platform-side interaction. If
+your plan is token-billed and prompt-cache reuse matters, frequent fresh child
+sessions can lower cache hit rates and raise cost.
+
+Use `subagentPolicy.mode` to tune this behavior. Real changes to registered
+child agents normally require updating config and reloading/restarting the
+plugin; `/ol-subagents` reports the currently loaded policy and cache guidance.
+
+OpenCode currently previews only the first line/segment of slash commands in
+some UI paths, and tab completion usually completes only the command name — not
+the later parameters. For parameter-like choices we therefore register complete
+commands instead of relying only on `argumentHint` or long descriptions:
+
+| Command | Meaning |
+|---------|---------|
+| `/ol-subagents-M` | Show guidance for `minimal` mode |
+| `/ol-subagents-F` | Show guidance for `full` mode |
+| `/ol-subagents-C` | Show guidance for `custom` mode |
+| `/ol-subagents-MO` | Show guidance for `main-only` mode |
+| `/ol-auto-continue-on` | Enable todo auto-continuation |
+| `/ol-auto-continue-off` | Disable todo auto-continuation |
+| `/ol-checkpoint-light` | Create a light checkpoint; optional goal text may follow |
+| `/ol-checkpoint-heavy` | Create a heavy checkpoint; optional goal text may follow |
+| `/ol-checkpoint-resume-latest` | Resume the latest checkpoint |
+
+The subagent policy commands are informational for the currently loaded
+instance. To actually change registered child agents, set `subagentPolicy.mode`
+in config and reload/restart the plugin. The legacy parameterized forms such as
+`/ol-subagents M`, `/ol-auto-continue on`, and `/ol-checkpoint light` remain
+accepted for compatibility, but the complete command forms above are easier to
+discover in today's OpenCode UI.
+
+| Mode | Use when | Behavior |
+|------|----------|----------|
+| `minimal` (`M`) | Default for token-billed/cache-sensitive APIs | Keeps only the high-leverage minimal specialists (`explorer`, `librarian`, `oracle`, `fixer`, plus `observer` when enabled) and treats other specialists as local checklists |
+| `full` (`F`) | You want all configured child agents or rely on strong provider prefix caching | Keeps normal specialist delegation available; parallel child prompts should still share the same leading context snapshot |
+| `custom` (`C`) | You want an explicit allowlist | Registers/uses only `allowedAgents`; non-allowed specialists become main-agent checklists |
+| `main-only` (`MO`) | You want to avoid built-in child sessions | Disables built-in orchestratable subagents and tells the main agent to treat specialist guidance as local checklists |
+
+```jsonc
+{
+  "subagentPolicy": {
+    "mode": "custom",
+    "allowedAgents": ["explorer", "librarian", "oracle", "fixer"]
+  }
+}
+```
+
+For providers such as DeepSeek where KV/prefix caching is especially strong,
+ExtendAI Lab nudges the orchestrator to build one stable **shared-prefix
+snapshot** before launching parallel child agents. The snapshot is placed before
+role-specific prompts and dynamic query parameters so multiple child sessions can
+share the longest possible identical prefix. If a shared-context MCP server is
+visible (for example tools like `create_session`, `add_message`, `get_messages`,
+`search_context`), the same snapshot can also be written to that shared session
+and read/searched by each child. This reduces repeated context transfer and
+research, but it does not magically make independent provider sessions share all
+cache state unless their leading prompt tokens match.
 
 ---
 
@@ -244,9 +313,12 @@ commands.
 ### Checkpoint Commands (AI-executed)
 | Command | Description |
 |---------|-------------|
-| `/ol-checkpoint [l\|h\|light\|heavy] [goal]` | Create durable checkpoint (`l` = light, `h` = heavy) |
+| `/ol-checkpoint-light [goal]` | Create light durable checkpoint for same-session recovery |
+| `/ol-checkpoint-heavy [goal]` | Create heavy durable checkpoint for cross-session handoff |
+| `/ol-checkpoint [l\|h\|light\|heavy] [goal]` | Legacy-compatible parameter form for checkpoint creation |
 | `/ol-handoff [goal]` | Create context summary for new session |
-| `/ol-checkpoint-resume [latest\|session-id\|path]` | Resume from checkpoint |
+| `/ol-checkpoint-resume-latest` | Resume from the latest checkpoint |
+| `/ol-checkpoint-resume [latest\|session-id\|path]` | Resume from checkpoint; keep using this form for explicit session IDs or paths |
 
 ### Workflow Commands (AI-executed)
 | Command | Description |
@@ -259,7 +331,10 @@ commands.
 ### Utility Commands
 | Command | Description |
 |---------|-------------|
-| `/ol-auto-continue [on\|off]` | Toggle or explicitly enable/disable auto-continuation |
+| `/ol-auto-continue-on` | Enable auto-continuation |
+| `/ol-auto-continue-off` | Disable auto-continuation |
+| `/ol-auto-continue [on\|off]` | Legacy-compatible toggle / explicit parameter form |
+| `/ol-subagents-M`, `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO` | Show loaded subagent policy guidance for minimal/full/custom/main-only modes |
 | `/ol-preset [name]` | Switch runtime model/provider presets for agents; does not inject coding guidance |
 | `/ol-interview [idea]` | Start product interview |
 | `/ol-karpathy [task-or-review-target]` | Apply Karpathy coding guidelines as task/review guidance; does not change model presets |
@@ -268,9 +343,9 @@ commands.
 
 | Type | Commands | Behavior |
 |------|----------|----------|
-| Prompt-template | `/ol-checkpoint`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | Registered command template is sent to the AI to execute |
+| Prompt-template | `/ol-checkpoint`, `/ol-checkpoint-light`, `/ol-checkpoint-heavy`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-checkpoint-resume-latest`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | Registered command template is sent to the AI to execute |
 | Mixed template + hook | `/ol-stop-continuation` | Template performs broad cleanup; hook hard-disables todo auto-continuation |
-| Hook-driven | `/ol-auto-continue`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo` | `command.execute.before` handles the command directly and replaces the LLM template output |
+| Hook-driven | `/ol-auto-continue`, `/ol-auto-continue-on`, `/ol-auto-continue-off`, `/ol-subagents*`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo` | `command.execute.before` handles the command directly and replaces the LLM template output |
 
 `/ol-preset` and `/ol-karpathy` intentionally live in different categories:
 `/ol-preset` changes agent runtime configuration; `/ol-karpathy` applies the fully

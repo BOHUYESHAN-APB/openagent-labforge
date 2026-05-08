@@ -8,9 +8,32 @@ handled directly by plugin hooks before the model sees them.
 
 | Category | Commands | Execution path |
 |----------|----------|----------------|
-| Prompt-template | `/ol-checkpoint`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | The registered template is injected into the session and executed by the active AI agent. |
+| Prompt-template | `/ol-checkpoint`, `/ol-checkpoint-light`, `/ol-checkpoint-heavy`, `/ol-handoff`, `/ol-checkpoint-resume`, `/ol-checkpoint-resume-latest`, `/ol-start-work`, `/ol-karpathy`, `/ol-ralph-loop`, `/ol-cancel-ralph` | The registered template is injected into the session and executed by the active AI agent. Complete checkpoint variants map back to the same checkpoint handlers. |
 | Mixed template + hook | `/ol-stop-continuation` | The template asks the agent to clean up broad continuation mechanisms; the hook also hard-disables todo auto-continuation deterministically. |
-| Hook-driven | `/ol-auto-continue`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo` | `command.execute.before` handles the command directly and replaces or augments the template output. |
+| Hook-driven | `/ol-auto-continue`, `/ol-auto-continue-on`, `/ol-auto-continue-off`, `/ol-subagents*`, `/ol-preset`, `/ol-interview`, `/ol-light`, `/ol-heavy`, `/ol-turbo`, `/ol-memory-*` | `command.execute.before` handles the command directly and replaces or augments the template output. |
+
+## Complete commands for finite arguments
+
+OpenCode currently tends to complete the command name, not later positional
+parameters. For finite choices, LabForge registers complete command names so the
+choice is visible in command completion. The older parameterized forms remain
+accepted for compatibility.
+
+| Complete command | Equivalent legacy form | Purpose |
+|------------------|------------------------|---------|
+| `/ol-subagents-M` | `/ol-subagents M` | Show loaded `minimal` subagent policy guidance |
+| `/ol-subagents-F` | `/ol-subagents F` | Show loaded `full` subagent policy guidance |
+| `/ol-subagents-C` | `/ol-subagents C` | Show loaded `custom` subagent policy guidance |
+| `/ol-subagents-MO` | `/ol-subagents MO` | Show loaded `main-only` subagent policy guidance |
+| `/ol-auto-continue-on` | `/ol-auto-continue on` | Enable todo auto-continuation |
+| `/ol-auto-continue-off` | `/ol-auto-continue off` | Disable todo auto-continuation |
+| `/ol-checkpoint-light [goal]` | `/ol-checkpoint light [goal]` | Create light same-session checkpoint |
+| `/ol-checkpoint-heavy [goal]` | `/ol-checkpoint heavy [goal]` | Create heavy cross-session handoff checkpoint |
+| `/ol-checkpoint-resume-latest` | `/ol-checkpoint-resume latest` | Resume the latest checkpoint |
+
+Subagent policy commands are informational for the currently loaded plugin
+instance. To actually change which child agents are registered, update
+`subagentPolicy.mode` in config and reload/restart the plugin.
 
 ## Prefix policy
 
@@ -33,7 +56,7 @@ primary interface:
 | Primary command | Legacy compatibility input |
 |-----------------|----------------------------|
 | `/ol-preset` | `/preset` |
-| `/ol-auto-continue` | `/auto-continue` |
+| `/ol-auto-continue`, `/ol-auto-continue-on`, `/ol-auto-continue-off` | `/auto-continue` |
 | `/ol-interview` | `/interview` |
 | `/ol-stop-continuation` | `/stop-continuation` |
 | `/ol-ralph-loop`, `/ol-cancel-ralph` | No default legacy registration; use the prefixed commands. |
@@ -56,11 +79,18 @@ verification.
 
 `command.execute.before` handlers run in this order:
 
-1. Todo continuation hook — `/ol-auto-continue`, `/ol-stop-continuation`
-2. Interview manager — `/ol-interview`
-3. Preset manager — `/ol-preset`
-4. Start-work hook — `/ol-start-work`
-5. Prompt mode handler — `/ol-light`, `/ol-heavy`, `/ol-turbo`
+1. Complete command normalization — maps finite-choice commands such as
+   `/ol-auto-continue-on`, `/ol-checkpoint-light`, and
+   `/ol-checkpoint-resume-latest` back to their canonical handlers.
+2. Todo continuation hook — `/ol-auto-continue`, `/ol-stop-continuation`
+3. Interview manager — `/ol-interview`
+4. Preset manager — `/ol-preset`
+5. Memory commands — `/ol-memory-write`, `/ol-memory-list`,
+   `/ol-memory-delete`
+6. Start-work hook — `/ol-start-work`
+7. Prompt mode handler — `/ol-light`, `/ol-heavy`, `/ol-turbo`
+8. Subagent policy status — `/ol-subagents`, `/ol-subagents-M`,
+   `/ol-subagents-F`, `/ol-subagents-C`, `/ol-subagents-MO`
 
 Keep command names disjoint. Hook-driven commands should clear or replace the
 template output intentionally so users do not get duplicate model instructions.

@@ -11,6 +11,7 @@ import {
   getProjectBoulderFile,
   getProjectPlansDir,
 } from '../paths/plugin-paths';
+import { normalizePlanName } from '../plans/paths';
 
 export interface BoulderState {
   active_plan: string;
@@ -176,12 +177,4 @@ export function getPlanProgress(content: string): PlanProgress {
 
 export function planNameFromPath(filePath: string): string {
   return basename(filePath).replace(/\.md$/i, '');
-}
-
-function normalizePlanName(name: string): string {
-  return name
-    .trim()
-    .replace(/\.md$/i, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-');
 }

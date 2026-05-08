@@ -15,11 +15,11 @@
 | Doc | Contents |
 |-----|----------|
 | [Council Agent](council.md) | Multi-LLM consensus, presets, role prompts, timeouts |
-| [Command System](commands.md) | Prompt-template vs hook-driven commands, `ol-` prefix policy, `/ol-preset` vs `/ol-karpathy` |
+| [Command System](commands.md) | Prompt-template vs hook-driven commands, complete command variants for finite arguments, `ol-` prefix policy, `/ol-preset` vs `/ol-karpathy` |
 | [Interview](interview.md) | `/ol-interview` command, browser UI, dashboard mode, multi-session coordination |
 | [Multiplexer Integration](multiplexer-integration.md) | Real-time pane monitoring, layouts, troubleshooting |
 | [Plan Workflow](plan-workflow.md) | planner plan files, `/ol-start-work`, executor behavior, boulder resume state |
-| [Todo Continuation](todo-continuation.md) | `auto_continue`, `/ol-auto-continue`, cooldowns, safety gates |
+| [Todo Continuation](todo-continuation.md) | `auto_continue`, `/ol-auto-continue-on`, `/ol-auto-continue-off`, cooldowns, safety gates |
 | [Preset Switching](preset-switching.md) | `/ol-preset` command for runtime agent model/provider switching |
 | [Skills](skills.md) | `karpathy-guidelines`, `simplify`, `codemap` — prompt guidance vs runtime presets |
 | [Codemap Skill](codemap.md) | Hierarchical codemap generation |
@@ -33,6 +33,7 @@
 | [Tools](tools.md) | Background tasks, LSP, code search (`ast_grep`), formatters |
 | [Configuration](configuration.md) | Config files, prompt overriding, JSONC, full option reference table |
 | [Documentation Refactor Plan](documentation-refactor.md) | Tracks inherited OMO/Slim wording and target LabForge documentation structure |
+| [Runtime Compatibility Matrix](runtime-matrix.md) | OpenCode, Claude/OpenClaude, and Codex first; later limited adapters for DS-TUI, Copilot, Cline/RooCode, and KiloCode |
 | [Host Adapter Architecture](architecture/adapters.md) | OpenCode full plugin vs DeepSeek-TUI adapter, Node-compatible TS direction |
 | [Discipline Packs](architecture/discipline-packs.md) | Bio as the first optional discipline pack and future science packs |
 | [Engineering Modules](architecture/engineering-modules.md) | Reusable prompt-discipline docs such as scientific rigor, anti-overconfidence, and diagnostics strategy |

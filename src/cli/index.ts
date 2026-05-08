@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
-import { PACKAGE_NAME, PRODUCT_DISPLAY_NAME } from '../config/product';
 import {
   installDeepSeekAdapter,
   uninstallDeepSeekAdapter,
 } from '../adapters/deepseek-tui';
+import { PHASE_ONE_RUNTIME_IDS } from '../compat/types';
+import { PACKAGE_NAME, PRODUCT_DISPLAY_NAME } from '../config/product';
 import { install } from './install';
 import { getGeneratedPresetNames, isGeneratedPresetName } from './providers';
 import type { BooleanArg, InstallArgs } from './types';
@@ -69,6 +70,9 @@ Options:
 
 Available presets: ${getGeneratedPresetNames().join(', ')}
 
+Compatibility roadmap: phase 1 focuses on ${PHASE_ONE_RUNTIME_IDS.join(', ')}.
+Other runtimes are planned as limited agent/skill/MCP/rules adapters.
+
 The installer generates OpenAI and OpenCode Go presets by default.
 OpenAI is active unless --preset selects another generated preset.
 For the full config reference, see docs/configuration.md.
@@ -85,7 +89,10 @@ Examples:
 
 async function readCurrentPackageVersion(): Promise<string> {
   try {
-    const raw = await readFile(new URL('../../package.json', import.meta.url), 'utf8');
+    const raw = await readFile(
+      new URL('../../package.json', import.meta.url),
+      'utf8',
+    );
     const parsed = JSON.parse(raw) as { version?: string };
     return parsed.version || '0.0.0-dev';
   } catch {

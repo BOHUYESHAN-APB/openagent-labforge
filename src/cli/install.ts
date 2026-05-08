@@ -12,6 +12,7 @@ import {
   getOpenCodeVersion,
   isOpenCodeInstalled,
   writeLiteConfig,
+  writeLiteSchema,
 } from './config-manager';
 import { CUSTOM_SKILLS, installCustomSkill } from './custom-skills';
 import { getExistingLiteConfigPath } from './paths';
@@ -151,7 +152,7 @@ async function runInstall(config: InstallConfig): Promise<number> {
 
   printHeader(isUpdate);
 
-  let totalSteps = 6;
+  let totalSteps = 7;
   if (config.installSkills) totalSteps += 1;
   if (config.installCustomSkills) totalSteps += 1;
 
@@ -227,6 +228,14 @@ async function runInstall(config: InstallConfig): Promise<number> {
       )
         return 1;
     }
+  }
+
+  printStep(step++, totalSteps, `Writing ${PACKAGE_NAME} JSON schema...`);
+  if (config.dryRun) {
+    printInfo('Dry run mode - skipping JSON schema installation');
+  } else {
+    const schemaResult = writeLiteSchema();
+    if (!handleStepResult(schemaResult, 'JSON schema written')) return 1;
   }
 
   // Install skills if requested

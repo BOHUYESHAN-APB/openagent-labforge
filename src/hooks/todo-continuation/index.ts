@@ -143,6 +143,11 @@ interface ContinuationState {
   // config.todoContinuation.autoEnable until the user turns auto-continue on.
   autoEnableSuppressedSessionIds: Set<string>;
   autoEnableSuppressedGlobally: boolean;
+  // sessionID → last pressure checkpoint signature recorded through the
+  // forced context-pressure path. The reminder may repeat while pressure
+  // stays high, but durable checkpoints/memory should not duplicate the same
+  // pressure state on every idle event.
+  lastPressureCheckpointKeyBySession: Map<string, string>;
 }
 
 /**
@@ -275,6 +280,7 @@ function resetState(state: ContinuationState): void {
   state.reviewInjectedBySession.clear();
   state.autoEnableSuppressedSessionIds.clear();
   state.autoEnableSuppressedGlobally = false;
+  state.lastPressureCheckpointKeyBySession.clear();
 }
 
 export function createTodoContinuationHook(
@@ -295,9 +301,7 @@ export function createTodoContinuationHook(
       details: string;
     }) => void | Promise<void>;
     contextPressure?: {
-      getState: (
-        sessionID: string,
-      ) =>
+      getState: (sessionID: string) =>
         | {
             level: number;
             ratio: number;
@@ -374,6 +378,7 @@ export function createTodoContinuationHook(
     reviewInjectedBySession: new Set(),
     autoEnableSuppressedSessionIds: new Set(),
     autoEnableSuppressedGlobally: false,
+    lastPressureCheckpointKeyBySession: new Map(),
   };
 
   const hygiene = createTodoHygiene({
@@ -509,6 +514,7 @@ export function createTodoContinuationHook(
     if (!lastUserMessage.sessionID) {
       for (const sessionID of state.orchestratorSessionIds) {
         requestSignatureBySession.delete(sessionID);
+        state.lastPressureCheckpointKeyBySession.delete(sessionID);
         hygiene.handleRequestStart({ sessionID });
       }
       return;
@@ -568,6 +574,7 @@ export function createTodoContinuationHook(
       lastUserMessage.sessionID,
       lastUserMessage.signature,
     );
+    state.lastPressureCheckpointKeyBySession.delete(lastUserMessage.sessionID);
     pendingHygieneReminderBySession.delete(lastUserMessage.sessionID);
     hygiene.handleRequestStart({ sessionID: lastUserMessage.sessionID });
   }
@@ -944,12 +951,14 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Injecting auto-review prompt`, { sessionID });
         state.reviewInjectedBySession.add(sessionID);
         state.reviewVerdictBySession.set(sessionID, 'pending');
+        const contextPressure = config?.contextPressure;
+        const reviewPressureState = contextPressure?.getState(sessionID);
         const reviewPrompt = buildReviewPrompt(
-          config?.contextPressure?.getState(sessionID)
+          reviewPressureState
             ? {
-                ...config.contextPressure.getState(sessionID)!,
+                ...reviewPressureState,
                 strategy:
-                  config.contextPressure.getRecommendedStrategy(sessionID),
+                  contextPressure?.getRecommendedStrategy(sessionID) ?? '',
               }
             : undefined,
         );
@@ -1066,14 +1075,40 @@ export function createTodoContinuationHook(
           strategy,
         });
 
-        await config.contextPressure.onForceCheckpoint?.({
-          sessionID,
-          level: pressureState.level,
-          ratio: pressureState.ratio,
-          totalTokens: pressureState.totalTokens,
-          contextLimit: pressureState.contextLimit,
+        const pressureCheckpointKey = [
+          pressureState.level,
           strategy,
-        });
+          Math.round(pressureState.ratio * 100),
+          pressureState.contextLimit,
+        ].join(':');
+        if (
+          state.lastPressureCheckpointKeyBySession.get(sessionID) !==
+          pressureCheckpointKey
+        ) {
+          state.lastPressureCheckpointKeyBySession.set(
+            sessionID,
+            pressureCheckpointKey,
+          );
+          try {
+            await config.contextPressure.onForceCheckpoint?.({
+              sessionID,
+              level: pressureState.level,
+              ratio: pressureState.ratio,
+              totalTokens: pressureState.totalTokens,
+              contextLimit: pressureState.contextLimit,
+              strategy,
+            });
+          } catch (error) {
+            state.lastPressureCheckpointKeyBySession.delete(sessionID);
+            log(
+              `[${HOOK_NAME}] Warning: failed to record pressure checkpoint`,
+              {
+                sessionID,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
+          }
+        }
 
         state.isAutoInjecting = true;
         try {
@@ -1084,7 +1119,7 @@ export function createTodoContinuationHook(
                 createInternalAgentTextPart(
                   `[Context-pressure forcing: current session is at L${pressureState.level} (${Math.round(
                     pressureState.ratio * 100,
-                  )}% of model context, ${pressureState.totalTokens.toLocaleString()} / ${pressureState.contextLimit.toLocaleString()} tokens). Before continuing normal todos, perform the recommended ${strategy} response now: checkpoint/compress first, then continue with delta-only updates. Do not stop after checkpointing; continue the batch unless blocked or user input is required.]`,
+                  )}% of model context, ${pressureState.totalTokens.toLocaleString()} / ${pressureState.contextLimit.toLocaleString()} tokens). Before continuing normal todos, perform the recommended ${strategy} response now: handle context pressure first using whatever context-management path is actually available in this runtime, create a concise checkpoint/handoff yourself when needed, then continue with delta-only updates. Do not stop after checkpointing; continue the batch unless blocked or user input is required.]`,
                 ),
               ],
             },
@@ -1247,6 +1282,7 @@ export function createTodoContinuationHook(
         state.enabledBySession.delete(deletedSessionId);
         state.consecutiveContinuationsBySession.delete(deletedSessionId);
         state.autoEnableSuppressedSessionIds.delete(deletedSessionId);
+        state.lastPressureCheckpointKeyBySession.delete(deletedSessionId);
         clearNotificationState(deletedSessionId);
         if (state.orchestratorSessionIds.size === 0) {
           resetState(state);

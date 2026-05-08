@@ -10,6 +10,57 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - No changes yet.
 - 暂无变更。
 
+## v1.0.18 - 2026-05-07
+
+### Added / 新增
+
+- Added configurable subagent cost policy modes: `minimal`, `full`, `custom`,
+  and `main-only`, with `minimal` as the cache-sensitive default and custom
+  `allowedAgents` support.
+- 新增可配置的子代理成本策略模式：`minimal`、`full`、`custom` 与
+  `main-only`，其中 `minimal` 作为面向缓存命中的默认模式，并支持自定义
+  `allowedAgents` 白名单。
+
+- Added complete slash-command variants for finite choices so OpenCode command
+  completion can surface them directly: `/ol-subagents-M`, `/ol-subagents-F`,
+  `/ol-subagents-C`, `/ol-subagents-MO`, `/ol-auto-continue-on`,
+  `/ol-auto-continue-off`, `/ol-checkpoint-light`,
+  `/ol-checkpoint-heavy`, and `/ol-checkpoint-resume-latest`.
+- 新增有限选项的完整斜杠指令变体，方便当前 OpenCode UI 直接补全命令名：
+  `/ol-subagents-M`、`/ol-subagents-F`、`/ol-subagents-C`、
+  `/ol-subagents-MO`、`/ol-auto-continue-on`、`/ol-auto-continue-off`、
+  `/ol-checkpoint-light`、`/ol-checkpoint-heavy` 与
+  `/ol-checkpoint-resume-latest`。
+
+### Changed / 变更
+
+- Subagent delegation now favors stable shared-prefix snapshots for cache-friendly
+  parallel child sessions and can optionally coordinate through visible
+  shared-context MCP tools such as `create_session`, `add_message`,
+  `get_messages`, and `search_context`.
+- 子代理委派现在会优先使用稳定的 shared-prefix snapshot，以提升并行子会话的
+  缓存命中率；当运行时可见 shared-context MCP 工具（如 `create_session`、
+  `add_message`、`get_messages`、`search_context`）时，也会引导使用共享
+  session 协同。
+
+- Context-pressure guidance now slows down lossy compression and explicitly
+  preserves key decisions, constraints, file paths, open todos, validation status,
+  and user preferences before handoff/checkpoint work.
+- 上下文压力提示现在会放慢有损压缩节奏，并在 handoff / checkpoint 前明确保留
+  关键决策、约束、文件路径、未完成 todo、验证状态与用户偏好。
+
+- L2/L3 pressure checkpoint recording is deduplicated by pressure bucket and made
+  best-effort so durable memory writes do not repeatedly pollute storage or block
+  the pressure prompt when persistence fails.
+- L2/L3 压力 checkpoint 写入现在按 pressure bucket 去重，并改为 best-effort，
+  避免重复污染持久化存储，也避免持久化失败阻断压力提示。
+
+- Documentation now recommends complete command forms while retaining legacy
+  parameterized commands for compatibility, and clarifies that actual subagent
+  registration changes require config reload/restart.
+- 文档现在推荐使用完整命令形式，同时保留旧参数命令兼容；并明确实际子代理注册
+  变化需要更新配置并 reload/restart 插件。
+
 ## v1.0.17 - 2026-05-07
 
 ### Added / 新增

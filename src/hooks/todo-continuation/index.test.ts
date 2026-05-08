@@ -165,6 +165,286 @@ describe('createTodoContinuationHook', () => {
       expect(text).toContain('Context-pressure forcing');
       expect(text).toContain('L2');
       expect(text).toContain('l2-checkpoint-light');
+      expect(text).toContain('handle context pressure first');
+      expect(text).toContain(
+        'whatever context-management path is actually available',
+      );
+      expect(text).toContain('concise checkpoint/handoff yourself when needed');
+    });
+
+    test('deduplicates durable pressure checkpoints for unchanged pressure bucket', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      const onForceCheckpoint = mock(async () => {});
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio: 0.714,
+            totalTokens: 142800,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      ctx.client.session.prompt.mockClear();
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(1);
+    });
+
+    test('deduplicates durable pressure checkpoints across concurrent idle events', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      const onForceCheckpoint = mock(async () => {
+        await delay(10);
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio: 0.714,
+            totalTokens: 142800,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      ctx.client.session.prompt.mockClear();
+
+      await Promise.all([
+        hook.handleEvent({
+          event: {
+            type: 'session.idle',
+            properties: { sessionID: 's1' },
+          },
+        }),
+        hook.handleEvent({
+          event: {
+            type: 'session.idle',
+            properties: { sessionID: 's1' },
+          },
+        }),
+      ]);
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(1);
+    });
+
+    test('continues pressure prompt when durable checkpoint recording fails', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      const onForceCheckpoint = mock(async () => {
+        throw new Error('storage unavailable');
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio: 0.714,
+            totalTokens: 142800,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      ctx.client.session.prompt.mockClear();
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+
+      expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(2);
+    });
+
+    test('records pressure checkpoint again after a new user request', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      const onForceCheckpoint = mock(async () => {});
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio: 0.714,
+            totalTokens: 142800,
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.handleMessagesTransform(
+        userMessages('first request', 's1', 'orchestrator'),
+      );
+      await hook.tool.auto_continue.execute({ enabled: true });
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+      await hook.handleMessagesTransform(
+        userMessages('second request', 's1', 'orchestrator'),
+      );
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(2);
+    });
+
+    test('records pressure checkpoint again when pressure bucket changes', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'continuing work' }],
+            },
+          ],
+        },
+      });
+
+      let ratio = 0.714;
+      const onForceCheckpoint = mock(async () => {});
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        contextPressure: {
+          getState: () => ({
+            level: 2,
+            ratio,
+            totalTokens: Math.round(ratio * 200000),
+            contextLimit: 200000,
+          }),
+          shouldForceCheckpoint: () => true,
+          getRecommendedStrategy: () => 'l2-checkpoint-light',
+          onForceCheckpoint,
+        },
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+      ratio = 0.724;
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 's1' },
+        },
+      });
+
+      expect(onForceCheckpoint).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -2903,7 +3183,9 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain(
         'todos could not be verified right now',
       );
-      expect(output.parts[0].text).not.toContain('No incomplete todos right now');
+      expect(output.parts[0].text).not.toContain(
+        'No incomplete todos right now',
+      );
     });
   });
 

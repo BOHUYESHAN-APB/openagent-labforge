@@ -65,6 +65,8 @@ describe('createContextPressureHook', () => {
     expect(output.system[0]).toContain('[Context pressure: L1');
     expect(output.system[0]).toContain('60%');
     expect(output.system[0]).toContain('l1-micro-prune');
+    expect(output.system[0]).toContain('preserving important facts');
+    expect(output.system[0]).toContain('Before any pruning');
   });
 
   test('uses bio thresholds for bio-orchestrator sessions', async () => {
@@ -129,6 +131,51 @@ describe('createContextPressureHook', () => {
     expect(hook.getState('s3')?.level).toBe(2);
     expect(hook.shouldForceCheckpoint('s3')).toBe(true);
     expect(hook.getRecommendedStrategy('s3')).toBe('l2-checkpoint-light');
+
+    const output = { system: [] as string[] };
+    await hook.handleSystemTransform({ sessionID: 's3' }, output);
+    expect(output.system[0]).toContain('handle context pressure first');
+    expect(output.system[0]).toContain(
+      'whatever context-management path is actually available',
+    );
+    expect(output.system[0]).toContain('Slow down compression enough');
+    expect(output.system[0]).toContain('information-dense summary/checkpoint');
+  });
+
+  test('injects tool-agnostic L3 context pressure guidance', async () => {
+    const ctx = createCtx();
+    const hook = createContextPressureHook(ctx as never);
+
+    hook.handleChatMessage({ sessionID: 's4', agent: 'orchestrator' });
+    await hook.handleEvent({
+      event: {
+        type: 'message.updated',
+        properties: {
+          info: {
+            role: 'assistant',
+            sessionID: 's4',
+            providerID: 'openai',
+            modelID: 'gpt-5.5',
+            tokens: {
+              input: 150_000,
+              output: 10_000,
+              reasoning: 0,
+              cache: { read: 0, write: 0 },
+            },
+          },
+        },
+      },
+    });
+
+    const output = { system: [] as string[] };
+    await hook.handleSystemTransform({ sessionID: 's4' }, output);
+    expect(output.system[0]).toContain('[Context pressure: L3');
+    expect(output.system[0]).toContain('Handle context pressure');
+    expect(output.system[0]).toContain(
+      'whatever context-management path is actually available',
+    );
+    expect(output.system[0]).toContain('Do not rush into lossy compression');
+    expect(output.system[0]).toContain('restart-ready summary/handoff');
   });
 
   test('clears pressure state on session.deleted', async () => {

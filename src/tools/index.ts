@@ -4,4 +4,5 @@ export { createCouncilTool } from './council';
 export { createMediaInventoryTool } from './media-inventory';
 export type { PresetManager } from './preset-manager';
 export { createPresetManager } from './preset-manager';
+export { createSavePlanTool } from './save-plan';
 export { createWebfetchTool } from './smartfetch';

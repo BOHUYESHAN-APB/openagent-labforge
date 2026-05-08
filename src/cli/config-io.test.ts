@@ -23,6 +23,7 @@ import {
   stripJsonComments,
   writeConfig,
   writeLiteConfig,
+  writeLiteSchema,
 } from './config-io';
 import * as paths from './paths';
 
@@ -414,6 +415,20 @@ describe('config-io', () => {
     expect(saved.presets.openai).toBeDefined();
     expect(saved.presets['opencode-go']).toBeDefined();
     expect(saved.tmux.enabled).toBe(true);
+  });
+
+  test('writeLiteSchema copies schema beside lite config', () => {
+    const schemaPath = join(tmpDir, 'opencode', SCHEMA_FILE_NAME);
+
+    const result = writeLiteSchema();
+
+    expect(result.success).toBe(true);
+    expect(result.configPath).toBe(schemaPath);
+    expect(existsSync(schemaPath)).toBe(true);
+
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+    expect(schema.title).toBe(PACKAGE_NAME);
+    expect(schema.properties).toHaveProperty('subagentPolicy');
   });
 
   test('writeLiteConfig writes selected preset', () => {

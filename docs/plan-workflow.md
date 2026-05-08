@@ -36,9 +36,15 @@ New files should use `.opencode/extendai-lab/`, not `.sisyphus/`. Legacy `.openc
 ## Planner contract
 
 When the planner agent (internal id `prometheus`) has enough information to
-create an execution plan, it should:
+create an execution plan, it must use the model-visible `save_plan` tool. The
+tool is the authority for whether a plan was actually written to disk; chat text
+alone is not a successful save.
 
-1. Write a markdown plan file to `.opencode/extendai-lab/plans/`.
+The planner should:
+
+1. Call `save_plan` with a descriptive `name` and the full markdown `content`.
+   The tool writes the plan file to `.opencode/extendai-lab/plans/` and returns
+   the normalized saved path.
 2. Use top-level structured checkboxes for executable progress:
    - `- [ ] 1. Implementation task`
    - `- [ ] 2. Implementation task`
@@ -47,7 +53,7 @@ create an execution plan, it should:
    - `- [ ] F3. Real Manual QA`
    - `- [ ] F4. Scope Fidelity Check`
 3. Keep nested checkboxes for acceptance criteria/evidence only.
-4. End with the exact handoff:
+4. End with the exact handoff copied from the successful `save_plan` result:
 
 ```text
 Plan saved to: .opencode/extendai-lab/plans/<plan-name>.md
@@ -55,6 +61,8 @@ Next command: /ol-start-work <plan-name>
 ```
 
 The planner should never tell users to run legacy `/start-work`.
+The planner should never claim `Plan saved to:` if `save_plan` fails or was not
+called.
 
 ## Execution contract
 

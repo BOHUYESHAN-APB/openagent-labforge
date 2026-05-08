@@ -7,7 +7,9 @@ Auto-continue the orchestrator when it stops with incomplete todos. Opt-in only 
 | Tool / Command | Description |
 |----------------|-------------|
 | `auto_continue` | Toggle auto-continuation. Call with `{ enabled: true }` to activate, `{ enabled: false }` to disable |
-| `/ol-auto-continue` | Slash command shortcut. Accepts `on`, `off`, or toggles with no argument. Legacy `/auto-continue` is accepted by the hook but not registered as the primary command |
+| `/ol-auto-continue-on` | Recommended complete command for enabling auto-continuation in current OpenCode UIs |
+| `/ol-auto-continue-off` | Recommended complete command for disabling auto-continuation in current OpenCode UIs |
+| `/ol-auto-continue` | Legacy-compatible shortcut. Accepts `on`, `off`, or toggles with no argument. Legacy `/auto-continue` is accepted by the hook but not registered as the primary command |
 
 ## How It Works
 

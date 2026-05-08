@@ -85,11 +85,13 @@ import {
   createCouncilTool,
   createMediaInventoryTool,
   createPresetManager,
+  createSavePlanTool,
   createWebfetchTool,
 } from './tools';
 import { detectBioTaskTool } from './tools/detect-bio-task.js';
 import {
   createDisplayNameMentionRewriter,
+  createInternalAgentTextPart,
   resolveRuntimeAgentName,
 } from './utils';
 import { initLogger, log } from './utils/logger';
@@ -142,6 +144,158 @@ const HEALTH_CHECK = {
   minTools: 5,
   minMcps: 1,
 } as const;
+
+const SUBAGENT_POLICY_COMMAND = 'ol-subagents';
+
+const SUBAGENT_POLICY_USAGE =
+  'Commands: /ol-subagents-M minimal, /ol-subagents-F full, /ol-subagents-C custom, /ol-subagents-MO main-only. Real agent registration changes require config reload/restart.';
+
+const CHECKPOINT_LIGHT_COMMAND = 'ol-checkpoint-light';
+const CHECKPOINT_HEAVY_COMMAND = 'ol-checkpoint-heavy';
+const CHECKPOINT_RESUME_LATEST_COMMAND = 'ol-checkpoint-resume-latest';
+const AUTO_CONTINUE_ON_COMMAND = 'ol-auto-continue-on';
+const AUTO_CONTINUE_OFF_COMMAND = 'ol-auto-continue-off';
+
+const SUBAGENT_POLICY_ALIASES = {
+  m: 'minimal',
+  minimal: 'minimal',
+  f: 'full',
+  full: 'full',
+  c: 'custom',
+  custom: 'custom',
+  mo: 'main-only',
+  'main-only': 'main-only',
+  mainonly: 'main-only',
+} as const;
+
+type SubagentPolicyMode =
+  (typeof SUBAGENT_POLICY_ALIASES)[keyof typeof SUBAGENT_POLICY_ALIASES];
+
+const SUBAGENT_POLICY_COMMAND_MODES = {
+  'ol-subagents-M': 'minimal',
+  'ol-subagents-F': 'full',
+  'ol-subagents-C': 'custom',
+  'ol-subagents-MO': 'main-only',
+  'ol-subagents-m': 'minimal',
+  'ol-subagents-f': 'full',
+  'ol-subagents-c': 'custom',
+  'ol-subagents-mo': 'main-only',
+} as const satisfies Record<string, SubagentPolicyMode>;
+
+const SUBAGENT_POLICY_COMMAND_DESCRIPTIONS: Record<
+  keyof typeof SUBAGENT_POLICY_COMMAND_MODES,
+  string
+> = {
+  'ol-subagents-M': 'Subagent policy: M=minimal, cache-first low-agent mode',
+  'ol-subagents-F': 'Subagent policy: F=full, all configured subagents',
+  'ol-subagents-C': 'Subagent policy: C=custom, use allowedAgents allowlist',
+  'ol-subagents-MO': 'Subagent policy: MO=main-only, disable child sessions',
+  'ol-subagents-m': 'Subagent policy: M=minimal, cache-first low-agent mode',
+  'ol-subagents-f': 'Subagent policy: F=full, all configured subagents',
+  'ol-subagents-c': 'Subagent policy: C=custom, use allowedAgents allowlist',
+  'ol-subagents-mo': 'Subagent policy: MO=main-only, disable child sessions',
+};
+
+function parseSubagentPolicyMode(
+  argument: string | undefined,
+): SubagentPolicyMode | undefined {
+  const first = argument?.trim().split(/\s+/)[0]?.toLowerCase();
+  if (!first) return undefined;
+  return SUBAGENT_POLICY_ALIASES[first as keyof typeof SUBAGENT_POLICY_ALIASES];
+}
+
+function getSubagentPolicyModeForCommand(
+  command: string,
+): SubagentPolicyMode | undefined {
+  return SUBAGENT_POLICY_COMMAND_MODES[
+    command as keyof typeof SUBAGENT_POLICY_COMMAND_MODES
+  ];
+}
+
+function registerCommandIfMissing(
+  commands: Record<string, unknown>,
+  name: string,
+  config: Record<string, unknown>,
+): void {
+  if (!commands[name]) {
+    commands[name] = config;
+  }
+}
+
+function formatSubagentPolicyStatus(
+  config: ReturnType<typeof loadPluginConfig>,
+  requestedMode?: SubagentPolicyMode,
+): string {
+  const policy = config.subagentPolicy;
+  const mode = policy?.mode ?? 'minimal';
+  const allowed = policy?.allowedAgents?.length
+    ? policy.allowedAgents.join(', ')
+    : '(none configured)';
+  const requestNote = requestedMode
+    ? `\nRequested mode: ${requestedMode}\nConfig value: { "subagentPolicy": { "mode": "${requestedMode}" } }\n`
+    : '';
+
+  return `[Subagent policy]\n${SUBAGENT_POLICY_USAGE}\n\nActive mode: ${mode}\nAllowed agents: ${allowed}${requestNote}\nRuntime note: this command reports the active policy for the currently loaded plugin instance. Real changes to registered child agents/tools usually require updating config and reloading/restarting the plugin.\n\nCost/cache guidance: child agents start separate sessions, so they may not inherit the main session's full context or prompt-cache state. Prefer main-agent direct tools when quality is comparable. When parallel delegation is still worthwhile, put the same shared-prefix snapshot first for every child, then role/task-specific instructions. If shared-context MCP tools are visible, write that same snapshot to the shared session and tell children to read/search it before work. Prefer resuming existing specialist sessions when possible.`;
+}
+
+function registerSubagentPolicyCommand(opencodeConfig: {
+  command?: Record<string, unknown>;
+}): void {
+  if (!opencodeConfig.command) {
+    opencodeConfig.command = {};
+  }
+  const commands = opencodeConfig.command;
+  registerCommandIfMissing(commands, SUBAGENT_POLICY_COMMAND, {
+    template: '',
+    description: 'Show active subagent policy and cache guidance',
+  });
+
+  for (const [command, mode] of Object.entries(SUBAGENT_POLICY_COMMAND_MODES)) {
+    registerCommandIfMissing(commands, command, {
+      template: '',
+      description:
+        SUBAGENT_POLICY_COMMAND_DESCRIPTIONS[
+          command as keyof typeof SUBAGENT_POLICY_COMMAND_DESCRIPTIONS
+        ],
+      metadata: { subagentPolicyMode: mode },
+    });
+  }
+}
+
+function registerCompleteArgumentCommands(opencodeConfig: {
+  command?: Record<string, unknown>;
+}): void {
+  if (!opencodeConfig.command) {
+    opencodeConfig.command = {};
+  }
+  const commands = opencodeConfig.command;
+
+  registerCommandIfMissing(commands, AUTO_CONTINUE_ON_COMMAND, {
+    template: '',
+    description: 'Enable auto-continuation for current session',
+  });
+  registerCommandIfMissing(commands, AUTO_CONTINUE_OFF_COMMAND, {
+    template: '',
+    description: 'Disable auto-continuation for current session',
+  });
+
+  registerCommandIfMissing(commands, CHECKPOINT_LIGHT_COMMAND, {
+    template: CHECKPOINT_TEMPLATE,
+    description:
+      'Create light checkpoint for same-session recovery. Add goal text after command if needed.',
+    argumentHint: '[goal]',
+  });
+  registerCommandIfMissing(commands, CHECKPOINT_HEAVY_COMMAND, {
+    template: CHECKPOINT_TEMPLATE,
+    description:
+      'Create heavy checkpoint for cross-session handoff. Add goal text after command if needed.',
+    argumentHint: '[goal]',
+  });
+  registerCommandIfMissing(commands, CHECKPOINT_RESUME_LATEST_COMMAND, {
+    template: CHECKPOINT_RESUME_TEMPLATE,
+    description: 'Resume from latest checkpoint',
+  });
+}
 
 /**
  * Probe jsdom at init time so the first webfetch call doesn't fail
@@ -502,6 +656,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       Object.keys(councilTools).length +
       Object.keys(todoContinuationHook.tool).length +
       1 + // media_inventory
+      1 + // save_plan
       1 + // webfetch
       2; // ast_grep_search, ast_grep_replace
   } catch (err) {
@@ -568,6 +723,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     tool: {
       ...councilTools,
       media_inventory: createMediaInventoryTool(ctx),
+      save_plan: createSavePlanTool(ctx.directory),
       webfetch,
       ...todoContinuationHook.tool,
       ast_grep_search,
@@ -909,6 +1065,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       interviewManager.registerCommand(opencodeConfig);
       presetManager.registerCommand(opencodeConfig);
       memoryCommandsHook.registerCommands(opencodeConfig);
+      registerSubagentPolicyCommand(
+        opencodeConfig as { command?: Record<string, unknown> },
+      );
+      registerCompleteArgumentCommands(
+        opencodeConfig as { command?: Record<string, unknown> },
+      );
 
       // Register prompt mode commands (/ol-light, /ol-heavy, /ol-turbo)
       modeCommandHandler.registerCommand(opencodeConfig);
@@ -1116,63 +1278,78 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Direct interception of /ol-auto-continue command — bypasses LLM
     // round-trip
     'command.execute.before': async (input, output) => {
+      const typedInput = input as {
+        command: string;
+        sessionID: string;
+        arguments: string;
+      };
+      const typedOutput = output as {
+        parts: Array<{ type: string; text?: string }>;
+        message?: { agent?: string };
+      };
+      const effectiveInput = { ...typedInput };
+      if (typedInput.command === AUTO_CONTINUE_ON_COMMAND) {
+        effectiveInput.command = 'ol-auto-continue';
+        effectiveInput.arguments = 'on';
+      } else if (typedInput.command === AUTO_CONTINUE_OFF_COMMAND) {
+        effectiveInput.command = 'ol-auto-continue';
+        effectiveInput.arguments = 'off';
+      } else if (typedInput.command === CHECKPOINT_LIGHT_COMMAND) {
+        effectiveInput.command = 'ol-checkpoint';
+        effectiveInput.arguments = `light ${typedInput.arguments}`.trim();
+      } else if (typedInput.command === CHECKPOINT_HEAVY_COMMAND) {
+        effectiveInput.command = 'ol-checkpoint';
+        effectiveInput.arguments = `heavy ${typedInput.arguments}`.trim();
+      } else if (typedInput.command === CHECKPOINT_RESUME_LATEST_COMMAND) {
+        effectiveInput.command = 'ol-checkpoint-resume';
+        effectiveInput.arguments = 'latest';
+      }
+
       await todoContinuationHook.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as { parts: Array<{ type: string; text?: string }> },
+        effectiveInput,
+        typedOutput,
       );
 
       await interviewManager.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as { parts: Array<{ type: string; text?: string }> },
+        effectiveInput,
+        typedOutput,
       );
 
       await presetManager.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as { parts: Array<{ type: string; text?: string }> },
+        effectiveInput,
+        typedOutput,
       );
 
       await memoryCommandsHook.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as { parts: Array<{ type: string; text?: string }> },
+        effectiveInput,
+        typedOutput,
       );
 
       await startWorkHook.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as {
-          parts: Array<{ type: string; text?: string }>;
-          message?: { agent?: string };
-        },
+        effectiveInput,
+        typedOutput,
       );
 
       // Handle prompt mode commands (/ol-light, /ol-heavy, /ol-turbo)
       modeCommandHandler.handleCommandExecuteBefore(
-        input as {
-          command: string;
-          sessionID: string;
-          arguments: string;
-        },
-        output as { parts: Array<{ type: string; text?: string }> },
+        effectiveInput,
+        typedOutput,
       );
+
+      if (
+        typedInput.command === SUBAGENT_POLICY_COMMAND ||
+        getSubagentPolicyModeForCommand(typedInput.command)
+      ) {
+        const requestedMode =
+          getSubagentPolicyModeForCommand(typedInput.command) ??
+          parseSubagentPolicyMode(typedInput.arguments);
+        typedOutput.parts.length = 0;
+        typedOutput.parts.push(
+          createInternalAgentTextPart(
+            formatSubagentPolicyStatus(config, requestedMode),
+          ),
+        );
+      }
     },
 
     'chat.headers': chatHeadersHook['chat.headers'],

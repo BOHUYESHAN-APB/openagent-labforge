@@ -5,8 +5,6 @@ import {
 } from '../context-pressure';
 import { log } from '../utils/logger';
 
-type OpencodeClient = PluginInput['client'];
-
 type ProviderModel = {
   limit?: { context?: number };
 };
@@ -45,7 +43,9 @@ export function createContextPressureHook(
   ) => Promise<void>;
   shouldForceCheckpoint: (sessionID: string) => boolean;
   getRecommendedStrategy: (sessionID: string) => string;
-  getState: (sessionID: string) => ReturnType<ContextPressureMonitor['getState']>;
+  getState: (
+    sessionID: string,
+  ) => ReturnType<ContextPressureMonitor['getState']>;
 } {
   const enabled = options?.enabled !== false;
   const monitor = new ContextPressureMonitor();
@@ -87,11 +87,15 @@ export function createContextPressureHook(
             workspace?: string;
           }) => Promise<ProvidersResponse>;
         };
-        const result = await configClient.providers({ directory: ctx.directory });
+        const result = await configClient.providers({
+          directory: ctx.directory,
+        });
         const providers = result.data?.providers ?? [];
         modelContextLimit.clear();
         for (const provider of providers) {
-          for (const [modelID, model] of Object.entries(provider.models ?? {})) {
+          for (const [modelID, model] of Object.entries(
+            provider.models ?? {},
+          )) {
             const context = model?.limit?.context;
             if (typeof context !== 'number' || context <= 0) continue;
             modelContextLimit.set(getModelKey(provider.id, modelID), context);
@@ -132,14 +136,14 @@ export function createContextPressureHook(
     const header = `[Context pressure: L${state.level} | usage ${usage} | strategy ${strategy}]`;
 
     if (state.level === 1) {
-      return `${header}\nKeep responses concise. Avoid restating already known context, avoid large summaries, and prefer targeted edits/searches over broad recap.`;
+      return `${header}\nKeep responses concise while preserving important facts. Avoid restating already known context, avoid large summaries, and prefer targeted edits/searches over broad recap. Before any pruning, keep key decisions, constraints, file paths, open todos, and validation status explicit.`;
     }
 
     if (state.level === 2) {
-      return `${header}\nContext is materially pressured. Before starting a large new phase, prefer a light checkpoint or compact handoff packet, keep outputs delta-focused, avoid generating large repeated reasoning blocks, and if no compression plugin is active prepare a concise summary/checkpoint for the next turn or a fresh session.`;
+      return `${header}\nContext is materially pressured. Before starting a large new phase, handle context pressure first using whatever context-management path is actually available in this runtime. Slow down compression enough to preserve key decisions, constraints, file paths, open todos, and validation status; keep outputs delta-focused; avoid generating large repeated reasoning blocks; and prepare an information-dense summary/checkpoint for the next turn or a fresh session when needed.`;
     }
 
-    return `${header}\nContext is critically pressured. Prioritize heavy compression/checkpoint behavior before further long work. Keep outputs minimal, avoid broad recaps, prefer checkpoint-first continuation over continuing with large context growth, and if no compression plugin is active explicitly prepare a restart-ready summary/handoff for the user or the next session.`;
+    return `${header}\nContext is critically pressured. Handle context pressure before further long work using whatever context-management path is actually available in this runtime. Do not rush into lossy compression: first preserve key decisions, constraints, file paths, open todos, validation status, and user preferences. Keep outputs minimal, avoid broad recaps, prefer checkpoint-first continuation over continuing with large context growth, and explicitly prepare a restart-ready summary/handoff for the user or the next session when needed.`;
   }
 
   async function handleEvent(input: {
@@ -162,8 +166,9 @@ export function createContextPressureHook(
       return;
     }
 
-    const info = (event.properties as { info?: Record<string, unknown> } | undefined)
-      ?.info;
+    const info = (
+      event.properties as { info?: Record<string, unknown> } | undefined
+    )?.info;
     if (!info || info.role !== 'assistant') {
       return;
     }
@@ -203,7 +208,11 @@ export function createContextPressureHook(
     }
 
     const previousLevel = monitor.getState(sessionID)?.level ?? 0;
-    const nextState = monitor.updatePressure(sessionID, totalTokens, contextLimit);
+    const nextState = monitor.updatePressure(
+      sessionID,
+      totalTokens,
+      contextLimit,
+    );
     if (nextState.level !== previousLevel) {
       log(`[${HOOK_NAME}] Pressure level changed`, {
         sessionID,
@@ -218,7 +227,10 @@ export function createContextPressureHook(
     }
   }
 
-  function handleChatMessage(input: { sessionID: string; agent?: string }): void {
+  function handleChatMessage(input: {
+    sessionID: string;
+    agent?: string;
+  }): void {
     if (!enabled) return;
     setProfileForAgent(input.sessionID, input.agent);
   }

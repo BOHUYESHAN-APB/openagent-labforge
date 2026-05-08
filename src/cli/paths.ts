@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { CONFIG_BASENAME } from '../config/product';
+import { CONFIG_BASENAME, SCHEMA_FILE_NAME } from '../config/product';
 
 function getDefaultOpenCodeConfigDir(): string {
   const userConfigDir = process.env.XDG_CONFIG_HOME
@@ -74,6 +74,10 @@ export function getLiteConfig(): string {
 
 export function getLiteConfigJsonc(): string {
   return join(getConfigDir(), `${CONFIG_BASENAME}.jsonc`);
+}
+
+export function getLiteSchemaPath(): string {
+  return join(getConfigDir(), SCHEMA_FILE_NAME);
 }
 
 export function getTuiConfig(): string {

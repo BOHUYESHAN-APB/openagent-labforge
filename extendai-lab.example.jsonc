@@ -25,6 +25,25 @@
     // }
   },
 
+  // ========== 子代理成本策略 ==========
+  "subagentPolicy": {
+    // 完整 Slash 命令：/ol-subagents-M, /ol-subagents-F,
+    // /ol-subagents-C, /ol-subagents-MO。
+    // M=minimal, F=full, C=custom, MO=main-only。
+    // OpenCode UI 目前通常只补全命令名，不补全后续参数；所以参数型选择
+    // 优先注册成完整命令，而不是只依赖 argumentHint/description。
+    // 注意：subagent 注册变化需要修改 config 后 reload/restart 插件。
+    // minimal: 默认低子代理/缓存优先模式，只保留 explorer/librarian/oracle/fixer，
+    //          observer 仅在从 disabled_agents 移除后启用
+    // full: 完整启用已配置子代理，适合平台包月/按调用计费或强前缀缓存服务商
+    // custom: 只启用 allowedAgents 中列出的可委托子代理
+    // main-only: 禁用内置可委托子代理，把专家提示当作主代理本地 checklist
+    // 并行子代理仍会被提示使用同一段 shared-prefix snapshot，以提高 DeepSeek
+    // 等前缀缓存服务商的缓存命中率；如安装 shared-context MCP，也会优先复用共享 session。
+    "mode": "minimal"
+    // "allowedAgents": ["explorer", "librarian", "oracle", "fixer"]
+  },
+
   // ========== 提示词模式配置 ==========
   "prompt_mode": {
     // 默认模式：heavy | light | turbo

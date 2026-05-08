@@ -8,6 +8,7 @@ import {
   getAgentOverride,
   getCustomAgentNames,
   loadAgentPrompt,
+  ORCHESTRATABLE_AGENTS,
   type PluginConfig,
   PRIMARY_AGENT_NAMES,
   PROTECTED_AGENTS,
@@ -34,6 +35,7 @@ import { createOracleAgent } from './oracle';
 import {
   type AgentDefinition,
   createOrchestratorAgent,
+  getMinimalSubagentNames,
   resolvePrompt,
 } from './orchestrator';
 import { createPrometheusAgent } from './prometheus';
@@ -54,8 +56,9 @@ function normalizeDisplayName(displayName: string): string {
   return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
 }
 
-function reorderPrimaryAgentFactories(config?: PluginConfig):
-  [PrimaryAgentName, (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName]][] {
+function reorderPrimaryAgentFactories(
+  config?: PluginConfig,
+): [PrimaryAgentName, (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName]][] {
   const entries = Object.entries(PRIMARY_AGENT_FACTORIES) as [
     PrimaryAgentName,
     (typeof PRIMARY_AGENT_FACTORIES)[PrimaryAgentName],
@@ -77,10 +80,15 @@ function reorderPrimaryAgentFactories(config?: PluginConfig):
 
   if (!preferredInternalName) return entries;
 
-  const preferredEntry = entries.find(([name]) => name === preferredInternalName);
+  const preferredEntry = entries.find(
+    ([name]) => name === preferredInternalName,
+  );
   if (!preferredEntry) return entries;
 
-  return [preferredEntry, ...entries.filter(([name]) => name !== preferredInternalName)];
+  return [
+    preferredEntry,
+    ...entries.filter(([name]) => name !== preferredInternalName),
+  ];
 }
 
 function escapeRegExp(value: string): string {
@@ -326,6 +334,7 @@ const PRIMARY_AGENT_FACTORIES: Record<
     customPrompt?: string,
     customAppendPrompt?: string,
     disabledAgents?: Set<string>,
+    subagentPolicy?: PluginConfig['subagentPolicy'],
   ) => AgentDefinition
 > = {
   orchestrator: createOrchestratorAgent,
@@ -347,6 +356,8 @@ const PRIMARY_AGENT_FACTORIES: Record<
  */
 export function createAgents(config?: PluginConfig): AgentDefinition[] {
   const disabled = getDisabledAgents(config);
+  const subagentPolicy = config?.subagentPolicy;
+  const allowedCustomSubagents = new Set(subagentPolicy?.allowedAgents ?? []);
 
   // TEMP: If fixer has no config, inherit from librarian's model to avoid breaking
   // existing users who don't have fixer in their config yet
@@ -384,9 +395,7 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
   };
 
   // 1. Create all primary agents (orchestrator + new primary agents)
-  const primaryAgents = (
-    reorderPrimaryAgentFactories(config)
-  )
+  const primaryAgents = reorderPrimaryAgentFactories(config)
     .filter(([name]) => !disabled.has(name))
     .map(([name, factory]) => {
       const customPrompts = loadAgentPrompt(name, config?.preset);
@@ -408,6 +417,7 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
         customPrompts.prompt,
         customPrompts.appendPrompt,
         disabled,
+        subagentPolicy,
       );
       if (override) {
         applyOverrides(agent, override);
@@ -434,6 +444,15 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
     .map(normalizeCustomAgentName)
     .filter((name) => name.length > 0)
     .filter((name) => {
+      if (subagentPolicy?.mode === 'main-only') {
+        return false;
+      }
+      if (
+        subagentPolicy?.mode === 'custom' &&
+        !allowedCustomSubagents.has(name)
+      ) {
+        return false;
+      }
       if (!isSafeCustomAgentName(name)) {
         throw new Error(`Unsafe custom agent name '${name}'`);
       }
@@ -686,6 +705,30 @@ export function getDisabledAgents(config?: PluginConfig): Set<string> {
   for (const name of disabledSource) {
     if (!PROTECTED_AGENTS.has(name)) {
       disabled.add(name);
+    }
+  }
+
+  const mode = config?.subagentPolicy?.mode ?? 'minimal';
+  const minimalAgents = new Set(getMinimalSubagentNames());
+  const allowedAgents = new Set(config?.subagentPolicy?.allowedAgents ?? []);
+
+  if (mode === 'main-only') {
+    for (const name of ORCHESTRATABLE_AGENTS) {
+      if (!PROTECTED_AGENTS.has(name)) {
+        disabled.add(name);
+      }
+    }
+  } else if (mode === 'minimal') {
+    for (const name of ORCHESTRATABLE_AGENTS) {
+      if (!PROTECTED_AGENTS.has(name) && !minimalAgents.has(name)) {
+        disabled.add(name);
+      }
+    }
+  } else if (mode === 'custom') {
+    for (const name of ORCHESTRATABLE_AGENTS) {
+      if (!PROTECTED_AGENTS.has(name) && !allowedAgents.has(name)) {
+        disabled.add(name);
+      }
     }
   }
   return disabled;

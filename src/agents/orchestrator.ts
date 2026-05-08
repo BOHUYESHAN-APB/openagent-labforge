@@ -1,4 +1,5 @@
 import type { AgentConfig } from '@opencode-ai/sdk/v2';
+import type { SubagentPolicyConfig } from '../config';
 
 export interface AgentDefinition {
   name: string;
@@ -110,12 +111,91 @@ const PARALLEL_DELEGATION_EXAMPLES = [
   '- @observer + @explorer in parallel (visual analysis + code search)?',
 ];
 
+const MINIMAL_SUBAGENTS = [
+  'explorer',
+  'librarian',
+  'oracle',
+  'fixer',
+  'observer',
+] as const;
+
+export function getMinimalSubagentNames(): readonly string[] {
+  return MINIMAL_SUBAGENTS;
+}
+
 /**
  * Build the orchestrator prompt with dynamic agent filtering.
  * @param disabledAgents - Set of disabled agent names to exclude from the prompt
  * @returns The complete orchestrator prompt string
  */
-export function buildOrchestratorPrompt(disabledAgents?: Set<string>): string {
+function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
+  const mode = policy?.mode ?? 'minimal';
+
+  if (mode === 'full') {
+    return `
+
+### Subagent Policy: Full delegation
+- Full configured subagent delegation is available. This fits call-count/platform plans where child-agent parallelism may be cheap, and also remains useful for providers with strong long-lived prefix caching.
+- Use the normal delegation rules when specialist separation, parallelism, or independent review gives net quality/speed gains.
+- Still avoid wasteful one-off child sessions when direct main-agent work is clearly cheaper.
+- When launching parallel children, give every child the same shared-prefix snapshot before role-specific instructions so prefix-cache providers can reuse the identical leading context.`;
+  }
+
+  if (mode === 'custom') {
+    const allowed = policy?.allowedAgents?.length
+      ? policy.allowedAgents.map((name) => `@${name}`).join(', ')
+      : '(none configured)';
+    return `
+
+### Subagent Policy: Custom allowlist
+- Only these configured subagents should be considered for real child-session delegation: ${allowed}.
+- Treat non-allowlisted specialist descriptions as local main-agent checklists, not spawn targets.
+- If the allowlist is too small for safe execution, ask before expanding it or proceed in the main agent with direct tools.
+- When delegation is allowed, pass the shared-prefix snapshot first, then role/task-specific instructions. Keep the snapshot structure identical across children.`;
+  }
+
+  if (mode === 'main-only') {
+    return `
+
+### Subagent Policy: Main-agent-only
+- Built-in orchestratable subagent delegation is disabled to preserve main-session prompt-cache reuse and avoid token-billed child sessions.
+- Do the work in the main agent using direct tools.
+- Use specialist descriptions only as local checklists; do not ask for subagents unless the user explicitly changes this mode or provides another available runtime path.
+- When you would normally delegate, first compress the needed specialist framing into a short checklist and execute it yourself.`;
+  }
+
+  return `
+
+### Subagent Policy: Minimal / cache-first
+- The user environment is cache-sensitive and likely token-billed. Fresh child sessions do not inherit the main session's full context/cache and can reduce prompt-cache hit rates.
+- Default minimal specialists are @explorer, @librarian, @oracle, @fixer, and @observer only when visual/media handling is enabled.
+- Other specialties should usually be handled as local main-agent checklists instead of fresh child sessions.
+- Before spawning a child session, ask whether the child will save more tokens/context than it costs. If not, use direct tools in the main agent.
+- When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
+- Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.`;
+}
+
+const SHARED_PREFIX_SNAPSHOT_TEMPLATE = `[SHARED_CONTEXT_START]
+project: <repo/project name, stack, root path>
+task: <one-sentence current objective, <=50 words>
+constraints:
+- <non-negotiable constraints, license limits, user preferences>
+files_relevant:
+- <path>: <why it matters>
+decisions_made:
+- <decision and reason>
+open_questions:
+- <question or risk still unresolved>
+validation_status:
+- <checks run, failures, pending validation>
+do_not_reread:
+- <files/results already summarized well enough>
+[SHARED_CONTEXT_END]`;
+
+export function buildOrchestratorPrompt(
+  disabledAgents?: Set<string>,
+  subagentPolicy?: SubagentPolicyConfig,
+): string {
   // Filter agent descriptions
   const enabledAgents = Object.entries(AGENT_DESCRIPTIONS)
     .filter(([name]) => !disabledAgents?.has(name))
@@ -179,6 +259,17 @@ Balance: respect dependencies, avoid parallelizing what must be sequential.
 - Delegation is blocking for the parent at that point: send work out, then continue that line after results return.
 - Parallel delegation means launching multiple independent child-session branches.
 - Only parallelize branches that are truly independent; reconcile dependent steps after delegated results come back.
+
+### Parent → child context bridge
+- Child sessions may not inherit the main session's full prompt-cache state or all accumulated context. Treat each fresh child session as a potential cache miss unless you deliberately stabilize its prefix.
+- Before launching parallel child sessions, build one shared-prefix snapshot using this exact section order and reuse the same snapshot text as the first delegation block for every child in that batch:
+
+${SHARED_PREFIX_SNAPSHOT_TEMPLATE}
+
+- Put role-specific prompts and query parameters after the shared snapshot. The goal is: shared prefix first, role prompt second, dynamic query last.
+- If a shared-context/session MCP is actually visible in this runtime (for example tools like create_session, add_message, get_messages, search_context), create or reuse a task session, write the same snapshot there, and tell child agents to read/search that shared session before work.
+- If no shared-context tool is visible, pass the same snapshot directly in the delegation prompt.
+${buildSubagentPolicyPrompt(subagentPolicy)}
 
 ## 5. Execute
 1. Break complex tasks into todos
@@ -304,8 +395,9 @@ export function createOrchestratorAgent(
   customPrompt?: string,
   customAppendPrompt?: string,
   disabledAgents?: Set<string>,
+  subagentPolicy?: SubagentPolicyConfig,
 ): AgentDefinition {
-  const basePrompt = buildOrchestratorPrompt(disabledAgents);
+  const basePrompt = buildOrchestratorPrompt(disabledAgents, subagentPolicy);
   const prompt = resolvePrompt(basePrompt, customPrompt, customAppendPrompt);
 
   const definition: AgentDefinition = {

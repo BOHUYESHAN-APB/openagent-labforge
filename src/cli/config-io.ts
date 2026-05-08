@@ -7,7 +7,12 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { PACKAGE_NAME, SUPPORTED_PACKAGE_NAMES } from '../config/product';
+import { fileURLToPath } from 'node:url';
+import {
+  PACKAGE_NAME,
+  SCHEMA_FILE_NAME,
+  SUPPORTED_PACKAGE_NAMES,
+} from '../config/product';
 import {
   ensureConfigDir,
   ensureOpenCodeConfigDir,
@@ -15,6 +20,7 @@ import {
   getExistingConfigPath,
   getExistingTuiConfigPath,
   getLiteConfig,
+  getLiteSchemaPath,
 } from './paths';
 import { generateLiteConfig } from './providers';
 import type {
@@ -333,6 +339,35 @@ export function writeLiteConfig(
       success: false,
       configPath,
       error: `Failed to write lite config: ${err}`,
+    };
+  }
+}
+
+export function writeLiteSchema(): ConfigMergeResult {
+  const schemaPath = getLiteSchemaPath();
+
+  try {
+    ensureConfigDir();
+    const packageRoot =
+      findPackageRoot(fileURLToPath(import.meta.url)) ?? process.cwd();
+    const sourcePath = join(packageRoot, SCHEMA_FILE_NAME);
+
+    if (!existsSync(sourcePath)) {
+      return {
+        success: false,
+        configPath: schemaPath,
+        error: `Schema source not found: ${sourcePath}`,
+      };
+    }
+
+    copyFileSync(sourcePath, schemaPath);
+
+    return { success: true, configPath: schemaPath };
+  } catch (err) {
+    return {
+      success: false,
+      configPath: schemaPath,
+      error: `Failed to write schema: ${err}`,
     };
   }
 }
