@@ -138,10 +138,12 @@ baseline.
 ## Current runtime completion boundary
 
 - **OpenCode**: most complete native install/runtime path.
-- **OpenClaude**: real install/apply + rollback baseline exists, but broader host
-  activation closure still needs more work.
-- **Codex**: real install/apply + rollback baseline exists, but broader host
-  activation closure still needs more work.
+- **OpenClaude**: discovery-ready baseline exists (real install/apply + rollback,
+  activation bridge files, and semantic config validation), but broader host
+  process acceptance still needs more work.
+- **Codex**: discovery-ready baseline exists (real install/apply + rollback,
+  marketplace/discovery bridge, and semantic config validation), but broader
+  host process acceptance still needs more work.
 - **Claude Code (closed-source)**: preview-only by design for now.
 
 ## Current implementation status
@@ -154,6 +156,14 @@ Implemented foundation:
 - Codex TOML managed MCP registry writer
 - OpenClaude activation bridge via `settings.json.enabledPlugins`, `plugins/installed_plugins.json`, and `plugins/known_marketplaces.json`
 - Codex activation bridge via managed marketplace registration block in `config.toml`
+- OpenClaude activation bridge now follows host-shaped semantics: `enabledPlugins`
+  as a record, `installed_plugins.json` install records, and
+  `known_marketplaces.json` local-source marketplace records
+- Codex plugin-owned marketplace index now follows the local marketplace shape
+  more closely, while `config.toml` carries the managed marketplace registration
+  block
+- OpenClaude validate now checks semantic alignment between plugin manifest, `enabledPlugins`, installed plugin records, marketplace records, and managed `.claude.json` MCP content
+- Codex validate now checks semantic alignment between plugin manifest, marketplace JSON, managed marketplace block, and managed MCP config
 - real apply path for `install --runtime=openclaude|codex`
 - manifest-backed real restore path for `rollback --runtime=<id> --manifest=...`
 - isolated runtime-root testing via `--runtime-root=<path>`
@@ -162,6 +172,7 @@ Implemented foundation:
 
 Still pending for full install/apply closure:
 
-- validation that the written config is accepted by each host runtime
-- broader host-specific validation beyond file-write success (current checks now cover presence of activation bridge files/blocks, but not host process acceptance yet)
+- host-process acceptance / discovery confirmation beyond semantic config
+  validation (for example, proving the running host actually enumerates and
+  accepts the plugin after reload)
 - closed-source Claude real apply path (still preview-only by design)

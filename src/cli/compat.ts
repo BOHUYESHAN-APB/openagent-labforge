@@ -112,7 +112,30 @@ function getCompatRuntimeCompletionState(
     return 'preview-only';
   }
 
-  return validationOk ? 'working-baseline' : 'partial-baseline';
+  return validationOk ? 'process-acceptance-pending' : 'partial-baseline';
+}
+
+function buildAcceptanceGuidanceLines(
+  runtimeId: CompatRuntimeId,
+  completionState: string,
+): string[] {
+  if (completionState !== 'process-acceptance-pending') {
+    return [];
+  }
+
+  if (runtimeId === 'openclaude') {
+    return [
+      '- OpenClaude: semantic activation bridge is correct, but host-process acceptance still depends on reload/restart and discovery confirmation.',
+    ];
+  }
+
+  if (runtimeId === 'codex') {
+    return [
+      '- Codex: semantic activation bridge is correct, but host-process acceptance still depends on reload/restart and discovery confirmation.',
+    ];
+  }
+
+  return [];
 }
 
 function getStoredOrDerivedCompletionState(
@@ -120,6 +143,10 @@ function getStoredOrDerivedCompletionState(
   runtimeId: CompatRuntimeId,
   validationOk: boolean,
 ): string {
+  if (!validationOk) {
+    return getCompatRuntimeCompletionState(runtimeId, false);
+  }
+
   const stored = readCompatInstallState(workspaceRoot, runtimeId);
   return (
     stored?.installState ??
@@ -198,10 +225,18 @@ export async function buildCompatStatusReport(
       ? `sdk=${sdkStatus?.usable ? 'usable' : sdkStatus?.installed ? 'installed-but-incomplete' : 'missing'} (${runtime.sdkPackage})`
       : 'sdk=native-plugin-path';
     const statePath = getCompatInstallStatePath(workspaceRoot, id);
+    const completionState = getStoredOrDerivedCompletionState(
+      workspaceRoot,
+      id,
+      validation.ok,
+    );
 
     return [
-      `- ${runtime.displayName}: ${getStoredOrDerivedCompletionState(workspaceRoot, id, validation.ok)}; ${sdkLine}`,
+      `- ${runtime.displayName}: ${completionState}; ${sdkLine}`,
       `  state=${statePath}`,
+      ...buildAcceptanceGuidanceLines(id, completionState).map(
+        (line) => `  ${line}`,
+      ),
     ];
   });
 
@@ -224,6 +259,30 @@ export async function buildCompatStatusReport(
     '',
     'Current install/apply completion state:',
     ...completionLines,
+    ...(completionLines.some((line) =>
+      line.includes('process-acceptance-pending'),
+    )
+      ? [
+          '',
+          'Host process acceptance guidance:',
+          ...selectedRuntimeIds.flatMap((id) => {
+            const runtime = getRuntimeCompatibilityProfile(id);
+            const adapter = getCompatRuntimeAdapter(id);
+            if (!runtime || !adapter) return [];
+            const validation = adapter.validate({
+              workspaceRoot,
+              dryRun: true,
+              runtimeRoot: options?.runtimeRoot,
+            });
+            const state = getStoredOrDerivedCompletionState(
+              workspaceRoot,
+              id,
+              validation.ok,
+            );
+            return buildAcceptanceGuidanceLines(id, state);
+          }),
+        ]
+      : []),
     ...(degradationLines.length
       ? ['', 'Runtime degradation guidance:', ...degradationLines]
       : []),
@@ -279,6 +338,12 @@ export function buildCompatDoctorReport(
       `  memory=${paths.runtimeMemoryDir}`,
     ];
   });
+  const acceptanceLines = selectedRuntimeIds.flatMap((id) =>
+    buildAcceptanceGuidanceLines(
+      id,
+      getStoredOrDerivedCompletionState(workspaceRoot, id, true),
+    ),
+  );
 
   return [
     'ExtendAI Lab Compatibility Doctor',
@@ -293,6 +358,9 @@ export function buildCompatDoctorReport(
     '',
     'Unified storage baseline:',
     ...storageLines,
+    ...(acceptanceLines.length
+      ? ['', 'Host process acceptance guidance:', ...acceptanceLines]
+      : []),
     ...(degradationLines.length
       ? ['', 'Degradation guidance:', ...degradationLines]
       : []),
@@ -384,7 +452,8 @@ export function applyCompatRuntimeInstall(
     validation.ok,
   ) as
     | 'native-primary'
-    | 'working-baseline'
+    | 'discovery-ready'
+    | 'process-acceptance-pending'
     | 'partial-baseline'
     | 'preview-only';
   const statePath = writeCompatInstallState({
@@ -413,6 +482,7 @@ export function applyCompatRuntimeInstall(
     '',
     'Validation:',
     ...validation.findings.map((finding) => `- ${finding}`),
+    ...buildAcceptanceGuidanceLines(runtimeId, installState),
   ].join('\n');
 }
 

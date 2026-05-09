@@ -58,6 +58,16 @@ describe('capability renderer registry', () => {
         '.agents/plugins/marketplace.json',
       ]),
     );
+    expect(
+      files.find(
+        (file) => file.relativePath === '.agents/plugins/marketplace.json',
+      )?.content,
+    ).toContain('"name": "extendai-lab-local"');
+    expect(
+      files.find(
+        (file) => file.relativePath === '.agents/plugins/marketplace.json',
+      )?.content,
+    ).toContain('"installation": "AVAILABLE"');
   });
 
   test('unknown renderer requests return no files', () => {

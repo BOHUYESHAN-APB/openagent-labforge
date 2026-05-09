@@ -194,13 +194,15 @@ const SUBAGENT_POLICY_COMMAND_DESCRIPTIONS: Record<
   'ol-subagents-UM':
     'Subagent policy: UM=ultra-minimal, strict main-agent-first default',
   'ol-subagents-M': 'Subagent policy: M=minimal, cache-first low-agent mode',
-  'ol-subagents-F': 'Subagent policy: F=full, all configured subagents',
+  'ol-subagents-F':
+    'Subagent policy: F=full registration, but main-agent execution remains default',
   'ol-subagents-C': 'Subagent policy: C=custom, use allowedAgents allowlist',
   'ol-subagents-MO': 'Subagent policy: MO=main-only, disable child sessions',
   'ol-subagents-um':
     'Subagent policy: UM=ultra-minimal, strict main-agent-first default',
   'ol-subagents-m': 'Subagent policy: M=minimal, cache-first low-agent mode',
-  'ol-subagents-f': 'Subagent policy: F=full, all configured subagents',
+  'ol-subagents-f':
+    'Subagent policy: F=full registration, but main-agent execution remains default',
   'ol-subagents-c': 'Subagent policy: C=custom, use allowedAgents allowlist',
   'ol-subagents-mo': 'Subagent policy: MO=main-only, disable child sessions',
 };
@@ -244,7 +246,7 @@ function formatSubagentPolicyStatus(
     ? `\nRequested mode: ${requestedMode}\nConfig value: { "subagentPolicy": { "mode": "${requestedMode}" } }\n`
     : '';
 
-  return `[Subagent policy]\n${SUBAGENT_POLICY_USAGE}\n\nActive mode: ${mode}\nAllowed agents: ${allowed}${requestNote}\nRuntime note: this command reports the active policy for the currently loaded plugin instance. Real changes to registered child agents/tools usually require updating config and reloading/restarting the plugin.\n\nCost/cache guidance: child agents start separate sessions, so they may not inherit the main session's full context or prompt-cache state. Prefer main-agent direct tools when quality is comparable. When parallel delegation is still worthwhile, put the same shared-prefix snapshot first for every child, then role/task-specific instructions. If shared-context MCP tools are visible, write that same snapshot to the shared session and tell children to read/search it before work. Prefer resuming existing specialist sessions when possible.`;
+  return `[Subagent policy]\n${SUBAGENT_POLICY_USAGE}\n\nActive mode: ${mode}\nAllowed agents: ${allowed}${requestNote}\nRuntime note: this command reports the active policy for the currently loaded plugin instance. Real changes to registered child agents/tools usually require updating config and reloading/restarting the plugin.\n\nExecution rule: the main agent should perform work directly by default. Registered specialists should be treated as local checklists/tooling references first, not automatic child-session targets. Only use real child sessions when the active policy permits it, the work is genuinely parallel or independently judgment-heavy, and the user has explicitly allowed child-session use. When delegation is still worthwhile, put the same shared-prefix snapshot first for every child, then role/task-specific instructions. If shared-context MCP tools are visible, write that same snapshot to the shared session and tell children to read/search it before work. Prefer resuming existing specialist sessions when possible.`;
 }
 
 function registerSubagentPolicyCommand(opencodeConfig: {

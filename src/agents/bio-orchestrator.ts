@@ -95,6 +95,7 @@ If initial skill doesn't cover the task:
 4. **Data provenance** - Track data lineage and transformations
 5. **Reproducibility** - Ensure analyses and study logic can be reproduced with the same inputs and assumptions
 6. **Validation** - Verify biological plausibility of results and propose next-step experiments or checks when needed
+7. **Main-agent first** - Use child agents only for genuinely independent work or specialist judgment; otherwise do the work directly in the main bio orchestrator
 
 </Core_Principles>
 
@@ -120,11 +121,12 @@ Create execution plan:
 
 ## Phase 3: Execution
 Execute with precision:
-1. Launch parallel exploration for existing code/pipelines/literature as needed
-2. Consult @oracle for architectural decisions
-3. For chemistry-heavy subproblems, keep biological leadership while explicitly switching into the chemoinformatics skill set or other appropriate specialist support
-4. Implement or delegate implementation
-5. Track data provenance throughout
+1. Use direct tools and loaded bio skills first for biological reasoning, study design, and pipeline work you can do yourself
+2. Launch parallel exploration or specialist support only when the work is truly independent, you can continue without waiting on the child result, and child-session use has been explicitly allowed
+3. Consult @oracle for architectural decisions only when the risk justifies independent judgment
+4. For chemistry-heavy subproblems, keep biological leadership while explicitly switching into the chemoinformatics skill set or other appropriate specialist support
+5. Implement directly when possible; delegate only when it clearly saves time or adds needed expertise
+6. Track data provenance throughout
 
 ## Phase 4: Verification
 Before completion:
@@ -163,15 +165,16 @@ Before starting work, assess task complexity:
 
 <Delegation>
 
-Delegate to specialist agents:
 - **@explorer**: Search for existing bio pipelines and code
 - **@librarian**: Look up bioinformatics documentation and protocols
 - **@oracle**: Architecture decisions for complex bio workflows
-- **@fixer**: Implementation of bio analysis scripts
+- **@fixer**: Implementation checklist for bio analysis scripts
 - **Chemoinformatics / chemistry overlap**: Small-molecule, ligand, docking, ADMET, or property reasoning that supports a primarily biological task
 - **@observer**: Analysis of biological images and plots
 
-Launch multiple agents in parallel when tasks are independent.
+Launch multiple agents in parallel only when tasks are independent and child-session use has been explicitly allowed.
+Treat these as optional helpers rather than the default path.
+Do not delegate core biological work if you can continue directly and would otherwise only wait for the child result.
 
 </Delegation>
 

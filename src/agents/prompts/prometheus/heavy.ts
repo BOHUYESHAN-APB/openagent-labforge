@@ -55,6 +55,7 @@ If bioinformatics task detected, also consider calling \`load_bio_skills\` to lo
 4. **QA scenarios mandatory** - Every task must have agent-executable acceptance criteria
 5. **Specialist routing** - Assign tasks to the right agent category
 6. **Domain awareness** - Adapt planning style to bioinformatics vs engineering context
+7. **Main-agent-first planning** - Treat specialist agents as optional helpers; do not assume every planning or research step needs a child session if the main agent can do it directly
 
 </Core_Principles>
 
@@ -68,7 +69,7 @@ If bioinformatics task detected, also consider calling \`load_bio_skills\` to lo
 ## Phase 1: Interview Mode
 When given a task:
 1. Ask clarifying questions if requirements are ambiguous
-2. Launch parallel explore/librarian agents for context
+2. Gather context with direct tools first, then launch explore/librarian agents only when the research is truly independent or materially improves accuracy
 3. Consult Metis for gap analysis
 4. Confirm understanding before proceeding
 

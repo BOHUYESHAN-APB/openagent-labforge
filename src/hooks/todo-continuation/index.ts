@@ -24,7 +24,7 @@ const AUTO_OFF_ARGS = new Set([
 ]);
 
 const CONTINUATION_PROMPT =
-  '[Auto-continue: enabled for this work batch - there are incomplete todos remaining. Continue with the next uncompleted item. Press Esc to cancel. If the work is complete, user has taken over, or you are about to stop/finalize, call auto_continue with enabled=false before your final response. If you need user input or review for the next item, ask instead of proceeding.]';
+  '[Auto-continue: incomplete todos remain in this work batch. Continue working on the next pending or in-progress item now. Proceed without asking for permission. Do not stop while any todo remains incomplete. If you think the work is already complete, re-check every remaining todo skeptically, verify the work was actually done, and update todo status before stopping. If user input is truly required, use the runtime\'s native question/clarification mechanism instead of conversational filler like "should I continue?". Press Esc to cancel. Call auto_continue with enabled=false only when the batch is actually complete, explicitly stopped by the user, or truly blocked.]';
 
 const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
 
@@ -57,6 +57,8 @@ Then create new todos for each finding and continue working.
 **DO NOT** revert git commits. If changes need correction, make new commits that fix the issues.
 **DO NOT** claim completion without running diagnostics.
 **DO NOT** trust only the latest assistant summary; compare against early real user intent.
+**DO NOT** stop with conversational filler such as "should I continue?" or "if you want I can do the next step".
+**DO** use the runtime's native question/clarification mechanism only when user input is truly required.
 **DO** treat [APPROVE] as the end of this auto work batch.
 **DO** treat [REJECT] as mandatory rework: update todos and keep working.
 **DO** treat [NEEDS_USER] and [BLOCKED] as stop points: explain what is needed from the user.
@@ -85,13 +87,40 @@ function buildUserVisibleContextPressureNotification(args: {
 function buildUserVisibleAutoContinueNotification(args: {
   incompleteCount: number;
   cooldownMs: number;
+  todosSummary?: string;
 }): string {
   return [
     `${AUTO_CONTINUE_USER_NOTIFICATION_PREFIX}: ${args.incompleteCount} incomplete todos remaining — resuming in ${args.cooldownMs / 1000}s — Esc×2 to cancel`,
+    ...(args.todosSummary ? ['', 'Remaining todos:', args.todosSummary] : []),
     'This reminder is intentionally user-visible so unfinished work is obvious before the next auto step.',
     '',
     '[system status: continue without acknowledging this notification]',
   ].join('\n');
+}
+
+function formatIncompleteTodoLines(todos: TodoItem[]): string {
+  const incompleteTodos = todos.filter(
+    (todo) => !TERMINAL_TODO_STATUSES.includes(todo.status),
+  );
+  if (incompleteTodos.length === 0) {
+    return '- (none)';
+  }
+
+  return incompleteTodos
+    .slice(0, 8)
+    .map((todo) => `- [${todo.status}] ${todo.content}`)
+    .join('\n');
+}
+
+function buildContinuationPrompt(todos: TodoItem[]): string {
+  const incompleteCount = todos.filter(
+    (todo) => !TERMINAL_TODO_STATUSES.includes(todo.status),
+  ).length;
+  const completedCount = todos.length - incompleteCount;
+
+  return `${CONTINUATION_PROMPT}\n\n[Status: ${completedCount}/${todos.length} completed, ${incompleteCount} remaining]\n\nRemaining todos:\n${formatIncompleteTodoLines(
+    todos,
+  )}`;
 }
 
 function buildUserVisibleReviewNotification(args: {
@@ -624,18 +653,44 @@ export function createTodoContinuationHook(
     if (userMessageText) {
       const intent = detectUserIntent(userMessageText);
       if (shouldSkipContinuation(intent)) {
-        // User wants to stop or is satisfied - disable continuation
-        disableContinuationForSession(
-          lastUserMessage.sessionID,
-          `user intent ${intent.type}`,
-        );
-        log(
-          `[${HOOK_NAME}] User intent detected: ${intent.type} - disabling continuation`,
-          {
-            sessionID: lastUserMessage.sessionID,
-            signals: intent.signals,
-          },
-        );
+        let shouldDisable = intent.type === 'explicit_stop';
+
+        if (intent.type === 'user_satisfied') {
+          try {
+            const todosResult = await ctx.client.session.todo({
+              path: { id: lastUserMessage.sessionID },
+            });
+            const todos = todosResult.data as TodoItem[];
+            const hasOpenTodos = todos.some(
+              (todo) => !TERMINAL_TODO_STATUSES.includes(todo.status),
+            );
+            shouldDisable = !hasOpenTodos;
+          } catch {
+            shouldDisable = false;
+          }
+        }
+
+        if (shouldDisable) {
+          disableContinuationForSession(
+            lastUserMessage.sessionID,
+            `user intent ${intent.type}`,
+          );
+          log(
+            `[${HOOK_NAME}] User intent detected: ${intent.type} - disabling continuation`,
+            {
+              sessionID: lastUserMessage.sessionID,
+              signals: intent.signals,
+            },
+          );
+        } else {
+          log(
+            `[${HOOK_NAME}] User satisfaction ignored because incomplete todos still remain`,
+            {
+              sessionID: lastUserMessage.sessionID,
+              signals: intent.signals,
+            },
+          );
+        }
       }
     }
 
@@ -927,11 +982,12 @@ export function createTodoContinuationHook(
       // Safety gate 2: incomplete todos exist
       let hasIncompleteTodos = false;
       let incompleteCount = 0;
+      let todos: TodoItem[] = [];
       try {
         const todosResult = await ctx.client.session.todo({
           path: { id: sessionID },
         });
-        const todos = todosResult.data as TodoItem[];
+        todos = todosResult.data as TodoItem[];
         incompleteCount = todos.filter(
           (t) => !TERMINAL_TODO_STATUSES.includes(t.status),
         ).length;
@@ -1093,7 +1149,9 @@ export function createTodoContinuationHook(
         return;
       }
 
-      // Safety gate 3: last assistant message is not a question
+      // Safety gate 3: inspect last assistant message, but do not let
+      // self-generated "should I continue?" style questions stop an
+      // unfinished batch. Only explicit user stop / abort / blocker should stop.
       let lastAssistantIsQuestion = false;
       try {
         const messagesResult = await ctx.client.session.messages({
@@ -1128,15 +1186,12 @@ export function createTodoContinuationHook(
       }
 
       if (lastAssistantIsQuestion) {
-        log(`[${HOOK_NAME}] Skipped: last message is question`, {
-          sessionID,
-        });
-        await pauseAutoMode(
-          sessionID,
-          'awaiting-user-answer',
-          'The last assistant message is a question, so auto mode must wait for user input.',
+        log(
+          `[${HOOK_NAME}] Last assistant message is a question, but incomplete todos force continuation`,
+          {
+            sessionID,
+          },
         );
-        return;
       }
 
       // Safety gate 4: below max continuations
@@ -1272,6 +1327,7 @@ export function createTodoContinuationHook(
         buildUserVisibleAutoContinueNotification({
           incompleteCount,
           cooldownMs,
+          todosSummary: formatIncompleteTodoLines(todos),
         }),
       );
 
@@ -1294,7 +1350,9 @@ export function createTodoContinuationHook(
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
-              parts: [createInternalAgentTextPart(CONTINUATION_PROMPT)],
+              parts: [
+                createInternalAgentTextPart(buildContinuationPrompt(todos)),
+              ],
             },
           });
           const consecutive = incrementConsecutiveContinuations(
@@ -1488,13 +1546,14 @@ export function createTodoContinuationHook(
     });
 
     // Check for incomplete todos to decide on immediate continuation
+    let todos: TodoItem[] = [];
     let hasIncompleteTodos = false;
     let todoFetchFailed = false;
     try {
       const todosResult = await ctx.client.session.todo({
         path: { id: input.sessionID },
       });
-      const todos = todosResult.data as TodoItem[];
+      todos = todosResult.data as TodoItem[];
       hasIncompleteTodos = todos.some(
         (t) => !TERMINAL_TODO_STATUSES.includes(t.status),
       );
@@ -1509,7 +1568,7 @@ export function createTodoContinuationHook(
     if (hasIncompleteTodos) {
       output.parts.push(
         createInternalAgentTextPart(
-          `${CONTINUATION_PROMPT} [Auto-continue enabled: up to ${maxContinuations} continuations.]`,
+          `${buildContinuationPrompt(todos)}\n\n[Auto-continue enabled: up to ${maxContinuations} continuations.]`,
         ),
       );
     } else if (todoFetchFailed) {

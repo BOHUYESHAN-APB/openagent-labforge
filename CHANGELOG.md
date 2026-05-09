@@ -30,13 +30,13 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
   以及可输出 plugin manifest、skills、agents、commands、MCP、shared-prefix snapshot 的
   renderer registry。
 
-- Added a host-neutral memory/evolution baseline with memory capsules,
-  replayable summaries, mailbox/handoff messages, controlled promotion to
-  behavior, and structured reference-lesson boundaries for Hermes,
+- Added a host-neutral memory/evolution baseline of primitives and references:
+  memory capsules, replayable summaries, handoff-related helpers, controlled
+  promotion primitives, and structured reference-lesson boundaries for Hermes,
   agent-harness, oh-my-codex, and oh-my-openagent.
-- 新增宿主无关的 memory / evolution 基线：包括 memory capsule、可回放 summary、
-  mailbox / handoff message、受控的行为晋升链路，以及针对 Hermes、agent-harness、
-  oh-my-codex、oh-my-openagent 的结构化参考边界。
+- 新增宿主无关的 memory / evolution 基线原语与参考边界：包括 memory capsule、
+  可回放 summary、handoff 相关 helper、受控行为晋升 primitive，以及针对
+  Hermes、agent-harness、oh-my-codex、oh-my-openagent 的结构化参考边界。
 
 ### Changed / 变更
 
@@ -46,11 +46,13 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - planner 默认 prompt 现在统一走 Prometheus 的 plan-file contract，不再使用陈旧的内联 prompt；
   同时 `/ol-start-work` 的计划名查找已与保存路径共用同一套 normalization 规则。
 
-- Context-pressure and auto-continue reminders are now stronger and more
-  user-visible, while auto-review re-checks the earliest real user request and
-  ignores fake user-shaped internal/system control text.
-- context-pressure 与 auto-continue 提醒现在更强、更偏用户可见；auto-review 会重新核对最早的真实用户需求，
-  并忽略伪装成 user message 的内部/system 控制文本。
+- Context-pressure and auto-continue reminders now have a stronger user-visible
+  baseline, while auto-review re-checks the earliest real user request and
+  ignores fake user-shaped internal/system control text. This flow still
+  requires ongoing behavior hardening in continuation/review edge cases.
+- context-pressure 与 auto-continue 提醒现在具备更强的用户可见基线；auto-review
+  会重新核对最早的真实用户需求，并忽略伪装成 user message 的内部/system 控制文本。
+  但 continuation/review 的边界行为仍需继续加固。
 
 - Review/validation baselines now include broader focused tests for planner,
   compat foundation, reminder flow, memory evolution, and runtime adapters while
@@ -63,10 +65,10 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 ### Added / 新增
 
 - Added configurable subagent cost policy modes: `minimal`, `full`, `custom`,
-  and `main-only`, with `minimal` as the cache-sensitive default and custom
+  and `main-only`, with `minimal` as the then-current cache-sensitive default and custom
   `allowedAgents` support.
 - 新增可配置的子代理成本策略模式：`minimal`、`full`、`custom` 与
-  `main-only`，其中 `minimal` 作为面向缓存命中的默认模式，并支持自定义
+  `main-only`；当时 `minimal` 作为面向缓存命中的默认模式，并支持自定义
   `allowedAgents` 白名单。
 
 - Added complete slash-command variants for finite choices so OpenCode command

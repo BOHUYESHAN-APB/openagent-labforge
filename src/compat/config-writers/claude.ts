@@ -161,20 +161,17 @@ export function mergeClaudeEnabledPlugins(
     return { content: baseContent, changed: false, added: [], warnings };
   }
 
-  const existing = Array.isArray(parsed.enabledPlugins)
-    ? parsed.enabledPlugins.filter(
-        (value): value is string => typeof value === 'string',
-      )
-    : [];
-  const next = [...existing];
+  const existing = isRecord(parsed.enabledPlugins)
+    ? { ...(parsed.enabledPlugins as Record<string, unknown>) }
+    : {};
   const added: string[] = [];
   for (const pluginId of pluginIds) {
-    if (!next.includes(pluginId)) {
-      next.push(pluginId);
+    if (existing[pluginId] !== true) {
+      existing[pluginId] = true;
       added.push(pluginId);
     }
   }
-  parsed.enabledPlugins = next;
+  parsed.enabledPlugins = existing;
   const nextContent = `${JSON.stringify(parsed, null, 2)}\n`;
   return {
     content: nextContent,
@@ -247,7 +244,7 @@ export function mergeClaudeKnownMarketplaces(
 
   parsed[marketplaceName] = {
     source: {
-      type: 'local',
+      source: 'local',
       path: installLocation,
     },
     installLocation,

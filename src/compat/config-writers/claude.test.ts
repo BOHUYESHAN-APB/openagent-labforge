@@ -87,7 +87,9 @@ describe('Claude activation bridge writers', () => {
     const existing = JSON.stringify(
       {
         theme: 'dark',
-        enabledPlugins: ['existing-plugin@local'],
+        enabledPlugins: {
+          'existing-plugin@local': true,
+        },
       },
       null,
       2,
@@ -100,10 +102,10 @@ describe('Claude activation bridge writers', () => {
     expect(result.changed).toBe(true);
     expect(result.added).toEqual(['extendai-lab@extendai-lab-local']);
     const parsed = JSON.parse(result.content);
-    expect(parsed.enabledPlugins).toEqual([
-      'existing-plugin@local',
-      'extendai-lab@extendai-lab-local',
-    ]);
+    expect(parsed.enabledPlugins).toEqual({
+      'existing-plugin@local': true,
+      'extendai-lab@extendai-lab-local': true,
+    });
     expect(parsed.theme).toBe('dark');
   });
 
@@ -134,6 +136,6 @@ describe('Claude activation bridge writers', () => {
     expect(parsed['extendai-lab-local'].installLocation).toBe(
       'C:/plugins/extendai-lab',
     );
-    expect(parsed['extendai-lab-local'].source.type).toBe('local');
+    expect(parsed['extendai-lab-local'].source.source).toBe('local');
   });
 });

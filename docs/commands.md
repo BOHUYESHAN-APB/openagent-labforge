@@ -37,7 +37,8 @@ Subagent policy commands are informational for the currently loaded plugin
 instance. To actually change which child agents are registered, update
 `subagentPolicy.mode` in config and reload/restart the plugin. The current
 default is `ultra-minimal`, which keeps the main agent in the foreground and
-avoids child-session waiting unless delegation is clearly worth it.
+avoids child-session waiting unless the work is genuinely parallel or requires
+independent judgment and child-session use has been explicitly allowed.
 
 ## Prefix policy
 

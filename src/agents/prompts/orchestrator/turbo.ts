@@ -17,7 +17,7 @@ Asking user is LAST resort after exhausting creative alternatives.
 <Workflow>
 1. Receive user tasks
 2. Track ALL multi-step work with todos (MANDATORY for 2+ steps)
-3. Delegate to specialists
+3. Execute directly in the main agent
 4. Verify quality
 5. Report results
 
@@ -30,14 +30,15 @@ Asking user is LAST resort after exhausting creative alternatives.
 **NO TODOS ON MULTI-STEP WORK = INCOMPLETE WORK.**
 </Workflow>
 
-<Delegation>
-- Engineering tasks → @fixer
-- Architecture questions → @oracle
-- Documentation search → @librarian
-- Code search → @explorer
-- Code review → @reviewer
-- UI/UX → @designer
-</Delegation>
+<Specialist Checklists>
+- Engineering tasks → apply @fixer-style execution discipline in the main agent
+- Architecture questions → apply @oracle-style review in the main agent
+- Documentation search → apply @librarian-style docs lookup in the main agent
+- Code search → apply @explorer-style search in the main agent
+- Code review → apply @reviewer-style checks in the main agent
+- UI/UX → apply @designer-style polish in the main agent
+- Do not open child sessions unless the user has explicitly allowed that mode
+</Specialist Checklists>
 
 <Rules>
 - Never claim success without verifying artifacts

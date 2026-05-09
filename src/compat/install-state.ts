@@ -8,7 +8,8 @@ export interface CompatInstallStateRecord {
   workspaceRoot: string;
   installState:
     | 'native-primary'
-    | 'working-baseline'
+    | 'discovery-ready'
+    | 'process-acceptance-pending'
     | 'partial-baseline'
     | 'preview-only';
   runtimeRoot?: string;

@@ -228,3 +228,47 @@ export function mergeCodexMarketplaceRegistration(
     skipped: [],
   };
 }
+
+export interface CodexMarketplaceJsonEntry {
+  name: string;
+  source: {
+    source: 'local';
+    path: string;
+  };
+  policy: {
+    installation: 'AVAILABLE';
+    authentication: 'ON_INSTALL';
+  };
+  category: string;
+}
+
+export function createCodexMarketplaceJson(
+  marketplaceName: string,
+  pluginName: string,
+  pluginPath = './plugins/extendai-lab',
+): {
+  name: string;
+  interface: { displayName: string };
+  plugins: CodexMarketplaceJsonEntry[];
+} {
+  return {
+    name: marketplaceName,
+    interface: {
+      displayName: 'ExtendAI Lab Local Plugins',
+    },
+    plugins: [
+      {
+        name: pluginName,
+        source: {
+          source: 'local',
+          path: pluginPath,
+        },
+        policy: {
+          installation: 'AVAILABLE',
+          authentication: 'ON_INSTALL',
+        },
+        category: 'Developer Tools',
+      },
+    ],
+  };
+}

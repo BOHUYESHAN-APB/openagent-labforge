@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  createCodexMarketplaceJson,
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
 } from './codex';
@@ -131,5 +132,24 @@ describe('mergeCodexMarketplaceRegistration', () => {
     expect(result.skipped).toEqual(['extendai-lab-local']);
     expect(result.content).toContain('source = "C:/existing/plugin"');
     expect(result.content).not.toContain('[marketplaces.old-managed]');
+  });
+});
+
+describe('createCodexMarketplaceJson', () => {
+  test('creates a local marketplace JSON structure close to host expectations', () => {
+    const marketplace = createCodexMarketplaceJson(
+      'extendai-lab-local',
+      'extendai-lab',
+    );
+
+    expect(marketplace.name).toBe('extendai-lab-local');
+    expect(marketplace.interface.displayName).toBe(
+      'ExtendAI Lab Local Plugins',
+    );
+    expect(marketplace.plugins[0]?.name).toBe('extendai-lab');
+    expect(marketplace.plugins[0]?.source.source).toBe('local');
+    expect(marketplace.plugins[0]?.source.path).toBe('./plugins/extendai-lab');
+    expect(marketplace.plugins[0]?.policy.installation).toBe('AVAILABLE');
+    expect(marketplace.plugins[0]?.policy.authentication).toBe('ON_INSTALL');
   });
 });

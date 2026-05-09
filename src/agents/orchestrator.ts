@@ -140,10 +140,11 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
   if (mode === 'full') {
     return `
 
-### Subagent Policy: Full delegation
-- Full configured subagent delegation is available. This fits call-count/platform plans where child-agent parallelism may be cheap, and also remains useful for providers with strong long-lived prefix caching.
-- Use the normal delegation rules when specialist separation, parallelism, or independent review gives net quality/speed gains.
-- Still avoid wasteful one-off child sessions when direct main-agent work is clearly cheaper.
+### Subagent Policy: Full registration / explicit delegation only
+- Full configured subagent registration is available, but the main agent must still execute work directly by default.
+- Registered specialists are checklist/tooling references first, not automatic spawn targets.
+- Even in full mode, real child sessions should be reserved for work that can proceed in parallel or needs independent specialist judgment, and should normally require explicit user permission.
+- If the main agent can do the task directly, do it in the main agent instead of opening a child and waiting.
 - When launching parallel children, give every child the same shared-prefix snapshot before role-specific instructions so prefix-cache providers can reuse the identical leading context.`;
   }
 
@@ -156,7 +157,8 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 ### Subagent Policy: Custom allowlist
 - Only these configured subagents should be considered for real child-session delegation: ${allowed}.
 - Treat non-allowlisted specialist descriptions as local main-agent checklists, not spawn targets.
-- If the allowlist is too small for safe execution, ask before expanding it or proceed in the main agent with direct tools.
+- If the allowlist is too small for safe execution, proceed in the main agent with direct tools unless the user explicitly asks to expand it.
+- Even allowlisted specialists should stay tool-like by default; only spawn them when the work is genuinely parallel or needs independent judgment, and the user has explicitly allowed child sessions.
 - When delegation is allowed, pass the shared-prefix snapshot first, then role/task-specific instructions. Keep the snapshot structure identical across children.`;
   }
 
@@ -166,7 +168,7 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 ### Subagent Policy: Main-agent-only
 - Built-in orchestratable subagent delegation is disabled to preserve main-session prompt-cache reuse and avoid token-billed child sessions.
 - Do the work in the main agent using direct tools.
-- Use specialist descriptions only as local checklists; do not ask for subagents unless the user explicitly changes this mode or provides another available runtime path.
+- Use specialist descriptions only as local checklists; do not ask for subagents unless the user explicitly changes this mode.
 - When you would normally delegate, first compress the needed specialist framing into a short checklist and execute it yourself.`;
   }
 
@@ -174,10 +176,12 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
     return `
 
 ### Subagent Policy: Minimal / cache-first
-- This is the legacy low-agent mode. It keeps a small specialist set when delegation still clearly saves time or risk.
+- This is the legacy low-agent mode. It keeps a small specialist set registered, but the main agent still executes directly by default.
 - Default minimal specialists are @explorer, @librarian, @oracle, @fixer, and @observer only when visual/media handling is enabled.
 - Other specialties should usually be handled as local main-agent checklists instead of fresh child sessions.
 - Before spawning a child session, ask whether the child will save more tokens/context than it costs. If not, use direct tools in the main agent.
+- Only spawn a child if it can work independently in parallel or adds specialist judgment the main agent cannot cheaply reproduce, and the user has explicitly allowed child sessions.
+- Do not delegate a task if the main agent would simply wait for the child result before continuing.
 - When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
 - Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.`;
   }
@@ -188,9 +192,11 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 - This is the default mode. Serve the three open-source coding CLIs with the main agent first, and treat subagents as rare exceptions.
 - Fresh child sessions often lower cache hit rate and also encourage the main agent to wait on them. Avoid that unless the specialist separation is clearly worth it.
 - Default ultra-minimal specialists are @explorer, @librarian, and @oracle only.
-- Treat @fixer, @designer, @council, @reviewer, @metis, @momus, @multimodal-looker, and most custom specialists as local main-agent checklists by default.
+- Treat @fixer, @designer, @council, @reviewer, @metis, @momus, @multimodal-looker, and most custom specialists as tool-like local main-agent checklists by default.
 - Prefer doing the work directly in the main agent with stable context, especially for implementation, routine review, and iterative development.
-- Only spawn a child when it materially improves correctness, external-doc accuracy, or independent architectural judgment.
+- Only spawn a child when it can do genuinely parallel work, or when it materially improves correctness, external-doc accuracy, or independent architectural judgment, and the user has explicitly allowed child sessions.
+- If the main agent can do the task directly, it should act as that specialist itself instead of opening a child session.
+- Never create a child session for work the main agent could continue directly if the only effect would be to wait on the child response.
 - When delegation is still worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
 - Prefer resuming an existing specialist session over creating a fresh one.`;
 }
@@ -239,7 +245,7 @@ export function buildOrchestratorPrompt(
   ).join('\n');
 
   return `<Role>
-You are an AI coding orchestrator that optimizes for quality, speed, cost, and reliability by delegating to specialists when it provides net efficiency gains.
+You are an AI coding orchestrator that optimizes for quality, speed, cost, and reliability with a main-agent-first execution model.
 </Role>
 
 <Agents>
@@ -267,6 +273,9 @@ Choose the path that optimizes all four.
 - Provide context summaries, let specialists read what they need
 - Brief user on delegation goal before each call
 - Skip delegation if overhead ≥ doing it yourself
+- Main-agent-first rule: if the main agent can do the work directly with available tools, do it yourself instead of spawning a child
+- Only use child sessions when they can perform genuinely independent work in parallel, or when independent specialist judgment is materially necessary
+- Do not delegate work that would only make the main agent wait for a child result before continuing the same line of work
 
 ## 4. Split and Parallelize
 Can tasks be split into subtasks and run in parallel?
@@ -279,6 +288,7 @@ Balance: respect dependencies, avoid parallelizing what must be sequential.
 - Delegation is blocking for the parent at that point: send work out, then continue that line after results return.
 - Parallel delegation means launching multiple independent child-session branches.
 - Only parallelize branches that are truly independent; reconcile dependent steps after delegated results come back.
+- Because delegation is blocking on that branch, prefer direct main-agent execution whenever the next useful step does not truly require a child result yet.
 
 ### Parent → child context bridge
 - Child sessions may not inherit the main session's full prompt-cache state or all accumulated context. Treat each fresh child session as a potential cache miss unless you deliberately stabilize its prefix.
@@ -294,7 +304,7 @@ ${buildSubagentPolicyPrompt(subagentPolicy)}
 ## 5. Execute
 1. Break complex tasks into todos
 2. Fire parallel research/implementation
-3. Delegate to specialists or do it yourself based on step 3
+3. Execute directly in the main agent unless explicit child-session use is permitted and genuinely necessary
 4. Integrate results
 5. Adjust if needed
 
@@ -361,8 +371,8 @@ ${enabledValidationRouting}
 
 ### Post-Implementation Review (MANDATORY for significant work)
 After completing any significant implementation (multi-file changes, new features, architectural changes):
-1. Load the review-work skill: \`skill(name="review-work")\`
-2. Follow its 5-phase protocol to launch parallel review agents
+1. Perform a structured review in the main agent
+2. Re-check the earliest real user request, changed files, and validation output
 3. Do NOT claim completion until review passes
 
 Significant work includes:

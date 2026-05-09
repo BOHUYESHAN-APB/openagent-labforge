@@ -1,8 +1,8 @@
 # Session Management
 
-Session management lets the orchestrator keep track of recent delegated child
-sessions so follow-up work can continue in the right specialist context instead
-of starting from scratch every time.
+Session management lets the orchestrator keep track of recent child sessions in
+the rare cases where child-session use is actually allowed. The default working
+style is still main-agent-first.
 
 It is enabled by default. You do not need to add anything to your config unless
 you want to change how many sessions are remembered.
@@ -11,17 +11,18 @@ you want to change how many sessions are remembered.
 
 ## Why It Exists
 
-Delegation works best when specialists can continue a thread they already
-understand:
+When child-session use is explicitly allowed, reuse works best if specialists
+can continue a thread they already understand:
 
 - Explorer can continue investigating the same part of the codebase.
 - Oracle can keep reviewing the same architecture/debugging thread.
 - Fixer can continue a scoped implementation or test update.
 - Librarian can continue the same documentation/API research.
 
-Without session management, follow-up delegations usually create fresh child
-sessions. That works, but the specialist may need repeated context. With session
-management, the orchestrator can reuse recent child sessions when it makes sense.
+Without session management, follow-up child-session work usually creates fresh
+child sessions. That works, but the specialist may need repeated context. With
+session management, the orchestrator can reuse recent child sessions when that
+mode is explicitly in play.
 
 ---
 

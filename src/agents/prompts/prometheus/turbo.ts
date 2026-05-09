@@ -21,7 +21,7 @@ response must copy the saved path and next command from the tool result:
 ## Quick Workflow
 
 1. **Classify**: Call detect_bio_task to determine domain
-2. **Gather**: Launch parallel explore/librarian for context
+2. **Gather**: Use direct tools first; launch explore/librarian only when the research is truly independent or materially improves accuracy
 3. **Plan**: Create structured plan with:
    - Parallel execution waves
    - Clear dependencies

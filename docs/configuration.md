@@ -117,7 +117,8 @@ Notes:
 
 - `ultra-minimal` is the new strict main-agent-first default.
 - `minimal` remains as a compatibility mode for the older low-agent cache-first behavior.
-- Use `full` only when broad delegation is intentional and you accept extra child-session cost/waiting.
+- Use `full` only when you want all configured specialists registered. It does **not** mean the orchestrator should delegate by default.
+- This main-agent-first rule applies to all primary orchestrators, including bio and chemistry modes: child sessions should be real parallel helpers or independent judgment lanes, not work the main agent could do directly while waiting.
 | `disabled_mcps` | string[] | `[]` | MCP server IDs to disable globally |
 | `fallback.enabled` | boolean | `false` | Enable model failover on timeout/error |
 | `fallback.timeoutMs` | number | `15000` | Time before aborting and trying next model |
@@ -209,7 +210,8 @@ Notes:
 
 Unknown keys under `agents` are treated as custom subagents. A custom agent needs
 its own `model`, a normal `prompt`, and optionally an `orchestratorPrompt` that
-teaches the orchestrator exactly when to delegate to it.
+teaches the orchestrator how to use that specialist as a checklist first and, if
+your policy/runtime allows it, when explicit child-session delegation is truly justified.
 
 ```jsonc
 {

@@ -8,6 +8,10 @@ import {
   PluginConfigSchema,
   SUBAGENT_NAMES,
 } from '../config';
+import { createAtlasAgent } from './atlas';
+import { createBioOrchestratorAgent } from './bio-orchestrator';
+import { createChemOrchestratorAgent } from './chem-orchestrator';
+import { createDeepWorkerAgent } from './deep-worker';
 import {
   createAgents,
   getAgentConfigs,
@@ -837,7 +841,7 @@ describe('subagentPolicy', () => {
     expect(prompt).toContain('Minimal / cache-first');
   });
 
-  test('full enables configured subagents and parallel-friendly guidance', () => {
+  test('full enables configured subagents but still keeps main-agent-first guidance', () => {
     const agents = createAgents({
       disabled_agents: [],
       subagentPolicy: { mode: 'full' },
@@ -848,8 +852,10 @@ describe('subagentPolicy', () => {
     expect(names).toContain('designer');
     expect(names).toContain('council');
     expect(names).toContain('observer');
-    expect(prompt).toContain('Full delegation');
-    expect(prompt).toContain('Use the normal delegation rules');
+    expect(prompt).toContain('Full registration / explicit delegation only');
+    expect(prompt).toContain(
+      'main agent must still execute work directly by default',
+    );
     expect(prompt).toContain('same shared-prefix snapshot');
   });
 
@@ -914,6 +920,20 @@ describe('subagentPolicy', () => {
     expect(prompt).toContain('create_session, add_message');
   });
 
+  test('ultra-minimal prompt forbids unnecessary child waiting', () => {
+    const prompt = buildOrchestratorPrompt(undefined, {
+      mode: 'ultra-minimal',
+    });
+
+    expect(prompt).toContain(
+      'Do not delegate work that would only make the main agent wait',
+    );
+    expect(prompt).toContain('tool-like local main-agent checklists');
+    expect(prompt).toContain(
+      'Only spawn a child when it can do genuinely parallel work',
+    );
+  });
+
   test('main-only skips custom subagents', () => {
     const agents = createAgents({
       subagentPolicy: { mode: 'main-only' },
@@ -926,6 +946,44 @@ describe('subagentPolicy', () => {
     });
 
     expect(agents.map((a) => a.name)).not.toContain('auditor');
+  });
+});
+
+describe('main-agent-first prompt guardrails', () => {
+  test('deep-worker prompt prefers direct work before child sessions', () => {
+    const agent = createDeepWorkerAgent('test/model');
+
+    expect(agent.config.prompt).toContain(
+      'Use direct tools yourself before opening child sessions',
+    );
+    expect(agent.config.prompt).toContain(
+      'If you can do the task directly, do it yourself',
+    );
+  });
+
+  test('atlas prompt forbids child sessions that only cause waiting', () => {
+    const agent = createAtlasAgent('test/model');
+
+    expect(agent.config.prompt).toContain(
+      'Execute directly in the main agent whenever the task does not truly benefit from a child session',
+    );
+    expect(agent.config.prompt).toContain(
+      'Do not delegate a task if Atlas could execute it directly',
+    );
+  });
+
+  test('bio and chem orchestrators share the main-agent-first rule', () => {
+    const bio = createBioOrchestratorAgent('test/model');
+    const chem = createChemOrchestratorAgent('test/model');
+
+    expect(bio.config.prompt).toContain('Main-agent first');
+    expect(bio.config.prompt).toContain(
+      'Do not delegate core biological work if you can continue directly',
+    );
+    expect(chem.config.prompt).toContain('Main-agent first');
+    expect(chem.config.prompt).toContain(
+      'Do not delegate chemistry work if you can continue directly',
+    );
   });
 });
 

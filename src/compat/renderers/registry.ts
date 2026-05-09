@@ -1,4 +1,5 @@
 import type { DocumentKind } from '../../document-output';
+import { createCodexMarketplaceJson } from '../config-writers';
 import type { RenderedFile } from '../install-plan';
 import type {
   CompatibilityCapability,
@@ -42,6 +43,7 @@ function renderPluginManifest(context: RendererContext): RenderedFile[] {
         version: '0.0.0-compat',
         description:
           'ExtendAI Lab compatibility baseline for Claude-family runtimes.',
+        license: 'MIT',
         skills: './skills',
         commands: './commands',
         agents: './agents',
@@ -56,25 +58,28 @@ function renderPluginManifest(context: RendererContext): RenderedFile[] {
         name: 'extendai-lab',
         version: '0.0.0-compat',
         description: 'ExtendAI Lab compatibility baseline for Codex.',
+        license: 'MIT',
         skills: './skills',
         agents: './agents',
         mcpServers: './.mcp.json',
         apps: './.app.json',
+        interface: {
+          displayName: 'extendai-lab',
+          shortDescription:
+            'Compatibility baseline and workflow layer for open-source coding CLIs.',
+          developerName: 'ExtendAI Lab',
+          category: 'Developer Tools',
+        },
       }),
       renderJsonFile('.app.json', {
         managedBy: 'extendai-lab',
         runtime: context.runtime.id,
         status: 'compat-baseline',
       }),
-      renderJsonFile('.agents/plugins/marketplace.json', {
-        marketplaces: [
-          {
-            name: 'extendai-lab-local',
-            source: './plugins/extendai-lab',
-            plugins: ['extendai-lab'],
-          },
-        ],
-      }),
+      renderJsonFile(
+        '.agents/plugins/marketplace.json',
+        createCodexMarketplaceJson('extendai-lab-local', 'extendai-lab'),
+      ),
     ];
   }
 

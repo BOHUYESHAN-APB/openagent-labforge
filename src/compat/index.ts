@@ -39,11 +39,13 @@ export type {
   ClaudeKnownMarketplaceMergeResult,
   ClaudeMcpMergeResult,
   ClaudeMcpServerEntry,
+  CodexMarketplaceJsonEntry,
   CodexMarketplaceMergeResult,
   CodexTomlMergeResult,
   UnifiedMcpRegistryEntry,
 } from './config-writers';
 export {
+  createCodexMarketplaceJson,
   mergeClaudeEnabledPlugins,
   mergeClaudeInstalledPlugins,
   mergeClaudeKnownMarketplaces,

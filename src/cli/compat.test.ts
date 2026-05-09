@@ -97,6 +97,32 @@ describe('compat CLI reports', () => {
     expect(report).toContain('partial-baseline');
   });
 
+  test('status report falls back to partial-baseline when validation no longer passes', async () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'compat-status-state-'));
+    try {
+      const runtimeRoot = join(workspaceRoot, 'openclaude-home');
+      applyCompatRuntimeInstall(workspaceRoot, 'openclaude', {
+        packageVersion: '1.0.19',
+        runtimeRoot,
+        timestamp: '2026-05-08T14-00-00Z',
+      });
+
+      rmSync(join(runtimeRoot, 'settings.json'), { force: true });
+
+      const report = await buildCompatStatusReport(
+        workspaceRoot,
+        'openclaude',
+        {
+          runtimeRoot,
+        },
+      );
+
+      expect(report).toContain('OpenClaude: partial-baseline');
+    } finally {
+      rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
   test('doctor/status can use an overridden runtime root', async () => {
     const workspaceRoot = mkdtempSync(
       join(tmpdir(), 'compat-cli-runtime-root-'),
@@ -118,6 +144,34 @@ describe('compat CLI reports', () => {
 
       expect(doctor).toContain(`paths=${runtimeRoot}`);
       expect(status).toContain(`OpenClaude: available — ${runtimeRoot}`);
+    } finally {
+      rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('status reports process-acceptance-pending after a successful real apply', async () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'compat-status-accept-'));
+    try {
+      const runtimeRoot = join(workspaceRoot, 'openclaude-home');
+      applyCompatRuntimeInstall(workspaceRoot, 'openclaude', {
+        packageVersion: '1.0.19',
+        runtimeRoot,
+        timestamp: '2026-05-08T14-30-00Z',
+      });
+
+      const report = await buildCompatStatusReport(
+        workspaceRoot,
+        'openclaude',
+        {
+          runtimeRoot,
+        },
+      );
+
+      expect(report).toContain('OpenClaude: process-acceptance-pending');
+      expect(report).toContain('Host process acceptance guidance:');
+      expect(report).toContain(
+        'host-process acceptance still depends on reload/restart and discovery confirmation',
+      );
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -165,6 +219,9 @@ describe('compat CLI reports', () => {
       expect(report).toContain('Applied files:');
       expect(report).toContain('Reload/restart the Claude-family runtime');
       expect(report).toContain('Install state:');
+      expect(report).toContain(
+        'host-process acceptance still depends on reload/restart and discovery confirmation',
+      );
       expect(
         existsSync(join(runtimeRoot, '.claude-plugin', 'plugin.json')),
       ).toBe(true);

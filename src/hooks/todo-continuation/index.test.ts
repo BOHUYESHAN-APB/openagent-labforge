@@ -1067,8 +1067,12 @@ describe('createTodoContinuationHook', () => {
       const promptCall = contCall(ctx.client.session.prompt);
       expect(promptCall[0].path.id).toBe('session-123');
       expect(promptCall[0].body.parts[0].text).toContain(
-        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
+        '[Auto-continue: incomplete todos remain in this work batch.',
       );
+      expect(promptCall[0].body.parts[0].text).toContain(
+        'Proceed without asking for permission',
+      );
+      expect(promptCall[0].body.parts[0].text).toContain('Remaining todos:');
       expect(promptCall[0].body.parts[0].text).toContain(
         SLIM_INTERNAL_INITIATOR_MARKER,
       );
@@ -1109,7 +1113,7 @@ describe('createTodoContinuationHook', () => {
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
     });
 
-    test('last message is a question → skip', async () => {
+    test('last message is a self-generated question → still continue when todos remain', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -1143,11 +1147,10 @@ describe('createTodoContinuationHook', () => {
       // Wait for cooldown
       await delay(60);
 
-      // Verify continuation NOT scheduled
-      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
-    test('last assistant question pauses auto mode with surfaced reason', async () => {
+    test('last assistant question does not pause auto mode when todos remain', async () => {
       const onAutoPause = mock(async () => {});
       const ctx = createMockContext({
         todoResult: {
@@ -1177,12 +1180,7 @@ describe('createTodoContinuationHook', () => {
         },
       });
 
-      expect(onAutoPause).toHaveBeenCalledWith({
-        sessionID: 'session-question',
-        reason: 'awaiting-user-answer',
-        details:
-          'The last assistant message is a question, so auto mode must wait for user input.',
-      });
+      expect(onAutoPause).not.toHaveBeenCalled();
 
       ctx.client.session.prompt.mockClear();
       await hook.handleEvent({
@@ -1192,10 +1190,10 @@ describe('createTodoContinuationHook', () => {
         },
       });
       await delay(60);
-      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
-    test('question detection with question mark → skip', async () => {
+    test('question detection with question mark → still continue', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -1224,10 +1222,10 @@ describe('createTodoContinuationHook', () => {
 
       await delay(60);
 
-      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
-    test('question detection with "would you like" phrase → skip', async () => {
+    test('question detection with "would you like" phrase → still continue', async () => {
       const ctx = createMockContext({
         todoResult: {
           data: [
@@ -1261,7 +1259,7 @@ describe('createTodoContinuationHook', () => {
 
       await delay(60);
 
-      expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
     test('max continuations reached → skip', async () => {
@@ -2225,8 +2223,9 @@ describe('createTodoContinuationHook', () => {
 
       const call = contCall(ctx.client.session.prompt);
       expect(call[0].body.parts[0].text).toContain(
-        'call auto_continue with enabled=false before your final response',
+        'Proceed without asking for permission',
       );
+      expect(call[0].body.parts[0].text).toContain('Remaining todos:');
     });
 
     test('explicit user stop clears auto and review state', async () => {
@@ -2301,6 +2300,45 @@ describe('createTodoContinuationHook', () => {
       await delay(60);
 
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('user satisfaction does not disable continuation while todos remain', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'still pending',
+              status: 'pending',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'Looks good.' }],
+            },
+          ],
+        },
+      });
+      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleMessagesTransform(
+        userMessages('好的', 'session-123', 'orchestrator', undefined, 'u2'),
+      );
+
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+      await delay(60);
+
+      expect(hasContinuation(ctx.client.session.prompt)).toBe(true);
     });
 
     test('non-orchestrator session → skip', async () => {
@@ -2800,8 +2838,9 @@ describe('createTodoContinuationHook', () => {
 
       expect(output.parts).toHaveLength(1);
       expect(output.parts[0].text).toContain(
-        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
+        '[Auto-continue: incomplete todos remain in this work batch.',
       );
+      expect(output.parts[0].text).toContain('Remaining todos:');
       expect(output.parts[0].text).toContain(SLIM_INTERNAL_INITIATOR_MARKER);
     });
 
@@ -3118,7 +3157,7 @@ describe('createTodoContinuationHook', () => {
 
       expect(enableOutput.parts).toHaveLength(1);
       expect(enableOutput.parts[0].text).toContain(
-        '[Auto-continue: enabled for this work batch',
+        '[Auto-continue: incomplete todos remain in this work batch.',
       );
     });
 
@@ -3162,7 +3201,7 @@ describe('createTodoContinuationHook', () => {
 
       expect(enableOutput.parts).toHaveLength(1);
       expect(enableOutput.parts[0].text).toContain(
-        '[Auto-continue: enabled for this work batch',
+        '[Auto-continue: incomplete todos remain in this work batch.',
       );
     });
 
@@ -3223,7 +3262,7 @@ describe('createTodoContinuationHook', () => {
       );
       // Should have continuation prompt again (count was reset)
       expect(outputOn.parts[0].text).toContain(
-        '[Auto-continue: enabled for this work batch - there are incomplete todos remaining.',
+        '[Auto-continue: incomplete todos remain in this work batch.',
       );
     });
 

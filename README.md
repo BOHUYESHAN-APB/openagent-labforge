@@ -117,9 +117,15 @@ This currently reports:
 - detected config roots for OpenCode / OpenClaude / Codex / Claude-family later target
 - capability matrix summary per runtime
 - optional compat SDK probe results
+- real apply for `install --runtime=openclaude|codex` when `--dry-run` is omitted
+- real manifest-backed restore for `rollback --runtime=<id> --manifest=...` when `--dry-run` is omitted
+- runtime-specific backup/manifests and install-state records under `.opencode/extendai-lab/compat/<runtime>/install/**`
 
-For now, `install openclaude` and `install codex` remain status-first/dry-run
-entry points rather than full write/install flows.
+`install --runtime=openclaude` and `install --runtime=codex` now support real
+apply when `--dry-run` is omitted. Closed-source Claude remains preview-only.
+The current state for OpenClaude/Codex is best described as discovery-ready:
+plugin assets, activation bridge files, and semantic config validation are in
+place, but deeper host process acceptance after reload is still pending.
 
 Host-specific docs:
 
@@ -202,18 +208,24 @@ constraints, file paths, open todos, validation status, and user preferences.
 
 ### Subagent cost policy
 
-Different providers expose very different cost shapes. If your plan is billed by
-high-level calls, frequent specialist delegation can be efficient because many
-child-agent/tool operations may still appear as one platform-side interaction. If
-your plan is token-billed and prompt-cache reuse matters, frequent fresh child
-sessions can lower cache hit rates and raise cost.
+Different providers expose very different cost shapes. Even so, ExtendAI Lab now
+defaults to a stricter main-agent-first policy: registered specialists should be
+treated as local checklists/tooling references first, not as automatic child
+sessions. Fresh child sessions still tend to lower cache hit rates and raise
+cost unless you explicitly choose that tradeoff.
 
 Use `subagentPolicy.mode` to tune this behavior. Real changes to registered
 child agents normally require updating config and reloading/restarting the
 plugin; `/ol-subagents` reports the currently loaded policy and cache guidance.
 The default is now `ultra-minimal`: serve the three open-source coding CLIs with
-the main agent first, and only delegate when the specialist split is clearly
-worth the wait/cache cost.
+the main agent first. Real child-session use should be treated as an explicit
+exception, normally only when the work is genuinely parallel or requires
+independent specialist judgment and the user has allowed that mode.
+
+This main-agent-first rule applies across all primary orchestrators, including
+bio and chemistry flows: if the primary agent can do the work directly with the
+available tools and skills, it should not spawn a child session just to wait on
+the result.
 
 OpenCode currently previews only the first line/segment of slash commands in
 some UI paths, and tab completion usually completes only the command name — not
@@ -244,7 +256,7 @@ discover in today's OpenCode UI.
 |------|----------|----------|
 | `ultra-minimal` (`UM`) | Default strict main-agent-first mode | Keeps only `explorer`, `librarian`, and `oracle` by default; pushes implementation/review work back to the main agent to avoid waiting on child sessions |
 | `minimal` (`M`) | Legacy low-agent cache-first mode | Keeps the earlier low-agent specialist set (`explorer`, `librarian`, `oracle`, `fixer`, plus `observer` when enabled) and treats other specialists as local checklists |
-| `full` (`F`) | You want all configured child agents or rely on strong provider prefix caching | Keeps normal specialist delegation available; parallel child prompts should still share the same leading context snapshot |
+| `full` (`F`) | You want all configured agents registered | Keeps all configured specialists visible/available, but main-agent execution is still the default; child sessions remain an explicit exception |
 | `custom` (`C`) | You want an explicit allowlist | Registers/uses only `allowedAgents`; non-allowed specialists become main-agent checklists |
 | `main-only` (`MO`) | You want to avoid built-in child sessions | Disables built-in orchestratable subagents and tells the main agent to treat specialist guidance as local checklists |
 
@@ -305,7 +317,7 @@ cache state unless their leading prompt tokens match.
 
 | Mode | Source | Use Case |
 |------|--------|----------|
-| **Light** (default) | [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) | Daily development, balanced delegation |
+| **Light** (default) | [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) | Daily development, strict main-agent-first execution |
 | **Heavy** | Inspired by [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) | Complex tasks, Phase 0-3 workflow, failure recovery |
 | **Turbo** | Inspired by [opencode-workspace](https://github.com/kdcokenny/opencode-workspace) | Fast execution, minimal overhead |
 

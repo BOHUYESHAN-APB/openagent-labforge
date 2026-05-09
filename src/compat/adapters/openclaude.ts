@@ -27,6 +27,21 @@ import { getRuntimeCompatibilityProfile } from '../types';
 const profile = getRuntimeCompatibilityProfile('openclaude');
 if (!profile) throw new Error('Missing OpenClaude runtime profile');
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readJsonObject(path: string): Record<string, unknown> | undefined {
+  if (!existsSync(path)) return undefined;
+
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getOpenClaudeConfigCandidates(): string[] {
   return [join(homedir(), '.openclaude'), join(homedir(), '.claude')];
 }
@@ -249,6 +264,16 @@ export const openclaudeAdapter: RuntimeAdapter = {
     const knownMarketplacesContent = existsSync(knownMarketplacesPath)
       ? readFileSync(knownMarketplacesPath, 'utf8')
       : '';
+    const pluginManifestPath = join(
+      configRoot,
+      '.claude-plugin',
+      'plugin.json',
+    );
+    const pluginManifest = readJsonObject(pluginManifestPath);
+    const settingsJson = readJsonObject(settingsPath);
+    const installedPluginsJson = readJsonObject(installedPluginsPath);
+    const knownMarketplacesJson = readJsonObject(knownMarketplacesPath);
+    const mcpConfigJson = readJsonObject(getClaudeMcpConfigPath(configRoot));
     const activationFindings: string[] = [];
     if (settingsContent && !settingsContent.includes('enabledPlugins')) {
       activationFindings.push(
@@ -272,6 +297,94 @@ export const openclaudeAdapter: RuntimeAdapter = {
       );
     }
 
+    const enabledPlugins = isRecord(settingsJson?.enabledPlugins)
+      ? (settingsJson.enabledPlugins as Record<string, unknown>)
+      : undefined;
+    if (
+      settingsJson &&
+      (!enabledPlugins || enabledPlugins[getOpenClaudePluginKey()] !== true)
+    ) {
+      activationFindings.push(
+        'settings.json enabledPlugins does not include the ExtendAI Lab plugin key.',
+      );
+    }
+
+    const installedPlugins = isRecord(installedPluginsJson?.plugins)
+      ? (installedPluginsJson.plugins as Record<string, unknown>)
+      : undefined;
+    const installedPluginEntries: unknown[] = Array.isArray(
+      installedPlugins?.[getOpenClaudePluginKey()],
+    )
+      ? (installedPlugins?.[getOpenClaudePluginKey()] as unknown[])
+      : [];
+    const installedPluginEntry = isRecord(installedPluginEntries[0])
+      ? installedPluginEntries[0]
+      : undefined;
+    if (installedPluginsJson && !installedPluginEntry) {
+      activationFindings.push(
+        'installed_plugins.json does not contain a valid ExtendAI Lab plugin installation record.',
+      );
+    } else if (
+      installedPluginEntry &&
+      installedPluginEntry.installPath !== configRoot
+    ) {
+      activationFindings.push(
+        'installed_plugins.json points ExtendAI Lab to a different installPath than the active runtime root.',
+      );
+    }
+
+    const marketplaceEntry = isRecord(
+      knownMarketplacesJson?.['extendai-lab-local'],
+    )
+      ? knownMarketplacesJson['extendai-lab-local']
+      : undefined;
+    const marketplaceSource = isRecord(marketplaceEntry?.source)
+      ? marketplaceEntry.source
+      : undefined;
+    if (knownMarketplacesJson && !marketplaceEntry) {
+      activationFindings.push(
+        'known_marketplaces.json does not contain a valid ExtendAI Lab marketplace record.',
+      );
+    } else if (marketplaceEntry) {
+      if (marketplaceEntry.installLocation !== configRoot) {
+        activationFindings.push(
+          'known_marketplaces.json points ExtendAI Lab to a different installLocation than the active runtime root.',
+        );
+      }
+      if (
+        !marketplaceSource ||
+        marketplaceSource.source !== 'local' ||
+        marketplaceSource.path !== configRoot
+      ) {
+        activationFindings.push(
+          'known_marketplaces.json does not describe ExtendAI Lab as a local-source marketplace rooted at the active runtime path.',
+        );
+      }
+    }
+
+    const pluginName = pluginManifest?.name;
+    const pluginSkills = pluginManifest?.skills;
+    const pluginMcpServers = pluginManifest?.mcpServers;
+    if (
+      pluginManifest &&
+      (pluginName !== 'extendai-lab' ||
+        pluginSkills !== './skills' ||
+        pluginMcpServers !== './.mcp.json')
+    ) {
+      activationFindings.push(
+        'plugin.json does not match the expected Claude-family plugin manifest shape for ExtendAI Lab.',
+      );
+    }
+
+    const mcpServers = isRecord(mcpConfigJson?.mcpServers)
+      ? mcpConfigJson.mcpServers
+      : undefined;
+    if (mcpConfigJson && !isRecord(mcpServers?.['shared-context-server'])) {
+      activationFindings.push(
+        '.claude.json is missing the managed shared-context-server MCP entry.',
+      );
+    }
+
     return {
       runtimeId: profile.id,
       ok: missingPaths.length === 0 && activationFindings.length === 0,
@@ -279,6 +392,7 @@ export const openclaudeAdapter: RuntimeAdapter = {
         missingPaths.length === 0 && activationFindings.length === 0
           ? [
               'OpenClaude required assets are present.',
+              'OpenClaude activation bridge is semantically consistent (plugin manifest, enabledPlugins, installed plugins, marketplaces, and MCP config).',
               'Reload/restart the Claude-family runtime to activate new plugin assets and MCP config.',
             ]
           : [

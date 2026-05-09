@@ -12,11 +12,13 @@ export {
   mergeClaudeMcpServers,
 } from './claude';
 export type {
+  CodexMarketplaceJsonEntry,
   CodexMarketplaceMergeResult,
   CodexTomlMergeResult,
   UnifiedMcpRegistryEntry,
 } from './codex';
 export {
+  createCodexMarketplaceJson,
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
 } from './codex';

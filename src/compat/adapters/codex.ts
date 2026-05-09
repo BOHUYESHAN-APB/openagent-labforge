@@ -25,6 +25,21 @@ import { getRuntimeCompatibilityProfile } from '../types';
 const profile = getRuntimeCompatibilityProfile('codex');
 if (!profile) throw new Error('Missing Codex runtime profile');
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readJsonObject(path: string): Record<string, unknown> | undefined {
+  if (!existsSync(path)) return undefined;
+
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function resolveCodexConfigRoot(context: RuntimeAdapterContext): string {
   return context.runtimeRoot ?? join(homedir(), '.codex');
 }
@@ -139,6 +154,13 @@ export const codexAdapter: RuntimeAdapter = {
     const configContent = existsSync(configPath)
       ? readFileSync(configPath, 'utf8')
       : '';
+    const pluginManifest = readJsonObject(
+      join(configRoot, '.codex-plugin', 'plugin.json'),
+    );
+    const marketplaceJson = readJsonObject(
+      join(configRoot, '.agents', 'plugins', 'marketplace.json'),
+    );
+    const mcpJson = readJsonObject(join(configRoot, '.mcp.json'));
     const missingManagedBlocks: string[] = [];
     if (
       configContent &&
@@ -159,19 +181,96 @@ export const codexAdapter: RuntimeAdapter = {
       );
     }
 
+    if (
+      configContent &&
+      !configContent.includes('[marketplaces.extendai-lab-local]')
+    ) {
+      missingManagedBlocks.push(
+        'config.toml does not register the extendai-lab-local marketplace table.',
+      );
+    }
+    if (configContent && !configContent.includes('source_type = "local"')) {
+      missingManagedBlocks.push(
+        'config.toml marketplace registration is missing source_type = "local".',
+      );
+    }
+    if (
+      configContent &&
+      !configContent.includes(
+        `source = "${configRoot.replaceAll('\\', '\\\\')}"`,
+      )
+    ) {
+      missingManagedBlocks.push(
+        'config.toml marketplace registration does not point to the active runtime root.',
+      );
+    }
+
+    const activationFindings: string[] = [];
+    if (
+      pluginManifest &&
+      (pluginManifest.name !== 'extendai-lab' ||
+        pluginManifest.skills !== './skills' ||
+        pluginManifest.mcpServers !== './.mcp.json' ||
+        pluginManifest.apps !== './.app.json')
+    ) {
+      activationFindings.push(
+        'plugin.json does not match the expected Codex plugin manifest shape for ExtendAI Lab.',
+      );
+    }
+
+    const marketplacePlugins = Array.isArray(marketplaceJson?.plugins)
+      ? marketplaceJson.plugins
+      : [];
+    const extendAiPluginEntry = marketplacePlugins.find((entry) => {
+      if (!isRecord(entry)) return false;
+      const source = isRecord(entry.source) ? entry.source : undefined;
+      const policy = isRecord(entry.policy) ? entry.policy : undefined;
+      return (
+        entry.name === 'extendai-lab' &&
+        source?.source === 'local' &&
+        source.path === './plugins/extendai-lab' &&
+        policy?.installation === 'AVAILABLE' &&
+        policy?.authentication === 'ON_INSTALL'
+      );
+    });
+    if (
+      marketplaceJson &&
+      (marketplaceJson.name !== 'extendai-lab-local' || !extendAiPluginEntry)
+    ) {
+      activationFindings.push(
+        'marketplace.json does not contain the expected ExtendAI Lab local marketplace/plugin entry.',
+      );
+    }
+
+    const mcpServers = isRecord(mcpJson?.mcpServers)
+      ? mcpJson.mcpServers
+      : undefined;
+    if (mcpJson && !isRecord(mcpServers?.['shared-context-server'])) {
+      activationFindings.push(
+        '.mcp.json is missing the shared-context-server MCP entry.',
+      );
+    }
+
     return {
       runtimeId: profile.id,
-      ok: missingPaths.length === 0 && missingManagedBlocks.length === 0,
+      ok:
+        missingPaths.length === 0 &&
+        missingManagedBlocks.length === 0 &&
+        activationFindings.length === 0,
       findings:
-        missingPaths.length === 0 && missingManagedBlocks.length === 0
+        missingPaths.length === 0 &&
+        missingManagedBlocks.length === 0 &&
+        activationFindings.length === 0
           ? [
               'Codex required assets are present.',
+              'Codex activation bridge is semantically consistent (plugin manifest, marketplace registration, marketplace index, and MCP config).',
               'Reload/restart Codex so new plugin assets, marketplace metadata, and managed config are re-read.',
             ]
           : [
               'Codex install is incomplete. Missing required assets:',
               ...missingPaths.map((path) => `- ${path}`),
               ...missingManagedBlocks.map((line) => `- ${line}`),
+              ...activationFindings.map((line) => `- ${line}`),
             ],
     };
   },

@@ -16,7 +16,7 @@ describe('compat install state', () => {
         runtimeId: 'openclaude',
         updatedAt: '2026-05-08T16:00:00.000Z',
         workspaceRoot,
-        installState: 'working-baseline',
+        installState: 'process-acceptance-pending',
         runtimeRoot: join(workspaceRoot, 'openclaude-home'),
         packageVersion: '1.0.19',
         rollbackManifestPath: join(workspaceRoot, 'manifest.json'),
@@ -27,7 +27,7 @@ describe('compat install state', () => {
 
       const loaded = readCompatInstallState(workspaceRoot, 'openclaude');
       expect(loaded).toBeDefined();
-      expect(loaded?.installState).toBe('working-baseline');
+      expect(loaded?.installState).toBe('process-acceptance-pending');
       expect(loaded?.runtimeId).toBe('openclaude');
       expect(loaded?.packageVersion).toBe('1.0.19');
     } finally {

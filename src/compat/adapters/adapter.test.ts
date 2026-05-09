@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   claudeAdapter,
   codexAdapter,
@@ -106,9 +106,84 @@ describe('runtime adapter skeletons', () => {
         ?.content,
     ).toContain('enabledPlugins');
     expect(
+      openclaudePlan.files.find((file) => file.relativePath === 'settings.json')
+        ?.content,
+    ).toContain('"extendai-lab@extendai-lab-local": true');
+    expect(
       openclaudePlan.files.find(
         (file) => file.relativePath === 'plugins/installed_plugins.json',
       )?.content,
     ).toContain('extendai-lab@extendai-lab-local');
+    expect(
+      openclaudePlan.files.find(
+        (file) => file.relativePath === 'plugins/known_marketplaces.json',
+      )?.content,
+    ).toContain('extendai-lab-local');
+    expect(
+      openclaudePlan.files.find(
+        (file) => file.relativePath === 'plugins/known_marketplaces.json',
+      )?.content,
+    ).toContain('"source": "local"');
+    expect(
+      codexPlan.files.find((file) => file.relativePath === 'config.toml')
+        ?.content,
+    ).toContain('[marketplaces.extendai-lab-local]');
+    expect(
+      codexPlan.files.find((file) => file.relativePath === 'config.toml')
+        ?.content,
+    ).toContain('source_type = "local"');
+    expect(
+      codexPlan.files.find(
+        (file) => file.relativePath === '.agents/plugins/marketplace.json',
+      )?.content,
+    ).toContain('"installation": "AVAILABLE"');
+  });
+
+  test('openclaude and codex validate semantic activation bridge content', () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'compat-validate-'));
+    try {
+      const openclaudeRoot = join(workspaceRoot, 'openclaude-home');
+      const codexRoot = join(workspaceRoot, 'codex-home');
+
+      for (const file of openclaudeAdapter.render({
+        workspaceRoot,
+        dryRun: false,
+        runtimeRoot: openclaudeRoot,
+      })) {
+        mkdirSync(dirname(file.path), { recursive: true });
+        writeFileSync(file.path, file.content, 'utf8');
+      }
+
+      for (const file of codexAdapter.render({
+        workspaceRoot,
+        dryRun: false,
+        runtimeRoot: codexRoot,
+      })) {
+        mkdirSync(dirname(file.path), { recursive: true });
+        writeFileSync(file.path, file.content, 'utf8');
+      }
+
+      const openclaudeValidation = openclaudeAdapter.validate({
+        workspaceRoot,
+        dryRun: false,
+        runtimeRoot: openclaudeRoot,
+      });
+      const codexValidation = codexAdapter.validate({
+        workspaceRoot,
+        dryRun: false,
+        runtimeRoot: codexRoot,
+      });
+
+      expect(openclaudeValidation.ok).toBe(true);
+      expect(openclaudeValidation.findings).toContain(
+        'OpenClaude activation bridge is semantically consistent (plugin manifest, enabledPlugins, installed plugins, marketplaces, and MCP config).',
+      );
+      expect(codexValidation.ok).toBe(true);
+      expect(codexValidation.findings).toContain(
+        'Codex activation bridge is semantically consistent (plugin manifest, marketplace registration, marketplace index, and MCP config).',
+      );
+    } finally {
+      rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 });
