@@ -1365,6 +1365,13 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       }
     },
 
+    'chat.params': async (
+      input: { model?: { providerID?: string; id?: string }; sessionID?: string },
+      _output: unknown,
+    ) => {
+      await thinkingLanguageHook['chat.params'](input, _output);
+    },
+
     'chat.headers': chatHeadersHook['chat.headers'],
 
     // Track which agent each session uses (needed for serve-mode prompt
@@ -1536,13 +1543,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
       // Inject thinking language preference for models that support it
       await thinkingLanguageHook['experimental.chat.system.transform'](
-        input as {
-          model?: string;
-          messages?: Array<{
-            info: { role: string };
-            parts: Array<{ type: string; text?: string }>;
-          }>;
-        },
+        input as { sessionID?: string },
         output,
       );
 
@@ -1601,6 +1602,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         messages: typedOutput.messages,
       });
       await filterAvailableSkillsHook['experimental.chat.messages.transform'](
+        input,
+        typedOutput,
+      );
+      await thinkingLanguageHook['experimental.chat.messages.transform'](
         input,
         typedOutput,
       );
