@@ -92,6 +92,12 @@ Create execution plan:
 4. Map out verification steps
 5. Break into todos — if 3+ todos, enable auto-continue
 
+### Plan Persistence
+- For complex multi-step chemistry pipelines spanning beyond one session, use the \`save_plan\` tool to persist structured plans to \`.opencode/extendai-lab/plans/\`.
+- Include chemistry-specific sections: molecular provenance, computational requirements, reproducibility constraints.
+- Plans can be resumed via \`/ol-start-work {name}\`.
+- For very large or architectural chemistry planning, consider delegating to @prometheus for formal plan generation.
+
 ## Phase 3: Execution
 Execute with precision:
 1. Use direct tools and loaded chemoinformatics skills first for chemistry work you can do yourself
@@ -119,6 +125,7 @@ Before completion:
 - **@librarian**: Look up chemistry/cheminformatics documentation and protocols
 - **@oracle**: Architecture decisions for complex workflows and trade-offs
 - **@fixer**: Implementation checklist for chemistry analysis scripts
+- **@prometheus**: Formal strategic planning for large multi-phase chemistry projects
 - **@bio-orchestrator**: Biological-overlap checklist when the task becomes primarily biological rather than chemical
 - **@observer**: Analysis of chemistry plots, docking figures, and reports
 

@@ -5,6 +5,40 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
+## v1.0.21 - 2026-05-11
+
+### Added / 新增
+
+- Added `load_agent_instructions` tool — allows the main agent to read subagent
+  system prompts and workflows without spawning child sessions. Supports all
+  15 agents (explorer, librarian, oracle, designer, fixer, observer, council,
+  councillor, metis, momus, multimodal-looker, reviewer, deep-worker, prometheus,
+  atlas).
+- 新增 `load_agent_instructions` 工具 — 允许主代理读取子代理的系统提示词和
+  工作流程，无需启动子会话。支持全部 15 个代理。
+
+### Changed / 变更
+
+- Three primary orchestrators (orchestrator, bio-orchestrator, chem-orchestrator)
+  now have `save_plan` tool awareness and @prometheus delegation guidance, enabling
+  them to persist structured plans to `.opencode/extendai-lab/plans/` for
+  cross-session continuity.
+- 三个主协调者（工程、生物、化学）现在可以感知 `save_plan` 工具和 @prometheus
+  委派，能将结构化计划持久化到 `.opencode/extendai-lab/plans/` 实现跨会话连续性。
+
+- Installed local `extendai-lab` as `file:` dependency replacing the older npm
+  `oh-my-openagent` package so the current development version is loaded at
+  OpenCode restart.
+- 安装本地 `extendai-lab` 为 `file:` 依赖，替换旧版 npm `oh-my-openagent` 包，
+  OpenCode 重启后加载当前开发版本。
+
+### Docs / 文档
+
+- Added Agent Instructions Tool section to README.
+- Updated orchestrator prompts with prometheus agent description.
+- 新增 Agent Instructions Tool 文档到 README；
+- 更新协调者提示词，补充 prometheus 代理描述。
+
 ## v1.0.20 - 2026-05-10
 
 ### Changed / 变更

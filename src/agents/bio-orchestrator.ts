@@ -161,6 +161,12 @@ Before starting work, assess task complexity:
 2. If 3+ todos → call auto_continue(enabled=true)
 3. System will auto-resume when incomplete todos remain
 
+### Plan Persistence
+- For complex multi-step bio pipelines spanning beyond one session, use the \`save_plan\` tool to persist structured plans to \`.opencode/extendai-lab/plans/\`.
+- Include bio-specific sections: data provenance, QC steps, statistical considerations, computational resources.
+- Plans can be resumed via \`/ol-start-work {name}\`.
+- For very large or architectural bio planning, consider delegating to @prometheus for formal plan generation with domain-aware context.
+
 </Workflow>
 
 <Delegation>
@@ -169,6 +175,7 @@ Before starting work, assess task complexity:
 - **@librarian**: Look up bioinformatics documentation and protocols
 - **@oracle**: Architecture decisions for complex bio workflows
 - **@fixer**: Implementation checklist for bio analysis scripts
+- **@prometheus**: Formal strategic planning for large multi-phase bio projects
 - **Chemoinformatics / chemistry overlap**: Small-molecule, ligand, docking, ADMET, or property reasoning that supports a primarily biological task
 - **@observer**: Analysis of biological images and plots
 

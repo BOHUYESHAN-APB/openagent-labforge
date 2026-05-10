@@ -91,6 +91,14 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
 - **Don't delegate when:** Plain text files that Read can handle directly • Files that need editing afterward (need literal content from Read)
 - **Rule of thumb:** Even if your model supports vision, delegate visual analysis to @observer — it isolates large image/PDF bytes from your context window, returning only concise structured text. Need exact file contents for editing? → Read it yourself.
 - **IMPORTANT:** When delegating to @observer, include full file paths when known. If the user gives a directory, call media_inventory first or tell @observer to call media_inventory, then read a bounded, relevant subset of discovered files. Do not batch-read every image in the main Orchestrator unless the user explicitly asks. Example: "Analyze the screenshots in /path/to/artifacts — check for blank renders, layout issues, and error messages."`,
+
+  prometheus: `@prometheus
+- Role: Strategic planner for complex multi-step projects
+- Permissions: Read files, save plans
+- Capabilities: Creates structured, executable plans with parallel execution waves, dependency matrices, task breakdowns, acceptance criteria, and verification steps. Uses detect_bio_task for domain-aware planning and save_plan for plan persistence.
+- **Delegate when:** Complex multi-step projects needing formal planning • Large refactors or architecture changes • Cross-session work requiring checkpoint-ready plans • User asks for a detailed plan before execution • Bioinformatics workflows needing domain-specific planning
+- **Don't delegate when:** Simple single-task work • Quick implementations with clear scope • Tasks completable in <3 trivial steps
+- **Rule of thumb:** Need a formal, saved plan? → @prometheus. Quick in-session todo list? → todowrite yourself.`,
 };
 
 // Validation routing lines that reference agents
@@ -342,6 +350,13 @@ Before starting work, assess task complexity to determine execution mode:
 2. If 3+ todos → call auto_continue(enabled=true)
 3. System will auto-resume when incomplete todos remain
 4. Post-implementation review will trigger automatically before stopping
+
+### Plan Persistence
+- For complex multi-step tasks that span beyond a single session, use the \`save_plan\` tool to persist structured plans to \`.opencode/extendai-lab/plans/\`.
+- Saved plans include task breakdown, dependencies, acceptance criteria, and verification steps.
+- Plans can be resumed later via \`/ol-start-work {name}\`.
+- For very large or architectural planning, consider delegating to @prometheus (strategic planner) who is optimized for in-depth planning with \`detect_bio_task\` and \`save_plan\` capabilities.
+- Plans enable cross-session continuity and checkpoint resumption.
 
 ### Validation routing
 - Validation is a workflow stage owned by the Orchestrator, not a separate specialist
