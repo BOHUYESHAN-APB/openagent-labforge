@@ -271,35 +271,9 @@ bun run check:ci   # Lint + format + organize imports
 
 ---
 
-## 中文
+## 中文文档
 
-**ExtendAI Lab** 是 OpenCode 的 Agent 编排插件 — 5 个主编排器、15 个专有子代理、自动续跑与审查、计划持久化、三层提示词、以及面向国内模型的成本优化策略。
-
-### 快速开始
-
-```bash
-git clone git@github.com:BOHUYESHAN-APB/openagent-labforge-bio.git --depth=1
-cd openagent-labforge-bio && bun install && bun run build
-```
-
-在 `~/.config/opencode/opencode.json` 注册插件后重启即可。
-
-### 核心能力
-
-| 能力 | 实现方式 |
-|------|---------|
-| **主代理优先** | 默认 ultra-minimal 模式，只注册 3 个子代理，其余为本地 checklist |
-| **自动续跑** | `todowrite` + `auto_continue`，任务未完成自动继续，完成后自动审查 |
-| **计划持久化** | `save_plan` 写入 `.opencode/extendai-lab/plans/`，`/ol-start-work` 恢复执行 |
-| **子代理提示词读取** | `load_agent_instructions` 工具，主代理读懂子代理能力后自行执行 |
-| **思考语言优化** | 国模 (DeepSeek/Qwen/Kimi/GLM/Mimo/Doubao) → 中文思考；海外模型 → 英文思考 |
-| **上下文压力** | L1/L2/L3 三级监测，自动触发 checkpoint |
-| **检查点系统** | 轻量（同会话恢复）+ 重量（跨会话交接），115+ 元数据字段 |
-| **生物信息学** | 442 个领域技能（64 大类）+ UniProt/BioNext/Semantic Scholar MCP |
-
-### 成本优化要点
-
-国内模型 token 套餐下，**缓存命中率直接影响成本**。核心策略：主代理优先执行，子代理提示词读取而非启动新会话，共享前缀对齐。详见上方 English 部分的 Cost Optimization 节。
+完整中文文档请阅读 **[README.zh-CN.md](README.zh-CN.md)**。
 
 ---
 
