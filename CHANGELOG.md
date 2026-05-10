@@ -5,6 +5,36 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
+## v1.0.20 - 2026-05-10
+
+### Changed / 变更
+
+- Re-focused development priorities: current and future work concentrates on
+  OpenCode core functionality (todo-continuation, auto-review, agent
+  orchestration). OpenClaude/Codex runtime compatibility has been moved to a
+  feature branch and placed on indefinite hold.
+- 开发重心回归：当前及后续开发专注于 OpenCode 核心功能（todo-continuation、
+  auto-review、agent 编排）。OpenClaude/Codex 运行时兼容移至 feature 分支，
+  无限期搁置。
+
+- Enhanced command execution robustness with retry logic and configurable temp
+  directory handling.
+- 增强命令执行健壮性：加入重试逻辑和可配置临时目录处理。
+
+- Updated MCP server registration logic and config handling for improved
+  reliability.
+- 更新 MCP 服务器注册逻辑与配置处理，提升可靠性。
+
+### Docs / 文档
+
+- Added COMPAT_STATUS.md documenting the current state of cross-runtime
+  compatibility features.
+- Updated README with development status and current focus area.
+- Updated CLI help text to reflect shelved compat features.
+- 新增 COMPAT_STATUS.md 说明跨运行时兼容性状态；
+- 更新 README 明确当前开发重心；
+- 更新 CLI 帮助信息移除搁置功能的示例。
+
 ## Unreleased / 未发布
 
 - No changes yet.

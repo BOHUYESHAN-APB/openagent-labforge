@@ -169,3 +169,26 @@
 - 更完整的版本级逐条核验
 - 文档与 README 的同步检查
 - CLI 实际行为与 CHANGELOG 声称的一致性复核
+
+## v1.0.20
+
+### 整体
+- 状态：`verified`
+- OpenCode 核心功能完整，全部测试通过
+- 跨运行时兼容性已标记为 ON HOLD，代码移至 feature 分支
+
+### 变更项验证
+
+1. **todo-continuation + auto-review + auto mode**
+   - 状态：`verified`
+   - 代码：`src/hooks/todo-continuation/index.ts`
+   - 测试：107 pass, 0 fail（全量功能覆盖）
+   - 包含：auto_continue tool、auto-enable、review verdict 解析、rework 注入
+
+2. **命令执行重试与临时目录**
+   - 状态：`verified`
+   - 代码：`src/adapters/deepseek-tui/install.ts` 等
+
+3. **MCP 注册逻辑与配置处理**
+   - 状态：`verified`
+   - 代码：`src/mcp/index.ts`、`src/config/loader.ts` 等
