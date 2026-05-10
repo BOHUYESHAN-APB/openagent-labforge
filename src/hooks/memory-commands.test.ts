@@ -1,7 +1,7 @@
+import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
 import { CheckpointManager } from '../checkpoint/manager';
 import { createMemoryCommandsHook } from './memory-commands';
 
@@ -21,7 +21,10 @@ describe('memory commands hook', () => {
     const root = mkdtempSync(join(tmpdir(), 'ol-memory-hook-'));
     try {
       const manager = new CheckpointManager(root);
-      const hook = createMemoryCommandsHook({ directory: root } as any, manager);
+      const hook = createMemoryCommandsHook(
+        { directory: root } as any,
+        manager,
+      );
 
       const writeOutput = createOutput();
       await hook.handleCommandExecuteBefore(
@@ -36,7 +39,9 @@ describe('memory commands hook', () => {
 
       const writeText = getOutputText(writeOutput);
       expect(writeText).toContain('[Memory recorded: pref_');
-      expect(writeText).toContain('| repository | workflow | Prefer test -> build -> deploy order');
+      expect(writeText).toContain(
+        '| repository | workflow | Prefer test -> build -> deploy order',
+      );
 
       const idMatch = writeText.match(/pref_[^\s\]]+/);
       expect(idMatch).not.toBeNull();
@@ -67,7 +72,9 @@ describe('memory commands hook', () => {
         deleteOutput,
       );
 
-      expect(getOutputText(deleteOutput)).toContain(`[Memory removed: ${entryId}]`);
+      expect(getOutputText(deleteOutput)).toContain(
+        `[Memory removed: ${entryId}]`,
+      );
 
       const listAfterDelete = createOutput();
       await hook.handleCommandExecuteBefore(
@@ -90,7 +97,10 @@ describe('memory commands hook', () => {
     const root = mkdtempSync(join(tmpdir(), 'ol-memory-hook-'));
     try {
       const manager = new CheckpointManager(root);
-      const hook = createMemoryCommandsHook({ directory: root } as any, manager);
+      const hook = createMemoryCommandsHook(
+        { directory: root } as any,
+        manager,
+      );
       const output = createOutput();
 
       await hook.handleCommandExecuteBefore(
@@ -115,7 +125,10 @@ describe('memory commands hook', () => {
     const root = mkdtempSync(join(tmpdir(), 'ol-memory-hook-'));
     try {
       const manager = new CheckpointManager(root);
-      const hook = createMemoryCommandsHook({ directory: root } as any, manager);
+      const hook = createMemoryCommandsHook(
+        { directory: root } as any,
+        manager,
+      );
       const output = createOutput();
 
       await hook.handleCommandExecuteBefore(

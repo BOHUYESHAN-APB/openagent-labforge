@@ -2,10 +2,7 @@ import * as fs from 'node:fs';
 import { appendFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { PACKAGE_NAME } from '../config/product';
-import {
-  getGlobalBgTasksDir,
-  getGlobalLogDir,
-} from '../paths/plugin-paths';
+import { getGlobalBgTasksDir, getGlobalLogDir } from '../paths/plugin-paths';
 
 const LOG_PREFIX = `${PACKAGE_NAME}.`;
 const LOG_SUFFIX = '.log';

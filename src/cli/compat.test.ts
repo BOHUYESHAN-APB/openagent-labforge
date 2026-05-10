@@ -59,6 +59,8 @@ describe('compat CLI reports', () => {
   test('compat runtime list includes openclaude without requiring positional target', () => {
     expect(getCompatRuntimeIds()).toContain('openclaude');
     expect(getCompatRuntimeIds()).toContain('codex');
+    expect(getCompatRuntimeIds()).toContain('claude-code');
+    expect(getCompatRuntimeIds()).not.toContain('claude');
   });
 
   test('doctor report can be scoped to one runtime', () => {
@@ -94,7 +96,7 @@ describe('compat CLI reports', () => {
     expect(report).toContain('OpenClaude:');
     expect(report).toContain('Codex:');
     expect(report).toContain('native-primary');
-    expect(report).toContain('partial-baseline');
+    expect(report).toContain('process-acceptance-pending');
   });
 
   test('status report falls back to partial-baseline when validation no longer passes', async () => {
@@ -225,6 +227,9 @@ describe('compat CLI reports', () => {
       expect(
         existsSync(join(runtimeRoot, '.claude-plugin', 'plugin.json')),
       ).toBe(true);
+      expect(
+        existsSync(join(runtimeRoot, '.claude-plugin', 'marketplace.json')),
+      ).toBe(true);
       expect(existsSync(join(runtimeRoot, '.claude.json'))).toBe(true);
       expect(existsSync(join(runtimeRoot, 'settings.json'))).toBe(true);
       expect(
@@ -236,6 +241,9 @@ describe('compat CLI reports', () => {
       expect(
         readFileSync(join(runtimeRoot, 'settings.json'), 'utf8'),
       ).toContain('enabledPlugins');
+      expect(
+        readFileSync(join(runtimeRoot, 'settings.json'), 'utf8'),
+      ).toContain('extraKnownMarketplaces');
       expect(
         readFileSync(
           join(runtimeRoot, 'plugins', 'installed_plugins.json'),
@@ -284,6 +292,24 @@ describe('compat CLI reports', () => {
       expect(
         readFileSync(join(runtimeRoot, 'codex', 'config.toml'), 'utf8'),
       ).toContain('# BEGIN EXTENDAI LAB MANAGED MARKETPLACE REGISTRATION');
+      expect(
+        readFileSync(join(runtimeRoot, 'codex', 'config.toml'), 'utf8'),
+      ).toContain('[plugins."extendai-lab@extendai-lab-local"]');
+      expect(
+        existsSync(
+          join(
+            runtimeRoot,
+            'codex',
+            'plugins',
+            'cache',
+            'extendai-lab-local',
+            'extendai-lab',
+            'local',
+            '.codex-plugin',
+            'plugin.json',
+          ),
+        ),
+      ).toBe(true);
     } finally {
       rmSync(workspaceRoot, { recursive: true, force: true });
     }

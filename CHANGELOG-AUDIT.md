@@ -49,13 +49,25 @@
 - 状态：`partial`
 - 结论：
   - 真实的 install/apply/rollback、runtime-root、manifest-backed 路径都已存在。
-  - activation bridge 也已接入到“文件/语义一致性”层。
+  - OpenClaude activation bridge 已对齐 Claude-family 本体的主要状态形态：`settings.json.enabledPlugins`、`settings.json.extraKnownMarketplaces`、`plugins/installed_plugins.json`、`plugins/known_marketplaces.json`、`.claude-plugin/plugin.json`。
+  - Codex activation bridge 已修正为 host loader 形态：marketplace root 在 runtime root，插件资产放在 `plugins/cache/extendai-lab-local/extendai-lab/local`，`config.toml` 同时启用 `[features] plugins = true` 和 `[plugins."extendai-lab@extendai-lab-local"] enabled = true`。
   - 但 host-process acceptance 仍然依赖 reload/restart 和运行时 discovery 确认，不能写成“已经完全可用”。
 - 证据：
   - `src/cli/compat.ts`
   - `src/compat/adapters/openclaude.ts`
   - `src/compat/adapters/codex.ts`
   - `src/cli/compat.test.ts`
+
+### CLI runtime selector consistency
+- 状态：`verified`
+- 结论：
+  - 修复了 compat CLI 中 `claude` 与 adapter profile `claude-code` 不一致的问题。
+  - CLI 仍接受旧输入 `claude`，但规范化为真实 runtime id `claude-code`。
+- 证据：
+  - `src/cli/index.ts`
+  - `src/cli/types.ts`
+  - `src/cli/compat.ts`
+  - `src/cli/ui.ts`
 
 ### memory / evolution baseline
 - 状态：`partial` / `overstated`

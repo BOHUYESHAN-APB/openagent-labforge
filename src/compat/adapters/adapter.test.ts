@@ -48,6 +48,7 @@ describe('runtime adapter skeletons', () => {
     expect(openclaudePlan.files.map((file) => file.relativePath)).toEqual(
       expect.arrayContaining([
         '.claude-plugin/plugin.json',
+        '.claude-plugin/marketplace.json',
         '.claude.json',
         'settings.json',
         'plugins/known_marketplaces.json',
@@ -61,6 +62,7 @@ describe('runtime adapter skeletons', () => {
     expect(claudePlan.files.map((file) => file.relativePath)).toEqual(
       expect.arrayContaining([
         '.claude-plugin/plugin.json',
+        '.claude-plugin/marketplace.json',
         '.claude.json',
         'skills/extendai-lab-foundation/SKILL.md',
         'agents/extendai-lab-orchestrator.md',
@@ -70,14 +72,14 @@ describe('runtime adapter skeletons', () => {
     );
     expect(codexPlan.files.map((file) => file.relativePath)).toEqual(
       expect.arrayContaining([
-        '.codex-plugin/plugin.json',
-        '.app.json',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/.codex-plugin/plugin.json',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/.app.json',
         '.agents/plugins/marketplace.json',
         'config.toml',
-        'skills/extendai-lab-foundation/SKILL.md',
-        'agents/extendai-lab-orchestrator.md',
-        'commands/extendai-lab-baseline.md',
-        '.mcp.json',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/skills/extendai-lab-foundation/SKILL.md',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/agents/extendai-lab-orchestrator.md',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/commands/extendai-lab-baseline.md',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/.mcp.json',
       ]),
     );
 
@@ -102,6 +104,10 @@ describe('runtime adapter skeletons', () => {
         ?.content,
     ).toContain('# BEGIN EXTENDAI LAB MANAGED MARKETPLACE REGISTRATION');
     expect(
+      codexPlan.files.find((file) => file.relativePath === 'config.toml')
+        ?.content,
+    ).toContain('# BEGIN EXTENDAI LAB MANAGED PLUGIN ACTIVATION');
+    expect(
       openclaudePlan.files.find((file) => file.relativePath === 'settings.json')
         ?.content,
     ).toContain('enabledPlugins');
@@ -123,7 +129,7 @@ describe('runtime adapter skeletons', () => {
       openclaudePlan.files.find(
         (file) => file.relativePath === 'plugins/known_marketplaces.json',
       )?.content,
-    ).toContain('"source": "local"');
+    ).toContain('"source": "directory"');
     expect(
       codexPlan.files.find((file) => file.relativePath === 'config.toml')
         ?.content,
@@ -132,6 +138,10 @@ describe('runtime adapter skeletons', () => {
       codexPlan.files.find((file) => file.relativePath === 'config.toml')
         ?.content,
     ).toContain('source_type = "local"');
+    expect(
+      codexPlan.files.find((file) => file.relativePath === 'config.toml')
+        ?.content,
+    ).toContain('[plugins."extendai-lab@extendai-lab-local"]');
     expect(
       codexPlan.files.find(
         (file) => file.relativePath === '.agents/plugins/marketplace.json',

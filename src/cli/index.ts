@@ -35,8 +35,8 @@ function parseArgs(args: string[]): InstallArgs {
       result.target = 'openclaude';
     } else if (arg === 'codex') {
       result.target = 'codex';
-    } else if (arg === 'claude') {
-      result.target = 'claude';
+    } else if (arg === 'claude-code' || arg === 'claude') {
+      result.target = 'claude-code';
     } else if (arg === '--no-tui') {
       result.tui = false;
     } else if (arg.startsWith('--skills=')) {
@@ -65,16 +65,17 @@ function parseArgs(args: string[]): InstallArgs {
     } else if (arg.startsWith('--runtime=')) {
       const parsedRuntimes = arg
         .split('=')[1]
-        .split(',')
+        .split(/[\s,]+/)
         .map((entry) => entry.trim())
         .flatMap((entry) => {
           if (
             entry === 'opencode' ||
             entry === 'openclaude' ||
             entry === 'codex' ||
+            entry === 'claude-code' ||
             entry === 'claude'
           ) {
-            return [entry] as const;
+            return [entry === 'claude' ? 'claude-code' : entry] as const;
           }
           return [];
         });
@@ -105,7 +106,7 @@ Usage: bunx ${PACKAGE_NAME} install [OPTIONS]
 Options:
   --skills=yes|no        Install recommended and bundled skills (default: yes)
   --preset=<name>        Active generated config preset (default: openai)
-  --runtime=<id[,id...]> Scope compat doctor/status/install to opencode|openclaude|codex|claude; repeat or comma-separate for multi-runtime compat flows
+  --runtime=<id[,id...]> Scope compat doctor/status/install to opencode|openclaude|codex|claude-code; repeat or comma-separate for multi-runtime compat flows
   --runtime-root=<path>  Override compat runtime root for install/apply/doctor
   --manifest=<path>      Backup manifest path for compat rollback preview
   --no-tui               Non-interactive mode
@@ -134,6 +135,7 @@ Examples:
   bunx ${PACKAGE_NAME} install --runtime=openclaude
   bunx ${PACKAGE_NAME} install --runtime=openclaude,codex --runtime-root=C:\\temp\\lab-runtimes
   bunx ${PACKAGE_NAME} install --runtime=codex --dry-run
+  bunx ${PACKAGE_NAME} install --runtime=claude-code --dry-run
   bunx ${PACKAGE_NAME} rollback --runtime=openclaude --manifest=.opencode/extendai-lab/backups/latest/manifest.json
   bunx ${PACKAGE_NAME} install codex --dry-run
   bunx ${PACKAGE_NAME} install --no-tui --skills=yes
@@ -200,7 +202,7 @@ function isCompatRuntimeTarget(
     target === 'opencode' ||
     target === 'openclaude' ||
     target === 'codex' ||
-    target === 'claude'
+    target === 'claude-code'
   );
 }
 
@@ -281,7 +283,7 @@ async function runCli(args: string[]): Promise<number> {
       selectedRuntime === 'opencode' ||
       selectedRuntime === 'openclaude' ||
       selectedRuntime === 'codex' ||
-      selectedRuntime === 'claude'
+      selectedRuntime === 'claude-code'
     ) {
       installTarget = selectedRuntime;
     }
@@ -322,7 +324,7 @@ async function runCli(args: string[]): Promise<number> {
     }
 
     if (selectedRuntime && selectedRuntime !== 'opencode') {
-      if (!installArgs.dryRun && selectedRuntime !== 'claude') {
+      if (!installArgs.dryRun && selectedRuntime !== 'claude-code') {
         const packageVersion = await readCurrentPackageVersion();
         console.log(
           applyCompatRuntimeInstall(process.cwd(), selectedRuntime, {

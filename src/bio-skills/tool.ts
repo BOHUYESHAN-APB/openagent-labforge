@@ -1,7 +1,7 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
-import type { BioSkillsSessionManager } from './session-manager';
 import { countSkillFilesInCategory } from './loader';
+import type { BioSkillsSessionManager } from './session-manager';
 
 const z = tool.schema;
 
@@ -15,7 +15,9 @@ export function createLoadBioSkillsTool(
       categories: z
         .array(z.string())
         .min(1)
-        .describe('Category names to load (e.g., ["rna-seq", "variant-calling"])'),
+        .describe(
+          'Category names to load (e.g., ["rna-seq", "variant-calling"])',
+        ),
     },
     async execute(args, toolContext) {
       if (
@@ -32,9 +34,7 @@ export function createLoadBioSkillsTool(
       // Validate categories exist
       const catalog = sessionManager.getCatalog();
       const catalogByName = new Map(catalog.map((cat) => [cat.name, cat]));
-      const validCategories = categories.filter((c) =>
-        catalogByName.has(c),
-      );
+      const validCategories = categories.filter((c) => catalogByName.has(c));
 
       if (validCategories.length === 0) {
         const available = catalog.map((c) => c.name).join(', ');
@@ -59,7 +59,8 @@ export function createLoadBioSkillsTool(
       if (totalLoaded === 0) {
         const diagnostics = validCategories.map((categoryName) => {
           const category = catalogByName.get(categoryName);
-          if (!category) return `${categoryName}: category missing from catalog`;
+          if (!category)
+            return `${categoryName}: category missing from catalog`;
           return `${categoryName}: path=${category.path}, catalogCount=${category.skillCount}, diskCount=${countSkillFilesInCategory(category.path)}`;
         });
         return [

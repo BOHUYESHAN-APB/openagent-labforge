@@ -35,10 +35,15 @@ describe('DeepSeek-TUI adapter install/uninstall', () => {
     expect(existsSync(paths.manifestPath)).toBe(true);
     expect(existsSync(join(paths.commandsDir, 'ol-review.md'))).toBe(true);
     expect(
-      existsSync(join(paths.skillsDir, 'extendai-lab-anti-overconfidence', 'SKILL.md')),
+      existsSync(
+        join(paths.skillsDir, 'extendai-lab-anti-overconfidence', 'SKILL.md'),
+      ),
     ).toBe(true);
 
-    const installed = readFileSync(join(paths.commandsDir, 'ol-engineer.md'), 'utf8');
+    const installed = readFileSync(
+      join(paths.commandsDir, 'ol-engineer.md'),
+      'utf8',
+    );
     expect(installed).toContain('extendai-lab-managed: true');
     expect(installed).toContain('# ExtendAI Engineer');
   });
@@ -56,7 +61,9 @@ describe('DeepSeek-TUI adapter install/uninstall', () => {
     expect(existsSync(paths.manifestPath)).toBe(false);
     expect(existsSync(join(paths.commandsDir, 'ol-engineer.md'))).toBe(false);
     expect(
-      existsSync(join(paths.skillsDir, 'extendai-lab-scientific-rigor', 'SKILL.md')),
+      existsSync(
+        join(paths.skillsDir, 'extendai-lab-scientific-rigor', 'SKILL.md'),
+      ),
     ).toBe(false);
   });
 
@@ -105,7 +112,9 @@ describe('DeepSeek-TUI adapter install/uninstall', () => {
       join('skills', 'extendai-lab-scientific-rigor', 'SKILL.md'),
     );
     expect(
-      existsSync(join(paths.skillsDir, 'extendai-lab-scientific-rigor', 'SKILL.md')),
+      existsSync(
+        join(paths.skillsDir, 'extendai-lab-scientific-rigor', 'SKILL.md'),
+      ),
     ).toBe(false);
   });
 
@@ -128,7 +137,13 @@ describe('DeepSeek-TUI adapter install/uninstall', () => {
       files: Array<{ relativePath: string }>;
     };
 
-    expect(manifest.files.some((file) => file.relativePath === join('skills', 'extendai-lab-scientific-rigor', 'SKILL.md'))).toBe(true);
+    expect(
+      manifest.files.some(
+        (file) =>
+          file.relativePath ===
+          join('skills', 'extendai-lab-scientific-rigor', 'SKILL.md'),
+      ),
+    ).toBe(true);
   });
 
   test('force uninstall keeps backup directory instead of deleting it', async () => {
@@ -141,7 +156,11 @@ describe('DeepSeek-TUI adapter install/uninstall', () => {
     });
 
     const engineerCommand = join(paths.commandsDir, 'ol-engineer.md');
-    writeFileSync(engineerCommand, `${readFileSync(engineerCommand, 'utf8')}\nforced edit\n`, 'utf8');
+    writeFileSync(
+      engineerCommand,
+      `${readFileSync(engineerCommand, 'utf8')}\nforced edit\n`,
+      'utf8',
+    );
 
     const result = await uninstallDeepSeekAdapter({
       targetRoot: root,

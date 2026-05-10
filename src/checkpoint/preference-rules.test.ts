@@ -21,7 +21,9 @@ describe('preference rules', () => {
     expect(
       classifyAutoPreference('Prefer test -> build -> deploy order'),
     ).toEqual({ kind: 'workflow', scope: 'repository' });
-    expect(classifyAutoPreference('Prefer uv for Python tooling setup')).toEqual({
+    expect(
+      classifyAutoPreference('Prefer uv for Python tooling setup'),
+    ).toEqual({
       kind: 'tooling',
       scope: 'repository',
     });

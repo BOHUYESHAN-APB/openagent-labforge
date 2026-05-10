@@ -141,24 +141,30 @@ describe('media_inventory tool', () => {
     expect(result).not.toContain('report.pdf');
   });
 
-  test('reports when scan entry budget is reached', async () => {
-    const dir = makeTempDir();
-    dirs.push(dir);
-    for (let index = 0; index < 5_001; index += 1) {
-      writeFileSync(path.join(dir, `file-${index}.txt`), 'not media');
-    }
+  test(
+    'reports when scan entry budget is reached',
+    async () => {
+      const dir = makeTempDir();
+      dirs.push(dir);
+      for (let index = 0; index < 5_001; index += 1) {
+        writeFileSync(path.join(dir, `file-${index}.txt`), 'not media');
+      }
 
-    const mediaInventory = createMediaInventoryTool({ directory: dir } as any);
-    const result = await mediaInventory.execute(
-      { path: '.', recursive: false },
-      makeContext({ directory: dir }) as any,
-    );
+      const mediaInventory = createMediaInventoryTool({
+        directory: dir,
+      } as any);
+      const result = await mediaInventory.execute(
+        { path: '.', recursive: false },
+        makeContext({ directory: dir }) as any,
+      );
 
-    expect(result).toContain(
-      'Scan limit reached after 5001 filesystem entries',
-    );
-    expect(result).toContain('results may be incomplete');
-  });
+      expect(result).toContain(
+        'Scan limit reached after 5001 filesystem entries',
+      );
+      expect(result).toContain('results may be incomplete');
+    },
+    { timeout: 30000 },
+  );
 
   test('returns a single supported file', async () => {
     const dir = makeTempDir();

@@ -75,7 +75,7 @@ function buildRuntimeSelectionLabel(
 function buildRuntimePriorityNote(
   runtimeId?: CompatRuntimeId,
 ): string | undefined {
-  if (runtimeId === 'claude') {
+  if (runtimeId === 'claude-code') {
     return 'Selected runtime is a later closed-source Claude target. OpenCode -> OpenClaude -> Codex remains the current implementation order.';
   }
 
@@ -108,7 +108,7 @@ function getCompatRuntimeCompletionState(
     return 'native-primary';
   }
 
-  if (runtimeId === 'claude') {
+  if (runtimeId === 'claude-code') {
     return 'preview-only';
   }
 
@@ -497,11 +497,11 @@ export function applyCompatRuntimeInstalls(
 ): string {
   const orderedRuntimeIds = normalizeCompatRuntimeSelection(runtimeIds);
   const sections = orderedRuntimeIds.map((runtimeId) => {
-    if (runtimeId === 'claude') {
+    if (runtimeId === 'claude-code') {
       return [
         'ExtendAI Lab Install Apply: Claude Code',
         '',
-        'Runtime scope: claude',
+        'Runtime scope: claude-code',
         'Closed-source Claude remains preview-only in the current implementation order.',
       ].join('\n');
     }

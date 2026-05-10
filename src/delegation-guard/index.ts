@@ -1,6 +1,6 @@
 /**
  * Delegation guard - pre-delegation safety and benefit check
- * 
+ *
  * Prevents delegation failures by checking:
  * 1. Is delegation truly worthwhile?
  * 2. Does target agent have an available model?
@@ -10,7 +10,10 @@
 
 import type { AgentName } from '../config/index.js';
 import type { ModelResolverContext } from '../model-resolver/index.js';
-import { isDelegationWorthwhile, resolveFallbackToPrimary } from '../model-resolver/index.js';
+import {
+  isDelegationWorthwhile,
+  resolveFallbackToPrimary,
+} from '../model-resolver/index.js';
 
 export interface DelegationGuardContext extends ModelResolverContext {
   sessionManager?: {
@@ -57,7 +60,8 @@ export function checkDelegation(
   }
 
   // Check 3: Does a reusable session exist?
-  const hasReusableSession = ctx.sessionManager?.hasReusableSession(agentName) ?? false;
+  const hasReusableSession =
+    ctx.sessionManager?.hasReusableSession(agentName) ?? false;
 
   // Check 4: Is handoff packet needed?
   const requiresHandoff = ctx.contextPressure?.requiresHandoff ?? false;
@@ -87,7 +91,9 @@ export function checkAgentAvailability(
     };
   }
 
-  const modelString = Array.isArray(resolvedModel) ? resolvedModel[0] : resolvedModel;
+  const modelString = Array.isArray(resolvedModel)
+    ? resolvedModel[0]
+    : resolvedModel;
 
   return {
     available: true,

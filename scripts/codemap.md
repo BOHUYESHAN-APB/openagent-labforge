@@ -22,6 +22,7 @@
   - Builds temporary OpenCode environment (bin from `bun add opencode-ai`), mounts the plugin tarball,
     launches `opencode serve`, and probes `http://127.0.0.1:<port>/global/health`.
   - Captures logs and fails on `failed to load plugin` and `cannot find module` patterns.
+  - Set `EXTENDAI_LAB_TMP_ROOT` to pin the smoke-test temp root inside the repo (skips auto-cleanup).
 - All scripts are executable boundary files (`#!/usr/bin/env bun` / Node), with explicit temp-dir lifecycle management
   and defensive cleanup via `rmSync(..., { force: true, recursive: true })`.
 

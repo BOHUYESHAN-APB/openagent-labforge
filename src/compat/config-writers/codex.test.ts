@@ -3,6 +3,7 @@ import {
   createCodexMarketplaceJson,
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
+  mergeCodexPluginActivation,
 } from './codex';
 
 describe('mergeCodexMcpServers', () => {
@@ -135,6 +136,42 @@ describe('mergeCodexMarketplaceRegistration', () => {
   });
 });
 
+describe('mergeCodexPluginActivation', () => {
+  test('enables plugins feature and appends managed plugin table', () => {
+    const result = mergeCodexPluginActivation('model = "gpt-5"\n', [
+      'extendai-lab@extendai-lab-local',
+    ]);
+
+    expect(result.changed).toBe(true);
+    expect(result.featureChanged).toBe(true);
+    expect(result.activated).toEqual(['extendai-lab@extendai-lab-local']);
+    expect(result.content).toContain('[features]');
+    expect(result.content).toContain('plugins = true');
+    expect(result.content).toContain(
+      '[plugins."extendai-lab@extendai-lab-local"]',
+    );
+    expect(result.content).toContain('enabled = true');
+  });
+
+  test('skips unmanaged existing plugin config', () => {
+    const existing = [
+      '[features]',
+      'plugins = true',
+      '',
+      '[plugins."extendai-lab@extendai-lab-local"]',
+      'enabled = false',
+      '',
+    ].join('\n');
+    const result = mergeCodexPluginActivation(existing, [
+      'extendai-lab@extendai-lab-local',
+    ]);
+
+    expect(result.activated).toEqual([]);
+    expect(result.skipped).toEqual(['extendai-lab@extendai-lab-local']);
+    expect(result.content).toContain('enabled = false');
+  });
+});
+
 describe('createCodexMarketplaceJson', () => {
   test('creates a local marketplace JSON structure close to host expectations', () => {
     const marketplace = createCodexMarketplaceJson(
@@ -148,7 +185,9 @@ describe('createCodexMarketplaceJson', () => {
     );
     expect(marketplace.plugins[0]?.name).toBe('extendai-lab');
     expect(marketplace.plugins[0]?.source.source).toBe('local');
-    expect(marketplace.plugins[0]?.source.path).toBe('./plugins/extendai-lab');
+    expect(marketplace.plugins[0]?.source.path).toBe(
+      './plugins/cache/extendai-lab-local/extendai-lab/local',
+    );
     expect(marketplace.plugins[0]?.policy.installation).toBe('AVAILABLE');
     expect(marketplace.plugins[0]?.policy.authentication).toBe('ON_INSTALL');
   });

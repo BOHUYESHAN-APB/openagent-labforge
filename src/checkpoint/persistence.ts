@@ -1,8 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  getProjectMemoryDir,
-} from '../paths/plugin-paths';
+import { getProjectMemoryDir } from '../paths/plugin-paths';
 import type {
   CheckpointStorage,
   RepositoryMemory,

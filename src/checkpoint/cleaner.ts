@@ -55,7 +55,10 @@ export function cleanupCheckpoints(
 
   // Clean by total size if limit is set
   if (config.maxTotalSizeMb > 0) {
-    const stateFile = join(getProjectMemoryDir(workspaceRoot), 'checkpoint-state.json');
+    const stateFile = join(
+      getProjectMemoryDir(workspaceRoot),
+      'checkpoint-state.json',
+    );
     try {
       const currentSizeBytes = statSync(stateFile).size;
       const maxSizeBytes = config.maxTotalSizeMb * 1024 * 1024;
@@ -73,7 +76,9 @@ export function cleanupCheckpoints(
         }
 
         // Sort by timestamp (oldest first)
-        allCheckpoints.sort((a, b) => a.checkpoint.timestamp - b.checkpoint.timestamp);
+        allCheckpoints.sort(
+          (a, b) => a.checkpoint.timestamp - b.checkpoint.timestamp,
+        );
 
         // Remove oldest checkpoints until under size limit
         // Rough estimate: remove 20% of checkpoints at a time
@@ -83,7 +88,9 @@ export function cleanupCheckpoints(
         for (const { sessionID, checkpoint } of removed) {
           const session = storage.sessionMemory.get(sessionID);
           if (session) {
-            const index = session.checkpoints.findIndex((cp) => cp.id === checkpoint.id);
+            const index = session.checkpoints.findIndex(
+              (cp) => cp.id === checkpoint.id,
+            );
             if (index !== -1) {
               session.checkpoints.splice(index, 1);
               stats.checkpointsRemoved++;

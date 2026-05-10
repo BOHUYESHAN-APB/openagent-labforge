@@ -1,7 +1,7 @@
+import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
 import { getProjectMemoryDir } from '../paths/plugin-paths';
 import { CheckpointManager } from './manager';
 
@@ -20,9 +20,15 @@ describe('checkpoint persistence', () => {
         'conversation-1',
       );
 
-      const statePath = join(getProjectMemoryDir(root), 'checkpoint-state.json');
+      const statePath = join(
+        getProjectMemoryDir(root),
+        'checkpoint-state.json',
+      );
       const persisted = JSON.parse(readFileSync(statePath, 'utf-8')) as {
-        sessions: Array<{ sessionID: string; checkpoints: Array<{ id: string }> }>;
+        sessions: Array<{
+          sessionID: string;
+          checkpoints: Array<{ id: string }>;
+        }>;
       };
 
       expect(persisted.sessions).toHaveLength(1);
@@ -62,7 +68,8 @@ describe('checkpoint persistence', () => {
 
       expect(checkpoint).not.toBeNull();
       expect(
-        manager.sessionMemory.get('session-pressure')?.metadata.lastContextPressure,
+        manager.sessionMemory.get('session-pressure')?.metadata
+          .lastContextPressure,
       ).toMatchObject({
         strategy: 'l3-checkpoint-heavy',
         checkpointID: checkpoint?.id,
@@ -82,13 +89,14 @@ describe('checkpoint persistence', () => {
       expect(
         manager.conversationMemory.get('conversation-pressure')?.summary,
       ).toBe(checkpoint?.summary);
-      expect(
-        manager.workingMemory.get('session-pressure')?.currentTask,
-      ).toBe('context-pressure:L3');
+      expect(manager.workingMemory.get('session-pressure')?.currentTask).toBe(
+        'context-pressure:L3',
+      );
 
       const reloaded = new CheckpointManager(root);
       expect(
-        reloaded.sessionMemory.get('session-pressure')?.metadata.lastContextPressure,
+        reloaded.sessionMemory.get('session-pressure')?.metadata
+          .lastContextPressure,
       ).toMatchObject({ strategy: 'l3-checkpoint-heavy' });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -140,7 +148,8 @@ describe('checkpoint persistence', () => {
 
       const reloaded = new CheckpointManager(root);
       expect(
-        reloaded.sessionMemory.get('session-review')?.metadata.lastReviewOutcome,
+        reloaded.sessionMemory.get('session-review')?.metadata
+          .lastReviewOutcome,
       ).toMatchObject({ verdict: 'needs_user' });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -319,37 +328,52 @@ describe('checkpoint persistence', () => {
           }),
         ]),
       );
-      expect(manager.repositoryMemory.get('repo-pref')?.globalKnowledge).toContain(
-        'Preference (tooling): Prefer uv for Python tooling setup.',
-      );
+      expect(
+        manager.repositoryMemory.get('repo-pref')?.globalKnowledge,
+      ).toContain('Preference (tooling): Prefer uv for Python tooling setup.');
       expect(manager.repositoryMemory.get('repo-pref')?.patterns).toContain(
         'preference:tooling',
       );
 
       expect(
-        manager.removeManualPreferenceById('session-pref', repositoryPrefId!, 'repository'),
+        manager.removeManualPreferenceById(
+          'session-pref',
+          repositoryPrefId!,
+          'repository',
+        ),
       ).toBe(true);
       expect(
-        manager.repositoryMemory.get('repo-pref')?.preferences.some((entry) => entry.id === repositoryPrefId),
+        manager.repositoryMemory
+          .get('repo-pref')
+          ?.preferences.some((entry) => entry.id === repositoryPrefId),
       ).toBe(false);
-      expect(manager.repositoryMemory.get('repo-pref')?.globalKnowledge).not.toContain(
+      expect(
+        manager.repositoryMemory.get('repo-pref')?.globalKnowledge,
+      ).not.toContain(
         'Preference (tooling): Prefer uv for Python tooling setup.',
       );
 
       expect(
-        manager.removeManualPreferenceById('session-pref', workspacePrefId!, 'workspace'),
+        manager.removeManualPreferenceById(
+          'session-pref',
+          workspacePrefId!,
+          'workspace',
+        ),
       ).toBe(true);
       expect(
-        manager.workspaceMemory.get(root)?.preferences.some((entry) => entry.id === workspacePrefId),
+        manager.workspaceMemory
+          .get(root)
+          ?.preferences.some((entry) => entry.id === workspacePrefId),
       ).toBe(false);
-      expect(manager.workspaceMemory.get(root)?.globalContext).not.toHaveProperty(
-        `preference:${workspacePrefId}`,
-      );
+      expect(
+        manager.workspaceMemory.get(root)?.globalContext,
+      ).not.toHaveProperty(`preference:${workspacePrefId}`);
 
       const reloaded = new CheckpointManager(root);
       expect(reloaded.listManualPreferences('session-pref')).toHaveLength(0);
       expect(
-        reloaded.sessionMemory.get('session-pref')?.metadata.lastRemovedPreference,
+        reloaded.sessionMemory.get('session-pref')?.metadata
+          .lastRemovedPreference,
       ).toMatchObject({
         id: workspacePrefId,
         scope: 'workspace',
@@ -384,35 +408,49 @@ describe('checkpoint persistence', () => {
       expect(firstId).toBeTruthy();
       expect(secondId).toBeTruthy();
       expect(firstId).not.toBe(secondId);
-      expect(manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge).toContain(
-        'Preference (tooling): Prefer uv for Python tooling setup.',
-      );
-      expect(manager.repositoryMemory.get('repo-pref-dup')?.patterns).toContain(
-        'preference:tooling',
-      );
-
-      expect(
-        manager.removeManualPreferenceById('session-pref-dup', firstId!, 'repository'),
-      ).toBe(true);
-
-      expect(manager.listManualPreferences('session-pref-dup', 'repository')).toHaveLength(1);
-      expect(manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge).toContain(
-        'Preference (tooling): Prefer uv for Python tooling setup.',
-      );
-      expect(manager.repositoryMemory.get('repo-pref-dup')?.patterns).toContain(
-        'preference:tooling',
-      );
-
-      expect(
-        manager.removeManualPreferenceById('session-pref-dup', secondId!, 'repository'),
-      ).toBe(true);
-      expect(manager.listManualPreferences('session-pref-dup', 'repository')).toHaveLength(0);
       expect(
         manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge,
-      ).not.toContain('Preference (tooling): Prefer uv for Python tooling setup.');
-      expect(manager.repositoryMemory.get('repo-pref-dup')?.patterns).not.toContain(
+      ).toContain('Preference (tooling): Prefer uv for Python tooling setup.');
+      expect(manager.repositoryMemory.get('repo-pref-dup')?.patterns).toContain(
         'preference:tooling',
       );
+
+      expect(
+        manager.removeManualPreferenceById(
+          'session-pref-dup',
+          firstId!,
+          'repository',
+        ),
+      ).toBe(true);
+
+      expect(
+        manager.listManualPreferences('session-pref-dup', 'repository'),
+      ).toHaveLength(1);
+      expect(
+        manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge,
+      ).toContain('Preference (tooling): Prefer uv for Python tooling setup.');
+      expect(manager.repositoryMemory.get('repo-pref-dup')?.patterns).toContain(
+        'preference:tooling',
+      );
+
+      expect(
+        manager.removeManualPreferenceById(
+          'session-pref-dup',
+          secondId!,
+          'repository',
+        ),
+      ).toBe(true);
+      expect(
+        manager.listManualPreferences('session-pref-dup', 'repository'),
+      ).toHaveLength(0);
+      expect(
+        manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge,
+      ).not.toContain(
+        'Preference (tooling): Prefer uv for Python tooling setup.',
+      );
+      expect(
+        manager.repositoryMemory.get('repo-pref-dup')?.patterns,
+      ).not.toContain('preference:tooling');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -447,7 +485,8 @@ describe('checkpoint persistence', () => {
         ]),
       );
       expect(
-        manager.sessionMemory.get('session-auto-pref')?.metadata.lastAutoPreference,
+        manager.sessionMemory.get('session-auto-pref')?.metadata
+          .lastAutoPreference,
       ).toMatchObject({
         id: autoId,
         source: 'auto',
@@ -459,7 +498,9 @@ describe('checkpoint persistence', () => {
           'User gets angry easily when tests fail',
         ),
       ).toBeNull();
-      expect(manager.listManualPreferences('session-auto-pref')).toHaveLength(1);
+      expect(manager.listManualPreferences('session-auto-pref')).toHaveLength(
+        1,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

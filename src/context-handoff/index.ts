@@ -1,6 +1,6 @@
 /**
  * Context handoff packet - structured work-memory transfer from main agent to sub-agents
- * 
+ *
  * Enables efficient sub-agent delegation by providing:
  * - Task summary and user intent
  * - Constraints and prior findings
@@ -11,35 +11,35 @@
 export interface ContextHandoffPacket {
   /** Brief summary of the task being delegated */
   task_summary: string;
-  
+
   /** Original user intent (what the user actually wants) */
   user_intent: string;
-  
+
   /** Explicit constraints from user or context */
   constraints: string[];
-  
+
   /** Key findings from prior exploration/research */
   prior_findings: string[];
-  
+
   /** Files/artifacts already read by main agent */
   read_artifacts: Array<{
     path: string;
     lineCount?: number;
     summary?: string;
   }>;
-  
+
   /** Relevant file paths or directories for this task */
   relevant_paths: string[];
-  
+
   /** Open questions that need answering */
   open_questions: string[];
-  
+
   /** Things the sub-agent should NOT repeat */
   do_not_repeat: string[];
-  
+
   /** Optional: Session ID of parent for context continuity */
   parent_session_id?: string;
-  
+
   /** Optional: Timestamp of handoff */
   created_at?: number;
 }
@@ -138,13 +138,13 @@ export function persistHandoffPacket(
 ): string {
   const fs = require('node:fs');
   const path = require('node:path');
-  
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `handoff-${timestamp}.json`;
   const filepath = path.join(runtimeDir, 'handoffs', filename);
-  
+
   fs.mkdirSync(path.dirname(filepath), { recursive: true });
   fs.writeFileSync(filepath, JSON.stringify(packet, null, 2), 'utf-8');
-  
+
   return filepath;
 }

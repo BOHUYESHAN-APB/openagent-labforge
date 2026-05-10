@@ -1,18 +1,13 @@
 import type { CheckpointCleanupConfig } from '../config/schema';
-import type {
-  CheckpointStorage,
-  ContextCheckpoint,
-  PreferenceMemoryEntry,
-} from './types';
 import { cleanupCheckpoints } from './cleaner';
 import { ConversationMemoryStore } from './conversation-memory';
 import {
   addGlobalKnowledge,
   addGlobalPattern,
   getRepositoryWorkspaces,
+  registerWorkspace,
   removeGlobalKnowledge,
   removeGlobalPattern,
-  registerWorkspace,
 } from './global-index';
 import { loadCheckpointStorage, saveCheckpointStorage } from './persistence';
 import {
@@ -21,6 +16,11 @@ import {
 } from './preference-rules';
 import { RepositoryMemoryStore } from './repository-memory';
 import { SessionMemoryStore } from './session-memory';
+import type {
+  CheckpointStorage,
+  ContextCheckpoint,
+  PreferenceMemoryEntry,
+} from './types';
 import { WorkingMemoryStore } from './working-memory';
 import { WorkspaceMemoryStore } from './workspace-memory';
 
@@ -90,7 +90,10 @@ export class CheckpointManager {
 
       const resolvedRepositoryId = existing.repositoryId ?? repositoryId;
       if (resolvedRepositoryId) {
-        this.workspaceMemory.setRepositoryId(workspaceRoot, resolvedRepositoryId);
+        this.workspaceMemory.setRepositoryId(
+          workspaceRoot,
+          resolvedRepositoryId,
+        );
         let repo = this.repositoryMemory.get(resolvedRepositoryId);
         if (!repo) {
           repo = this.repositoryMemory.create(resolvedRepositoryId);
@@ -115,7 +118,12 @@ export class CheckpointManager {
       this.persist();
       return;
     }
-    this.initializeSession(sessionID, workspaceRoot, repositoryId, conversationID);
+    this.initializeSession(
+      sessionID,
+      workspaceRoot,
+      repositoryId,
+      conversationID,
+    );
   }
 
   createCheckpoint(
@@ -179,7 +187,10 @@ export class CheckpointManager {
     if (conversationID) {
       let conversation = this.conversationMemory.get(conversationID);
       if (!conversation) {
-        conversation = this.conversationMemory.create(conversationID, sessionID);
+        conversation = this.conversationMemory.create(
+          conversationID,
+          sessionID,
+        );
       } else {
         this.conversationMemory.addSession(conversationID, sessionID);
       }
@@ -235,7 +246,10 @@ export class CheckpointManager {
       session.conversationID,
     );
 
-    this.workingMemory.updateTask(sessionID, `context-pressure:L${pressure.level}`);
+    this.workingMemory.updateTask(
+      sessionID,
+      `context-pressure:L${pressure.level}`,
+    );
     this.workingMemory.addDecision(sessionID, summary);
     this.workingMemory.setContext(sessionID, 'lastContextPressure', {
       ...pressure,
@@ -247,12 +261,16 @@ export class CheckpointManager {
       strategy,
       checkpointID: checkpoint.id,
     });
-    this.workspaceMemory.setGlobalContext(session.workspaceRoot, 'lastContextPressure', {
-      sessionID,
-      ...pressure,
-      strategy,
-      checkpointID: checkpoint.id,
-    });
+    this.workspaceMemory.setGlobalContext(
+      session.workspaceRoot,
+      'lastContextPressure',
+      {
+        sessionID,
+        ...pressure,
+        strategy,
+        checkpointID: checkpoint.id,
+      },
+    );
 
     if (session.conversationID) {
       this.conversationMemory.updateSummary(session.conversationID, summary);
@@ -289,8 +307,12 @@ export class CheckpointManager {
       summary,
       [`Review verdict: ${verdict}`],
       verdict === 'approve'
-        ? ['If the session is reopened later, continue only from net-new changes.']
-        : ['Resolve the review finding or gather the required user/external input.'],
+        ? [
+            'If the session is reopened later, continue only from net-new changes.',
+          ]
+        : [
+            'Resolve the review finding or gather the required user/external input.',
+          ],
       0,
       session.conversationID,
     );
@@ -307,12 +329,16 @@ export class CheckpointManager {
       details: normalizedDetails,
       checkpointID: checkpoint.id,
     });
-    this.workspaceMemory.setGlobalContext(session.workspaceRoot, 'lastReviewOutcome', {
-      sessionID,
-      verdict,
-      details: normalizedDetails,
-      checkpointID: checkpoint.id,
-    });
+    this.workspaceMemory.setGlobalContext(
+      session.workspaceRoot,
+      'lastReviewOutcome',
+      {
+        sessionID,
+        verdict,
+        details: normalizedDetails,
+        checkpointID: checkpoint.id,
+      },
+    );
 
     if (session.conversationID) {
       this.conversationMemory.updateSummary(session.conversationID, summary);
@@ -320,7 +346,10 @@ export class CheckpointManager {
 
     if (session.repositoryId) {
       this.repositoryMemory.addKnowledge(session.repositoryId, summary);
-      this.repositoryMemory.addPattern(session.repositoryId, `review-outcome:${verdict}`);
+      this.repositoryMemory.addPattern(
+        session.repositoryId,
+        `review-outcome:${verdict}`,
+      );
       addGlobalKnowledge(session.repositoryId, summary);
       addGlobalPattern(session.repositoryId, `review-outcome:${verdict}`);
     }
@@ -345,7 +374,9 @@ export class CheckpointManager {
       sessionID,
       summary,
       [`Auto pause reason: ${reason}`],
-      ['Resume after resolving the pause reason or explicitly re-enabling auto mode.'],
+      [
+        'Resume after resolving the pause reason or explicitly re-enabling auto mode.',
+      ],
       0,
       session.conversationID,
     );
@@ -362,12 +393,16 @@ export class CheckpointManager {
       details: normalizedDetails,
       checkpointID: checkpoint.id,
     });
-    this.workspaceMemory.setGlobalContext(session.workspaceRoot, 'lastAutoPause', {
-      sessionID,
-      reason,
-      details: normalizedDetails,
-      checkpointID: checkpoint.id,
-    });
+    this.workspaceMemory.setGlobalContext(
+      session.workspaceRoot,
+      'lastAutoPause',
+      {
+        sessionID,
+        reason,
+        details: normalizedDetails,
+        checkpointID: checkpoint.id,
+      },
+    );
 
     if (session.conversationID) {
       this.conversationMemory.updateSummary(session.conversationID, summary);
@@ -375,7 +410,10 @@ export class CheckpointManager {
 
     if (session.repositoryId) {
       this.repositoryMemory.addKnowledge(session.repositoryId, summary);
-      this.repositoryMemory.addPattern(session.repositoryId, `auto-pause:${reason}`);
+      this.repositoryMemory.addPattern(
+        session.repositoryId,
+        `auto-pause:${reason}`,
+      );
       addGlobalKnowledge(session.repositoryId, summary);
       addGlobalPattern(session.repositoryId, `auto-pause:${reason}`);
     }
@@ -384,7 +422,10 @@ export class CheckpointManager {
     return checkpoint;
   }
 
-  recordBatchSummary(sessionID: string, summaryText: string): ContextCheckpoint | null {
+  recordBatchSummary(
+    sessionID: string,
+    summaryText: string,
+  ): ContextCheckpoint | null {
     const session = this.sessionMemory.get(sessionID);
     if (!session) {
       return null;
@@ -412,11 +453,15 @@ export class CheckpointManager {
       summary: normalizedSummary,
       checkpointID: checkpoint.id,
     });
-    this.workspaceMemory.setGlobalContext(session.workspaceRoot, 'lastBatchSummary', {
-      sessionID,
-      summary: normalizedSummary,
-      checkpointID: checkpoint.id,
-    });
+    this.workspaceMemory.setGlobalContext(
+      session.workspaceRoot,
+      'lastBatchSummary',
+      {
+        sessionID,
+        summary: normalizedSummary,
+        checkpointID: checkpoint.id,
+      },
+    );
 
     if (session.conversationID) {
       this.conversationMemory.updateSummary(session.conversationID, summary);
@@ -429,7 +474,10 @@ export class CheckpointManager {
         'batch-summary:auto-review-approved',
       );
       addGlobalKnowledge(session.repositoryId, summary);
-      addGlobalPattern(session.repositoryId, 'batch-summary:auto-review-approved');
+      addGlobalPattern(
+        session.repositoryId,
+        'batch-summary:auto-review-approved',
+      );
     }
 
     this.persist();
@@ -558,7 +606,10 @@ export class CheckpointManager {
         session.repositoryId,
         `Preference (${classification.kind}): ${normalizedContent}`,
       );
-      addGlobalPattern(session.repositoryId, `preference:${classification.kind}`);
+      addGlobalPattern(
+        session.repositoryId,
+        `preference:${classification.kind}`,
+      );
     } else {
       this.workspaceMemory.addPreference(session.workspaceRoot, entry);
       this.workspaceMemory.setGlobalContext(
@@ -636,7 +687,10 @@ export class CheckpointManager {
 
     let removed = false;
     if (input.scope === 'repository' && session.repositoryId) {
-      removed = this.repositoryMemory.removePreference(session.repositoryId, input.id);
+      removed = this.repositoryMemory.removePreference(
+        session.repositoryId,
+        input.id,
+      );
       const shouldKeepSharedRepositoryMemory =
         removed &&
         input.kind &&
@@ -666,7 +720,10 @@ export class CheckpointManager {
         removeGlobalPattern(session.repositoryId, `preference:${input.kind}`);
       }
     } else {
-      removed = this.workspaceMemory.removePreference(session.workspaceRoot, input.id);
+      removed = this.workspaceMemory.removePreference(
+        session.workspaceRoot,
+        input.id,
+      );
       if (removed) {
         const workspace = this.workspaceMemory.get(session.workspaceRoot);
         if (workspace) {

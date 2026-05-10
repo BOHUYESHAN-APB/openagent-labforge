@@ -34,6 +34,7 @@ describe('capability renderer registry', () => {
     expect(files.map((file) => file.relativePath)).toEqual(
       expect.arrayContaining([
         '.claude-plugin/plugin.json',
+        '.claude-plugin/marketplace.json',
         'skills/extendai-lab-foundation/SKILL.md',
         'agents/extendai-lab-orchestrator.md',
         'commands/extendai-lab-baseline.md',
@@ -53,8 +54,8 @@ describe('capability renderer registry', () => {
 
     expect(files.map((file) => file.relativePath)).toEqual(
       expect.arrayContaining([
-        '.codex-plugin/plugin.json',
-        '.app.json',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/.codex-plugin/plugin.json',
+        'plugins/cache/extendai-lab-local/extendai-lab/local/.app.json',
         '.agents/plugins/marketplace.json',
       ]),
     );

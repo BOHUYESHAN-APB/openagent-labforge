@@ -41,6 +41,7 @@ export type {
   ClaudeMcpServerEntry,
   CodexMarketplaceJsonEntry,
   CodexMarketplaceMergeResult,
+  CodexPluginActivationMergeResult,
   CodexTomlMergeResult,
   UnifiedMcpRegistryEntry,
 } from './config-writers';
@@ -52,6 +53,7 @@ export {
   mergeClaudeMcpServers,
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
+  mergeCodexPluginActivation,
 } from './config-writers';
 export type { CapabilityDegradation, DegradationRule } from './degradation';
 export {

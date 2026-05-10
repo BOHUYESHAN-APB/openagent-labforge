@@ -194,7 +194,9 @@ describe('task-session-manager hook', () => {
 
     const prompt = systemOutput.system.join('\n');
     expect(prompt).toContain('exp-1 session files');
-    expect(prompt).toMatch(/Context read by exp-1: src[\\/]index\.ts \(12 lines\)/);
+    expect(prompt).toMatch(
+      /Context read by exp-1: src[\\/]index\.ts \(12 lines\)/,
+    );
   });
 
   test('accumulates multiple reads and hides tiny read context', async () => {

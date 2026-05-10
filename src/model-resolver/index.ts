@@ -1,6 +1,6 @@
 /**
  * Main-agent-first model resolution strategy
- * 
+ *
  * Core principle: Main agent's model is the default execution model.
  * Sub-agents inherit unless explicitly configured otherwise.
  */
@@ -35,7 +35,7 @@ export function resolveDelegatedExecutionModel(
   if (agentConfig?.model) {
     return agentConfig.model;
   }
-  
+
   // Fallback to primary agent's model
   return ctx.primaryAgentModel;
 }
@@ -58,7 +58,7 @@ export function resolveFallbackToPrimary(
   ctx: ModelResolverContext,
 ): string | string[] | undefined {
   const delegatedModel = resolveDelegatedExecutionModel(agentName, ctx);
-  
+
   // If delegated model is array, check first available
   if (Array.isArray(delegatedModel)) {
     for (const model of delegatedModel) {
@@ -66,10 +66,13 @@ export function resolveFallbackToPrimary(
         return model;
       }
     }
-  } else if (delegatedModel && isModelUsable(delegatedModel, ctx.availableModels)) {
+  } else if (
+    delegatedModel &&
+    isModelUsable(delegatedModel, ctx.availableModels)
+  ) {
     return delegatedModel;
   }
-  
+
   // Fallback to primary
   const primaryModel = ctx.primaryAgentModel;
   if (Array.isArray(primaryModel)) {
@@ -81,7 +84,7 @@ export function resolveFallbackToPrimary(
   } else if (primaryModel && isModelUsable(primaryModel, ctx.availableModels)) {
     return primaryModel;
   }
-  
+
   return undefined;
 }
 
@@ -93,26 +96,26 @@ export function isDelegationWorthwhile(
   ctx: ModelResolverContext,
 ): { worthwhile: boolean; reason?: string } {
   const resolvedModel = resolveFallbackToPrimary(agentName, ctx);
-  
+
   if (!resolvedModel) {
     return {
       worthwhile: false,
       reason: `No usable model for agent ${agentName}`,
     };
   }
-  
+
   // If sub-agent would use same model as primary, delegation may not be worthwhile
   // (unless sub-agent has specialized prompt/tools)
   const primaryModel = Array.isArray(ctx.primaryAgentModel)
     ? ctx.primaryAgentModel[0]
     : ctx.primaryAgentModel;
-  
+
   if (resolvedModel === primaryModel) {
     return {
       worthwhile: true,
       reason: 'Same model but specialized agent',
     };
   }
-  
+
   return { worthwhile: true };
 }

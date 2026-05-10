@@ -11,6 +11,7 @@ import { assessRuntimeCapabilities } from '../capabilities';
 import {
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
+  mergeCodexPluginActivation,
 } from '../config-writers';
 import {
   addPlanFile,
@@ -24,6 +25,17 @@ import { getRuntimeCompatibilityProfile } from '../types';
 
 const profile = getRuntimeCompatibilityProfile('codex');
 if (!profile) throw new Error('Missing Codex runtime profile');
+
+const CODEX_MARKETPLACE_NAME = 'extendai-lab-local';
+const CODEX_PLUGIN_NAME = 'extendai-lab';
+const CODEX_PLUGIN_KEY = `${CODEX_PLUGIN_NAME}@${CODEX_MARKETPLACE_NAME}`;
+const CODEX_PLUGIN_ROOT = join(
+  'plugins',
+  'cache',
+  CODEX_MARKETPLACE_NAME,
+  CODEX_PLUGIN_NAME,
+  'local',
+);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -46,13 +58,17 @@ function resolveCodexConfigRoot(context: RuntimeAdapterContext): string {
 
 function getCodexRequiredPaths(configRoot: string): string[] {
   return [
-    join(configRoot, '.codex-plugin', 'plugin.json'),
-    join(configRoot, '.mcp.json'),
-    join(configRoot, '.app.json'),
+    join(configRoot, CODEX_PLUGIN_ROOT, '.codex-plugin', 'plugin.json'),
+    join(configRoot, CODEX_PLUGIN_ROOT, '.mcp.json'),
+    join(configRoot, CODEX_PLUGIN_ROOT, '.app.json'),
     join(configRoot, '.agents', 'plugins', 'marketplace.json'),
-    join(configRoot, 'skills', 'extendai-lab-foundation', 'SKILL.md'),
-    join(configRoot, 'agents', 'extendai-lab-orchestrator.md'),
-    join(configRoot, 'commands', 'extendai-lab-baseline.md'),
+    join(
+      configRoot,
+      CODEX_PLUGIN_ROOT,
+      'skills',
+      'extendai-lab-foundation',
+      'SKILL.md',
+    ),
     join(configRoot, 'config.toml'),
   ];
 }
@@ -72,16 +88,20 @@ function renderCodexManagedConfig(configRoot: string): RenderedFile {
   });
   const mergedMarketplace = mergeCodexMarketplaceRegistration(
     mergedMcp.content,
-    'extendai-lab-local',
+    CODEX_MARKETPLACE_NAME,
     configRoot,
+  );
+  const mergedActivation = mergeCodexPluginActivation(
+    mergedMarketplace.content,
+    [CODEX_PLUGIN_KEY],
   );
 
   return {
     path: configPath,
     relativePath: 'config.toml',
-    content: mergedMarketplace.content,
+    content: mergedActivation.content,
     action:
-      mergedMcp.changed || mergedMarketplace.changed
+      mergedMcp.changed || mergedMarketplace.changed || mergedActivation.changed
         ? existingContent
           ? 'update'
           : 'create'
@@ -155,12 +175,14 @@ export const codexAdapter: RuntimeAdapter = {
       ? readFileSync(configPath, 'utf8')
       : '';
     const pluginManifest = readJsonObject(
-      join(configRoot, '.codex-plugin', 'plugin.json'),
+      join(configRoot, CODEX_PLUGIN_ROOT, '.codex-plugin', 'plugin.json'),
     );
     const marketplaceJson = readJsonObject(
       join(configRoot, '.agents', 'plugins', 'marketplace.json'),
     );
-    const mcpJson = readJsonObject(join(configRoot, '.mcp.json'));
+    const mcpJson = readJsonObject(
+      join(configRoot, CODEX_PLUGIN_ROOT, '.mcp.json'),
+    );
     const missingManagedBlocks: string[] = [];
     if (
       configContent &&
@@ -204,6 +226,24 @@ export const codexAdapter: RuntimeAdapter = {
         'config.toml marketplace registration does not point to the active runtime root.',
       );
     }
+    if (configContent && !configContent.includes('[features]')) {
+      missingManagedBlocks.push(
+        'config.toml is missing the [features] table required to enable Codex plugins.',
+      );
+    }
+    if (configContent && !configContent.includes('plugins = true')) {
+      missingManagedBlocks.push(
+        'config.toml is missing plugins = true under Codex features.',
+      );
+    }
+    if (
+      configContent &&
+      !configContent.includes(`[plugins."${CODEX_PLUGIN_KEY}"]`)
+    ) {
+      missingManagedBlocks.push(
+        'config.toml is missing the managed ExtendAI Lab plugin activation table.',
+      );
+    }
 
     const activationFindings: string[] = [];
     if (
@@ -228,7 +268,8 @@ export const codexAdapter: RuntimeAdapter = {
       return (
         entry.name === 'extendai-lab' &&
         source?.source === 'local' &&
-        source.path === './plugins/extendai-lab' &&
+        source.path ===
+          './plugins/cache/extendai-lab-local/extendai-lab/local' &&
         policy?.installation === 'AVAILABLE' &&
         policy?.authentication === 'ON_INSTALL'
       );

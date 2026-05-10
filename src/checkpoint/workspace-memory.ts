@@ -68,7 +68,9 @@ export class WorkspaceMemoryStore {
     const memory = this.get(workspaceRoot);
     if (!memory) return false;
     const before = memory.preferences.length;
-    memory.preferences = memory.preferences.filter((item) => item.id !== entryId);
+    memory.preferences = memory.preferences.filter(
+      (item) => item.id !== entryId,
+    );
     const removed = memory.preferences.length !== before;
     if (removed) {
       memory.lastActivity = Date.now();

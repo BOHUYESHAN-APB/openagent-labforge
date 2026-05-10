@@ -1,6 +1,6 @@
 /**
  * Bio task detection tool - let the model decide if a task is bioinformatics-related
- * 
+ *
  * Instead of complex pattern matching, we expose a tool that:
  * 1. Model reads user's planning request
  * 2. Model calls detect_bio_task tool to classify
@@ -108,13 +108,19 @@ Call this tool when starting to plan a task to get domain-specific context.
 
 Returns augmented planning context based on task classification.`,
   args: {
-    task_description: z.string().describe('Brief description of the task to classify'),
-    is_bio_task: z.boolean().describe('Your assessment: is this a bioinformatics/computational biology task? (true) or software engineering task? (false)'),
+    task_description: z
+      .string()
+      .describe('Brief description of the task to classify'),
+    is_bio_task: z
+      .boolean()
+      .describe(
+        'Your assessment: is this a bioinformatics/computational biology task? (true) or software engineering task? (false)',
+      ),
   },
   async execute({ task_description, is_bio_task }) {
     const classification = is_bio_task ? 'bioinformatics' : 'engineering';
-    const augmentation = is_bio_task 
-      ? BIO_PLANNING_AUGMENTATION 
+    const augmentation = is_bio_task
+      ? BIO_PLANNING_AUGMENTATION
       : ENGINEERING_PLANNING_AUGMENTATION;
 
     return `Task classified as: ${classification}\n\n${augmentation}`;

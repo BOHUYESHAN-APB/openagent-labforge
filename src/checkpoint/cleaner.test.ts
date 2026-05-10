@@ -1,7 +1,7 @@
+import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
 import type { CheckpointCleanupConfig } from '../config/schema';
 import { CheckpointManager } from './manager';
 

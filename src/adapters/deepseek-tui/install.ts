@@ -14,9 +14,9 @@ import {
 } from './filenames';
 import {
   createEmptyDeepSeekManifest,
-  renderOwnershipMarker,
-  type DeepSeekInstallManifest,
   type DeepSeekInstalledFile,
+  type DeepSeekInstallManifest,
+  renderOwnershipMarker,
 } from './manifest';
 
 const ADAPTER_NAME = 'deepseek-tui' as const;
@@ -90,13 +90,17 @@ function getDefaultDeepSeekRoot(): string {
   const home = process.env.HOME || process.env.USERPROFILE;
 
   if (!home) {
-    throw new Error('Unable to determine home directory for DeepSeek-TUI root.');
+    throw new Error(
+      'Unable to determine home directory for DeepSeek-TUI root.',
+    );
   }
 
   return join(home, '.deepseek');
 }
 
-export function getDeepSeekAdapterPaths(targetRoot?: string): DeepSeekAdapterPaths {
+export function getDeepSeekAdapterPaths(
+  targetRoot?: string,
+): DeepSeekAdapterPaths {
   const root = targetRoot ?? getDefaultDeepSeekRoot();
   const dataDir = join(root, PACKAGE_NAME);
 
@@ -250,14 +254,13 @@ function buildSkillTemplates(): ManagedSkillTemplate[] {
   ];
 }
 
-function renderCommandFile(template: ManagedCommandTemplate, packageVersion: string): ResolvedManagedFile {
+function renderCommandFile(
+  template: ManagedCommandTemplate,
+  packageVersion: string,
+): ResolvedManagedFile {
   const commandFileName = buildDeepSeekCommandFileName(template.id);
   const fileId = `commands/${sanitizeAdapterFileId(template.id)}`;
-  const provisionalContent = [
-    template.title,
-    '',
-    template.body,
-  ].join('\n');
+  const provisionalContent = [template.title, '', template.body].join('\n');
   const provisionalHash = computeSha256(provisionalContent);
   const marker = renderOwnershipMarker({
     packageVersion,
@@ -277,7 +280,10 @@ function renderCommandFile(template: ManagedCommandTemplate, packageVersion: str
   };
 }
 
-function renderSkillFile(template: ManagedSkillTemplate, packageVersion: string): ResolvedManagedFile {
+function renderSkillFile(
+  template: ManagedSkillTemplate,
+  packageVersion: string,
+): ResolvedManagedFile {
   const skillDirName = sanitizeAdapterFileId(template.id);
   const fileId = `skills/${skillDirName}`;
   const provisionalHash = computeSha256(template.body);
@@ -367,7 +373,9 @@ function backupExistingFile(
   return backupPath;
 }
 
-function buildManifestFileEntry(file: ResolvedManagedFile): DeepSeekInstalledFile {
+function buildManifestFileEntry(
+  file: ResolvedManagedFile,
+): DeepSeekInstalledFile {
   return {
     kind: file.kind,
     relativePath: file.relativePath,
@@ -391,16 +399,17 @@ export async function installDeepSeekAdapter(
       absolutePath: join(paths.root, rendered.relativePath),
     };
   });
-  const skillFiles = options.installSkills !== false
-    ? buildSkillTemplates().map((template) => {
-        const rendered = renderSkillFile(template, options.packageVersion);
+  const skillFiles =
+    options.installSkills !== false
+      ? buildSkillTemplates().map((template) => {
+          const rendered = renderSkillFile(template, options.packageVersion);
 
-        return {
-          ...rendered,
-          absolutePath: join(paths.root, rendered.relativePath),
-        };
-      })
-    : [];
+          return {
+            ...rendered,
+            absolutePath: join(paths.root, rendered.relativePath),
+          };
+        })
+      : [];
   const files = [...commandFiles, ...skillFiles];
 
   const result: DeepSeekAdapterActionResult = {
@@ -415,7 +424,9 @@ export async function installDeepSeekAdapter(
     manifestRetained: false,
   };
 
-  const existingManifest = readJsonFile<DeepSeekInstallManifest>(paths.manifestPath);
+  const existingManifest = readJsonFile<DeepSeekInstallManifest>(
+    paths.manifestPath,
+  );
   const nextManifestEntries: DeepSeekInstalledFile[] = [];
 
   const manifest = createEmptyDeepSeekManifest({
@@ -516,7 +527,10 @@ export async function uninstallDeepSeekAdapter(
     }
 
     const currentHash = computeSha256(existing);
-    const owned = hasOwnershipMarker(existing, file.source.replace('deepseek-tui:', ''));
+    const owned = hasOwnershipMarker(
+      existing,
+      file.source.replace('deepseek-tui:', ''),
+    );
 
     if (owned && currentHash === file.sha256) {
       if (!result.dryRun) {

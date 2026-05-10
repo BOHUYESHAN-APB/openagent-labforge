@@ -21,7 +21,9 @@ export function applyDefaultAgent(
 }
 
 export function resolvePreferredDefaultAgent(
-  config: { defaultAgentName?: string; defaultVisibleAgent?: string } | undefined,
+  config:
+    | { defaultAgentName?: string; defaultVisibleAgent?: string }
+    | undefined,
 ): string | undefined {
   if (!config) return undefined;
   return config.defaultAgentName || config.defaultVisibleAgent;

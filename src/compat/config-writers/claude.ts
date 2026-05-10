@@ -22,6 +22,7 @@ export interface ClaudeEnabledPluginsMergeResult {
   content: string;
   changed: boolean;
   added: string[];
+  marketplacesAdded: string[];
   warnings: string[];
 }
 
@@ -152,13 +153,27 @@ export function mergeClaudeMcpServers(
 export function mergeClaudeEnabledPlugins(
   existingContent: string | undefined,
   pluginIds: string[],
+  marketplaces: Record<
+    string,
+    {
+      source: { source: 'directory'; path: string };
+      installLocation: string;
+      autoUpdate?: boolean;
+    }
+  > = {},
 ): ClaudeEnabledPluginsMergeResult {
   const { parsed, baseContent, warnings, parseFailed } = parseJsonObject(
     existingContent,
     'Failed to parse Claude settings JSON',
   );
   if (parseFailed) {
-    return { content: baseContent, changed: false, added: [], warnings };
+    return {
+      content: baseContent,
+      changed: false,
+      added: [],
+      marketplacesAdded: [],
+      warnings,
+    };
   }
 
   const existing = isRecord(parsed.enabledPlugins)
@@ -172,11 +187,27 @@ export function mergeClaudeEnabledPlugins(
     }
   }
   parsed.enabledPlugins = existing;
+
+  const existingMarketplaces = isRecord(parsed.extraKnownMarketplaces)
+    ? { ...(parsed.extraKnownMarketplaces as Record<string, unknown>) }
+    : {};
+  const marketplacesAdded: string[] = [];
+  for (const [name, marketplace] of Object.entries(marketplaces)) {
+    if (!deepEqual(existingMarketplaces[name], marketplace)) {
+      marketplacesAdded.push(name);
+    }
+    existingMarketplaces[name] = marketplace;
+  }
+  if (Object.keys(existingMarketplaces).length > 0) {
+    parsed.extraKnownMarketplaces = existingMarketplaces;
+  }
+
   const nextContent = `${JSON.stringify(parsed, null, 2)}\n`;
   return {
     content: nextContent,
     changed: nextContent !== baseContent,
     added,
+    marketplacesAdded,
     warnings,
   };
 }
@@ -244,7 +275,7 @@ export function mergeClaudeKnownMarketplaces(
 
   parsed[marketplaceName] = {
     source: {
-      source: 'local',
+      source: 'directory',
       path: installLocation,
     },
     installLocation,

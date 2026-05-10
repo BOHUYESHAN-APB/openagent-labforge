@@ -76,4 +76,4 @@ TO CONTINUE IN A NEW SESSION:
 - Workspace-relative file paths
 - NO sensitive information (secrets, keys, credentials)
 - USER REQUESTS and EXPLICIT CONSTRAINTS must be verbatim
-- Max 10 files in KEY FILES`
+- Max 10 files in KEY FILES`;

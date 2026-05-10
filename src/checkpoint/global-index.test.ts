@@ -103,7 +103,10 @@ describe('global memory index', () => {
     try {
       registerWorkspace('repo-knowledge', root);
       addGlobalKnowledge('repo-knowledge', 'Pressure checkpoint summary');
-      addGlobalPattern('repo-knowledge', 'context-pressure:l2-checkpoint-light');
+      addGlobalPattern(
+        'repo-knowledge',
+        'context-pressure:l2-checkpoint-light',
+      );
 
       const index = loadGlobalIndex();
       const repo = index.repositories.get('repo-knowledge');

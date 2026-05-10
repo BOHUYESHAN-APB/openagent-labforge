@@ -1,8 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  getGlobalMemoryDir,
-} from '../paths/plugin-paths';
+import { getGlobalMemoryDir } from '../paths/plugin-paths';
 
 export interface GlobalMemoryIndex {
   repositories: Map<string, RepositoryIndex>;
@@ -131,7 +129,9 @@ export function removeGlobalKnowledge(
 
   if (!repo) return false;
   const before = repo.globalKnowledge.length;
-  repo.globalKnowledge = repo.globalKnowledge.filter((item) => item !== knowledge);
+  repo.globalKnowledge = repo.globalKnowledge.filter(
+    (item) => item !== knowledge,
+  );
   const removed = repo.globalKnowledge.length !== before;
   if (removed) {
     repo.lastActivity = Date.now();

@@ -23,26 +23,51 @@ function fail(message: string): never {
 function run(
   command: string,
   args: string[],
-  options: { cwd?: string; env?: Record<string, string> } = {},
+  options: {
+    cwd?: string;
+    env?: Record<string, string>;
+    retries?: number;
+  } = {},
 ) {
-  const result = spawnSync(command, args, {
-    cwd: options.cwd ?? repoRoot,
-    env: {
-      ...process.env,
-      ...options.env,
-    },
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const maxRetries = options.retries ?? 0;
+  let lastError: string | undefined;
 
-  if (result.status !== 0) {
-    const detail = [result.stdout, result.stderr].filter(Boolean).join('\n');
-    fail(
-      `Command failed: ${command} ${args.join(' ')}${detail ? `\n${detail}` : ''}`,
-    );
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.log(
+        `Retrying command (attempt ${attempt + 1}/${maxRetries + 1})...`,
+      );
+    }
+
+    const result = spawnSync(command, args, {
+      cwd: options.cwd ?? repoRoot,
+      env: {
+        ...process.env,
+        ...options.env,
+      },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    if (result.status === 0) {
+      return result.stdout.trim();
+    }
+
+    lastError = [result.stdout, result.stderr].filter(Boolean).join('\n');
+
+    if (attempt < maxRetries) {
+      // Wait before retry
+      const delay = Math.min(1000 * 2 ** attempt, 5000);
+      const start = Date.now();
+      while (Date.now() - start < delay) {
+        // Busy wait
+      }
+    }
   }
 
-  return result.stdout.trim();
+  fail(
+    `Command failed after ${maxRetries + 1} attempt(s): ${command} ${args.join(' ')}${lastError ? `\n${lastError}` : ''}`,
+  );
 }
 
 function parsePackJson(output: string) {
@@ -59,7 +84,8 @@ function parsePackJson(output: string) {
 }
 
 function packArtifact() {
-  const output = run('npm', ['pack', '--json', '--ignore-scripts']);
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const output = run(npmCommand, ['pack', '--json', '--ignore-scripts']);
   const parsed = parsePackJson(output);
   const tarball = parsed[0]?.filename;
   if (!tarball) fail(`npm pack did not return a tarball filename:\n${output}`);
@@ -158,8 +184,14 @@ function omitOpencodeEnv(env: NodeJS.ProcessEnv) {
   );
 }
 
+function resolveTempRoot(): string {
+  const envRoot = process.env.EXTENDAI_LAB_TMP_ROOT?.trim();
+  if (envRoot) return envRoot;
+  return mkdtempSync(path.join(tmpdir(), 'omos-opencode-smoke-'));
+}
+
 async function verifyHostSmoke(tarballPath: string) {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), 'omos-opencode-smoke-'));
+  const tempRoot = resolveTempRoot();
   const homeDir = path.join(tempRoot, 'home');
   const configDir = path.join(tempRoot, 'config');
   const cacheDir = path.join(tempRoot, 'cache');
@@ -198,7 +230,7 @@ async function verifyHostSmoke(tarballPath: string) {
     );
 
     console.log('Installing opencode-ai into isolated test root...');
-    run('bun', ['add', 'opencode-ai@latest'], { cwd: hostDir });
+    run('bun', ['add', 'opencode-ai@latest'], { cwd: hostDir, retries: 2 });
 
     const opencodeBin = path.join(hostDir, 'node_modules', '.bin', 'opencode');
     if (!existsSync(opencodeBin)) {
@@ -305,7 +337,9 @@ async function verifyHostSmoke(tarballPath: string) {
 
     await stopProcess(child);
   } finally {
-    rmSync(tempRoot, { recursive: true, force: true });
+    if (!process.env.EXTENDAI_LAB_TMP_ROOT) {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   }
 }
 

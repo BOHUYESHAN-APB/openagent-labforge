@@ -45,8 +45,10 @@ Derived from local references:
 | Target | Format | Ownership | Write Strategy |
 |---|---|---|---|
 | `.claude-plugin/plugin.json` | JSON | plugin asset | generated file |
+| `.claude-plugin/marketplace.json` | JSON | local marketplace manifest | generated file |
 | `.mcp.json` | JSON | plugin asset | generated file |
 | `settings.json` | JSON | host config | narrow key merge only |
+| `settings.json.extraKnownMarketplaces` | JSON | host marketplace intent | narrow key merge using `directory` source |
 | `.claude.json` | JSON | canonical Claude-family MCP config | managed `mcpServers` merge |
 | `CLAUDE.md` | Markdown | host/project instruction file | marker-based merge |
 | `skills/**` | Markdown/files | plugin/runtime asset | generated files |
@@ -71,11 +73,11 @@ Derived from local references:
 
 | Target | Format | Ownership | Write Strategy |
 |---|---|---|---|
-| `.codex-plugin/plugin.json` | JSON | plugin asset | generated file |
-| `.mcp.json` | JSON | plugin asset | generated file |
-| `.app.json` | JSON | plugin asset | generated file |
+| `plugins/cache/<marketplace>/<plugin>/local/.codex-plugin/plugin.json` | JSON | plugin cache asset | generated file |
+| `plugins/cache/<marketplace>/<plugin>/local/.mcp.json` | JSON | plugin cache asset | generated file |
+| `plugins/cache/<marketplace>/<plugin>/local/.app.json` | JSON | plugin cache asset | generated file |
 | `.agents/plugins/marketplace.json` | JSON | discovery/marketplace index | managed JSON merge or generated local index |
-| `config.toml` | TOML | host config | managed block merge |
+| `config.toml` | TOML | host config | managed block merge for marketplace + `[features] plugins = true` + `[plugins."name@marketplace"]` |
 | `hooks.json` | JSON | host config | managed JSON merge |
 | `skills/**` | Markdown/files | plugin/runtime asset | generated files |
 | `agents/**` | Markdown/files | plugin/runtime asset | generated files |
@@ -155,13 +157,17 @@ Implemented foundation:
 - Claude-family JSON MCP merge writer
 - Codex TOML managed MCP registry writer
 - OpenClaude activation bridge via `settings.json.enabledPlugins`, `plugins/installed_plugins.json`, and `plugins/known_marketplaces.json`
-- Codex activation bridge via managed marketplace registration block in `config.toml`
+- Codex activation bridge via managed marketplace registration block plus plugin
+  activation table in `config.toml`
 - OpenClaude activation bridge now follows host-shaped semantics: `enabledPlugins`
-  as a record, `installed_plugins.json` install records, and
-  `known_marketplaces.json` local-source marketplace records
-- Codex plugin-owned marketplace index now follows the local marketplace shape
-  more closely, while `config.toml` carries the managed marketplace registration
-  block
+  as a record, `extraKnownMarketplaces` intent in `settings.json`,
+  `installed_plugins.json` install records, and `known_marketplaces.json`
+  directory-source marketplace records
+- Codex plugin-owned marketplace index and cache now follow the host loader shape:
+  marketplace root at the runtime root, plugin assets under
+  `plugins/cache/extendai-lab-local/extendai-lab/local`, and `config.toml`
+  carrying `[features] plugins = true`, marketplace registration, and
+  `[plugins."extendai-lab@extendai-lab-local"] enabled = true`
 - OpenClaude validate now checks semantic alignment between plugin manifest, `enabledPlugins`, installed plugin records, marketplace records, and managed `.claude.json` MCP content
 - Codex validate now checks semantic alignment between plugin manifest, marketplace JSON, managed marketplace block, and managed MCP config
 - real apply path for `install --runtime=openclaude|codex`

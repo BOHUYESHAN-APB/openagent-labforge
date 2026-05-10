@@ -18,7 +18,10 @@ export function createModeCommandHandler(modeManager: PromptModeManager) {
     // Clear template to bypass LLM (direct execution)
     output.parts.length = 0;
 
-    const mode = input.command.replace('ol-', '') as 'light' | 'heavy' | 'turbo';
+    const mode = input.command.replace('ol-', '') as
+      | 'light'
+      | 'heavy'
+      | 'turbo';
     const success = modeManager.setMode(mode, input.sessionID);
 
     if (!success) {
@@ -31,9 +34,12 @@ export function createModeCommandHandler(modeManager: PromptModeManager) {
     }
 
     const modeDescriptions = {
-      light: 'Light mode (OMOS 200-300 lines): Detailed delegation, parallel execution, session reuse',
-      heavy: 'Heavy mode (Omo 542 lines): Phase 0-3 workflow, failure recovery, evidence-driven',
-      turbo: 'Turbo mode (OLD-2 58 lines): "KEEP GOING" philosophy, fast execution',
+      light:
+        'Light mode (OMOS 200-300 lines): Detailed delegation, parallel execution, session reuse',
+      heavy:
+        'Heavy mode (Omo 542 lines): Phase 0-3 workflow, failure recovery, evidence-driven',
+      turbo:
+        'Turbo mode (OLD-2 58 lines): "KEEP GOING" philosophy, fast execution',
     };
 
     output.parts.push(

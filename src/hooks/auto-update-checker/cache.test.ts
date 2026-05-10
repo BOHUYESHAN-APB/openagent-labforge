@@ -137,7 +137,11 @@ describe('auto-update-checker/cache', () => {
     test('keeps working when dependency is already on target version', async () => {
       // Use actual CACHE_DIR from constants for platform compatibility
       const legacyPkgJson = path.join(CACHE_DIR, 'package.json');
-      const legacyNodeModules = path.join(CACHE_DIR, 'node_modules', PACKAGE_NAME);
+      const legacyNodeModules = path.join(
+        CACHE_DIR,
+        'node_modules',
+        PACKAGE_NAME,
+      );
 
       const existsSpy = spyOn(fs, 'existsSync').mockImplementation(
         (p: string) => p === legacyPkgJson || p === legacyNodeModules,
@@ -155,11 +159,7 @@ describe('auto-update-checker/cache', () => {
         `./cache?test=${importCounter++}`
       );
 
-      const result = preparePackageUpdate(
-        '1.0.1',
-        PACKAGE_NAME,
-        null,
-      );
+      const result = preparePackageUpdate('1.0.1', PACKAGE_NAME, null);
 
       expect(result).toBe(CACHE_DIR);
       expect(writeSpy).not.toHaveBeenCalled();

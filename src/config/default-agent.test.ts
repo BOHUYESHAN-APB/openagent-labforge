@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_VISIBLE_AGENT_NAME } from './constants';
-import { applyDefaultAgent, resolvePreferredDefaultAgent } from './default-agent';
+import {
+  applyDefaultAgent,
+  resolvePreferredDefaultAgent,
+} from './default-agent';
 
 describe('applyDefaultAgent', () => {
   test('defaults to visible engineer agent when unset', () => {
@@ -48,8 +51,8 @@ describe('resolvePreferredDefaultAgent', () => {
   });
 
   test('falls back to deprecated defaultVisibleAgent during migration window', () => {
-    expect(resolvePreferredDefaultAgent({ defaultVisibleAgent: 'bio-analyst' })).toBe(
-      'bio-analyst',
-    );
+    expect(
+      resolvePreferredDefaultAgent({ defaultVisibleAgent: 'bio-analyst' }),
+    ).toBe('bio-analyst');
   });
 });

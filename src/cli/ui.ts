@@ -7,7 +7,7 @@ export type CliUiRuntime =
   | 'opencode'
   | 'openclaude'
   | 'codex'
-  | 'claude';
+  | 'claude-code';
 
 export interface CliUiState {
   language: CliUiLanguage;
@@ -213,7 +213,7 @@ function getRuntimeOptions(
       },
     },
     {
-      value: 'claude',
+      value: 'claude-code',
       label: { 'zh-CN': 'Claude (预览)', en: 'Claude (Preview)' },
       hint: {
         'zh-CN': '闭源 Claude 路径，当前保持 preview-only',
@@ -586,7 +586,7 @@ function renderPreviewPage(
     '',
   ];
 
-  if (state.action === 'install' && state.runtime === 'claude') {
+  if (state.action === 'install' && state.runtime === 'claude-code') {
     lines.push(
       rgb(
         theme.warning,

@@ -77,6 +77,7 @@ function getOpenClaudePluginKey(): string {
 function getOpenClaudeRequiredPaths(configRoot: string): string[] {
   return [
     join(configRoot, '.claude-plugin', 'plugin.json'),
+    join(configRoot, '.claude-plugin', 'marketplace.json'),
     join(configRoot, '.mcp.json'),
     getOpenClaudeSettingsPath(configRoot),
     getOpenClaudeKnownMarketplacesPath(configRoot),
@@ -120,9 +121,17 @@ function renderOpenClaudeSettings(configRoot: string): RenderedFile {
   const existingContent = existsSync(settingsPath)
     ? readFileSync(settingsPath, 'utf8')
     : undefined;
-  const merged = mergeClaudeEnabledPlugins(existingContent, [
-    getOpenClaudePluginKey(),
-  ]);
+  const merged = mergeClaudeEnabledPlugins(
+    existingContent,
+    [getOpenClaudePluginKey()],
+    {
+      'extendai-lab-local': {
+        source: { source: 'directory', path: configRoot },
+        installLocation: configRoot,
+        autoUpdate: false,
+      },
+    },
+  );
 
   return {
     path: settingsPath,
@@ -270,6 +279,9 @@ export const openclaudeAdapter: RuntimeAdapter = {
       'plugin.json',
     );
     const pluginManifest = readJsonObject(pluginManifestPath);
+    const marketplaceManifest = readJsonObject(
+      join(configRoot, '.claude-plugin', 'marketplace.json'),
+    );
     const settingsJson = readJsonObject(settingsPath);
     const installedPluginsJson = readJsonObject(installedPluginsPath);
     const knownMarketplacesJson = readJsonObject(knownMarketplacesPath);
@@ -353,7 +365,7 @@ export const openclaudeAdapter: RuntimeAdapter = {
       }
       if (
         !marketplaceSource ||
-        marketplaceSource.source !== 'local' ||
+        marketplaceSource.source !== 'directory' ||
         marketplaceSource.path !== configRoot
       ) {
         activationFindings.push(
@@ -373,6 +385,26 @@ export const openclaudeAdapter: RuntimeAdapter = {
     ) {
       activationFindings.push(
         'plugin.json does not match the expected Claude-family plugin manifest shape for ExtendAI Lab.',
+      );
+    }
+
+    const marketplacePlugins = Array.isArray(marketplaceManifest?.plugins)
+      ? marketplaceManifest.plugins
+      : [];
+    const hasMarketplacePlugin = marketplacePlugins.some((entry) => {
+      return (
+        isRecord(entry) &&
+        entry.name === 'extendai-lab' &&
+        entry.source === './'
+      );
+    });
+    if (
+      marketplaceManifest &&
+      (marketplaceManifest.name !== 'extendai-lab-local' ||
+        !hasMarketplacePlugin)
+    ) {
+      activationFindings.push(
+        'marketplace.json does not contain the expected ExtendAI Lab local marketplace/plugin entry.',
       );
     }
 

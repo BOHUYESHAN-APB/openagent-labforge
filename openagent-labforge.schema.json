@@ -25,11 +25,7 @@
     },
     "scoringEngineVersion": {
       "type": "string",
-      "enum": [
-        "v1",
-        "v2-shadow",
-        "v2"
-      ]
+      "enum": ["v1", "v2-shadow", "v2"]
     },
     "balanceProviderUsage": {
       "type": "boolean"
@@ -61,12 +57,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         },
         "oracle": {
           "type": "object",
@@ -88,12 +79,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         },
         "designer": {
           "type": "object",
@@ -115,12 +101,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         },
         "explorer": {
           "type": "object",
@@ -142,12 +123,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         },
         "librarian": {
           "type": "object",
@@ -169,12 +145,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         },
         "fixer": {
           "type": "object",
@@ -196,12 +167,7 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": [
-            "primary",
-            "fallback1",
-            "fallback2",
-            "fallback3"
-          ]
+          "required": ["primary", "fallback1", "fallback2", "fallback3"]
         }
       },
       "required": [
@@ -250,9 +216,7 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "id"
-                        ]
+                        "required": ["id"]
                       }
                     ]
                   }
@@ -334,9 +298,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "id"
-                      ]
+                      "required": ["id"]
                     }
                   ]
                 }
@@ -412,12 +374,7 @@
         "type": {
           "default": "none",
           "type": "string",
-          "enum": [
-            "auto",
-            "tmux",
-            "zellij",
-            "none"
-          ]
+          "enum": ["auto", "tmux", "zellij", "none"]
         },
         "layout": {
           "default": "main-vertical",
@@ -470,10 +427,7 @@
         "provider": {
           "default": "exa",
           "type": "string",
-          "enum": [
-            "exa",
-            "tavily"
-          ]
+          "enum": ["exa", "tavily"]
         }
       }
     },
@@ -605,9 +559,7 @@
           "type": "string"
         },
         "allowedAgents": {
-          "default": [
-            "*"
-          ],
+          "default": ["*"],
           "description": "Agents that can see bio skills catalog. Default [\"*\"] = all agents",
           "type": "array",
           "items": {
@@ -628,11 +580,7 @@
           "default": "auto",
           "description": "Compression strategy: auto (automatic), manual (user-triggered), hybrid (both)",
           "type": "string",
-          "enum": [
-            "auto",
-            "manual",
-            "hybrid"
-          ]
+          "enum": ["auto", "manual", "hybrid"]
         },
         "thresholdTokens": {
           "default": 100000,
@@ -729,11 +677,7 @@
         "profile": {
           "description": "Model profile preset: openai (GPT only), deepseek (DS only), mixed (GPT plan + DS execute). Takes precedence over customModel/perAgent.",
           "type": "string",
-          "enum": [
-            "openai",
-            "deepseek",
-            "mixed"
-          ]
+          "enum": ["openai", "deepseek", "mixed"]
         },
         "customModel": {
           "description": "Default model for all agents when enabled (provider/model format). Per-agent overrides take precedence.",
@@ -768,11 +712,7 @@
           "default": "light",
           "description": "Default prompt mode: heavy (Omo 542 lines), light (OMOS 200-300 lines), turbo (OLD-2 58 lines)",
           "type": "string",
-          "enum": [
-            "heavy",
-            "light",
-            "turbo"
-          ]
+          "enum": ["heavy", "light", "turbo"]
         },
         "allowModeSwitch": {
           "default": true,
@@ -923,10 +863,7 @@
           "default": "parallel",
           "description": "Execution mode for councillors. \"serial\" runs them one at a time (required for single-model systems). \"parallel\" runs them concurrently (default, faster for multi-model systems).",
           "type": "string",
-          "enum": [
-            "parallel",
-            "serial"
-          ]
+          "enum": ["parallel", "serial"]
         },
         "councillor_retries": {
           "default": 3,
@@ -945,9 +882,7 @@
           "description": "DEPRECATED — ignored. No separate master session."
         }
       },
-      "required": [
-        "presets"
-      ]
+      "required": ["presets"]
     }
   },
   "title": "extendai-lab",

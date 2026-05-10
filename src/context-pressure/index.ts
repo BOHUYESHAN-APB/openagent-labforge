@@ -1,6 +1,6 @@
 /**
  * Context pressure monitor - track context usage and trigger L0/L1/L2/L3 strategies
- * 
+ *
  * Monitors context window usage via OpenCode native stats and triggers
  * appropriate compression/checkpoint strategies based on pressure levels.
  */
@@ -8,16 +8,16 @@
 export interface ContextPressureState {
   /** Current context usage ratio (0.0 - 1.0) */
   ratio: number;
-  
+
   /** Total input tokens */
   totalTokens: number;
-  
+
   /** Context limit */
   contextLimit: number;
-  
+
   /** Current pressure level (0-3) */
   level: number;
-  
+
   /** Last update timestamp */
   lastUpdated: number;
 }
@@ -25,10 +25,10 @@ export interface ContextPressureState {
 export interface ContextPressureThresholds {
   /** L1 threshold (micro-pruning) - default 0.5 */
   l1: number;
-  
+
   /** L2 threshold (checkpoint + capsule) - default 0.65 */
   l2: number;
-  
+
   /** L3 threshold (strong compression + cross-session prep) - default 0.8 */
   l3: number;
 }

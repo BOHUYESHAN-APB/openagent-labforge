@@ -109,6 +109,34 @@ describe('Claude activation bridge writers', () => {
     expect(parsed.theme).toBe('dark');
   });
 
+  test('can add Claude-family marketplace intent into settings', () => {
+    const result = mergeClaudeEnabledPlugins(
+      undefined,
+      ['extendai-lab@extendai-lab-local'],
+      {
+        'extendai-lab-local': {
+          source: {
+            source: 'directory',
+            path: 'C:/plugins/extendai-lab',
+          },
+          installLocation: 'C:/plugins/extendai-lab',
+          autoUpdate: false,
+        },
+      },
+    );
+
+    expect(result.marketplacesAdded).toEqual(['extendai-lab-local']);
+    const parsed = JSON.parse(result.content);
+    expect(parsed.extraKnownMarketplaces['extendai-lab-local']).toEqual({
+      source: {
+        source: 'directory',
+        path: 'C:/plugins/extendai-lab',
+      },
+      installLocation: 'C:/plugins/extendai-lab',
+      autoUpdate: false,
+    });
+  });
+
   test('writes installed_plugins v2 entry for extendai-lab', () => {
     const result = mergeClaudeInstalledPlugins(
       undefined,
@@ -136,6 +164,6 @@ describe('Claude activation bridge writers', () => {
     expect(parsed['extendai-lab-local'].installLocation).toBe(
       'C:/plugins/extendai-lab',
     );
-    expect(parsed['extendai-lab-local'].source.source).toBe('local');
+    expect(parsed['extendai-lab-local'].source.source).toBe('directory');
   });
 });

@@ -1,7 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import type { CheckpointManager } from '../checkpoint/manager';
 import { validatePreferenceContent } from '../checkpoint/preference-rules';
 import { createInternalAgentTextPart } from '../utils';
-import type { CheckpointManager } from '../checkpoint/manager';
 
 const WRITE_COMMAND = 'ol-memory-write';
 const DELETE_COMMAND = 'ol-memory-delete';
@@ -15,8 +15,7 @@ function parseKeyValueArgs(args: string): Record<string, string> {
   const pattern = /(\w+)=("([^"]*)"|'([^']*)'|(\S+))/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(args))) {
-    result[match[1].toLowerCase()] =
-      match[3] ?? match[4] ?? match[5] ?? '';
+    result[match[1].toLowerCase()] = match[3] ?? match[4] ?? match[5] ?? '';
   }
   return result;
 }
@@ -74,7 +73,8 @@ export function createMemoryCommandsHook(
     if (!configCommand?.[LIST_COMMAND]) {
       (opencodeConfig.command as Record<string, unknown>)[LIST_COMMAND] = {
         template: 'List manual workflow/preference/tooling memory entries.',
-        description: 'List recorded manual memory entries for this workspace or repository',
+        description:
+          'List recorded manual memory entries for this workspace or repository',
       };
     }
   }
@@ -107,10 +107,15 @@ export function createMemoryCommandsHook(
     if (input.command === LIST_COMMAND) {
       const scope = normalizeScope(input.arguments.trim() || undefined);
       if (!scope) {
-        output.parts.push(createInternalAgentTextPart(buildUsage(LIST_COMMAND)));
+        output.parts.push(
+          createInternalAgentTextPart(buildUsage(LIST_COMMAND)),
+        );
         return;
       }
-      const entries = checkpointManager.listManualPreferences(input.sessionID, scope);
+      const entries = checkpointManager.listManualPreferences(
+        input.sessionID,
+        scope,
+      );
       if (entries.length === 0) {
         output.parts.push(
           createInternalAgentTextPart(
@@ -138,7 +143,9 @@ export function createMemoryCommandsHook(
       const scope = normalizeScope(parsed.scope);
       const content = parsed.content?.trim();
       if (!kind || !scope || scope === 'all' || !content) {
-        output.parts.push(createInternalAgentTextPart(buildUsage(WRITE_COMMAND)));
+        output.parts.push(
+          createInternalAgentTextPart(buildUsage(WRITE_COMMAND)),
+        );
         return;
       }
       const validation = validatePreferenceContent(content);
@@ -157,7 +164,9 @@ export function createMemoryCommandsHook(
       });
       if (!id) {
         output.parts.push(
-          createInternalAgentTextPart('[Memory write failed: session memory is unavailable.]'),
+          createInternalAgentTextPart(
+            '[Memory write failed: session memory is unavailable.]',
+          ),
         );
         return;
       }
@@ -172,7 +181,9 @@ export function createMemoryCommandsHook(
     const id = parsed.id?.trim();
     const scope = normalizeScope(parsed.scope);
     if (!id || !scope) {
-      output.parts.push(createInternalAgentTextPart(buildUsage(DELETE_COMMAND)));
+      output.parts.push(
+        createInternalAgentTextPart(buildUsage(DELETE_COMMAND)),
+      );
       return;
     }
     const removed = checkpointManager.removeManualPreferenceById(

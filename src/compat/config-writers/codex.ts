@@ -13,6 +13,10 @@ const MARKETPLACE_MANAGED_START =
   '# BEGIN EXTENDAI LAB MANAGED MARKETPLACE REGISTRATION';
 const MARKETPLACE_MANAGED_END =
   '# END EXTENDAI LAB MANAGED MARKETPLACE REGISTRATION';
+const PLUGIN_ACTIVATION_MANAGED_START =
+  '# BEGIN EXTENDAI LAB MANAGED PLUGIN ACTIVATION';
+const PLUGIN_ACTIVATION_MANAGED_END =
+  '# END EXTENDAI LAB MANAGED PLUGIN ACTIVATION';
 const CODEX_MCP_SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
 const CODEX_MARKETPLACE_NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
 
@@ -115,6 +119,14 @@ export interface CodexMarketplaceMergeResult {
   changed: boolean;
   registered: string[];
   skipped: string[];
+}
+
+export interface CodexPluginActivationMergeResult {
+  content: string;
+  changed: boolean;
+  activated: string[];
+  skipped: string[];
+  featureChanged: boolean;
 }
 
 export function mergeCodexMcpServers(
@@ -229,6 +241,119 @@ export function mergeCodexMarketplaceRegistration(
   };
 }
 
+function stripManagedPluginActivationBlock(content: string): string {
+  const pattern = new RegExp(
+    `${PLUGIN_ACTIVATION_MANAGED_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${PLUGIN_ACTIVATION_MANAGED_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\n?`,
+    'g',
+  );
+  return content.replace(pattern, '').trimEnd();
+}
+
+function ensureCodexPluginsFeature(content: string): {
+  content: string;
+  changed: boolean;
+} {
+  const trimmedContent = content.trimEnd();
+  const lines = trimmedContent ? trimmedContent.split(/\r?\n/) : [];
+  const featureHeaderIndex = lines.findIndex(
+    (line) => line.trim() === '[features]',
+  );
+
+  if (featureHeaderIndex === -1) {
+    const next = `${trimmedContent}${trimmedContent ? '\n\n' : ''}[features]\nplugins = true\n`;
+    return { content: next, changed: next !== content };
+  }
+
+  let insertAt = lines.length;
+  let pluginLineIndex = -1;
+  for (let index = featureHeaderIndex + 1; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      insertAt = index;
+      break;
+    }
+    if (/^plugins\s*=/.test(trimmed)) {
+      pluginLineIndex = index;
+      break;
+    }
+  }
+
+  if (pluginLineIndex >= 0) {
+    if (lines[pluginLineIndex].trim() === 'plugins = true') {
+      return { content, changed: false };
+    }
+    lines[pluginLineIndex] = 'plugins = true';
+    return { content: `${lines.join('\n').trimEnd()}\n`, changed: true };
+  }
+
+  lines.splice(insertAt, 0, 'plugins = true');
+  return { content: `${lines.join('\n').trimEnd()}\n`, changed: true };
+}
+
+function parseCodexPluginConfigNames(content: string): Set<string> {
+  const names = new Set<string>();
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const quoted = line.match(/^\[plugins\."([^"]+)"\]$/);
+    if (quoted?.[1]) {
+      names.add(quoted[1]);
+      continue;
+    }
+    const bare = line.match(/^\[plugins\.([^\]]+)\]$/);
+    if (bare?.[1]) names.add(bare[1].trim());
+  }
+  return names;
+}
+
+function renderCodexPluginActivationBlock(pluginKeys: string[]): string {
+  if (pluginKeys.length === 0) return '';
+  return [
+    PLUGIN_ACTIVATION_MANAGED_START,
+    '',
+    ...pluginKeys.flatMap((pluginKey, index) => [
+      ...(index === 0 ? [] : ['']),
+      `[plugins.${renderTomlString(pluginKey)}]`,
+      'enabled = true',
+    ]),
+    '',
+    PLUGIN_ACTIVATION_MANAGED_END,
+  ].join('\n');
+}
+
+export function mergeCodexPluginActivation(
+  existingContent: string,
+  pluginKeys: string[],
+): CodexPluginActivationMergeResult {
+  const featureMerged = ensureCodexPluginsFeature(existingContent);
+  const base = stripManagedPluginActivationBlock(featureMerged.content);
+  const existingNames = parseCodexPluginConfigNames(base);
+  const activated: string[] = [];
+  const skipped: string[] = [];
+  const managedKeys = pluginKeys.filter((pluginKey) => {
+    if (existingNames.has(pluginKey)) {
+      skipped.push(pluginKey);
+      return false;
+    }
+    activated.push(pluginKey);
+    return true;
+  });
+  const managedBlock = renderCodexPluginActivationBlock(managedKeys);
+  const nextContent = managedBlock
+    ? `${base ? `${base}\n\n` : ''}${managedBlock}\n`
+    : base
+      ? `${base}\n`
+      : '';
+
+  return {
+    content: nextContent,
+    changed: nextContent !== existingContent,
+    activated,
+    skipped,
+    featureChanged: featureMerged.changed,
+  };
+}
+
 export interface CodexMarketplaceJsonEntry {
   name: string;
   source: {
@@ -245,7 +370,7 @@ export interface CodexMarketplaceJsonEntry {
 export function createCodexMarketplaceJson(
   marketplaceName: string,
   pluginName: string,
-  pluginPath = './plugins/extendai-lab',
+  pluginPath = './plugins/cache/extendai-lab-local/extendai-lab/local',
 ): {
   name: string;
   interface: { displayName: string };

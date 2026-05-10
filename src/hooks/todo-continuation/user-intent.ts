@@ -1,6 +1,6 @@
 /**
  * User Intent Detection for Continuation Mechanism
- * 
+ *
  * Detects user intent from messages to adjust autonomous behavior:
  * - Explicit stop signals → stop continuation
  * - Satisfaction signals → accept completion

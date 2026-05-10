@@ -1,8 +1,12 @@
 export type BooleanArg = 'yes' | 'no';
-export type CompatRuntimeArg = 'opencode' | 'openclaude' | 'codex' | 'claude';
+export type CompatRuntimeArg =
+  | 'opencode'
+  | 'openclaude'
+  | 'codex'
+  | 'claude-code';
 
 export interface InstallArgs {
-  target?: 'opencode' | 'openclaude' | 'codex' | 'claude' | 'dstui';
+  target?: 'opencode' | 'openclaude' | 'codex' | 'claude-code' | 'dstui';
   command?: 'install' | 'uninstall' | 'doctor' | 'status';
   runtime?: CompatRuntimeArg;
   runtimes?: CompatRuntimeArg[];

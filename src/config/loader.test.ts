@@ -1278,11 +1278,7 @@ describe('loadAgentPrompt', () => {
     const customConfigHome = path.join(tempDir, 'custom-xdg');
     process.env.XDG_CONFIG_HOME = customConfigHome;
 
-    const promptsDir = path.join(
-      customConfigHome,
-      'opencode',
-      'extendai-lab',
-    );
+    const promptsDir = path.join(customConfigHome, 'opencode', 'extendai-lab');
     fs.mkdirSync(promptsDir, { recursive: true });
     fs.writeFileSync(path.join(promptsDir, 'xdg-agent.md'), 'xdg prompt');
 

@@ -14,6 +14,7 @@ export {
 export type {
   CodexMarketplaceJsonEntry,
   CodexMarketplaceMergeResult,
+  CodexPluginActivationMergeResult,
   CodexTomlMergeResult,
   UnifiedMcpRegistryEntry,
 } from './codex';
@@ -21,4 +22,5 @@ export {
   createCodexMarketplaceJson,
   mergeCodexMarketplaceRegistration,
   mergeCodexMcpServers,
+  mergeCodexPluginActivation,
 } from './codex';
