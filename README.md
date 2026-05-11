@@ -191,6 +191,29 @@ Switch: `/ol-light` `/ol-heavy` `/ol-turbo`
 
 115+ metadata fields for heavy checkpoints — full state reconstruction.
 
+### 7. Model Presets
+
+Five preset modes. **Default is `free`** — no model binding, no recommendations, no interference. You control which model each agent uses.
+
+| Command | Preset | Description |
+|---------|--------|-------------|
+| `/ol-preset-free` | `free` | No binding — use current OpenCode model (default) |
+| `/ol-preset-ds-first` | `ds-first` | DS V4 Pro main, Flash workers, MiMo vision — OpenCode Go $10/mo |
+| `/ol-preset-openai` | `openai` | GPT-5.4 daily, 5.5 for reviews only — ChatGPT Plus/Pro |
+| `/ol-preset-openai-go` | `openai-go` | Dual sub: GPT review + DS workers — best of both |
+| `/ol-preset-custom` | `custom` | Per-agent model + variant from `extendai-lab.jsonc` |
+
+**Per-agent strategy** (ds-first example):
+
+| Role | Model | Reasoning |
+|------|-------|-----------|
+| Orchestrator, bio, deep-worker | DS V4 Pro `max` | Main workhorse |
+| Oracle, reviewer, council | DS V4 Pro `high` | Spend on quality reviews |
+| Explorer, librarian, fixer | DS V4 Flash `high` | Fast & cheap bulk work |
+| Designer, observer, mm-looker | MiMo V2.5 `medium` | 1M context + vision |
+
+Each agent gets an independent reasoning effort (`variant`): `low` / `medium` / `high` / `xhigh` / `max`.
+
 ---
 
 ## Configuration
