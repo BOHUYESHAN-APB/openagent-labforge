@@ -913,6 +913,12 @@ export function createTodoContinuationHook(
 
       log(`[${HOOK_NAME}] Session idle`, { sessionID });
 
+      // Gate: settle delay (OpenCode v1.15.0 event system can fire idle
+      // events while the session is still mid-response — this small delay
+      // lets in-flight work settle before we decide to inject).
+      // Pattern borrowed from oh-my-openagent's prompt-async-gate.
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       // Backward compatibility: if no chat.message has identified the
       // orchestrator yet, fall back to the first idle session.
       if (!state.sawChatMessage && state.orchestratorSessionIds.size === 0) {
