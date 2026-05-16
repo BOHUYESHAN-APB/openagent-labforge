@@ -681,11 +681,15 @@
       "type": "object",
       "properties": {
         "maxContinuations": {
-          "default": 5,
-          "description": "Maximum consecutive auto-continuations before stopping to ask user",
+          "default": 100,
+          "description": "Maximum consecutive auto-continuations before stopping (default 100). For open-ended goals, use 500+ with autoReviewModel.",
           "type": "integer",
           "minimum": 1,
-          "maximum": 50
+          "maximum": 500
+        },
+        "autoReviewModel": {
+          "description": "Optional separate model for auto-review (e.g., \"opencode-go/deepseek-v4-flash\"). Defaults to the orchestrator's own model when unset.",
+          "type": "string"
         },
         "cooldownMs": {
           "default": 3000,

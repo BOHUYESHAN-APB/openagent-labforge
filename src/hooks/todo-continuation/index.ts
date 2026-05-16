@@ -1,5 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   createInternalAgentTextPart,
   log,
@@ -215,7 +217,6 @@ const TERMINAL_TODO_STATUSES = ['completed', 'cancelled'];
 const PRIMARY_AGENT_NAMES = new Set(['orchestrator', 'bio-orchestrator']);
 
 interface ContinuationState {
-  // Fallback default for legacy tool calls that do not provide sessionID.
   enabled: boolean;
   enabledBySession: Map<string, boolean>;
   consecutiveContinuations: number;
@@ -225,27 +226,128 @@ interface ContinuationState {
   suppressUntil: number;
   orchestratorSessionIds: Set<string>;
   sawChatMessage: boolean;
-  // True while our auto-injection prompt is in flight — prevents counter reset
-  // on session.status→busy and blocks duplicate injections
   isAutoInjecting: boolean;
-  // session IDs with an in-flight noReply countdown notification.
   notifyingSessionIds: Set<string>;
-  // sessionID → timestamp until which just-completed noReply countdown
-  // notification busy transitions are ignored, covering HTTP/SSE reordering.
   notificationBusyUntilBySession: Map<string, number>;
-  // Review verdict tracking per session (for auto-review in full-auto mode)
   reviewVerdictBySession: Map<string, StoredReviewVerdict>;
-  // Track if review was already injected to avoid duplicates
   reviewInjectedBySession: Set<string>;
-  // Sessions explicitly stopped by the user/review must not be re-enabled by
-  // config.todoContinuation.autoEnable until the user turns auto-continue on.
   autoEnableSuppressedSessionIds: Set<string>;
   autoEnableSuppressedGlobally: boolean;
-  // sessionID → last pressure checkpoint signature recorded through the
-  // forced context-pressure path. The reminder may repeat while pressure
-  // stays high, but durable checkpoints/memory should not duplicate the same
-  // pressure state on every idle event.
   lastPressureCheckpointKeyBySession: Map<string, string>;
+}
+
+// ── State persistence (OMO ralph-loop pattern) ────────────────────
+// Persists key state to file so session can survive crashes/restarts.
+
+interface PersistedContinuationState {
+  maintainer: string;
+  version: number;
+  savedAt: string;
+  enabledBySession: Array<[string, boolean]>;
+  consecutiveContinuationsBySession: Array<[string, number]>;
+  suppressUntil: number;
+  reviewVerdictBySession: Array<[string, StoredReviewVerdict]>;
+  reviewInjectedBySession: string[];
+  autoEnableSuppressedSessionIds: string[];
+  autoEnableSuppressedGlobally: boolean;
+  lastPressureCheckpointKeyBySession: Array<[string, string]>;
+}
+
+function getContinuationStateFilePath(workspaceRoot: string): string {
+  return join(
+    workspaceRoot,
+    '.opencode',
+    'extendai-lab',
+    'continuation',
+    'state.json',
+  );
+}
+
+function saveContinuationState(
+  workspaceRoot: string,
+  state: ContinuationState,
+): void {
+  try {
+    const filePath = getContinuationStateFilePath(workspaceRoot);
+    const persist: PersistedContinuationState = {
+      maintainer: 'extendai-lab',
+      version: 1,
+      savedAt: new Date().toISOString(),
+      enabledBySession: Array.from(state.enabledBySession.entries()),
+      consecutiveContinuationsBySession: Array.from(
+        state.consecutiveContinuationsBySession.entries(),
+      ),
+      suppressUntil: state.suppressUntil,
+      reviewVerdictBySession: Array.from(state.reviewVerdictBySession.entries()),
+      reviewInjectedBySession: Array.from(state.reviewInjectedBySession),
+      autoEnableSuppressedSessionIds: Array.from(
+        state.autoEnableSuppressedSessionIds,
+      ),
+      autoEnableSuppressedGlobally: state.autoEnableSuppressedGlobally,
+      lastPressureCheckpointKeyBySession: Array.from(
+        state.lastPressureCheckpointKeyBySession.entries(),
+      ),
+    };
+    mkdirSync(join(filePath, '..'), { recursive: true });
+    writeFileSync(filePath, JSON.stringify(persist, null, 2), 'utf8');
+  } catch {
+    // Best-effort persistence — failure should not break runtime
+    log(`[${HOOK_NAME}] Warning: failed to persist continuation state`);
+  }
+}
+
+function loadContinuationState(
+  workspaceRoot: string,
+  state: ContinuationState,
+): void {
+  try {
+    const filePath = getContinuationStateFilePath(workspaceRoot);
+    if (!existsSync(filePath)) return;
+
+    const raw = readFileSync(filePath, 'utf8');
+    const persisted: PersistedContinuationState = JSON.parse(raw);
+
+    if (persisted.maintainer !== 'extendai-lab') return;
+
+    // Restore persisted fields into runtime state
+    for (const [sessionID, enabled] of persisted.enabledBySession) {
+      state.enabledBySession.set(sessionID, enabled);
+    }
+    for (const [sessionID, count] of persisted.consecutiveContinuationsBySession) {
+      state.consecutiveContinuationsBySession.set(sessionID, count);
+    }
+    state.suppressUntil = persisted.suppressUntil;
+    for (const [sessionID, verdict] of persisted.reviewVerdictBySession) {
+      state.reviewVerdictBySession.set(sessionID, verdict);
+    }
+    for (const sessionID of persisted.reviewInjectedBySession) {
+      state.reviewInjectedBySession.add(sessionID);
+    }
+    for (const sessionID of persisted.autoEnableSuppressedSessionIds) {
+      state.autoEnableSuppressedSessionIds.add(sessionID);
+    }
+    state.autoEnableSuppressedGlobally = persisted.autoEnableSuppressedGlobally;
+    for (const [sessionID, key] of persisted.lastPressureCheckpointKeyBySession) {
+      state.lastPressureCheckpointKeyBySession.set(sessionID, key);
+    }
+
+    log(`[${HOOK_NAME}] Restored continuation state from ${filePath}`);
+  } catch {
+    log(`[${HOOK_NAME}] No prior continuation state to restore (fresh start)`);
+  }
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleStateSave(
+  workspaceRoot: string,
+  state: ContinuationState,
+): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveContinuationState(workspaceRoot, state);
+  }, 500);
 }
 
 /**
@@ -385,6 +487,7 @@ export function createTodoContinuationHook(
   ctx: PluginInput,
   config?: {
     maxContinuations?: number;
+    autoReviewModel?: string;
     cooldownMs?: number;
     autoEnable?: boolean;
     autoEnableThreshold?: number;
@@ -478,6 +581,9 @@ export function createTodoContinuationHook(
     autoEnableSuppressedGlobally: false,
     lastPressureCheckpointKeyBySession: new Map(),
   };
+
+  // Load persisted state from disk (OMO ralph-loop pattern for crash recovery)
+  loadContinuationState(ctx.directory, state);
 
   const hygiene = createTodoHygiene({
     getTodoState: async (sessionID) => {
@@ -795,6 +901,7 @@ export function createTodoContinuationHook(
     log(`[${HOOK_NAME}] Auto-continue disabled: ${reason}`, {
       sessionID,
     });
+    scheduleStateSave(ctx.directory, state);
   }
 
   function disableContinuationForCompletedBatch(sessionID: string): void {
@@ -872,6 +979,7 @@ export function createTodoContinuationHook(
         }
         state.suppressUntil = 0;
         log(`[${HOOK_NAME}] Auto-continue enabled`, { maxContinuations });
+        scheduleStateSave(ctx.directory, state);
         return `Auto-continue enabled. Will auto-continue for up to ${maxContinuations} consecutive injections.`;
       }
 
@@ -883,6 +991,7 @@ export function createTodoContinuationHook(
       // Cancel any pending timer on disable
       cancelPendingTimer(state);
       log(`[${HOOK_NAME}] Auto-continue disabled`);
+      scheduleStateSave(ctx.directory, state);
       return 'Auto-continue disabled.';
     },
   });

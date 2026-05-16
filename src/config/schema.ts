@@ -251,10 +251,16 @@ export const TodoContinuationConfigSchema = z.object({
     .number()
     .int()
     .min(1)
-    .max(50)
-    .default(5)
+    .max(500)
+    .default(100)
     .describe(
-      'Maximum consecutive auto-continuations before stopping to ask user',
+      'Maximum consecutive auto-continuations before stopping (default 100). For open-ended goals, use 500+ with autoReviewModel.',
+    ),
+  autoReviewModel: z
+    .string()
+    .optional()
+    .describe(
+      'Optional separate model for auto-review (e.g., "opencode-go/deepseek-v4-flash"). Defaults to the orchestrator\'s own model when unset.',
     ),
   cooldownMs: z
     .number()

@@ -585,7 +585,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Initialize todo-continuation hook (opt-in auto-continue for
     // incomplete todos)
     todoContinuationHook = createTodoContinuationHook(ctx, {
-      maxContinuations: config.todoContinuation?.maxContinuations ?? 5,
+      maxContinuations: config.todoContinuation?.maxContinuations ?? 100,
+      autoReviewModel: config.todoContinuation?.autoReviewModel,
       cooldownMs: config.todoContinuation?.cooldownMs ?? 3000,
       autoEnable: config.todoContinuation?.autoEnable ?? false,
       autoEnableThreshold: config.todoContinuation?.autoEnableThreshold ?? 4,
