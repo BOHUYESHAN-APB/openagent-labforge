@@ -9,6 +9,7 @@ import {
 } from '../../utils';
 import { createTodoHygiene } from './todo-hygiene';
 import { detectUserIntent, shouldSkipContinuation } from './user-intent';
+import { createCrashRecovery } from './crash-recovery';
 
 const HOOK_NAME = 'todo-continuation';
 const COMMAND_NAME = 'ol-auto-continue';
@@ -585,6 +586,9 @@ export function createTodoContinuationHook(
   // Load persisted state from disk (OMO ralph-loop pattern for crash recovery)
   loadContinuationState(ctx.directory, state);
 
+  // Crash recovery guard — prevents re-inject after session.error
+  const crashRecovery = createCrashRecovery();
+
   const hygiene = createTodoHygiene({
     getTodoState: async (sessionID) => {
       const result = await ctx.client.session.todo({
@@ -1010,6 +1014,18 @@ export function createTodoContinuationHook(
       },
     });
 
+    // Crash detection — when session errors happen, mark as recovering
+    // to prevent immediate re-inject into a crashed session.
+    // Only for session.deleted (explicit crash/disconnect) and transport-level
+    // errors; routine session.error (tool failures, API errors) continue normally.
+    if (event.type === 'session.deleted') {
+      const sessionID = properties.sessionID as string;
+      if (sessionID) {
+        crashRecovery.markRecovering(sessionID);
+        log(`[${HOOK_NAME}] Marked session as recovering`, { sessionID });
+      }
+    }
+
     if (
       event.type === 'session.idle' ||
       (event.type === 'session.status' &&
@@ -1027,6 +1043,14 @@ export function createTodoContinuationHook(
       // lets in-flight work settle before we decide to inject).
       // Pattern borrowed from oh-my-openagent's prompt-async-gate.
       await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Gate: crash recovery — skip sessions that recently errored
+      if (crashRecovery.isRecovering(sessionID)) {
+        log(`[${HOOK_NAME}] Skipped: session is recovering from crash`, {
+          sessionID,
+        });
+        return;
+      }
 
       // Backward compatibility: if no chat.message has identified the
       // orchestrator yet, fall back to the first idle session.
