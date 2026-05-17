@@ -19,7 +19,12 @@ const PLUGIN_LOG_DIR = resolve(OPENCODE_LOG_DIR, 'extendai-lab');
 const LOCK_FILE = join(PLUGIN_LOG_DIR, 'server.lock');
 
 let workspaceRoot = process.cwd();
-let pluginRoot: string;
+// Determine plugin root from the dist path at module load time (before main)
+const _getPluginRoot = () => {
+  try { return resolve(dirname(new URL(import.meta.url).pathname), '..', '..'); }
+  catch { return process.cwd(); }
+};
+let pluginRoot: string = _getPluginRoot();
 let currentTheme = 'dark';
 let logFilePath = '';
 
@@ -223,7 +228,6 @@ async function main() {
   const ri = args.indexOf('--workspace');
   if (ri >= 0 && args[ri + 1]) workspaceRoot = resolve(args[ri + 1]);
   workspaceRoot = process.env.EXTENDAI_WORKSPACE ?? workspaceRoot;
-  try { pluginRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..'); } catch { pluginRoot = process.cwd(); }
 
   // ── Shared server check ─────────────────────────────
   const existingPort = findExistingPort();

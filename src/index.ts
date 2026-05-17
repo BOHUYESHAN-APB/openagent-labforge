@@ -1129,6 +1129,18 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         configSkills.paths.push(skillsPath);
       }
 
+      // Register bundled ThirdParty skills as OpenCode skill paths
+      for (const tpDir of [
+        'html-anything-skills',
+        'guizang-ppt-skill',
+        'html-ppt-skill',
+      ]) {
+        const tpPath = join(__dirname, '../ThirdParty', tpDir);
+        if (!configSkills.paths.includes(tpPath)) {
+          configSkills.paths.push(tpPath);
+        }
+      }
+
       // Allow reading bundled bioSkills even when OpenCode runs in another
       // project. These are plugin-owned reference files, not project files.
       if (bioSkillsManager) {
