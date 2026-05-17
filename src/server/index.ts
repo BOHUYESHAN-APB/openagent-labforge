@@ -175,7 +175,10 @@ async function handleRequest(req: Request): Promise<Response> {
       return Response.json({ ok: true, message: 'Saved. Restart OpenCode.', path: cp });
     }
 
-    if (p === '/' || p === '/dashboard') return new Response(renderDashboard(t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    if (p === '/' || p === '/dashboard') {
+      const skills = scanAllSkills();
+      return new Response(renderDashboard(t, { skills: skills.length, workspace: workspaceRoot, port: PORT }), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    }
     if (p === '/view') return new Response(renderHtmlViewer(t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
     if (p.startsWith('/view/')) {
       const name = decodeURIComponent(p.slice(6));

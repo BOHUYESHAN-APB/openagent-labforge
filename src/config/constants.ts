@@ -158,7 +158,9 @@ export const PHASE_REMINDER_TEXT = `!IMPORTANT! Recall the workflow rules:
 Understand → choose the best parallelized path based on your capabilities and agents delegation rules → recall session reuse rules → execute → verify.
 If delegating, launch the specialist in the same turn you mention it !END!`;
 
-// Tmux pane spawn delay (ms) — gives TmuxSessionManager time to create pane
+// Document parser reminder
+export const DOC_PARSER_REMINDER =
+  '<internal_reminder>If the model does not support native document parsing (PDF/DOCX/XLSX/PPTX), use Python tools (python -c, or write a script) to read and extract content from document files. Do not attempt to read binary files directly — extract text first.</internal_reminder>';
 export const TMUX_SPAWN_DELAY_MS = 500;
 
 // Stagger delay (ms) between parallel councillor launches to avoid tmux collisions

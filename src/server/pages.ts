@@ -66,11 +66,12 @@ function renderConfigFields(config: Record<string,unknown>): string {
 }
 
 // ── Pages ────────────────────────────────────────────
-export function renderDashboard(theme: string): string {
+export function renderDashboard(theme: string, info?: { skills?: number; workspace?: string; port?: number }): string {
   return base('Dashboard', `
     <div class="hero">
       <h1>extendai-lab</h1>
       <p>Agent orchestration · DeepSeek optimized · Document & design skills</p>
+      ${info ? `<p class="sub mono">${info.workspace || ''} · Port ${info.port || 25569} · ${info.skills || 0} skills</p>` : ''}
     </div>
     <div class="grid-3">
       <a href="/skills" class="card-link"><span class="ico">🎨</span><h3>Skills</h3><p>75+ document & design skills</p></a>

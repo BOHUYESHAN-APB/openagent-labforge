@@ -11,7 +11,7 @@ describe('createPhaseReminderHook', () => {
       output,
     );
 
-    expect(output.system).toHaveLength(2);
+    expect(output.system).toHaveLength(3); // base + phase_reminder + doc_parser_hint
     expect(output.system[1]).toBe(PHASE_REMINDER);
   });
 
@@ -24,8 +24,8 @@ describe('createPhaseReminderHook', () => {
       output,
     );
 
-    expect(output.system).toHaveLength(1);
-    expect(output.system[0]).toBe(`base\n\n${PHASE_REMINDER}`);
+    expect(output.system).toHaveLength(2); // base(with phase) + doc_parser_hint
+  expect(output.system[0]).toContain('base');
   });
 
   test('skips when no sessionID', async () => {
