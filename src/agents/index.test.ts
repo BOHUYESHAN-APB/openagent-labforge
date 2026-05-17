@@ -920,18 +920,15 @@ describe('subagentPolicy', () => {
     expect(prompt).toContain('create_session, add_message');
   });
 
-  test('ultra-minimal prompt forbids unnecessary child waiting', () => {
+  test('ultra-minimal prompt describes both delegation modes', () => {
     const prompt = buildOrchestratorPrompt(undefined, {
       mode: 'ultra-minimal',
     });
 
-    expect(prompt).toContain(
-      'Do not delegate work that would only make the main agent wait',
-    );
     expect(prompt).toContain('tool-like local main-agent checklists');
-    expect(prompt).toContain(
-      'Only spawn a child when it can do genuinely parallel work',
-    );
+    expect(prompt).toContain('background=false');
+    expect(prompt).toContain('background=true');
+    expect(prompt).toContain('fire-and-forget');
   });
 
   test('main-only skips custom subagents', () => {

@@ -151,9 +151,9 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 ### Subagent Policy: Full registration / explicit delegation only
 - Full configured subagent registration is available, but the main agent must still execute work directly by default.
 - Registered specialists are checklist/tooling references first, not automatic spawn targets.
-- Even in full mode, real child sessions should be reserved for work that can proceed in parallel or needs independent specialist judgment, and should normally require explicit user permission.
+- Even in full mode, child sessions should be reserved for independent specialist judgment. Use \`background=false\` (blocking) or \`background=true\` (fire-and-forget) as appropriate.
 - If the main agent can do the task directly, do it in the main agent instead of opening a child and waiting.
-- When launching parallel children, give every child the same shared-prefix snapshot before role-specific instructions so prefix-cache providers can reuse the identical leading context.`;
+- When multiple independent specialists are needed, batch them in one message (both blocking or both fire-and-forget). Give every child the same shared-prefix snapshot before role-specific instructions so prefix-cache providers can reuse the identical leading context.`;
   }
 
   if (mode === 'custom') {
@@ -166,8 +166,8 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 - Only these configured subagents should be considered for real child-session delegation: ${allowed}.
 - Treat non-allowlisted specialist descriptions as local main-agent checklists, not spawn targets.
 - If the allowlist is too small for safe execution, proceed in the main agent with direct tools unless the user explicitly asks to expand it.
-- Even allowlisted specialists should stay tool-like by default; only spawn them when the work is genuinely parallel or needs independent judgment, and the user has explicitly allowed child sessions.
-- When delegation is allowed, pass the shared-prefix snapshot first, then role/task-specific instructions. Keep the snapshot structure identical across children.`;
+- Even allowlisted specialists should stay tool-like by default; only spawn when independent judgment is needed. Use \`background=false\` (blocking) or \`background=true\` (fire-and-forget) as appropriate.
+- When multiple independent specialists are needed, batch them in one message. Pass the shared-prefix snapshot first, then role/task-specific instructions. Keep the snapshot structure identical across children.`;
   }
 
   if (mode === 'main-only') {
@@ -184,28 +184,28 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
     return `
 
 ### Subagent Policy: Minimal / cache-first
-- This is the legacy low-agent mode. It keeps a small specialist set registered, but the main agent still executes directly by default.
+- Keeps a small specialist set registered, but the main agent still executes directly by default.
 - Default minimal specialists are @explorer, @librarian, @oracle, @fixer, and @observer only when visual/media handling is enabled.
-- Other specialties should usually be handled as local main-agent checklists instead of fresh child sessions.
-- Before spawning a child session, ask whether the child will save more tokens/context than it costs. If not, use direct tools in the main agent.
-- Only spawn a child if it can work independently in parallel or adds specialist judgment the main agent cannot cheaply reproduce, and the user has explicitly allowed child sessions.
-- Do not delegate a task if the main agent would simply wait for the child result before continuing.
-- When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
+- Other specialties should be handled as local main-agent checklists instead of fresh child sessions.
+- Before spawning a child, weigh specialist judgment value vs blocking cost (\`background=false\`) or fire-and-forget utility (\`background=true\`).
+- Only spawn a child if it adds specialist judgment the main agent cannot cheaply reproduce, and the user has explicitly allowed child sessions.
+- When multiple independent specialists are needed, batch them in one message (blocking or fire-and-forget as appropriate).
+- When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot constant across all children in the same batch.
 - Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.`;
   }
 
   return `
 
-### Subagent Policy: Ultra minimal / main-agent-first
-- This is the default mode. Serve the three open-source coding CLIs with the main agent first, and treat subagents as rare exceptions.
-- Fresh child sessions often lower cache hit rate and also encourage the main agent to wait on them. Avoid that unless the specialist separation is clearly worth it.
+### Subagent Policy: Ultra minimal / main-agent-first (default)
+- Default mode. Serve with the main agent first; treat subagents as rare specialist tools.
+- Fresh child sessions lower cache hit rate. Use \`background=false\` (blocking) for needed results, \`background=true\` (non-blocking) for fire-and-forget parallel work. Only spawn when specialist judgment is truly necessary.
 - Default ultra-minimal specialists are @explorer, @librarian, and @oracle only.
 - Treat @fixer, @designer, @council, @reviewer, @metis, @momus, @multimodal-looker, and most custom specialists as tool-like local main-agent checklists by default.
-- Prefer doing the work directly in the main agent with stable context, especially for implementation, routine review, and iterative development.
-- Only spawn a child when it can do genuinely parallel work, or when it materially improves correctness, external-doc accuracy, or independent architectural judgment, and the user has explicitly allowed child sessions.
+- Prefer doing work directly in the main agent with stable context.
+- Only spawn a child when it materially improves correctness, external-doc accuracy, or independent architectural judgment, and the user has explicitly allowed child sessions.
 - If the main agent can do the task directly, it should act as that specialist itself instead of opening a child session.
-- Never create a child session for work the main agent could continue directly if the only effect would be to wait on the child response.
-- When delegation is still worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot byte-stable across all parallel children in the same batch.
+- When multiple independent specialists are needed, batch them in one message (all \`background=false\` sharing wait time, or \`background=true\` for non-blocking fire-and-forget).
+- When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot constant across all children in the same batch.
 - Prefer resuming an existing specialist session over creating a fresh one.`;
 }
 
@@ -276,31 +276,32 @@ Choose the path that optimizes all four.
 
 !!! Review available agents and delegation rules. Decide whether to delegate or do it yourself. !!!
 
-**Delegation efficiency:**
-- Reference paths/lines, don't paste files (\`src/app.ts:42\` not full contents)
-- Provide context summaries, let specialists read what they need
-- Brief user on delegation goal before each call
-- Skip delegation if overhead ≥ doing it yourself
-- Main-agent-first rule: if the main agent can do the work directly with available tools, do it yourself instead of spawning a child
-- Only use child sessions when they can perform genuinely independent work in parallel, or when independent specialist judgment is materially necessary
-- Do not delegate work that would only make the main agent wait for a child result before continuing the same line of work
+**Delegation rules:**
+- Treat subagents as specialist tools: call them when you genuinely need their independent judgment, external knowledge, or a skill you lack.
+- Main-agent-first: if you (the main agent) can do the work directly with available tools, do it yourself. Never spawn a child for work you can do.
+- Skip delegation if overhead ≥ doing it yourself.
+- Provide context summaries; let specialists read what they need.
+- Reference paths/lines (\`src/app.ts:42\`), don't paste file contents.
 
-## 4. Split and Parallelize
-Can tasks be split into subtasks and run in parallel?
-${enabledParallelExamples}
+### Subagent execution model (three modes)
+The \`task\` tool accepts an optional \`background\` parameter:
 
-Balance: respect dependencies, avoid parallelizing what must be sequential.
+| Mode | \`background\` param | Behavior |
+|---|---|---|
+| **Tool call** (default) | \`background=false\` (or omitted) | Subagent runs, main agent **blocks**, waits for result, then continues. Use when you need the result before the next step. |
+| **Fire-and-forget** | \`background=true\` | Subagent runs as a background fiber, main agent **continues immediately**. Subagent injects result when done (requires env \`OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true\`). Use for truly independent parallel work. |
+| **Batch** | Multiple \`task\` calls in one message | Each call is blocking by default, but they run **simultanously** in parallel child sessions, sharing the wait time. Main agent waits for all results, then integrates. |
 
-### OpenCode subagent execution model
-- A delegated specialist runs in a separate child session.
-- Delegation is blocking for the parent at that point: send work out, then continue that line after results return.
-- Parallel delegation means launching multiple independent child-session branches.
-- Only parallelize branches that are truly independent; reconcile dependent steps after delegated results come back.
-- Because delegation is blocking on that branch, prefer direct main-agent execution whenever the next useful step does not truly require a child result yet.
+**Decision guide:**
+- Need result before continuing? → \`background=false\` (tool-call mode)
+- Can continue working while subagent runs? → \`background=true\` (fire-and-forget mode)
+- Two independent specialist needs simultaneously? → \`background=true\` for both in one message (or batch two blocking calls)
+
+**Important:** Batch multiple calls in one message ONLY for truly independent tasks. If one result is needed before the next call can start, run sequentially.
 
 ### Parent → child context bridge
 - Child sessions may not inherit the main session's full prompt-cache state or all accumulated context. Treat each fresh child session as a potential cache miss unless you deliberately stabilize its prefix.
-- Before launching parallel child sessions, build one shared-prefix snapshot using this exact section order and reuse the same snapshot text as the first delegation block for every child in that batch:
+- Before batching multiple child sessions in one message, build one shared-prefix snapshot using this exact section order and reuse the same snapshot text as the first delegation block for every child in that batch:
 
 ${SHARED_PREFIX_SNAPSHOT_TEMPLATE}
 
@@ -421,6 +422,20 @@ When user's approach seems problematic:
 - State concern + alternative concisely
 - Ask if they want to proceed anyway
 - Don't lecture, don't blindly implement
+
+## File & Output Discipline
+
+### File creation rules
+- One-time content (explanations, analysis results, code snippets used once) belongs **in the conversation**, not in a file. Don't create files for things the user reads once and discards.
+- For long-lived scripts (.sh, .ps1, .py, .ts, .js, .rb), configs, or tools: always **update the existing file in-place** rather than creating a new variant each time. Never leave behind stale duplicates.
+- Before creating any file, ask: "Will this be reused? Could this content live in the conversation instead?"
+- Don't dump temporary markdown, todos, notes, or draft docs into the workspace. Keep the workspace clean.
+
+### Output style rules
+- Prefer **paragraph-style descriptions** over excessive bullet points. A paragraph flows; fragmented bullets waste vertical space and force scrolling.
+- Bullet points are acceptable for short, scannable lists (3-5 items max). Avoid single-word-per-line bullets — if every line has only 1-3 words, write it as prose instead.
+- Keep output concise. Minimize scroll distance. One well-written paragraph communicates more than 20 lines of fragmented one-word-per-line bullets.
+- Remember: scrolling costs time. Every unnecessary line of output is a friction cost.
 
 ## Example
 **Bad:** "Great question! Let me think about the best approach here. I'm going to delegate to @librarian to check the latest Next.js documentation for the App Router, and then I'll implement the solution for you."

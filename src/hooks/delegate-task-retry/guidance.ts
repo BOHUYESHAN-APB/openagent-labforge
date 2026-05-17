@@ -34,7 +34,11 @@ export function buildRetryGuidance(errorInfo: DetectedError): string {
 
   lines.push(
     'Retry now with corrected parameters. Example:',
-    'task(description="...", prompt="...", category="unspecified-low", run_in_background=false, load_skills=[])',
+    'task(description="...", prompt="...", subagent_type="explorer")',
+  );
+  lines.push(
+    'Use background=true for non-blocking delegation (requires OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true).',
+    'Use background=false (default) for blocking delegation where you need the result before continuing.',
   );
 
   return lines.join('\n');

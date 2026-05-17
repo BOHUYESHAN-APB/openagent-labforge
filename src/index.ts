@@ -57,12 +57,16 @@ import {
   createContextPressureHook,
   createDelegateTaskRetryHook,
   createFilterAvailableSkillsHook,
+  createFlashEscalationHook,
   createJsonErrorRecoveryHook,
   createMemoryCommandsHook,
   createModeDetectorHook,
   createPhaseReminderHook,
   createPostFileToolNudgeHook,
+  createPrefixStabilityHook,
+  createSchemaSanitizeHook,
   createStartWorkHook,
+  createStormBreakerHook,
   createTaskSessionManagerHook,
   createTodoContinuationHook,
   ForegroundFallbackManager,
@@ -360,6 +364,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let applyPatchHook: ReturnType<typeof createApplyPatchHook>;
   let deleteGuardHook: ReturnType<typeof createDeleteGuardHook>;
   let jsonErrorRecoveryHook: ReturnType<typeof createJsonErrorRecoveryHook>;
+  let stormBreakerHook: ReturnType<typeof createStormBreakerHook>;
+  let prefixStabilityHook: ReturnType<typeof createPrefixStabilityHook>;
+  let schemaSanitizeHook: ReturnType<typeof createSchemaSanitizeHook>;
+  let flashEscalationHook: ReturnType<typeof createFlashEscalationHook>;
   let foregroundFallback: ForegroundFallbackManager;
   let todoContinuationHook: ReturnType<typeof createTodoContinuationHook>;
   let taskSessionManagerHook: ReturnType<typeof createTaskSessionManagerHook>;
@@ -577,6 +585,18 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     deleteGuardHook = createDeleteGuardHook(ctx);
     // Initialize JSON parse error recovery hook
     jsonErrorRecoveryHook = createJsonErrorRecoveryHook(ctx);
+
+    // Initialize storm breaker: suppress repeat-loop tool calls
+    stormBreakerHook = createStormBreakerHook(ctx);
+
+    // Initialize prefix stability: SHA-256 drift detection
+    prefixStabilityHook = createPrefixStabilityHook(ctx);
+
+    // Initialize schema sanitize: clean deep schemas
+    schemaSanitizeHook = createSchemaSanitizeHook(ctx);
+
+    // Initialize flash escalation: auto-escalate on failure
+    flashEscalationHook = createFlashEscalationHook(ctx);
 
     // Initialize foreground fallback manager for runtime model switching
     foregroundFallback = new ForegroundFallbackManager(
@@ -1297,6 +1317,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         input as { tool: string; callID?: string },
         output as { args?: Record<string, unknown>; [key: string]: unknown },
       );
+
+      // Storm breaker: suppress repeat-loop tool calls
+      await stormBreakerHook['tool.execute.before'](
+        input as { tool: string; sessionID: string; callID: string },
+        output as { args: unknown },
+      );
     },
 
     // Direct interception of /ol-auto-continue command — bypasses LLM
@@ -1381,6 +1407,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       _output: unknown,
     ) => {
       await thinkingLanguageHook['chat.params'](input, _output);
+      // Flash escalation: count failures → switch model
+      await flashEscalationHook['chat.params'](
+        input as { sessionID: string; model: { id?: string; providerID?: string } },
+        _output as { temperature: number; topP: number; topK: number; maxOutputTokens: number | undefined; options: Record<string, unknown> },
+      );
     },
 
     'chat.headers': chatHeadersHook['chat.headers'],
@@ -1558,6 +1589,13 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         output,
       );
 
+      // Prefix stability: fingerprint system prompt for cache-hit
+      // tracking
+      await prefixStabilityHook['experimental.chat.system.transform'](
+        input as { sessionID?: string; model: { providerID?: string } },
+        output,
+      );
+
       // Collapse to single system message for provider compatibility.
       // Some providers (e.g. Qwen via VLLM/DashScope) reject multiple
       // system messages. Sub-hooks above may push additional entries; join
@@ -1643,6 +1681,21 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         },
       );
 
+      // Flash escalation: count failures, auto-escalate model
+      await flashEscalationHook['tool.execute.after'](
+        input as {
+          tool: string;
+          sessionID: string;
+          callID: string;
+          args: unknown;
+        },
+        output as {
+          title: string;
+          output: string;
+          metadata: unknown;
+        },
+      );
+
       await todoContinuationHook.handleToolExecuteAfter(
         input as {
           tool: string;
@@ -1672,6 +1725,14 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         },
         output as { output: unknown },
       );
+    },
+
+    // Schema sanitize: clean tool JSON Schemas before sending to LLM
+    'tool.definition': async (
+      input: { toolID: string },
+      output: { description: string; parameters: unknown },
+    ) => {
+      await schemaSanitizeHook['tool.definition'](input, output);
     },
   };
 };

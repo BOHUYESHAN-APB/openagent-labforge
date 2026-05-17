@@ -6,32 +6,10 @@ export interface DelegateTaskErrorPattern {
 
 export const DELEGATE_TASK_ERROR_PATTERNS: DelegateTaskErrorPattern[] = [
   {
-    pattern: 'run_in_background',
-    errorType: 'missing_run_in_background',
+    pattern: 'Background subagents require',
+    errorType: 'background_not_enabled',
     fixHint:
-      'Add run_in_background=false (delegation) or run_in_background=true (parallel exploration).',
-  },
-  {
-    pattern: 'load_skills',
-    errorType: 'missing_load_skills',
-    fixHint: 'Add load_skills=[] (empty array when no skill is needed).',
-  },
-  {
-    pattern: 'category OR subagent_type',
-    errorType: 'mutual_exclusion',
-    fixHint:
-      'Provide only one: category (e.g., "unspecified-low") OR subagent_type (e.g., "explorer").',
-  },
-  {
-    pattern: 'Must provide either category or subagent_type',
-    errorType: 'missing_category_or_agent',
-    fixHint:
-      'Add either category="unspecified-low" or subagent_type="explorer".',
-  },
-  {
-    pattern: 'Unknown category',
-    errorType: 'unknown_category',
-    fixHint: 'Use a valid category listed in the error output.',
+      'Background subagents require the env var OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true. Without it, use background=false (default) for blocking delegation.',
   },
   {
     pattern: 'Unknown agent',

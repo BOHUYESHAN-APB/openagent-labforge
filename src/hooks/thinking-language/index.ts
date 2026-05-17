@@ -146,6 +146,7 @@ export function createThinkingLanguageHook() {
           `${THINKING_LANGUAGE_MARKER}\n\n` +
             '<thinking_language_preference>\n' +
             'Please think and reason in English. English tokens are most cost-effective for this model.\n' +
+            'Your thinking summary (reasoning_summary) shown to the user MUST also be in English.\n' +
             '</thinking_language_preference>',
         );
       } else if (!model || isChineseProvider(model)) {
@@ -154,6 +155,7 @@ export function createThinkingLanguageHook() {
           `${THINKING_LANGUAGE_MARKER}\n\n` +
             '<thinking_language_preference>\n' +
             '请用中文进行思考和推理。中文思考对当前模型 token 成本最低。\n' +
+            '展示给用户的思考总结（reasoning_summary）也必须使用中文。\n' +
             '</thinking_language_preference>',
         );
       }

@@ -6,13 +6,13 @@ describe('delegate-task-retry hook', () => {
     const hook = createDelegateTaskRetryHook({} as never);
     const output = {
       output:
-        '[ERROR] Invalid arguments: Must provide either category or subagent_type. Available categories: quick, unspecified-low',
+        '[ERROR] Invalid arguments: Background subagents require OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true',
     };
 
     await hook['tool.execute.after']({ tool: 'task' }, output);
 
     expect(output.output).toContain('[delegate-task retry suggestion]');
-    expect(output.output).toContain('missing_category_or_agent');
+    expect(output.output).toContain('background_not_enabled');
   });
 
   test('appends guidance for task agent allowlist errors', async () => {
