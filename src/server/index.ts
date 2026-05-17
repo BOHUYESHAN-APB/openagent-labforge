@@ -9,7 +9,7 @@ import { homedir } from 'node:os';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, type Tool } from '@modelcontextprotocol/sdk/types.js';
-import { renderDashboard, renderSkillsList, renderSkillDetail, renderDocs, renderDocFile, renderPlans, renderPlanFile, renderConfigEditor, renderError } from './pages';
+import { renderDashboard, renderSkillsList, renderSkillDetail, renderDocs, renderDocFile, renderPlans, renderPlanFile, renderConfigEditor, renderHtmlViewer, renderHtmlPage, renderError } from './pages';
 
 // ── Constants ─────────────────────────────────────────
 const PORT = 25569;
@@ -170,7 +170,20 @@ async function handleRequest(req: Request): Promise<Response> {
       return Response.json({ ok: true, message: 'Saved. Restart OpenCode.', path: cp });
     }
 
-    if (p === '/' || p === '/dashboard') return new Response(renderDashboard({ sessions: 0 }, t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    if (p === '/' || p === '/dashboard') return new Response(renderDashboard(t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    if (p === '/view') return new Response(renderHtmlViewer(t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    if (p.startsWith('/view/')) {
+      const name = decodeURIComponent(p.slice(6));
+      const pagesDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'pages');
+      const fp = join(pagesDir, name);
+      if (!existsSync(fp)) return err(404, 'Page not found: ' + name);
+      return new Response(renderHtmlPage(name, readFileSync(fp, 'utf8'), t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
+    }
+    if (p === '/api/html-pages') {
+      const pagesDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'pages');
+      try { return Response.json(readdirSync(pagesDir).filter((f) => f.endsWith('.html'))); }
+      catch { return Response.json([]); }
+    }
     if (p === '/skills') return new Response(renderSkillsList(scanAllSkills(), t), { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any);
     if (p === '/docs') {
       const dirs = getDocDirs(workspaceRoot);
