@@ -66,7 +66,11 @@ function renderConfigFields(config: Record<string,unknown>): string {
 }
 
 // ── Pages ────────────────────────────────────────────
-export function renderDashboard(theme: string, info?: { skills?: number; workspace?: string; port?: number }): string {
+export function renderDashboard(theme: string, info?: { skills?: number; workspace?: string; port?: number; recentHtml?: string[] }): string {
+  const recentSection = info?.recentHtml?.length
+    ? `<h3 class="cat-head">Recent HTML Pages</h3><div class="grid-3">${info.recentHtml.map((f) => `<a href="/view/${encodeURIComponent(f)}" class="card-link"><span class="ico">🌐</span><h4>${f}</h4></a>`).join('')}</div>`
+    : '<p class="sub">No HTML pages yet. AI can write them to .opencode/extendai-lab/pages/</p>';
+
   return base('Dashboard', `
     <div class="hero">
       <h1>extendai-lab</h1>
@@ -74,13 +78,14 @@ export function renderDashboard(theme: string, info?: { skills?: number; workspa
       ${info ? `<p class="sub mono">${info.workspace || ''} · Port ${info.port || 25569} · ${info.skills || 0} skills</p>` : ''}
     </div>
     <div class="grid-3">
-      <a href="/skills" class="card-link"><span class="ico">🎨</span><h3>Skills</h3><p>75+ document & design skills</p></a>
+      <a href="/view" class="card-link"><span class="ico">🌐</span><h3>HTML Viewer</h3><p>AI-generated HTML content for users</p></a>
       <a href="/docs" class="card-link"><span class="ico">📄</span><h3>Docs</h3><p>Browse workspace documentation</p></a>
-      <a href="/view" class="card-link"><span class="ico">🌐</span><h3>HTML Viewer</h3><p>View AI-generated HTML content</p></a>
+      <a href="/skills" class="card-link"><span class="ico">🎨</span><h3>Skills</h3><p>${info?.skills || 0} document & design skills</p></a>
       <a href="/config/project" class="card-link"><span class="ico">⚙</span><h3>Project Config</h3><p>Edit project settings</p></a>
       <a href="/config/global" class="card-link"><span class="ico">🔧</span><h3>Global Config</h3><p>Edit global plugin settings</p></a>
       <a href="/plans" class="card-link"><span class="ico">📋</span><h3>Plans</h3><p>Saved execution plans</p></a>
     </div>
+    ${recentSection}
   `, theme);
 }
 

@@ -7,6 +7,12 @@ const ANALYZE_PATTERN =
 const HEAVY_PATTERN =
   /\b(plan|planning|design plan|make plan|create plan|设计计划|做计划|制定计划|规划|计划)\b/i;
 
+const BIO_PATTERN =
+  /\b(RNA-seq|scRNA|single.?cell|转录组|基因组|蛋白质组|代谢组|甲基化|ChIP-seq|ATAC-seq|CRISPR|基因编辑|序列比对|差异表达|富集分析|通路分析|系统发育|分子对接|蛋白结构|AlphaFold|变异检测|GWAS|生物信息|bioinformatic|sequencing|alignment|phylogen|epigenetic|metagenom|microbiome|proteom|metabolom)\b/i;
+
+const CHEM_PATTERN =
+  /\b(分子动力学|量子化学|DFT|密度泛函|分子模拟|配体对接|药效团|QSAR|化学信息|chem.informatic|molecular dynamics|quantum chemistry|docking|ADMET|药物设计|force field|力场|反应路径|过渡态|溶剂化|自由能|结合能)\b/i;
+
 const SEARCH_PROMPT = `[search-mode]
 MAXIMIZE SEARCH EFFORT. Launch multiple background agents IN PARALLEL:
 - explore agents (codebase patterns, file structures, ast-grep)
@@ -27,6 +33,22 @@ IF COMPLEX - DO NOT STRUGGLE ALONE. Consult specialists:
 - **Artistry**: Non-conventional problems (different approach needed)
 
 SYNTHESIZE findings before proceeding.`;
+
+const BIO_PROMPT = `[bio-mode]
+BIOLOGICAL SCIENCE TASK detected. Load the relevant bioinformatics skills:
+
+1. Use load_bio_skills(categories=["<category>"]) to load the appropriate category
+2. Follow the skill's workflow: data ingestion → QC → analysis → visualization
+3. Use domain-specific tools (samtools, STAR, DESeq2, etc.) as directed by the skill
+4. Write analysis HTML reports to .opencode/extendai-lab/pages/ for the user to view`;
+
+const CHEM_PROMPT = `[chem-mode]
+COMPUTATIONAL CHEMISTRY TASK detected. Approach with domain rigor:
+
+1. Verify molecular structures before any computation
+2. Follow the force field / method selection guidelines from chem skills
+3. Validate results against known benchmarks where possible
+4. Write analysis HTML reports to .opencode/extendai-lab/pages/ for the user to view`;
 
 const pendingModeBySession = new Map<string, string>();
 
@@ -49,6 +71,8 @@ function extractUserText(messages: Message[]): string {
 function detectMode(text: string, agent?: string): string | null {
   if (SEARCH_PATTERN.test(text)) return 'search';
   if (ANALYZE_PATTERN.test(text)) return 'analyze';
+  if (BIO_PATTERN.test(text)) return 'bio';
+  if (CHEM_PATTERN.test(text)) return 'chem';
   if (
     agent &&
     (agent === 'orchestrator' || agent === 'bio-orchestrator') &&
@@ -93,6 +117,10 @@ async function handleSystemTransform(
     output.system.push(SEARCH_PROMPT);
   } else if (mode === 'analyze' && !combinedSystem.includes('[analyze-mode]')) {
     output.system.push(ANALYZE_PROMPT);
+  } else if (mode === 'bio' && !combinedSystem.includes('[bio-mode]')) {
+    output.system.push(BIO_PROMPT);
+  } else if (mode === 'chem' && !combinedSystem.includes('[chem-mode]')) {
+    output.system.push(CHEM_PROMPT);
   }
 }
 

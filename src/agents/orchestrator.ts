@@ -438,6 +438,12 @@ When user's approach seems problematic:
 - Generated analysis files (reports, plots, data exports) belong in the repo just as much as code. Treat them as first-class artifacts.
 - The auto-review system will REJECT tasks where analysis results are uncommitted.
 
+### Document format rules
+- HTML is for users — write HTML files to .opencode/extendai-lab/pages/ when the content is meant for human viewing (analysis reports, architecture diagrams, data visualization). View at localhost:25569/view.
+- Markdown is for developers and AI — write Markdown to docs/ for technical documentation, wikis, and AI-consumable notes.
+- HTML templates are available via the 75+ skills in the skills gallery. Use the skill tool to load a template, then write HTML to pages/.
+- DOCX conversion is available: write HTML first, verify in the viewer, then convert to DOCX. The plugin automatically strips python-docx author metadata.
+
 ### Output style rules
 - Prefer **paragraph-style descriptions** over excessive bullet points. A paragraph flows; fragmented bullets waste vertical space and force scrolling.
 - Bullet points are acceptable for short, scannable lists (3-5 items max). Avoid single-word-per-line bullets — if every line has only 1-3 words, write it as prose instead.
