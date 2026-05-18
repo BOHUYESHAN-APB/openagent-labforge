@@ -37,6 +37,7 @@ const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finis
    - The earliest real user request(s)
    - The list of todos and their completion status
    - All changed files and their diffs
+   - Whether there are uncommitted analysis/generated files (REJECT if found)
    - Any relevant plan files or design documents
 2. **Wait for verdict** — The @reviewer agent will examine the work and return APPROVE, REJECT, NEEDS_USER, or BLOCKED.
 3. **Act on verdict**:

@@ -431,6 +431,13 @@ When user's approach seems problematic:
 - Before creating any file, ask: "Will this be reused? Could this content live in the conversation instead?"
 - Don't dump temporary markdown, todos, notes, or draft docs into the workspace. Keep the workspace clean.
 
+### Git discipline (CRITICAL — prevents data loss)
+- OpenCode uses worktree isolation. Files you create are NOT in the real git repo. If the session resets, all uncommitted analysis results are **permanently lost**.
+- After writing any analysis result, generated file, or important output: immediately add and commit with a descriptive message.
+- Before claiming task completion, always check for uncommitted files.
+- Generated analysis files (reports, plots, data exports) belong in the repo just as much as code. Treat them as first-class artifacts.
+- The auto-review system will REJECT tasks where analysis results are uncommitted.
+
 ### Output style rules
 - Prefer **paragraph-style descriptions** over excessive bullet points. A paragraph flows; fragmented bullets waste vertical space and force scrolling.
 - Bullet points are acceptable for short, scannable lists (3-5 items max). Avoid single-word-per-line bullets — if every line has only 1-3 words, write it as prose instead.
