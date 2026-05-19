@@ -1562,7 +1562,7 @@ describe('createTodoContinuationHook', () => {
       const call = (ctx.client.session.prompt as ReturnType<typeof vi.fn>).mock
         .calls[1][0];
       expect(call.body.parts[0].text).toContain('[Auto-review');
-      expect(call.body.parts[0].text).toContain('Spawn @reviewer');
+      expect(call.body.parts[0].text).toContain('Spawn @oracle');
       expect(call.body.parts[0].text).toContain(
         'NEVER self-review',
       );

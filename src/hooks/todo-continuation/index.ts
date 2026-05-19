@@ -29,26 +29,26 @@ const AUTO_OFF_ARGS = new Set([
 const CONTINUATION_PROMPT =
   '[Auto-continue: incomplete todos remain in this work batch. Continue working on the next pending or in-progress item now. Proceed without asking for permission. Do not stop while any todo remains incomplete. If you think the work is already complete, re-check every remaining todo skeptically, verify the work was actually done, and update todo status before stopping. If user input is truly required, use the runtime\'s native question/clarification mechanism instead of conversational filler like "should I continue?". Press Esc to cancel. Call auto_continue with enabled=false only when the batch is actually complete, explicitly stopped by the user, or truly blocked.]';
 
-const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST delegate a structured review to the @reviewer agent.
+const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST delegate a structured review to the @oracle agent.
 
 ## Review Protocol
 
-1. **Spawn @reviewer** — Use the task tool: task(subagent_type="reviewer", description="auto review", prompt="...") with the following context:
+1. **Spawn @oracle** — Use the task tool: task(subagent_type="oracle", description="auto review", prompt="...") with the following context:
    - The earliest real user request(s)
    - The list of todos and their completion status
    - All changed files and their diffs
    - Whether there are uncommitted analysis/generated files (REJECT if found)
    - Any relevant plan files or design documents
-2. **Wait for verdict** — The @reviewer agent will examine the work and return APPROVE, REJECT, NEEDS_USER, or BLOCKED.
+2. **Wait for verdict** — The @oracle agent will examine the work and return APPROVE, REJECT, NEEDS_USER, or BLOCKED.
 3. **Act on verdict**:
    - APPROVE → call auto_continue(enabled=false) to close the batch. The @reviewer agent has exclusive permission to disable auto-continue.
    - REJECT → create new todos for each finding and continue working. DO NOT disable auto-continue.
    - NEEDS_USER → present the issue to the user.
    - BLOCKED → explain the blocker.
-4. **NEVER self-review** — Do not perform the review yourself. Always delegate to @reviewer.
-5. **NEVER disable auto-continue** unless @reviewer returns APPROVE — only @reviewer has that permission.
+4. **NEVER self-review** — Do not perform the review yourself. Always delegate to @oracle.
+5. **NEVER disable auto-continue** unless @oracle returns APPROVE — only @reviewer has that permission.
 
-## Output Format for @reviewer
+## Output Format for @oracle
 
 After review, output ONE of:
 
