@@ -170,6 +170,16 @@ You are starting a plan execution session. Use executor behavior for execution.
 - Session ID: ${input.sessionID}
 - Progress: ${input.progress.completed}/${input.progress.total} completed (${input.progress.percent}%), ${input.progress.remaining} remaining
 ${input.worktreePath ? `- Worktree path: ${input.worktreePath}\n` : ''}
+### Cross-window state recovery
+
+This command may be executed in a NEW window (isolated context). The hook has already:
+1. Located the plan file at: ${input.planPath}
+2. Created/updated boulder.json at: ${input.boulderPath}
+3. Appended your session ID: ${input.sessionID}
+4. Injected this execution context into your session
+
+You have ALL the information needed to execute. Do NOT ask where the plan is or claim you cannot find it. The plan path is above.
+
 ### Required workflow
 1. Read the full plan file before doing any work.
 2. Create todos for every incomplete top-level plan checkbox before starting.

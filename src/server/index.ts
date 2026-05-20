@@ -17,7 +17,6 @@ const PORT = 25569;
 const HOST = '127.0.0.1';
 const OPENCODE_LOG_DIR = resolve(homedir(), '.local', 'share', 'opencode');
 const PLUGIN_LOG_DIR = resolve(OPENCODE_LOG_DIR, 'extendai-lab');
-const LOCK_FILE = join(PLUGIN_LOG_DIR, 'server.lock');
 
 let workspaceRoot = process.cwd();
 // Determine plugin root from the dist path at module load time (before main)
@@ -40,21 +39,6 @@ async function srvLog(msg: string) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   try { await appendFile(logFilePath, line); } catch {}
   console.error(msg);
-}
-
-// ── Shared server via lock file ──────────────────────
-function isProcessAlive(pid: number): boolean {
-  try { process.kill(pid, 0); return true; } catch { return false; }
-}
-
-function findExistingPort(): number | null {
-  try {
-    const raw = readFileSync(LOCK_FILE, 'utf8');
-    const lock = JSON.parse(raw);
-    if (lock.port && lock.pid && isProcessAlive(lock.pid)) return lock.port;
-    unlinkSync(LOCK_FILE);
-  } catch {}
-  return null;
 }
 
 // ── Skills scanner ────────────────────────────────────
@@ -243,41 +227,10 @@ async function main() {
   if (ri >= 0 && args[ri + 1]) workspaceRoot = resolve(args[ri + 1]);
   workspaceRoot = process.env.EXTENDAI_WORKSPACE ?? workspaceRoot;
 
-  // ── Shared server check ─────────────────────────────
-  const existingPort = findExistingPort();
-  if (existingPort) {
-    // Another server is already running — connect as MCP-only (no HTTP)
-    await srvLog(`Using existing server on port ${existingPort}`);
-    const mcp = new McpServer({ name: 'extendai-lab', version: '1.0.0' }, { capabilities: { tools: {} } });
-    mcp.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: mcpTools }));
-    mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
-      const { name, arguments: toolArgs } = req.params;
-      if (name === 'extendai_list_skills') return { content: [{ type: 'text' as const, text: JSON.stringify(scanAllSkills()) }] };
-      if (name === 'extendai_dashboard_status') return { content: [{ type: 'text' as const, text: JSON.stringify({ workspace: workspaceRoot, shared: true, port: existingPort }) }] };
-      
-      // Academic tools
-      if (name === 'academic_check_tools') {
-        const tools = (toolArgs as any)?.tools;
-        const results = await checkTools(tools);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }] };
-      }
-      if (name === 'academic_build_docx') {
-        const docxPath = await handleAcademicBuildDocx(toolArgs as any);
-        return { content: [{ type: 'text' as const, text: `DOCX generated: ${docxPath}` }] };
-      }
-      
-      return { content: [{ type: 'text' as const, text: `Done. Dashboard: http://${HOST}:${existingPort}` }] };
-    });
-    const trans = new StdioServerTransport();
-    await mcp.connect(trans);
-    await srvLog('MCP connected (shared mode)');
-    process.stdin.on('end', () => { srvLog('stdin closed'); process.exit(0); });
-    return;
-  }
-
-  // ── First instance: start full server ──────────────
-  writeFileSync(LOCK_FILE, JSON.stringify({ port: PORT, pid: process.pid }));
-  await srvLog(`Starting server on port ${PORT}`);
+  // ── Start independent server (no sharing) ───────────
+  // Each OpenCode window gets its own MCP server instance.
+  // stdio transport is 1:1, so sharing doesn't work.
+  await srvLog(`Starting independent server on port ${PORT}`);
   const skills = scanAllSkills();
   await srvLog(`Scanned ${skills.length} skills`);
 
@@ -312,11 +265,10 @@ async function main() {
   // Cleanup on stdin close
   process.stdin.on('end', () => {
     srvLog('Parent exited, cleaning up');
-    try { unlinkSync(LOCK_FILE); } catch {}
     process.exit(0);
   });
-  process.on('SIGINT', () => { try { unlinkSync(LOCK_FILE); } catch {} process.exit(0); });
-  process.on('SIGTERM', () => { try { unlinkSync(LOCK_FILE); } catch {} process.exit(0); });
+  process.on('SIGINT', () => { process.exit(0); });
+  process.on('SIGTERM', () => { process.exit(0); });
 }
 
 main().catch(async (e) => { try { await srvLog(`FATAL: ${e}`); } catch {} console.error(e); process.exit(1); });

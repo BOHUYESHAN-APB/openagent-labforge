@@ -29,28 +29,44 @@ const AUTO_OFF_ARGS = new Set([
 const CONTINUATION_PROMPT =
   '[Auto-continue: incomplete todos remain in this work batch. Continue working on the next pending or in-progress item now. Proceed without asking for permission. Do not stop while any todo remains incomplete. If you think the work is already complete, re-check every remaining todo skeptically, verify the work was actually done, and update todo status before stopping. If user input is truly required, use the runtime\'s native question/clarification mechanism instead of conversational filler like "should I continue?". Press Esc to cancel. Call auto_continue with enabled=false only when the batch is actually complete, explicitly stopped by the user, or truly blocked.]';
 
-const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST delegate a structured review to the @oracle agent.
+const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
 
-## Review Protocol
+## Review Options
 
-1. **Spawn @oracle** — Use the task tool: task(subagent_type="oracle", description="auto review", prompt="...") with the following context:
-   - The earliest real user request(s)
-   - The list of todos and their completion status
-   - All changed files and their diffs
-   - Whether there are uncommitted analysis/generated files (REJECT if found)
-   - Any relevant plan files or design documents
-2. **Wait for verdict** — The @oracle agent will examine the work and return APPROVE, REJECT, NEEDS_USER, or BLOCKED.
-3. **Act on verdict**:
-   - APPROVE → call auto_continue(enabled=false) to close the batch. The @reviewer agent has exclusive permission to disable auto-continue.
-   - REJECT → create new todos for each finding and continue working. DO NOT disable auto-continue.
-   - NEEDS_USER → present the issue to the user.
-   - BLOCKED → explain the blocker.
-4. **NEVER self-review** — Do not perform the review yourself. Always delegate to @oracle.
-5. **NEVER disable auto-continue** unless @oracle returns APPROVE — only @reviewer has that permission.
+You have TWO options for performing the review:
 
-## Output Format for @oracle
+### Option A: Self-Review (Main Agent Checklist) — Recommended for simple tasks
+Perform the review yourself using this checklist:
+1. **Re-check earliest user request** — Does the work actually solve what the user asked for?
+2. **Verify all todos** — Are they genuinely complete, or just marked complete?
+3. **Check changed files** — Run lsp_diagnostics on all changed files (ZERO errors required)
+4. **Uncommitted files check** — Are there uncommitted analysis/generated files? (REJECT if found)
+5. **Run tests/build** — If applicable, verify the code actually works
+6. **Plan compliance** — If there's a plan file, does the work match it?
 
-After review, output ONE of:
+### Option B: Delegate to @oracle (Sub-Agent) — Use for complex/high-risk work
+When the work is complex, high-risk, or you're uncertain, delegate to @oracle:
+- Use the task tool: task(subagent_type="oracle", description="auto review", prompt="...")
+- Provide context: earliest user request, todos, changed files, uncommitted files, plan files
+- @oracle will return APPROVE, REJECT, NEEDS_USER, or BLOCKED
+- This creates a new session (keeps main UI clean for users who prefer it)
+
+**When to use Option B:**
+- Multi-file refactoring or architectural changes
+- Security-sensitive changes (auth, permissions, data handling)
+- High-stakes production code
+- When you're genuinely uncertain about correctness
+- User explicitly requested thorough review
+
+**When to use Option A:**
+- Simple bug fixes or feature additions
+- Single-file changes
+- Low-risk documentation updates
+- You're confident the work is correct
+
+## Output Format
+
+After review (either option), output ONE of:
 
 **[APPROVE]** — Work is complete and matches the plan. Include a brief summary of what was delivered.
 
@@ -63,7 +79,12 @@ After review, output ONE of:
 
 **[BLOCKED: <reason>]** — Blocked by external dependency.
 
-DO NOT revert git commits. DO NOT claim completion without running diagnostics.]`;
+## Critical Rules
+
+- NEVER disable auto-continue unless you output [APPROVE] — only after approval
+- DO NOT revert git commits — make corrective commits instead
+- DO NOT claim completion without running diagnostics
+- If you output [REJECT], create new todos for each finding and continue working]`;
 
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';

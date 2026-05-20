@@ -379,26 +379,76 @@ bun run check:ci   # Lint + format + organize imports
 
 ---
 
+## Changelog
+
+### v1.1.0 (2025-01-XX)
+
+**Major Release: Core Architecture Improvements**
+
+#### Breaking Changes
+- Removed MCP shared-server logic — each OpenCode window now runs an independent MCP server instance
+- This fixes multi-window MCP connection failures but means each window has its own server process
+
+#### Core Fixes
+- **Auto-Review System**: Refactored to support both main-agent self-review (Option A) and @oracle delegation (Option B)
+  - Main agent can now perform reviews using an internal checklist for simple tasks
+  - @oracle delegation preserved for complex/high-risk work
+  - Reduces token costs by avoiding unnecessary child session spawns
+- **save_plan Tool**: Enhanced description to explicitly prevent AI from outputting plans to conversation
+  - Added "CRITICAL: You MUST use this tool to save the plan. Do NOT output the plan content in the conversation."
+  - Eliminates path confusion and repeated prompt injections
+- **Start Work Command**: Improved cross-window state recovery
+  - Added explicit "Cross-window state recovery" section in hook-injected context
+  - Clarifies that all necessary information is already provided
+  - Prevents AI from claiming it cannot find the plan file
+- **Delete Guard**: Expanded tool name matching to cover more shell execution tools
+  - Now intercepts: bash, shell, exec, execute_command, powershell, run_command, system, cmd, terminal
+  - Better protection against accidental data loss
+
+#### Known Issues Resolved
+- ✅ MCP Multi-Window Sharing (removed shared logic)
+- ✅ Delete Command Guard (expanded tool matching)
+- ✅ Plan Mode Prompt Overhead (optimized save_plan description)
+- ⚠️ Start Work Command Detection (improved but may need further testing)
+
+---
+
+## Future Enhancements (v2.1.0+)
+
+### Context Management (High Priority)
+
+**Problem**: Current session context can reach 140K tokens, approaching the 500K danger threshold where context errors begin.
+
+**Planned Solutions**:
+
+1. **Auto Checkpoint Light** (v2.1.0)
+   - Automatically generate checkpoint light every 54-60 LLM calls
+   - Proactively move infrequently-used context to checkpoint storage
+   - Reduce main context size to stay well below 500K threshold
+   - Trade-off: Lower cache hit rate vs. avoiding context corruption
+
+2. **Context Layering** (v2.2.0)
+   - Frequently-used context: Keep in main session
+   - Infrequently-used context: Store in checkpoint, restore on-demand
+   - Smart eviction policy based on access patterns
+   - Automatic context pressure monitoring and warnings
+
+3. **Cross-Session State Management** (v2.2.0)
+   - Enhanced boulder.json state persistence
+   - Better new-window context initialization
+   - Checkpoint-based session resumption
+   - Reduced reliance on prompt injection for state recovery
+
+### Other Planned Features
+
+- **Paper Library Integration** (v2.1.0): Full Papis integration with citation graph visualization
+- **Citation Validation** (v2.1.0): Real-time citation checking against bibliography
+- **Dashboard Enhancements** (v2.2.0): Real-time context pressure visualization, checkpoint history
+- **Bio Skills Expansion** (v2.3.0): Additional bioinformatics workflows and tool integrations
+
+---
+
 ## Known Issues
-
-### MCP Multi-Window Sharing
-- **Issue**: When multiple OpenCode windows are open, only the first window's `extendai-lab` and `semantic_scholar_fastmcp` MCP servers work. Subsequent windows fail to connect.
-- **Root cause**: MCP stdio transport is 1:1 — cannot share across processes. Current "shared mode" logic attempts to reuse the first process but fails due to stdio limitations.
-- **Workaround**: Close all OpenCode windows and reopen. The first window to start will have working MCP servers.
-- **Status**: Under investigation. May require switching to SSE transport or removing shared-server logic entirely.
-
-### Delete Command Guard
-- **Issue**: The delete command safety guard (`src/safety/delete-guard.ts`) is registered but may not trigger in all cases.
-- **Root cause**: Guard only intercepts specific tool names (`bash`, `shell`, `exec`, `execute_command`, `powershell`). OpenCode may use different tool names in some contexts.
-- **Workaround**: Manually review destructive commands before execution.
-- **Status**: Needs runtime debugging to confirm tool name mismatches.
-
-### Plan Mode Prompt Overhead
-- **Issue**: Some guidelines/tool usage instructions are embedded in prompts, causing context cache invalidation and token waste when prompts change.
-- **Root cause**: Prompts should contain only core logic. Guidelines/rules should be loaded on-demand via `load_agent_instructions` or `skill` tools.
-- **Impact**: Reduced cache hit rate, increased token costs (especially for Chinese providers with token-based pricing).
-- **Recommendation**: Move guidelines to Skill files, load only when needed.
-- **Status**: Optimization pending.
 
 ### Plan File Write Permissions
 - **Issue**: AI cannot proactively write plan files to `.opencode/extendai-lab/plans/`.
@@ -406,12 +456,12 @@ bun run check:ci   # Lint + format + organize imports
 - **Workaround**: Manually create plan files or use `save_plan` tool when available.
 - **Status**: Under investigation.
 
-### Start Work Command Detection
-- **Issue**: When main agent (engineer), expert agents, or plan agent (planner/prometheus) create a plan and the user runs `/ol-start-work {plan-name}` in a new window, the AI cannot correctly execute the command. The instruction detection mechanism fails to automatically trigger the executor.
-- **Root cause**: Command detection logic may not properly recognize the `/ol-start-work` command context or fails to route to the appropriate executor agent.
-- **Impact**: Users must manually guide the AI to execute saved plans, reducing the value of persistent plan storage.
-- **Workaround**: Explicitly tell the AI to "execute the plan in .opencode/extendai-lab/plans/{plan-name}.md" instead of using the slash command.
-- **Status**: Needs investigation into command routing and executor triggering logic. Marked for future fix.
+### Context Pressure (500K Threshold)
+- **Issue**: Current session context can reach ~140K tokens, approaching the 500K danger threshold where context errors begin.
+- **Root cause**: Long-running sessions accumulate context without automatic cleanup.
+- **Impact**: Context corruption, hallucinations, and incorrect responses when approaching 500K tokens.
+- **Workaround**: Use checkpoint commands to save state and start fresh sessions periodically.
+- **Status**: Auto checkpoint light planned for v2.1.0 (see Future Enhancements).
 
 ---
 

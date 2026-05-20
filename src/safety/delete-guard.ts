@@ -228,13 +228,21 @@ export function createDeleteGuardHook(_ctx: PluginInput) {
       },
     ): Promise<void> => {
       const toolName = input.tool?.toLowerCase();
-      if (
-        toolName !== 'bash' &&
-        toolName !== 'shell' &&
-        toolName !== 'exec' &&
-        toolName !== 'execute_command' &&
-        toolName !== 'powershell'
-      ) {
+      
+      // Expanded tool name matching to cover more shell/command execution tools
+      const isShellTool = [
+        'bash',
+        'shell',
+        'exec',
+        'execute_command',
+        'powershell',
+        'run_command',
+        'system',
+        'cmd',
+        'terminal',
+      ].includes(toolName);
+      
+      if (!isShellTool) {
         return;
       }
 

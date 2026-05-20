@@ -259,3 +259,140 @@ Before working on any task, read `codemap.md` to understand:
 - Data flow and integration points between modules
 
 For deep work on a specific folder, also read that folder's `codemap.md`.
+
+## Best Practices (v1.1.0+)
+
+### Command System Architecture
+
+The plugin uses a **dual-trigger command system**:
+
+1. **Hook Trigger** (`command.execute.before`): Intercepts commands, reads files, builds context, injects into `output.parts`
+2. **Template Trigger**: OpenCode injects the command's `template` as a prompt to the LLM
+
+**Example**: `/ol-start-work` command
+- Hook reads plan file, updates boulder.json, injects execution context
+- Template provides workflow instructions
+- Both triggers fire for the same command
+
+**Key insight**: Commands are detected correctly. If a command "doesn't work," the issue is usually in the injected context or template content, not the detection mechanism.
+
+### Tool Description Best Practices
+
+Tool descriptions are the **only** way LLMs decide when and how to use tools. Follow these rules:
+
+1. **Be explicit about required behavior**:
+   ```typescript
+   // ❌ Bad: Vague
+   description: "Save a plan to .opencode/extendai-lab/plans/"
+   
+   // ✅ Good: Explicit
+   description: `Save a planner-created markdown plan to .opencode/extendai-lab/plans/
+   
+   CRITICAL: You MUST use this tool to save the plan. Do NOT output the plan content in the conversation. Do NOT ask the user where to save it.`
+   ```
+
+2. **State prohibitions clearly**: Tell the LLM what NOT to do
+3. **Provide context**: Explain when to use the tool
+4. **One source of truth**: Don't repeat instructions in prompts — put them in the tool description
+
+### Auto-Review System (v1.1.0)
+
+The auto-review system now supports **two modes**:
+
+**Option A: Self-Review (Main Agent Checklist)**
+- Use for simple tasks, single-file changes, low-risk work
+- Main agent performs review using internal checklist
+- No child session spawn = higher cache hit rate, lower cost
+
+**Option B: Delegate to @oracle (Sub-Agent)**
+- Use for complex/high-risk work, multi-file refactoring, security-sensitive changes
+- Spawns child session (keeps main UI clean for users who prefer it)
+- Independent review with fresh context
+
+**Design principle**: Give the LLM the choice. It knows the task complexity better than we do.
+
+### MCP Server Architecture (v1.1.0)
+
+**Before v1.1.0**: Shared server logic (first window works, subsequent windows fail)
+**After v1.1.0**: Independent servers (each window gets its own MCP server instance)
+
+**Why the change**: MCP stdio transport is 1:1 — cannot share across processes. Attempting to share causes connection failures in subsequent windows.
+
+**Trade-off**: More server processes vs. reliable multi-window support. We chose reliability.
+
+### Cross-Window State Management
+
+When executing `/ol-start-work` in a **new window** (isolated context):
+
+1. **Hook already did the work**: Plan file located, boulder.json updated, session ID appended
+2. **All info is injected**: Plan path, progress, session ID are in the hook-injected context
+3. **Don't ask for paths**: The LLM has everything it needs
+
+**Common mistake**: LLM claims it "cannot find the plan" → Actually, the plan path is in the injected context. The LLM should read the context, not ask the user.
+
+**Fix**: Enhanced hook context with explicit "Cross-window state recovery" section (v1.1.0).
+
+### Context Pressure Management
+
+**Current state**: Sessions can reach ~140K tokens, approaching 500K danger threshold.
+
+**Symptoms of context pressure**:
+- Hallucinations
+- Incorrect responses
+- Forgetting earlier instructions
+- Context corruption
+
+**Mitigation strategies**:
+1. Use checkpoint commands to save state and start fresh sessions
+2. Avoid unnecessary verbose output
+3. Use `load_agent_instructions` instead of spawning child sessions (preserves cache)
+4. Monitor context usage via dashboard
+
+**Future**: Auto checkpoint light (v2.1.0) will automatically manage context pressure.
+
+### Delete Guard Safety
+
+The delete guard intercepts destructive commands in these tools:
+- bash, shell, exec, execute_command, powershell
+- run_command, system, cmd, terminal (v1.1.0+)
+
+**How it works**:
+1. Detects dangerous patterns (rm -rf, Remove-Item, etc.)
+2. Replaces command with echo message explaining the block
+3. LLM sees the block in tool result
+4. LLM must explain to user why the command is needed
+5. User approves or denies
+
+**Design principle**: AI proposes, user disposes. Same security model as OpenCode's built-in permission system.
+
+### Tool Description vs. Prompt Injection
+
+**Anti-pattern**: Repeating instructions in prompts
+```typescript
+// ❌ Bad: Instructions in prompt
+const PROMPT = "Remember to save plans using save_plan tool, not output to conversation"
+```
+
+**Best practice**: Instructions in tool description
+```typescript
+// ✅ Good: Instructions in tool description
+description: `CRITICAL: You MUST use this tool to save the plan. Do NOT output to conversation.`
+```
+
+**Why**: Tool descriptions are stable (high cache hit rate). Prompts change frequently (cache invalidation, token waste).
+
+### Subagent Usage Philosophy
+
+**Main-agent-first principle**: Most work happens in the primary orchestrator.
+
+**When to spawn a child session**:
+- User explicitly requests it (wants clean UI)
+- Complex/high-risk work needing independent review
+- Genuinely need specialist's external knowledge (e.g., @librarian for library docs)
+
+**When NOT to spawn**:
+- Simple tasks the main agent can do
+- Just need to read specialist's instructions → use `load_agent_instructions`
+- Cost-sensitive scenarios (Chinese providers with token-based pricing)
+
+**Trade-off**: Child sessions = 0% cache hit initially. Main agent = 95-100% cache hit.
