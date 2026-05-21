@@ -239,6 +239,24 @@ This creates a superscript `[1]` but **without** clickable hyperlink.
 
 **Key insight**: `HYPERLINK \l` does NOT work reliably. Use `REF bookmark \h`.
 
+**Markdown Format Requirements:**
+
+```markdown
+## Body Text
+荞麦基因组研究[1]表明...多效唑处理[3]可显著降低株高...
+
+## 参考文献
+
+1. Lin Hao,Yao Yingjun,Sun Pengchuan,et al.Haplotype-resolved genomes...
+2. Zhang Kaixuan,He Ming,Fan Yu,et al.Resequencing of global Tartary...
+3. 作者C,作者D.论文标题C[J].期刊名,2026.
+```
+
+**CRITICAL**: Use Markdown ordered list (`1. 2. 3.`) for references, NOT `[1]`.
+This converts to Word's auto-numbering list, which is a true list style.
+
+**Implementation:**
+
 ```python
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -319,15 +337,33 @@ def add_bookmark(paragraph, name):
         paragraph._element.insert(0, bm_start)
     paragraph._element.append(bm_end)
 
-# Usage example:
-# In body text:
-p = doc.add_paragraph()
-p.add_run('正文引用')
-add_ref_field(p, '[1]', 'ref-1', superscript=True)
+def add_ref(text, ref_num):
+    """Add reference entry with Word auto-numbering and bookmark."""
+    p = doc.add_paragraph(style='List Number')  # Word built-in numbering
+    p.paragraph_format.line_spacing = 1.5
+    p.paragraph_format.first_line_indent = Cm(0)
+    
+    r = p.add_run(text)
+    set_run_font(r, 12)
+    
+    if ref_num:
+        add_bookmark(p, f'ref-{ref_num}')
 
-# In reference section:
-ref_p = doc.add_paragraph('[1] 作者A. 论文标题[J]. 期刊, 2026.')
-add_bookmark(ref_p, 'ref-1')
+# Parse Markdown ordered list in reference section:
+if in_refs:
+    m = re.match(r'^(\d+)\.\s+(.+)$', stripped)  # Match "1. Author..."
+    if m:
+        ref_num = m.group(1)
+        ref_text = m.group(2)
+        add_ref(ref_text, ref_num)
+
+# In body text, parse [1] and create REF field:
+parts = re.split(r'(\[\d+(?:,\d+)*\])', text)
+for part in parts:
+    if re.match(r'^\[\d+(?:,\d+)*\]$', part):
+        nums = re.findall(r'\d+', part)
+        for n in nums:
+            add_ref_field(p, f'[{n}]', f'ref-{n}', superscript=True)
 ```
 
 **Post-processing: Enable field updates**
@@ -360,15 +396,16 @@ os.remove('paper_tmp.docx')
 1. Select citation `[1]` → entire field should have gray background
 2. Press `Alt+F9` → shows `{ REF ref-1 \h }`
 3. `Ctrl+Click` → jumps to reference entry
+4. Reference list should be Word auto-numbered (right-click → "Adjust List Indents")
 
-**Why REF works but HYPERLINK doesn't:**
+**Why REF + List Number works:**
 
-| Field Code | Syntax | Reliability |
-|------------|--------|-------------|
-| `HYPERLINK \l "bookmark"` | With quotes | ❌ Unstable in some Word versions |
-| `REF bookmark \h` | No quotes | ✅ Standard cross-reference method |
+| Approach | Reference Format | Advantages | Disadvantages |
+|----------|------------------|------------|---------------|
+| Manual `[1]` text | Plain text `[1] Author...` | Simple | Not a real list, hard to adjust formatting |
+| Markdown ordered list | Word auto-numbering `1. Author...` | True list style, unified formatting | Requires correct parsing |
 
-**Reference**: Full working implementation at user's desktop files (verified).
+**Reference**: Full working implementation at user's desktop files (verified v2).
 
 ### Common Mistakes to Avoid
 
