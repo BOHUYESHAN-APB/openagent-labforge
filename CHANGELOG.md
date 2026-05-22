@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
-## v1.0.24 — 2026-05-22
+## v1.1.1 — 2026-05-22
 
 ### Breaking Changes / 破坏性变更
 
@@ -179,7 +179,7 @@ checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶
 - MCP 服务器修复：改用 SDK Server+StdioServerTransport，修复协议兼容性。
 
 - **Delete guard**: expanded tool name matching to cover bash, shell, exec,
-  execute_command, powershell, run_command, system, cmd, terminal (v1.0.24+).
+  execute_command, powershell, run_command, system, cmd, terminal (v1.1.0+).
 - 删除护栏：扩展匹配工具名覆盖范围。
 
 - **Cross-session auto_continue**: global fallback on state load when
