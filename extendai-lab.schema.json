@@ -25,7 +25,11 @@
     },
     "scoringEngineVersion": {
       "type": "string",
-      "enum": ["v1", "v2-shadow", "v2"]
+      "enum": [
+        "v1",
+        "v2-shadow",
+        "v2"
+      ]
     },
     "balanceProviderUsage": {
       "type": "boolean"
@@ -57,7 +61,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         },
         "oracle": {
           "type": "object",
@@ -79,7 +88,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         },
         "designer": {
           "type": "object",
@@ -101,7 +115,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         },
         "explorer": {
           "type": "object",
@@ -123,7 +142,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         },
         "librarian": {
           "type": "object",
@@ -145,7 +169,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         },
         "fixer": {
           "type": "object",
@@ -167,7 +196,12 @@
               "pattern": "^[^/\\s]+\\/[^\\s]+$"
             }
           },
-          "required": ["primary", "fallback1", "fallback2", "fallback3"]
+          "required": [
+            "primary",
+            "fallback1",
+            "fallback2",
+            "fallback3"
+          ]
         }
       },
       "required": [
@@ -216,7 +250,9 @@
                             "type": "string"
                           }
                         },
-                        "required": ["id"]
+                        "required": [
+                          "id"
+                        ]
                       }
                     ]
                   }
@@ -298,7 +334,9 @@
                           "type": "string"
                         }
                       },
-                      "required": ["id"]
+                      "required": [
+                        "id"
+                      ]
                     }
                   ]
                 }
@@ -374,7 +412,12 @@
         "type": {
           "default": "none",
           "type": "string",
-          "enum": ["auto", "tmux", "zellij", "none"]
+          "enum": [
+            "auto",
+            "tmux",
+            "zellij",
+            "none"
+          ]
         },
         "layout": {
           "default": "main-vertical",
@@ -427,7 +470,10 @@
         "provider": {
           "default": "exa",
           "type": "string",
-          "enum": ["exa", "tavily"]
+          "enum": [
+            "exa",
+            "tavily"
+          ]
         }
       }
     },
@@ -492,7 +538,13 @@
           "default": "ultra-minimal",
           "description": "Subagent usage mode: ultra-minimal (strict main-agent-first default), minimal (legacy cache-first low-agent mode), full (all configured subagents), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.",
           "type": "string",
-          "enum": ["full", "ultra-minimal", "minimal", "custom", "main-only"]
+          "enum": [
+            "full",
+            "ultra-minimal",
+            "minimal",
+            "custom",
+            "main-only"
+          ]
         },
         "allowedAgents": {
           "description": "Allowed orchestratable subagents when mode is custom. Non-allowed specialists should be treated as main-agent checklists.",
@@ -703,7 +755,9 @@
           "type": "string"
         },
         "allowedAgents": {
-          "default": ["*"],
+          "default": [
+            "*"
+          ],
           "description": "Agents that can see bio skills catalog. Default [\"*\"] = all agents",
           "type": "array",
           "items": {
@@ -724,7 +778,11 @@
           "default": "auto",
           "description": "Compression strategy: auto (automatic), manual (user-triggered), hybrid (both)",
           "type": "string",
-          "enum": ["auto", "manual", "hybrid"]
+          "enum": [
+            "auto",
+            "manual",
+            "hybrid"
+          ]
         },
         "thresholdTokens": {
           "default": 100000,
@@ -822,7 +880,13 @@
           "default": "free",
           "description": "Model profile preset: free (no binding), ds-first (DS via Go), openai (GPT only), openai-go (dual), custom (user-defined)",
           "type": "string",
-          "enum": ["free", "ds-first", "openai", "openai-go", "custom"]
+          "enum": [
+            "free",
+            "ds-first",
+            "openai",
+            "openai-go",
+            "custom"
+          ]
         },
         "customModels": {
           "description": "Per-agent custom model config (only active when profile=custom)",
@@ -849,7 +913,9 @@
                 }
               }
             },
-            "required": ["model"]
+            "required": [
+              "model"
+            ]
           }
         },
         "customModel": {
@@ -885,7 +951,11 @@
           "default": "light",
           "description": "Default prompt mode: heavy (Omo 542 lines), light (OMOS 200-300 lines), turbo (OLD-2 58 lines)",
           "type": "string",
-          "enum": ["heavy", "light", "turbo"]
+          "enum": [
+            "heavy",
+            "light",
+            "turbo"
+          ]
         },
         "allowModeSwitch": {
           "default": true,
@@ -1036,7 +1106,10 @@
           "default": "parallel",
           "description": "Execution mode for councillors. \"serial\" runs them one at a time (required for single-model systems). \"parallel\" runs them concurrently (default, faster for multi-model systems).",
           "type": "string",
-          "enum": ["parallel", "serial"]
+          "enum": [
+            "parallel",
+            "serial"
+          ]
         },
         "councillor_retries": {
           "default": 3,
@@ -1055,7 +1128,9 @@
           "description": "DEPRECATED — ignored. No separate master session."
         }
       },
-      "required": ["presets"]
+      "required": [
+        "presets"
+      ]
     }
   },
   "title": "extendai-lab",
