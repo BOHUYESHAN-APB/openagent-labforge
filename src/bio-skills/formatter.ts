@@ -39,7 +39,9 @@ export function formatCatalogForPrompt(categories: BioSkillCategory[]): string {
   for (const cat of categories) {
     const routeName = cat.name.replace(/-/g, ' ');
     if (cat.sampleSkills && cat.sampleSkills.length > 0) {
-      lines.push(`- ${routeName} → \`${cat.name}\` (e.g. ${cat.sampleSkills.slice(0, 3).join(', ')})`);
+      lines.push(
+        `- ${routeName} → \`${cat.name}\` (e.g. ${cat.sampleSkills.slice(0, 3).join(', ')})`,
+      );
     } else {
       lines.push(`- ${routeName} → \`${cat.name}\``);
     }

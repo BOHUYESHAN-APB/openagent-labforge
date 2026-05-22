@@ -568,13 +568,17 @@ describe('createPresetManager', () => {
         (opencodeConfig.command as Record<string, unknown>)['ol-preset-free'],
       ).toBeDefined();
       expect(
-        (opencodeConfig.command as Record<string, unknown>)['ol-preset-ds-first'],
+        (opencodeConfig.command as Record<string, unknown>)[
+          'ol-preset-ds-first'
+        ],
       ).toBeDefined();
       expect(
         (opencodeConfig.command as Record<string, unknown>)['ol-preset-openai'],
       ).toBeDefined();
       expect(
-        (opencodeConfig.command as Record<string, unknown>)['ol-preset-openai-go'],
+        (opencodeConfig.command as Record<string, unknown>)[
+          'ol-preset-openai-go'
+        ],
       ).toBeDefined();
       expect(
         (opencodeConfig.command as Record<string, unknown>)['ol-preset-custom'],

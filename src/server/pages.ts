@@ -4,74 +4,193 @@
 export { escapeHtml };
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 function escapeAttr(s: string): string {
-  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ── Schema-based config fields ───────────────────────
-interface FieldDef { key: string; label: string; type: 'string'|'boolean'|'number'|'json'|'select'; section: string; options?: string[]; default?: unknown }
+interface FieldDef {
+  key: string;
+  label: string;
+  type: 'string' | 'boolean' | 'number' | 'json' | 'select';
+  section: string;
+  options?: string[];
+  default?: unknown;
+}
 
 const CONFIG_FIELDS: FieldDef[] = [
   // General
-  { key: 'default_preset', label: 'Default Preset', type: 'select', section: 'General', options: ['free','ds-first','openai','openai-go','custom'], default: 'free' },
-  { key: 'preferredVisibleAgent', label: 'Preferred Visible Agent', type: 'select', section: 'General', options: ['engineer','planner','executor','bio-analyst'] },
-  { key: 'autoUpdate', label: 'Auto Update Check', type: 'boolean', section: 'General', default: true },
+  {
+    key: 'default_preset',
+    label: 'Default Preset',
+    type: 'select',
+    section: 'General',
+    options: ['free', 'ds-first', 'openai', 'openai-go', 'custom'],
+    default: 'free',
+  },
+  {
+    key: 'preferredVisibleAgent',
+    label: 'Preferred Visible Agent',
+    type: 'select',
+    section: 'General',
+    options: ['engineer', 'planner', 'executor', 'bio-analyst'],
+  },
+  {
+    key: 'autoUpdate',
+    label: 'Auto Update Check',
+    type: 'boolean',
+    section: 'General',
+    default: true,
+  },
   // Subagent Policy
-  { key: 'subagentPolicy.mode', label: 'Subagent Policy Mode', type: 'select', section: 'Subagent', options: ['ultra-minimal','minimal','full','custom','main-only'], default: 'ultra-minimal' },
+  {
+    key: 'subagentPolicy.mode',
+    label: 'Subagent Policy Mode',
+    type: 'select',
+    section: 'Subagent',
+    options: ['ultra-minimal', 'minimal', 'full', 'custom', 'main-only'],
+    default: 'ultra-minimal',
+  },
   // Todo Continuation
-  { key: 'todoContinuation.maxContinuations', label: 'Max Auto Continuations', type: 'number', section: 'Auto-Continue', default: 100 },
-  { key: 'todoContinuation.autoEnable', label: 'Auto-Continue Enabled', type: 'boolean', section: 'Auto-Continue', default: false },
-  { key: 'todoContinuation.cooldownMs', label: 'Cooldown (ms)', type: 'number', section: 'Auto-Continue', default: 3000 },
+  {
+    key: 'todoContinuation.maxContinuations',
+    label: 'Max Auto Continuations',
+    type: 'number',
+    section: 'Auto-Continue',
+    default: 100,
+  },
+  {
+    key: 'todoContinuation.autoEnable',
+    label: 'Auto-Continue Enabled',
+    type: 'boolean',
+    section: 'Auto-Continue',
+    default: false,
+  },
+  {
+    key: 'todoContinuation.cooldownMs',
+    label: 'Cooldown (ms)',
+    type: 'number',
+    section: 'Auto-Continue',
+    default: 3000,
+  },
   // Compression
-  { key: 'compression.enabled', label: 'Context Compression', type: 'boolean', section: 'Compression', default: true },
+  {
+    key: 'compression.enabled',
+    label: 'Context Compression',
+    type: 'boolean',
+    section: 'Compression',
+    default: true,
+  },
   // Bio Skills
-  { key: 'bioSkills.enabled', label: 'Bio Skills Enabled', type: 'boolean', section: 'Bio Skills', default: true },
+  {
+    key: 'bioSkills.enabled',
+    label: 'Bio Skills Enabled',
+    type: 'boolean',
+    section: 'Bio Skills',
+    default: true,
+  },
   // Interview
-  { key: 'interview.maxQuestions', label: 'Max Interview Questions', type: 'number', section: 'Interview', default: 2 },
+  {
+    key: 'interview.maxQuestions',
+    label: 'Max Interview Questions',
+    type: 'number',
+    section: 'Interview',
+    default: 2,
+  },
   // Multiplexer
-  { key: 'multiplexer.provider', label: 'Multiplexer Provider', type: 'select', section: 'Multiplexer', options: ['tmux','zellij','disabled'], default: 'disabled' },
-  { key: 'multiplexer.main_pane_size', label: 'Main Pane Size (%)', type: 'number', section: 'Multiplexer', default: 60 },
+  {
+    key: 'multiplexer.provider',
+    label: 'Multiplexer Provider',
+    type: 'select',
+    section: 'Multiplexer',
+    options: ['tmux', 'zellij', 'disabled'],
+    default: 'disabled',
+  },
+  {
+    key: 'multiplexer.main_pane_size',
+    label: 'Main Pane Size (%)',
+    type: 'number',
+    section: 'Multiplexer',
+    default: 60,
+  },
   // Others
-  { key: 'disabled_agents', label: 'Disabled Agents (comma)', type: 'string', section: 'Advanced' },
-  { key: 'disabled_mcps', label: 'Disabled MCPs (comma)', type: 'string', section: 'Advanced' },
+  {
+    key: 'disabled_agents',
+    label: 'Disabled Agents (comma)',
+    type: 'string',
+    section: 'Advanced',
+  },
+  {
+    key: 'disabled_mcps',
+    label: 'Disabled MCPs (comma)',
+    type: 'string',
+    section: 'Advanced',
+  },
 ];
 
-function getValue(config: Record<string,unknown>, key: string): unknown {
+function getValue(config: Record<string, unknown>, key: string): unknown {
   const parts = key.split('.');
   let v: unknown = config;
   for (const p of parts) {
-    if (v && typeof v === 'object') v = (v as Record<string,unknown>)[p];
+    if (v && typeof v === 'object') v = (v as Record<string, unknown>)[p];
     else return undefined;
   }
   return v;
 }
 
-function renderConfigFields(config: Record<string,unknown>): string {
+function renderConfigFields(config: Record<string, unknown>): string {
   const sections = [...new Set(CONFIG_FIELDS.map((f) => f.section))];
-  return sections.map((sec) => {
-    const fields = CONFIG_FIELDS.filter((f) => f.section === sec);
-    return `<fieldset class="cfg-section"><legend>${sec}</legend>` +
-      fields.map((f) => {
-        const val = getValue(config, f.key) ?? f.default ?? '';
-        if (f.type === 'boolean') return `<label class="cfg-row"><span>${f.label}</span><select name="${f.key}"><option value="true"${val===true?' selected':''}>On</option><option value="false"${val!==true?' selected':''}>Off</option></select></label>`;
-        if (f.type === 'select') return `<label class="cfg-row"><span>${f.label}</span><select name="${f.key}">${(f.options??[]).map((o:string)=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select></label>`;
-        if (f.type === 'number') return `<label class="cfg-row"><span>${f.label}</span><input name="${f.key}" type="number" value="${val}" step="1"></label>`;
-        if (f.type === 'string') return `<label class="cfg-row"><span>${f.label}</span><input name="${f.key}" value="${escapeAttr(String(val))}"></label>`;
-        return '';
-      }).join('') +
-      '</fieldset>';
-  }).join('');
+  return sections
+    .map((sec) => {
+      const fields = CONFIG_FIELDS.filter((f) => f.section === sec);
+      return (
+        `<fieldset class="cfg-section"><legend>${sec}</legend>` +
+        fields
+          .map((f) => {
+            const val = getValue(config, f.key) ?? f.default ?? '';
+            if (f.type === 'boolean')
+              return `<label class="cfg-row"><span>${f.label}</span><select name="${f.key}"><option value="true"${val === true ? ' selected' : ''}>On</option><option value="false"${val !== true ? ' selected' : ''}>Off</option></select></label>`;
+            if (f.type === 'select')
+              return `<label class="cfg-row"><span>${f.label}</span><select name="${f.key}">${(f.options ?? []).map((o: string) => `<option value="${o}"${val === o ? ' selected' : ''}>${o}</option>`).join('')}</select></label>`;
+            if (f.type === 'number')
+              return `<label class="cfg-row"><span>${f.label}</span><input name="${f.key}" type="number" value="${val}" step="1"></label>`;
+            if (f.type === 'string')
+              return `<label class="cfg-row"><span>${f.label}</span><input name="${f.key}" value="${escapeAttr(String(val))}"></label>`;
+            return '';
+          })
+          .join('') +
+        '</fieldset>'
+      );
+    })
+    .join('');
 }
 
 // ── Pages ────────────────────────────────────────────
-export function renderDashboard(theme: string, info?: { skills?: number; workspace?: string; port?: number; recentHtml?: string[] }): string {
+export function renderDashboard(
+  theme: string,
+  info?: {
+    skills?: number;
+    workspace?: string;
+    port?: number;
+    recentHtml?: string[];
+  },
+): string {
   const recentSection = info?.recentHtml?.length
     ? `<h3 class="cat-head">Recent HTML Pages</h3><div class="grid-3">${info.recentHtml.map((f) => `<a href="/view/${encodeURIComponent(f)}" class="card-link"><span class="ico">🌐</span><h4>${f}</h4></a>`).join('')}</div>`
     : '<p class="sub">No HTML pages yet. AI can write them to .opencode/extendai-lab/pages/</p>';
 
-  return base('Dashboard', `
+  return base(
+    'Dashboard',
+    `
     <div class="hero">
       <h1>extendai-lab</h1>
       <p>Agent orchestration · DeepSeek optimized · Document & design skills</p>
@@ -86,82 +205,158 @@ export function renderDashboard(theme: string, info?: { skills?: number; workspa
       <a href="/plans" class="card-link"><span class="ico">📋</span><h3>Plans</h3><p>Saved execution plans</p></a>
     </div>
     ${recentSection}
-  `, theme);
+  `,
+    theme,
+  );
 }
 
-interface SkillInfo { name: string; category: string; zhName: string; description: string; path: string }
+interface SkillInfo {
+  name: string;
+  category: string;
+  zhName: string;
+  description: string;
+  path: string;
+}
 
 export function renderSkillsList(skills: SkillInfo[], theme: string): string {
   const cats = [...new Set(skills.map((s) => s.category))];
-  return base('Skills', `
+  return base(
+    'Skills',
+    `
     <h2>Skills Gallery</h2>
     <p class="sub">${skills.length} skills · ${cats.length} categories</p>
-    ${cats.map((cat) => `
+    ${cats
+      .map(
+        (cat) => `
       <h3 class="cat-head">${cat}</h3>
       <div class="grid-3">
-        ${skills.filter((s) => s.category === cat).map((s) => `
+        ${skills
+          .filter((s) => s.category === cat)
+          .map(
+            (s) => `
           <a href="/skills/${encodeURIComponent(s.name)}" class="card-link">
             <h4>${s.zhName || s.name}</h4>
             <p>${s.description || ''}</p>
           </a>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
-    `).join('')}
-  `, theme);
+    `,
+      )
+      .join('')}
+  `,
+    theme,
+  );
 }
 
-export function renderSkillDetail(name: string, md: string, html: string, theme: string): string {
-  return base(name, `
+export function renderSkillDetail(
+  name: string,
+  md: string,
+  html: string,
+  theme: string,
+): string {
+  return base(
+    name,
+    `
     <h2>${name}</h2>
     <div class="tabs"><button class="tab active" onclick="switchTab('md')">Markdown</button><button class="tab" onclick="switchTab('html')">HTML Preview</button></div>
     <div id="tab-md" class="tab-body">${md2html(md)}</div>
     <div id="tab-html" class="tab-body hidden">${html ? `<iframe srcdoc="${escapeAttr(html)}" sandbox="allow-scripts allow-same-origin" class="iframe-full"></iframe>` : '<p class="sub">No HTML preview</p>'}</div>
     <script>function switchTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-body').forEach(t=>t.classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');event.target.classList.add('active')}</script>
-  `, theme);
+  `,
+    theme,
+  );
 }
 
-interface DocEntry { dirName: string; files: { name: string; type: 'file'|'dir'; path: string }[] }
+interface DocEntry {
+  dirName: string;
+  files: { name: string; type: 'file' | 'dir'; path: string }[];
+}
 
 export function renderDocs(docs: DocEntry[], theme: string): string {
-  if (!docs.length) return base('Docs', '<h2>Docs</h2><p class="sub">No doc/docs/document/documents folders in workspace.</p>', theme);
-  return base('Docs', `
+  if (!docs.length)
+    return base(
+      'Docs',
+      '<h2>Docs</h2><p class="sub">No doc/docs/document/documents folders in workspace.</p>',
+      theme,
+    );
+  return base(
+    'Docs',
+    `
     <h2>Document Browser</h2>
-    ${docs.map((d) => `
+    ${docs
+      .map(
+        (d) => `
       <h3 class="cat-head">/${d.dirName}</h3>
       <div class="grid-3">
-        ${d.files.map((f) => `<a href="/docs/file?path=${encodeURIComponent(f.path)}" class="card-link"><h4>${f.type==='dir'?'📁':'📄'} ${f.name}</h4><p class="mono">${f.path}</p></a>`).join('')}
+        ${d.files.map((f) => `<a href="/docs/file?path=${encodeURIComponent(f.path)}" class="card-link"><h4>${f.type === 'dir' ? '📁' : '📄'} ${f.name}</h4><p class="mono">${f.path}</p></a>`).join('')}
       </div>
-    `).join('')}
-  `, theme);
+    `,
+      )
+      .join('')}
+  `,
+    theme,
+  );
 }
 
-export function renderDocFile(path: string, content: string, theme: string): string {
-  const isMd = /\.md$/i.test(path), isHtml = /\.html?$/i.test(path);
+export function renderDocFile(
+  path: string,
+  content: string,
+  theme: string,
+): string {
+  const isMd = /\.md$/i.test(path),
+    isHtml = /\.html?$/i.test(path);
   let body = `<h2>${path}</h2>`;
-  if (isHtml) body += `<iframe srcdoc="${escapeAttr(content)}" sandbox="allow-scripts allow-same-origin" class="iframe-full"></iframe>`;
+  if (isHtml)
+    body += `<iframe srcdoc="${escapeAttr(content)}" sandbox="allow-scripts allow-same-origin" class="iframe-full"></iframe>`;
   else if (isMd) body += md2html(content);
   else body += `<pre class="code-block">${escapeHtml(content)}</pre>`;
   return base(path, body, theme);
 }
 
-interface PlanEntry { name: string; type: 'file'|'dir'; path: string }
+interface PlanEntry {
+  name: string;
+  type: 'file' | 'dir';
+  path: string;
+}
 
 export function renderPlans(plans: PlanEntry[], theme: string): string {
-  if (!plans.length) return base('Plans', '<h2>Plans</h2><p class="sub">No saved plans.</p>', theme);
-  return base('Plans', `
+  if (!plans.length)
+    return base(
+      'Plans',
+      '<h2>Plans</h2><p class="sub">No saved plans.</p>',
+      theme,
+    );
+  return base(
+    'Plans',
+    `
     <h2>Plans</h2>
     <div class="grid-3">
       ${plans.map((p) => `<a href="/plans/file?path=${encodeURIComponent(p.path)}" class="card-link"><h4>${p.name}</h4><p class="mono">${p.path}</p></a>`).join('')}
     </div>
-  `, theme);
+  `,
+    theme,
+  );
 }
 
-export function renderPlanFile(path: string, content: string, theme: string): string {
+export function renderPlanFile(
+  path: string,
+  content: string,
+  theme: string,
+): string {
   return base(path, `<h2>${path}</h2>` + md2html(content), theme);
 }
 
-export function renderConfigEditor(config: Record<string,unknown>, scope: string, configPath: string, theme: string): string {
-  return base(`Config (${scope})`, `
+export function renderConfigEditor(
+  config: Record<string, unknown>,
+  scope: string,
+  configPath: string,
+  theme: string,
+): string {
+  return base(
+    `Config (${scope})`,
+    `
     <h2>Config Editor · ${scope}</h2>
     <p class="sub mono">${configPath}</p>
     <form id="cf" onsubmit="saveConfig(event,'${scope}')">
@@ -175,12 +370,16 @@ export function renderConfigEditor(config: Record<string,unknown>, scope: string
       const r=await fetch('/api/config/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scope:s,config:c})});const j=await r.json();
       const el=document.getElementById('st');el.textContent=j.ok?j.message:'Error: '+j.error;el.className='toast '+(j.ok?'ok':'err');setTimeout(()=>el.className='toast hidden',4000)}
     </script>
-  `, theme);
+  `,
+    theme,
+  );
 }
 
 // ── AI HTML Viewer ───────────────────────────────────
 export function renderHtmlViewer(theme: string): string {
-  return base('HTML Viewer', `
+  return base(
+    'HTML Viewer',
+    `
     <h2>AI-Generated HTML Viewer</h2>
     <p class="sub">AI writes HTML files to <code>.opencode/extendai-lab/pages/</code> — they appear here.</p>
     <div id="pages-list"><p class="sub">Loading...</p></div>
@@ -191,10 +390,16 @@ export function renderHtmlViewer(theme: string): string {
         el.innerHTML='<div class="grid-3">'+pages.map(p=>'<a href="/view/'+p+'" class="card-link"><h4>'+p+'</h4></a>').join('')+'</div>';
       });
     </script>
-  `, theme);
+  `,
+    theme,
+  );
 }
 
-export function renderHtmlPage(name: string, content: string, theme: string): string {
+export function renderHtmlPage(
+  name: string,
+  content: string,
+  theme: string,
+): string {
   return `<!DOCTYPE html><html lang="zh-CN" data-theme="${theme}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${name} · extendai-lab</title></head><body style="margin:0">${content}</body></html>`;
 }
 
@@ -205,13 +410,23 @@ export function renderError(msg: string, theme: string): string {
 // ── Markdown → HTML ──────────────────────────────────
 function md2html(md: string): string {
   let o = md;
-  o = o.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code class="lang-${lang}">${escapeHtml(code.trim())}</code></pre>`);
-  o = o.replace(/^#### (.+)$/gm, '<h4>$1</h4>'); o = o.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  o = o.replace(/^## (.+)$/gm, '<h2>$1</h2>'); o = o.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  o = o.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); o = o.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  o = o.replace(
+    /```(\w*)\n([\s\S]*?)```/g,
+    (_, lang, code) =>
+      `<pre><code class="lang-${lang}">${escapeHtml(code.trim())}</code></pre>`,
+  );
+  o = o.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  o = o.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  o = o.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  o = o.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  o = o.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  o = o.replace(/\*(.+?)\*/g, '<em>$1</em>');
   o = o.replace(/`([^`]+)`/g, '<code>$1</code>');
   o = o.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  o = o.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
+  o = o.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    '<img src="$2" alt="$1" style="max-width:100%">',
+  );
   o = o.replace(/^---$/gm, '<hr>');
   o = o.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
   o = o.replace(/^[\s]*[-*] (.+)$/gm, '<li>$1</li>');
@@ -220,7 +435,9 @@ function md2html(md: string): string {
     const tds = cells.split('|').map((c: string) => c.trim());
     return `<tr>${tds.map((c: string) => `<td>${c}</td>`).join('')}</tr>`;
   });
-  o = o.replace(/(<tr>[\s\S]*?<\/tr>)/g, (m) => m.includes('<td>') ? `<table>${m}</table>` : m);
+  o = o.replace(/(<tr>[\s\S]*?<\/tr>)/g, (m) =>
+    m.includes('<td>') ? `<table>${m}</table>` : m,
+  );
   o = o.replace(/<\/table>\s*<table>/g, '');
   o = '<div class="md">' + o + '</div>';
   return o;
@@ -228,7 +445,7 @@ function md2html(md: string): string {
 
 // ── Base layout ──────────────────────────────────────
 function base(title: string, body: string, theme: string): string {
-  return `<!DOCTYPE html><html lang="zh-CN" data-theme="${theme}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · extendai-lab</title><style>${CSS}</style></head><body><nav><a href="/" class="brand">⚡ extendai-lab</a><div class="nav-links"><a href="/skills">Skills</a><a href="/docs">Docs</a><a href="/view">HTML</a><a href="/plans">Plans</a><a href="/config/project">Config</a></div><button class="btn-theme" onclick="toggleTheme()">${theme==='dark'?'☀':'☾'}</button></nav><main>${body}</main><script>function toggleTheme(){const h=document.documentElement;const t=h.dataset.theme==='dark'?'light':'dark';h.dataset.theme=t;fetch('/api/theme?theme='+t);location.reload()}</script></body></html>`;
+  return `<!DOCTYPE html><html lang="zh-CN" data-theme="${theme}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · extendai-lab</title><style>${CSS}</style></head><body><nav><a href="/" class="brand">⚡ extendai-lab</a><div class="nav-links"><a href="/skills">Skills</a><a href="/docs">Docs</a><a href="/view">HTML</a><a href="/plans">Plans</a><a href="/config/project">Config</a></div><button class="btn-theme" onclick="toggleTheme()">${theme === 'dark' ? '☀' : '☾'}</button></nav><main>${body}</main><script>function toggleTheme(){const h=document.documentElement;const t=h.dataset.theme==='dark'?'light':'dark';h.dataset.theme=t;fetch('/api/theme?theme='+t);location.reload()}</script></body></html>`;
 }
 
 // ── CSS ──────────────────────────────────────────────

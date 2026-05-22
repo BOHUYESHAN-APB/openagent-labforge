@@ -425,7 +425,10 @@ export type ModelProfile = z.infer<typeof ModelProfileSchema>;
 // Per-agent custom model config (only active when profile=custom)
 export const CustomAgentModelSchema = z.object({
   model: z.string().describe('provider/model-id format'),
-  variant: z.string().optional().describe('reasoning effort: low/medium/high/xhigh/max'),
+  variant: z
+    .string()
+    .optional()
+    .describe('reasoning effort: low/medium/high/xhigh/max'),
   fallback: z.array(z.string()).optional().describe('fallback model chain'),
 });
 export type CustomAgentModel = z.infer<typeof CustomAgentModelSchema>;
@@ -441,9 +444,11 @@ export const ModelPreferencesConfigSchema = z.object({
     .describe(
       'Enable model preferences. When false (default free mode), no model binding or recommendations.',
     ),
-  profile: ModelProfileSchema.optional().default('free').describe(
-    'Model profile preset: free (no binding), ds-first (DS via Go), openai (GPT only), openai-go (dual), custom (user-defined)',
-  ),
+  profile: ModelProfileSchema.optional()
+    .default('free')
+    .describe(
+      'Model profile preset: free (no binding), ds-first (DS via Go), openai (GPT only), openai-go (dual), custom (user-defined)',
+    ),
   customModels: CustomModelsSchema.optional().describe(
     'Per-agent custom model config (only active when profile=custom)',
   ),

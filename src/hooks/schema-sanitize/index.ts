@@ -27,9 +27,7 @@ function collapseNullableUnions(schema: Record<string, JsonValue>): void {
     const members = schema[key];
     if (!Array.isArray(members)) continue;
     if (members.length < 2) continue;
-    const nullIdx = members.findIndex(
-      (m) => isObject(m) && m.type === 'null',
-    );
+    const nullIdx = members.findIndex((m) => isObject(m) && m.type === 'null');
     if (nullIdx === -1) continue;
     const nonNull = members.find(
       (m, i) => i !== nullIdx && isObject(m) && m.type !== 'null',
@@ -68,9 +66,7 @@ function pruneDanglingRequired(schema: Record<string, JsonValue>): void {
   }
 }
 
-function collapseSingleElementUnions(
-  schema: Record<string, JsonValue>,
-): void {
+function collapseSingleElementUnions(schema: Record<string, JsonValue>): void {
   for (const key of ['oneOf', 'allOf', 'anyOf']) {
     const arr = schema[key];
     if (!Array.isArray(arr) || arr.length !== 1) continue;

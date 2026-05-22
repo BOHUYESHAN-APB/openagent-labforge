@@ -6,9 +6,7 @@
  * immediately try to re-inject into a session that just crashed,
  * creating a tight crash→inject→crash loop.
  */
-export function createCrashRecovery(
-  options?: { recoveryWindowMs?: number },
-) {
+export function createCrashRecovery(options?: { recoveryWindowMs?: number }) {
   const recoveryWindowMs = options?.recoveryWindowMs ?? 5000;
   const sessions = new Map<string, boolean>();
 

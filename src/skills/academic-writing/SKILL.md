@@ -1,304 +1,141 @@
 ---
 name: academic-writing
-description: Academic writing workflow with literature management, citation validation, and Chinese academic formatting
+description: Academic writing workflow with literature management, citation validation, LaTeX/MD pipelines, local citation vector database, and Chinese academic formatting (GB/T 7714-2015)
 category: academic
 ---
 
 # Academic Writing Skill
 
-Comprehensive academic writing support for ExtendAI Lab, including literature management, citation validation, document conversion, and Chinese academic formatting (GB/T 7714-2015).
+Comprehensive academic writing support for ExtendAI Lab. Covers the full pipeline: literature management → PDF parsing → citation database → writing → output generation.
+
+## Architecture Overview
+
+```
+                    ┌─────────────────────────────────────┐
+                    │        文献入库 Pipeline             │
+ CNKI ──► cnki-parser ──┐                                │
+ DOI ───► papis ────────┤                                │
+ 手动 ──► 直接导入 ────┼──► 统一 BibTeX 库 (.bib)        │
+ Zotero ► Better BibTeX ┤                                │
+                    └─────────────────────────────────────┘
+                                       │
+                                       ▼
+                    ┌─────────────────────────────────────┐
+                    │     PDF 解析 + 向量入库 Pipeline    │
+ 论文 PDF ──► doc-parser ──► 结构化文本                    │
+               (PyMuPDF)     ├── 分句 → BGE 嵌入           │
+                             └── 写入 Chroma 向量库        │
+                    └─────────────────────────────────────┘
+                                       │
+                                       ▼
+                    ┌─────────────────────────────────────┐
+                    │        写作 + 输出 Pipeline          │
+ 管线A: MD ──► Python Direct ──► DOCX  ✅（v4 主力）      │
+ 管线B: MD ──► Pandoc ────────► DOCX  （快速草稿）        │
+ 管线C: MD ──► Pandoc ────────► HTML  （仅预览）          │
+ 管线D: TeX ──► xelatex+biber ─► PDF  （LaTeX 用户）      │
+                    └─────────────────────────────────────┘
+```
 
 ## Core Principles
 
 1. **On-Demand Tool Checking** — Only check tools when the user needs to write a paper, not on every startup
-2. **AI Uses Bash for Papis** — Don't use MCP for papis commands; use bash directly to avoid context overhead
-3. **MD → HTML → DOCX Pipeline** — Avoid Markdown syntax leakage in final documents
-4. **Chinese Academic Formatting** — Follow GB/T 7714-2015 standards
+2. **Main Pipeline: Python Direct (v4)** — MD → python-docx low-level XML with REF field codes (verified production)
+3. **Pandoc Only for Drafts** — Pandoc 用于快速草稿，不用于最终输出
+4. **HTML Only for Preview** — HTML 仅用于预览，**禁止** HTML→DOCX 管线
+5. **PDF 解析标准化** — 统一走 doc-parser 脚本，不依赖模型自身解析能力
+6. **本地引用数据库** — Chroma + BGE 向量库，实现文段→论文溯源
 
-## Available Tools
+## Available Skills (Load on Demand)
 
-### 1. `academic_check_tools(tools?)`
+| Skill | Location | Load command | Purpose |
+|-------|----------|-------------|---------|
+| `academic-cnki-parser` | `resources/academicSkills/citation/cnki-parser/` | `skill("academic-cnki-parser")` | CNKI 导出→BibTeX |
+| `academic-cite-match` | `resources/academicSkills/citation/cite-match/` | `skill("academic-cite-match")` | `[[cite:keywords]]`→`[N]` 标记匹配 |
+| `academic-md2docx` | `resources/academicSkills/formatting/md2docx/` | `skill("academic-md2docx")` | MD→DOCX 三管线指南 |
+| `academic-latex-pipeline` | `resources/academicSkills/writing/latex-pipeline/` | `skill("academic-latex-pipeline")` | LaTeX 模板+编译 |
+| `academic-citation-database` | `resources/academicSkills/writing/citation-database/` | `skill("academic-citation-database")` | 本地向量数据库 |
+| `document-formatting` | `src/skills/document-formatting/` | `skill("document-formatting")` | DOCX 排版规范 v4 |
 
-Check if academic writing tools are installed.
+## Tool Checking
 
-**When to use:**
-- User mentions writing a paper, thesis, or manuscript
-- User asks about academic writing setup
-- Before running document conversion
+Use `academic_check_tools()` to check available tools:
 
-**Parameters:**
-- `tools` (optional): Array of specific tools to check. If not provided, checks all.
-  - Available: `papis`, `pandoc`, `gh`, `python-docx`, `wsl`, `docker`, `xelatex`, `noteexpress`
-
-**Example:**
 ```typescript
-// Check all tools
+// Check all
 academic_check_tools()
 
-// Check specific tools
-academic_check_tools({ tools: ["papis", "pandoc", "python-docx"] })
+// Check specific
+academic_check_tools({ tools: ["pandoc", "papis", "python-docx", "xelatex"] })
 ```
 
-**Response format:**
-```json
-{
-  "papis": {
-    "installed": true,
-    "version": "papis 0.13"
-  },
-  "pandoc": {
-    "installed": true,
-    "version": "pandoc 3.1.2"
-  },
-  "python-docx": {
-    "installed": false,
-    "installCmd": "pip install python-docx"
-  }
-}
+| Tool | Check command | Purpose |
+|------|--------------|---------|
+| `pandoc` | `pandoc --version` | MD→DOCX/BibTeX 处理 |
+| `papis` | `papis --version` | 文献管理（DOI/arXiv 导入） |
+| `python-docx` | `python -c "from docx import Document"` | DOCX 生成（v4 管线） |
+| `PyMuPDF` | `python -c "import fitz"` | PDF 文本解析 |
+| `xelatex` | `xelatex --version` | LaTeX 编译 |
+| `biber` | `biber --version` | 参考文献处理 |
+| `chromadb` | `python -c "import chromadb"` | 向量数据库 |
+| `sentence-transformers` | `python -c "import sentence_transformers"` | 嵌入模型 |
+| `jieba` | `python -c "import jieba"` | 中文分词 |
+
+## Writing Workflows
+
+### Workflow A: Markdown → DOCX (v4 Pipeline, 主力)
+
+```markdown
+1. 准备 Markdown 源文件（含 [N] 引用标记 + 有序列表参考文献）
+2. 运行 pipeline A：python build_docx_ref_codes.py
+3. 输出：DOCX 文件（REF field code + 自动编号 [1][2][3] 格式）
 ```
 
-### 2. `academic_build_docx(manuscriptPath, options?)`
+### Workflow B: LaTeX → PDF
 
-Generate DOCX from Markdown manuscript using MD → HTML → DOCX pipeline.
-
-**Pipeline:**
-1. Pandoc converts MD to HTML (with citation processing if `.bib` file exists)
-2. Python script converts HTML to DOCX with Chinese academic formatting
-
-**Parameters:**
-- `manuscriptPath` (required): Path to manuscript.md
-- `options` (optional):
-  - `fontCn`: Chinese font (default: SimSun 宋体)
-  - `fontEn`: English/number font (default: Times New Roman)
-  - `fontHeading`: Heading font (default: SimHei 黑体)
-  - `sizeTitle`: Title font size in pt (default: 16)
-  - `sizeHeading`: Heading font size in pt (default: 15)
-  - `sizeBody`: Body font size in pt (default: 14)
-  - `lineSpacing`: Line spacing multiplier (default: 1.5)
-
-**Example:**
-```typescript
-academic_build_docx({
-  manuscriptPath: "manuscripts/paper.md",
-  options: {
-    fontCn: "SimSun",
-    fontEn: "Times New Roman",
-    lineSpacing: 1.5
-  }
-})
+```markdown
+1. 准备 .tex 源文件（ctex + biblatex）
+2. 运行编译管线：xelatex → biber → xelatex ×2
+3. 输出：PDF 文件
 ```
 
-## Workflow
+### Workflow C: 文献入库
 
-### Setup Phase
-
-1. **Check tools** (only when user needs to write):
-   ```
-   Call academic_check_tools()
-   ```
-
-2. **Install missing tools** (guide user):
-   - Papis: `pip install papis`
-   - Pandoc: https://pandoc.org/installing.html
-   - python-docx: `pip install python-docx beautifulsoup4 lxml`
-
-### Literature Management
-
-**Use bash commands directly** (don't create MCP tools for papis):
-
-```bash
-# Add paper from DOI
-papis add paper.pdf --from doi 10.1234/example
-
-# Add paper from arXiv
-papis add --from arxiv 2301.12345
-
-# Search papers
-papis list --all
-
-# Open paper
-papis open <paper-name>
-
-# Export BibTeX
-papis export --all --format bibtex > references.bib
+```markdown
+1. 从 CNKI/Zotero/DOI 获取文献元数据
+2. 统一导出为 .bib 文件
+3. 下载 PDF 全文
+4. 运行 doc-parser 提取文本 → 写入本地向量数据库
 ```
 
-### Writing Phase
+## Pipeline Comparison
 
-1. **Create manuscript** in Markdown:
-   ```markdown
-   # Paper Title
-   
-   ## Abstract
-   
-   This paper presents...
-   
-   ## Introduction
-   
-   Previous work [@smith2020] has shown...
-   
-   ## References
-   ```
+| Feature | Pipeline A (Python Direct) | Pipeline B (Pandoc) | Pipeline D (LaTeX) |
+|---------|---------------------------|---------------------|---------------------|
+| **输出格式** | DOCX | DOCX | PDF |
+| **引用** | REF field code ✅ | 静态超链接 ⚠️ | BibLaTeX ✅ |
+| **编号** | Word 自动编号 `[1][2][3]` | 静态文本 | BibLaTeX 控制 |
+| **中文排版** | 完全控制 ✅ | 依赖 template.docx | ctex 宏包 ✅ |
+| **速度** | 中等 | 快 | 慢（多次编译） |
+| **推荐场景** | **最终论文输出** | 快速草稿 | 需要 PDF 的 LaTeX 用户 |
 
-2. **Create bibliography** (if using citations):
-   ```bash
-   papis export --all --format bibtex > manuscripts/paper.bib
-   ```
+## Reference Implementation
 
-3. **Validate citations** (manual check):
-   - Extract citation keys from manuscript: `[@citationKey]`
-   - Check if they exist in `paper.bib`
-
-### Document Generation
-
-1. **Generate DOCX**:
-   ```typescript
-   academic_build_docx({
-     manuscriptPath: "manuscripts/paper.md"
-   })
-   ```
-
-2. **Output**: `manuscripts/paper.docx` with:
-   - Chinese text in SimSun (宋体)
-   - English text in Times New Roman
-   - Headings in SimHei (黑体)
-   - Proper font sizes (16pt title, 15pt headings, 14pt body)
-   - 1.5 line spacing
-   - Processed citations (if `.bib` file exists)
-
-## Chinese Academic Formatting (GB/T 7714-2015)
-
-### Font Standards
-
-- **Chinese text**: SimSun (宋体)
-- **English text and numbers**: Times New Roman
-- **Headings**: SimHei (黑体)
-
-### Font Sizes
-
-- **Title**: 三号 (16pt)
-- **Headings**: 小三 (15pt)
-- **Body**: 四号 (14pt)
-
-### Layout
-
-- **Line spacing**: 1.5
-- **Margins**: 1 inch (top/bottom), 1.25 inch (left/right)
-
-### Citations
-
-- Use GB/T 7714-2015 citation style
-- Pandoc processes citations with `--citeproc` flag
-- Bibliography file: `manuscript.bib` (same name as `.md` file)
-
-## Common Patterns
-
-### Pattern 1: New Paper from Scratch
-
+生产验证的 v4 脚本路径（Windows）：
 ```
-User: "I want to write a paper about machine learning"
-
-AI:
-1. Check if tools are installed: academic_check_tools()
-2. If missing, guide installation
-3. Help user create manuscript.md
-4. Guide user to add papers: papis add paper.pdf --from doi <DOI>
-5. Export bibliography: papis export --all --format bibtex > paper.bib
-6. Generate DOCX: academic_build_docx({ manuscriptPath: "paper.md" })
+F:\swxxx\scripts\build_docx_ref_codes.py
 ```
 
-### Pattern 2: Convert Existing Markdown
+核心实现：
+- Markdown 直接解析（正则分块）
+- `{ REF ref-N \h }` field code 交叉引用
+- 自定义 `word/numbering.xml` 实现 `[1]` 编号格式
+- python-docx 底层 XML 操作（OxmlElement）
+- `word/settings.xml` 注入 `updateFields`
 
-```
-User: "Convert my paper.md to DOCX with Chinese formatting"
+## Future Enhancements (P2 — 暂不实现)
 
-AI:
-1. Check if pandoc and python-docx are installed
-2. Generate DOCX: academic_build_docx({ manuscriptPath: "paper.md" })
-3. Inform user of output location
-```
-
-### Pattern 3: Custom Formatting
-
-```
-User: "Generate DOCX with KaiTi font for Chinese"
-
-AI:
-academic_build_docx({
-  manuscriptPath: "paper.md",
-  options: {
-    fontCn: "KaiTi",
-    fontEn: "Times New Roman",
-    sizeBody: 12
-  }
-})
-```
-
-## Troubleshooting
-
-### Pandoc Not Found
-
-```
-Error: Failed to run pandoc. Make sure it is installed.
-
-Solution: Install pandoc from https://pandoc.org/installing.html
-```
-
-### python-docx Not Found
-
-```
-Error: Missing required library: No module named 'docx'
-
-Solution: pip install python-docx beautifulsoup4 lxml
-```
-
-### Citations Not Processed
-
-**Cause**: No `.bib` file found
-
-**Solution**:
-1. Export bibliography: `papis export --all --format bibtex > paper.bib`
-2. Ensure `.bib` file has same name as `.md` file
-3. Re-run `academic_build_docx()`
-
-### Font Not Available
-
-**Cause**: System doesn't have the specified font
-
-**Solution**:
-- Windows: Install font from Control Panel → Fonts
-- Linux: Install font package (e.g., `fonts-wqy-zenhei` for Chinese)
-- macOS: Install font from Font Book
-
-## Environment-Specific Notes
-
-### Windows
-
-- Checks WSL installation for Docker
-- NoteExpress detection (GUI app, no CLI)
-- Use PowerShell or WSL for bash commands
-
-### WSL
-
-- OpenCode running in WSL checks Docker directly
-- Can access Windows file system via `/mnt/c/`
-
-### Linux / macOS
-
-- Direct tool checking
-- Standard package managers (apt, brew)
-
-## Future Enhancements (P1)
-
-- `academic_list_papers()` — Visualize paper library
-- `academic_validate_citations()` — Automated citation validation
-- `academic_detect_missing_citations()` — Suggest citations for uncited sentences
-- `academic_build_html_preview()` — Generate HTML preview
-- Dashboard `/papers` page — Web-based paper library browser
-
-## References
-
-- GB/T 7714-2015: 信息与文献 参考文献著录规则
-- Pandoc Manual: https://pandoc.org/MANUAL.html
-- python-docx Documentation: https://python-docx.readthedocs.io/
-- Papis Documentation: https://papis.readthedocs.io/
+- `academic_detect_missing_citations()` — 基于向量库的文段缺失引用检测
+- `academic_build_html_preview()` — 集成到 dashboard 的 HTML 预览
+- OCR 兜底管线（ocrmypdf + tesseract）
+- 更多 CSL 引文样式

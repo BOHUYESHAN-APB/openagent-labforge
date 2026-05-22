@@ -1,6 +1,6 @@
-import path from "node:path";
-import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,9 +25,9 @@ export async function handleAcademicBuildDocx(args: {
 
   // Default options
   const config = {
-    fontCn: options.fontCn || "SimSun",
-    fontEn: options.fontEn || "Times New Roman",
-    fontHeading: options.fontHeading || "SimHei",
+    fontCn: options.fontCn || 'SimSun',
+    fontEn: options.fontEn || 'Times New Roman',
+    fontHeading: options.fontHeading || 'SimHei',
     sizeTitle: options.sizeTitle || 16,
     sizeHeading: options.sizeHeading || 15,
     sizeBody: options.sizeBody || 14,
@@ -36,8 +36,8 @@ export async function handleAcademicBuildDocx(args: {
 
   // Resolve paths
   const mdPath = path.resolve(manuscriptPath);
-  const htmlPath = mdPath.replace(/\.md$/, ".html");
-  const docxPath = mdPath.replace(/\.md$/, ".docx");
+  const htmlPath = mdPath.replace(/\.md$/, '.html');
+  const docxPath = mdPath.replace(/\.md$/, '.docx');
 
   // Step 1: Pandoc MD → HTML
   await runPandoc(mdPath, htmlPath);
@@ -54,27 +54,27 @@ export async function handleAcademicBuildDocx(args: {
 function runPandoc(mdPath: string, htmlPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     // Check for bibliography file
-    const bibPath = mdPath.replace(/\.md$/, ".bib");
-    const args = [mdPath, "-o", htmlPath, "--standalone"];
+    const bibPath = mdPath.replace(/\.md$/, '.bib');
+    const args = [mdPath, '-o', htmlPath, '--standalone'];
 
     // Add bibliography if exists
-    const fs = require("node:fs");
+    const fs = require('node:fs');
     if (fs.existsSync(bibPath)) {
-      args.push("--citeproc", `--bibliography=${bibPath}`);
+      args.push('--citeproc', `--bibliography=${bibPath}`);
     }
 
-    const proc = spawn("pandoc", args, {
+    const proc = spawn('pandoc', args, {
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    let stderr = "";
+    let stderr = '';
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
         resolve();
       } else {
@@ -86,7 +86,7 @@ function runPandoc(mdPath: string, htmlPath: string): Promise<void> {
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       reject(
         new Error(
           `Failed to run pandoc. Make sure it is installed: ${err.message}`,
@@ -113,7 +113,7 @@ function runHtmlToDocx(
   },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(__dirname, "../scripts/html_to_docx.py");
+    const scriptPath = path.join(__dirname, '../scripts/html_to_docx.py');
 
     const args = [
       scriptPath,
@@ -128,18 +128,18 @@ function runHtmlToDocx(
       `--line-spacing=${config.lineSpacing}`,
     ];
 
-    const proc = spawn("python", args, {
+    const proc = spawn('python', args, {
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    let stderr = "";
+    let stderr = '';
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
         resolve();
       } else {
@@ -151,7 +151,7 @@ function runHtmlToDocx(
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       reject(
         new Error(
           `Failed to run Python script. Make sure Python is installed: ${err.message}`,

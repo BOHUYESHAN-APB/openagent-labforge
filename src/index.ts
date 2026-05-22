@@ -1436,14 +1436,26 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     },
 
     'chat.params': async (
-      input: { model?: { providerID?: string; id?: string }; sessionID?: string },
+      input: {
+        model?: { providerID?: string; id?: string };
+        sessionID?: string;
+      },
       _output: unknown,
     ) => {
       await thinkingLanguageHook['chat.params'](input, _output);
       // Flash escalation: count failures → switch model
       await flashEscalationHook['chat.params'](
-        input as { sessionID: string; model: { id?: string; providerID?: string } },
-        _output as { temperature: number; topP: number; topK: number; maxOutputTokens: number | undefined; options: Record<string, unknown> },
+        input as {
+          sessionID: string;
+          model: { id?: string; providerID?: string };
+        },
+        _output as {
+          temperature: number;
+          topP: number;
+          topK: number;
+          maxOutputTokens: number | undefined;
+          options: Record<string, unknown>;
+        },
       );
     },
 

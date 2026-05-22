@@ -41,18 +41,18 @@ const DELETE_PATTERNS = [
 ] as const;
 
 const DANGEROUS_COMBINED_PATTERNS = [
-  /\|\s*rm\s/i,       // `| rm` pipe to delete
-  /&&\s*rm\s/i,       // `&& rm` chain delete
-  /;?\s*rm\s/i,       // `; rm` sequential delete
+  /\|\s*rm\s/i, // `| rm` pipe to delete
+  /&&\s*rm\s/i, // `&& rm` chain delete
+  /;?\s*rm\s/i, // `; rm` sequential delete
 ] as const;
 
 // ── Script execution patterns ────────────────────────────────────
 const SCRIPT_PATTERNS = [
-  /^\.\//,             // ./script.sh
-  /^\.\s/,             // . script.sh (source)
+  /^\.\//, // ./script.sh
+  /^\.\s/, // . script.sh (source)
   /^(bash|sh|zsh|fish)\s+/,
   /^source\s+/,
-  /^\.\\/,             // PowerShell .\script.ps1
+  /^\.\\/, // PowerShell .\script.ps1
   /& \.\//,
   /powershell\s+-file/i,
   /pwsh\s+-/i,
@@ -172,18 +172,14 @@ function buildBlockMessage(
   matchedPattern: string | null,
   scriptMatches: string[] | null,
 ): string {
-  const lines: string[] = [
-    '⚠️ Permission Required: Destructive Command',
-    '',
-  ];
+  const lines: string[] = ['⚠️ Permission Required: Destructive Command', ''];
 
   lines.push('The following command was blocked:');
   lines.push('');
 
   // Show the command (truncated if very long)
-  const displayCmd = command.length > 300
-    ? command.slice(0, 300) + '...'
-    : command;
+  const displayCmd =
+    command.length > 300 ? command.slice(0, 300) + '...' : command;
   lines.push('```');
   lines.push(displayCmd);
   lines.push('```');
@@ -211,7 +207,7 @@ function buildBlockMessage(
     '3. If the command is not needed, explain why and proceed without it.',
     '',
     'This guard protects against accidental data loss.',
-    'It follows the same security model as OpenCode\'s built-in permission system:',
+    "It follows the same security model as OpenCode's built-in permission system:",
     'the AI proposes, the user disposes.',
   );
 
@@ -228,7 +224,7 @@ export function createDeleteGuardHook(_ctx: PluginInput) {
       },
     ): Promise<void> => {
       const toolName = input.tool?.toLowerCase();
-      
+
       // Expanded tool name matching to cover more shell/command execution tools
       const isShellTool = [
         'bash',
@@ -241,7 +237,7 @@ export function createDeleteGuardHook(_ctx: PluginInput) {
         'cmd',
         'terminal',
       ].includes(toolName);
-      
+
       if (!isShellTool) {
         return;
       }
@@ -268,7 +264,11 @@ export function createDeleteGuardHook(_ctx: PluginInput) {
       }
 
       // Block the command — replace with message
-      const blockMsg = buildBlockMessage(command, matchedDelete, scriptMatches ?? null);
+      const blockMsg = buildBlockMessage(
+        command,
+        matchedDelete,
+        scriptMatches ?? null,
+      );
 
       output.args = {
         command: `echo "${blockMsg.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,

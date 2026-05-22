@@ -381,7 +381,7 @@ bun run check:ci   # Lint + format + organize imports
 
 ## Changelog
 
-### v1.1.0 (2026-05-20)
+### v1.0.24 (2026-05-22)
 
 **Paper Mode & Path Resolution Fix**
 

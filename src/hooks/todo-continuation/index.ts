@@ -299,7 +299,9 @@ function saveContinuationState(
         state.consecutiveContinuationsBySession.entries(),
       ),
       suppressUntil: state.suppressUntil,
-      reviewVerdictBySession: Array.from(state.reviewVerdictBySession.entries()),
+      reviewVerdictBySession: Array.from(
+        state.reviewVerdictBySession.entries(),
+      ),
       reviewInjectedBySession: Array.from(state.reviewInjectedBySession),
       autoEnableSuppressedSessionIds: Array.from(
         state.autoEnableSuppressedSessionIds,
@@ -335,7 +337,10 @@ function loadContinuationState(
       state.enabledBySession.set(sessionID, enabled);
       if (enabled) state.enabled = true; // global fallback for new sessions
     }
-    for (const [sessionID, count] of persisted.consecutiveContinuationsBySession) {
+    for (const [
+      sessionID,
+      count,
+    ] of persisted.consecutiveContinuationsBySession) {
       state.consecutiveContinuationsBySession.set(sessionID, count);
     }
     state.suppressUntil = persisted.suppressUntil;
@@ -349,7 +354,10 @@ function loadContinuationState(
       state.autoEnableSuppressedSessionIds.add(sessionID);
     }
     state.autoEnableSuppressedGlobally = persisted.autoEnableSuppressedGlobally;
-    for (const [sessionID, key] of persisted.lastPressureCheckpointKeyBySession) {
+    for (const [
+      sessionID,
+      key,
+    ] of persisted.lastPressureCheckpointKeyBySession) {
       state.lastPressureCheckpointKeyBySession.set(sessionID, key);
     }
 
@@ -998,11 +1006,11 @@ export function createTodoContinuationHook(
       // Primary agents (engineer, bio, chem) can enable but not disable
       // Other agents can only enable. Internal/system calls (no agent) allowed.
       if (!enabled) {
-        const callerAgent = (toolContext as { agent?: string } | undefined)?.agent ?? '';
+        const callerAgent =
+          (toolContext as { agent?: string } | undefined)?.agent ?? '';
         if (callerAgent) {
           const isReviewer =
-            callerAgent === 'reviewer' ||
-            callerAgent.includes('review');
+            callerAgent === 'reviewer' || callerAgent.includes('review');
           if (!isReviewer) {
             return 'Auto-continue can only be disabled by the @reviewer agent after a review cycle. If review has completed and approved, the @reviewer will call auto_continue(enabled=false).';
           }
@@ -1079,7 +1087,10 @@ export function createTodoContinuationHook(
 
       // Gate: user aborted — don't continue
       if (state.abortedByUser) {
-        log(`[${HOOK_NAME}] Skipped: user aborted (ESC). New message required.`, { sessionID });
+        log(
+          `[${HOOK_NAME}] Skipped: user aborted (ESC). New message required.`,
+          { sessionID },
+        );
         return;
       }
 

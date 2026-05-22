@@ -1,6 +1,6 @@
-import os from "node:os";
-import fs from "node:fs";
-import { spawn } from "node:child_process";
+import os from 'node:os';
+import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 
 /**
  * Tool installation status
@@ -16,7 +16,7 @@ export interface ToolStatus {
 /**
  * Environment type
  */
-export type Environment = "windows" | "wsl" | "linux" | "macos";
+export type Environment = 'windows' | 'wsl' | 'linux' | 'macos';
 
 /**
  * Detect the current runtime environment
@@ -24,26 +24,26 @@ export type Environment = "windows" | "wsl" | "linux" | "macos";
 export function detectEnvironment(): Environment {
   const platform = os.platform();
 
-  if (platform === "win32") return "windows";
-  if (platform === "darwin") return "macos";
+  if (platform === 'win32') return 'windows';
+  if (platform === 'darwin') return 'macos';
 
   // Linux: check if running inside WSL
-  if (platform === "linux") {
+  if (platform === 'linux') {
     try {
-      const release = fs.readFileSync("/proc/version", "utf8");
+      const release = fs.readFileSync('/proc/version', 'utf8');
       if (
-        release.toLowerCase().includes("microsoft") ||
-        release.toLowerCase().includes("wsl")
+        release.toLowerCase().includes('microsoft') ||
+        release.toLowerCase().includes('wsl')
       ) {
-        return "wsl";
+        return 'wsl';
       }
     } catch {
       // Not WSL
     }
-    return "linux";
+    return 'linux';
   }
 
-  return "linux";
+  return 'linux';
 }
 
 /**
@@ -51,35 +51,35 @@ export function detectEnvironment(): Environment {
  */
 async function checkCommand(
   command: string,
-  versionArgs: string[] = ["--version"],
+  versionArgs: string[] = ['--version'],
 ): Promise<ToolStatus> {
   return new Promise((resolve) => {
     const proc = spawn(command, versionArgs, {
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    proc.stdout?.on("data", (data) => {
+    proc.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
-        const version = (stdout + stderr).trim().split("\n")[0];
+        const version = (stdout + stderr).trim().split('\n')[0];
         resolve({ installed: true, version });
       } else {
         resolve({ installed: false, error: stderr.trim() });
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       resolve({ installed: false, error: err.message });
     });
   });
@@ -90,37 +90,37 @@ async function checkCommand(
  */
 async function checkCommandInWSL(
   command: string,
-  versionArgs: string[] = ["--version"],
+  versionArgs: string[] = ['--version'],
 ): Promise<ToolStatus> {
   return new Promise((resolve) => {
-    const wslCommand = `wsl ${command} ${versionArgs.join(" ")}`;
+    const wslCommand = `wsl ${command} ${versionArgs.join(' ')}`;
     const proc = spawn(wslCommand, [], {
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    proc.stdout?.on("data", (data) => {
+    proc.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
-        const version = (stdout + stderr).trim().split("\n")[0];
-        resolve({ installed: true, version, context: "wsl" });
+        const version = (stdout + stderr).trim().split('\n')[0];
+        resolve({ installed: true, version, context: 'wsl' });
       } else {
-        resolve({ installed: false, context: "wsl", error: stderr.trim() });
+        resolve({ installed: false, context: 'wsl', error: stderr.trim() });
       }
     });
 
-    proc.on("error", (err) => {
-      resolve({ installed: false, context: "wsl", error: err.message });
+    proc.on('error', (err) => {
+      resolve({ installed: false, context: 'wsl', error: err.message });
     });
   });
 }
@@ -130,43 +130,43 @@ async function checkCommandInWSL(
  */
 async function checkWSL(): Promise<ToolStatus> {
   return new Promise((resolve) => {
-    const proc = spawn("wsl", ["--status"], {
+    const proc = spawn('wsl', ['--status'], {
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    proc.stdout?.on("data", (data) => {
+    proc.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
         resolve({
           installed: true,
-          version: "WSL installed",
-          installCmd: "Already installed",
+          version: 'WSL installed',
+          installCmd: 'Already installed',
         });
       } else {
         resolve({
           installed: false,
-          installCmd: "wsl --install",
+          installCmd: 'wsl --install',
           error: stderr.trim(),
         });
       }
     });
 
-    proc.on("error", () => {
+    proc.on('error', () => {
       resolve({
         installed: false,
-        installCmd: "wsl --install",
-        error: "WSL not found",
+        installCmd: 'wsl --install',
+        error: 'WSL not found',
       });
     });
   });
@@ -176,24 +176,24 @@ async function checkWSL(): Promise<ToolStatus> {
  * Check if Docker is installed (environment-aware)
  */
 async function checkDocker(env: Environment): Promise<ToolStatus> {
-  if (env === "windows") {
+  if (env === 'windows') {
     // Windows: check WSL first, then check Docker in WSL
     const wslStatus = await checkWSL();
     if (!wslStatus.installed) {
       return {
         installed: false,
-        context: "wsl",
-        installCmd: "Install WSL first: wsl --install",
+        context: 'wsl',
+        installCmd: 'Install WSL first: wsl --install',
       };
     }
-    return checkCommandInWSL("docker", ["--version"]);
+    return checkCommandInWSL('docker', ['--version']);
   }
-  if (env === "wsl") {
+  if (env === 'wsl') {
     // OpenCode running in WSL: check Docker directly
-    return checkCommand("docker", ["--version"]);
+    return checkCommand('docker', ['--version']);
   }
   // Linux / macOS: check Docker directly
-  return checkCommand("docker", ["--version"]);
+  return checkCommand('docker', ['--version']);
 }
 
 /**
@@ -201,34 +201,34 @@ async function checkDocker(env: Environment): Promise<ToolStatus> {
  */
 async function checkNoteExpress(): Promise<ToolStatus> {
   const env = detectEnvironment();
-  if (env !== "windows") {
+  if (env !== 'windows') {
     return {
       installed: false,
-      context: "windows-only",
-      installCmd: "NoteExpress is Windows-only",
+      context: 'windows-only',
+      installCmd: 'NoteExpress is Windows-only',
     };
   }
 
   // Check common installation paths
   const paths = [
-    "C:\\Program Files\\NoteExpress",
-    "C:\\Program Files (x86)\\NoteExpress",
+    'C:\\Program Files\\NoteExpress',
+    'C:\\Program Files (x86)\\NoteExpress',
   ];
 
   for (const path of paths) {
     if (fs.existsSync(path)) {
       return {
         installed: true,
-        version: "NoteExpress (GUI)",
-        context: "windows",
+        version: 'NoteExpress (GUI)',
+        context: 'windows',
       };
     }
   }
 
   return {
     installed: false,
-    context: "windows",
-    installCmd: "Download from http://www.noteexpress.com/",
+    context: 'windows',
+    installCmd: 'Download from http://www.noteexpress.com/',
   };
 }
 
@@ -237,38 +237,42 @@ async function checkNoteExpress(): Promise<ToolStatus> {
  */
 async function checkPythonDocx(): Promise<ToolStatus> {
   return new Promise((resolve) => {
-    const proc = spawn("python", ["-c", "import docx; print(docx.__version__)"], {
-      shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const proc = spawn(
+      'python',
+      ['-c', 'import docx; print(docx.__version__)'],
+      {
+        shell: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    proc.stdout?.on("data", (data) => {
+    proc.stdout?.on('data', (data) => {
       stdout += data.toString();
     });
 
-    proc.stderr?.on("data", (data) => {
+    proc.stderr?.on('data', (data) => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       if (code === 0) {
         resolve({ installed: true, version: `python-docx ${stdout.trim()}` });
       } else {
         resolve({
           installed: false,
-          installCmd: "pip install python-docx",
+          installCmd: 'pip install python-docx',
           error: stderr.trim(),
         });
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       resolve({
         installed: false,
-        installCmd: "pip install python-docx",
+        installCmd: 'pip install python-docx',
         error: err.message,
       });
     });
@@ -278,28 +282,26 @@ async function checkPythonDocx(): Promise<ToolStatus> {
 /**
  * Tool check registry
  */
-const toolCheckers: Record<
-  string,
-  (env: Environment) => Promise<ToolStatus>
-> = {
-  papis: async () => checkCommand("papis", ["--version"]),
-  pandoc: async () => checkCommand("pandoc", ["--version"]),
-  gh: async () => checkCommand("gh", ["--version"]),
-  "python-docx": async () => checkPythonDocx(),
-  wsl: async (env) => {
-    if (env === "windows") {
-      return checkWSL();
-    }
-    return {
-      installed: false,
-      context: "windows-only",
-      installCmd: "WSL is Windows-only",
-    };
-  },
-  docker: async (env) => checkDocker(env),
-  xelatex: async () => checkCommand("xelatex", ["--version"]),
-  noteexpress: async () => checkNoteExpress(),
-};
+const toolCheckers: Record<string, (env: Environment) => Promise<ToolStatus>> =
+  {
+    papis: async () => checkCommand('papis', ['--version']),
+    pandoc: async () => checkCommand('pandoc', ['--version']),
+    gh: async () => checkCommand('gh', ['--version']),
+    'python-docx': async () => checkPythonDocx(),
+    wsl: async (env) => {
+      if (env === 'windows') {
+        return checkWSL();
+      }
+      return {
+        installed: false,
+        context: 'windows-only',
+        installCmd: 'WSL is Windows-only',
+      };
+    },
+    docker: async (env) => checkDocker(env),
+    xelatex: async () => checkCommand('xelatex', ['--version']),
+    noteexpress: async () => checkNoteExpress(),
+  };
 
 /**
  * Check academic writing tools

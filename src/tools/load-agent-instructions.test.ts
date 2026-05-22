@@ -46,10 +46,9 @@ describe('loadAgentInstructionsTool', () => {
   });
 
   test('loads fixer instructions', async () => {
-    const result = await loadAgentInstructionsTool.execute(
-      { agent: 'fixer' },
-      { sessionID: 'test' } as any,
-    );
+    const result = await loadAgentInstructionsTool.execute({ agent: 'fixer' }, {
+      sessionID: 'test',
+    } as any);
 
     expect(result).toContain('# fixer Instructions');
     expect(result).toContain('fixer');

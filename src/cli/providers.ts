@@ -38,7 +38,10 @@ export const MODEL_MAPPINGS: Record<string, Record<string, AgentModelEntry>> = {
     // 强推理主力
     orchestrator: { model: 'opencode-go/deepseek-v4-pro', variant: 'max' },
     'deep-worker': { model: 'opencode-go/deepseek-v4-pro', variant: 'max' },
-    'bio-orchestrator': { model: 'opencode-go/deepseek-v4-pro', variant: 'max' },
+    'bio-orchestrator': {
+      model: 'opencode-go/deepseek-v4-pro',
+      variant: 'max',
+    },
     // 审查位 — 花钱在刀刃上
     oracle: { model: 'opencode-go/deepseek-v4-pro', variant: 'high' },
     reviewer: { model: 'opencode-go/deepseek-v4-pro', variant: 'high' },
@@ -173,14 +176,20 @@ export function generateLiteConfig(
 
     // free/custom 预设不绑定模型
     if (!modelInfo) {
-      return { skills, mcps: DEFAULT_AGENT_MCPS[agentName as keyof typeof DEFAULT_AGENT_MCPS] ?? [] };
+      return {
+        skills,
+        mcps:
+          DEFAULT_AGENT_MCPS[agentName as keyof typeof DEFAULT_AGENT_MCPS] ??
+          [],
+      };
     }
 
     return {
       model: modelInfo.model,
       variant: modelInfo.variant,
       skills,
-      mcps: DEFAULT_AGENT_MCPS[agentName as keyof typeof DEFAULT_AGENT_MCPS] ?? [],
+      mcps:
+        DEFAULT_AGENT_MCPS[agentName as keyof typeof DEFAULT_AGENT_MCPS] ?? [],
     };
   };
 

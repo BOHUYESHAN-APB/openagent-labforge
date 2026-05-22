@@ -5,56 +5,230 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
-## v1.1.0 — 2026-05-20
+## v1.0.24 — 2026-05-22
 
-### Fixed / 修复
+### Breaking Changes / 破坏性变更
 
-- **Plugin path resolution bug**: replaced build-time `__dirname` hardcoding with
-  runtime `getPackageRoot(import.meta.url)` for `src/skills` and `ThirdParty`
-  paths. Previously, paths were baked to the build machine's filesystem at
-  build time, causing `src/skills` and `ThirdParty` skill discovery to fail
-  when the plugin was installed via npm on another machine.
-- 修复插件路径硬编码问题：构建时 `__dirname` 改为运行时 `import.meta.url` 动态解析。
-  此前路径绑定到构建机器的绝对路径，用户安装后无法发现内置 skills。
-
-- **Bio skills catalog routing guide**: replaced hardcoded route hints with
-  auto-generated entries from catalog.json. Previously, adding new categories
-  required manual editing of the routing guide.
-- Bio Skills 目录路由指南从硬编码改为从 catalog.json 自动生成。
-
-- **Absolute path leakage in bio skills prompt**: removed `Path:` line from
-  `<bio_skills_loaded>` block to prevent AI from copying SKILL.md files to
-  third-party directories.
-- 移除 Bio Skills 加载提示中的绝对路径暴露，防止 AI 误复制文件。
+- **MCP server architecture**: removed shared-server logic. Each OpenCode
+  window now runs an independent MCP server instance via
+  `StdioServerTransport`. Fixes multi-window connection failures and race
+  conditions where a second window's MCP requests would hang or crash.
+- MCP 服务器架构变更：每个 OpenCode 窗口独立运行 MCP 服务器实例
+  （`StdioServerTransport`）。修复多窗口连接失败和竞争条件问题。
 
 ### Added / 新增
 
-- **Academic Paper Mode skills** (`resources/academicSkills/`): new skill
-  category system following the same pattern as `resources/bioSkills/`.
-  Includes:
-  - `citation/cnki-parser` — CNKI multi-format export → unified BibTeX
-  - `citation/cite-match` — Body text `[[cite:keywords]]` → `[N]` citation
-  - `formatting/md2docx` — Markdown → HTML → DOCX academic formatting
-    (dual pipeline: HTML intermediate for font accuracy, direct for hyperlinks)
-  - MIT-licensed upstream skills (research-writing, office-academic,
-    scientific-toolkit) from codex-claude-academic-skills by zLanqing
-- 新增论文模式技能体系 (`resources/academicSkills/`)，包含 CNKI 解析、
-  正文引文匹配、MD→DOCX 管线，以及来自第三方的学术写作技能。
+#### Academic Paper Mode（论文模式）
 
-- **`THIRD_PARTY_NOTICES.md` updated**: added Section 5 (Integrated Skills)
-  and Section 6 (Contribution Guidelines) with full provenance tracking for
-  all third-party and AI-assisted content.
-- 更新 Third-Party Notices，完整标注所有第三方技能出处和许可证。
+- **Academic Paper Mode skills** (`resources/academicSkills/`): new skill
+  category system following `resources/bioSkills/` pattern:
+  - `citation/cnki-parser` — CNKI multi-format export (`.txt`, `.net`, `.enw`,
+    `.ris`, `.bib`) → unified BibTeX, auto-detect format, merge multi-file
+  - `citation/cite-match` — Body text `[[cite:keywords]]` → `[N]` citation
+    markers with multi-layer matching (keyword → TF-IDF → semantic)
+  - `formatting/md2docx` — Three-pipeline DOCX generation:
+    - Pipeline A (v4): Python direct parse — REF field codes + Word auto-numbering
+    - Pipeline B: Pandoc direct — quick drafts with --citeproc
+    - Pipeline C: HTML intermediate — fallback only, NOT for final output
+  - `writing/latex-pipeline` — LaTeX project templates (ctex), xelatex+biber
+    compilation pipeline, Chinese formatting, error troubleshooting
+  - `writing/citation-database` — Local citation vector database: PDF text
+    extraction → BGE embedding → Chroma vector search for sentence-level
+    citation matching
+- 新增论文模式技能体系 (`resources/academicSkills/`)，包含 CNKI 解析、
+  正文引文匹配、三管线 DOCX 生成、LaTeX 模板编译、本地引用向量数据库。
+
+- **`document-formatting` skill**: updated to v4 final spec — 14pt body,
+  0.74cm indent, fullwidth CJK punctuation, `[5][6]` tight multi-citation,
+  REF field code cross-reference, GB/T 7714-2015 reference format, custom
+  numbering XML with `[%1]` format, `<w:suff w:val="space"/>` spacing control.
+- `document-formatting` 技能更新至 v4 最终版规范。
+
+- **`academic-writing` skill**: rewritten with full pipeline architecture
+  diagram, tool chain checklist, pipeline comparison matrix, and decision tree.
+- `academic-writing` 技能重写，整合完整管线架构。
+
+- **Academic writing tool stack (P0)**:
+  - Environment-aware tool checking (`academic_check_tools()`) for Windows/WSL/
+    Linux/macOS — checks pandoc, papis, python-docx, xelatex, biber, PyMuPDF,
+    jieba, chromadb, sentence-transformers
+  - MD → DOCX pipeline with Chinese academic formatting (GB/T 7714-2015):
+    宋体/Times New Roman/SimHei fonts, proper sizing
+  - MD → HTML → DOCX with `academic_build_docx()` MCP tool
+  - Registration: `academic_check_tools` and `academic_build_docx` as MCP tools
+  - Skill documentation: comprehensive SKILL.md with workflows and patterns
+- 新增学术写作工具栈 P0：环境感知工具检测、MD→DOCX 管线、MCP 工具注册。
+
+- **Standardized document parser** (`src/tools/doc-parser/`):
+  - `parse_pdf.py` — PyMuPDF-based PDF parser with preserved paragraph/sentence
+    boundaries, unified JSON output format
+  - `parse_docx.py` — python-docx DOCX parser with style and table extraction
+  - `index.ts` — TypeScript entry point with crossSpawn Python integration
+  - `SKILL.md` — Documentation with three-pipeline design (text PDF / OCR / DOCX)
+- 新增标准化文档解析器：PDF（PyMuPDF）+ DOCX（python-docx）稳定解析脚本。
+
+#### Core Architecture（核心架构）
+
+- **Storm-breaker hook**: sliding-window duplicate tool call suppression.
+  Detects and blocks repeated identical tool invocations within a configurable
+  window to prevent infinite loops.
+- 新增 Storm-breaker hook：滑动窗口去重工具调用抑制。
+
+- **Prefix-stability hook**: SHA-256 system prompt fingerprint drift detection.
+  Warns when the system prompt changes unexpectedly mid-session.
+- 新增 Prefix-stability hook：SHA-256 系统提示词指纹漂移检测。
+
+- **Schema-sanitize hook**: JSON Schema cleanup filter for DeepSeek strict mode.
+  Removes schemas with `additionalProperties` conflicts that cause DeepSeek
+  validation errors.
+- 新增 Schema-sanitize hook：清理 JSON Schema 中的 DeepSeek 严格模式冲突。
+
+- **Flash-escalation hook**: failure-count-based auto model escalation.
+  After N consecutive API failures, automatically switches to a fallback model
+  for the current session.
+- 新增 Flash-escalation hook：基于失败次数的自动模型升级切换。
+
+- **Delegation model v2**: three-mode subagent execution — `background=false`
+  (blocking, default), `background=true` (fire-and-forget), batch (parallel
+  blocking). Added shared-prefix snapshot protocol for cache-friendly parallel
+  children. Resuming existing specialist sessions preferred over new ones.
+- 委派模型 v2：三模式子代理执行（阻塞/即弃/批量）+ 共享前缀协议。
+
+- **Review system v2**: dual-mode review — main-agent self-review (Option A)
+  for simple tasks, @oracle subagent delegation (Option B) for complex work.
+- 审查系统 v2：双模式审查（主代理自审 / @oracle 委派审查）。
+
+- **Git discipline rules**: auto-review now checks for uncommitted analysis
+  results; generated files must be committed before task completion.
+- Git 纪律规则：审查时检查未提交的分析结果文件。
+
+- **File/output discipline**: explicit file creation rules (conversation vs
+  workspace), output style rules (paragraph over bullets), script type hints.
+- 文件/输出纪律：文件创建规则、段落优先输出风格。
+
+- **Bio/chem mode detection**: automatic mode detection for bioinformatics
+  and chemistry tasks; HTML output rules for generated reports.
+- 生物/化学模式自动检测与 HTML 输出规则。
+
+- **Thinking-language hook**: `reasoning_summary` language directive based on
+  provider; Chinese models → Chinese thinking, foreign models → English.
+- `reasoning_summary` 语言指令：国模中文、海外模型英文。
+
+- **Delegate-task retry hook**: `run_in_background` → `background` parameter
+  alignment for OpenCode v1.15.0+ compatibility.
+- 委派任务重试 hook：参数与 OpenCode v1.15.0+ 对齐。
+
+#### Dashboard & Server（仪表板与服务）
+
+- **extendai-lab MCP server**: new built-in MCP server providing:
+  `extendai_list_skills`, `extendai_read_plan`, `extendai_list_checkpoints`,
+  `extendai_dashboard_status`. Runs on `bun run extendai-server`.
+- 新增 extendai-lab MCP 服务器（localhost:25569），提供技能浏览、计划读取、
+  checkpoint 列表、仪表板状态等工具。
+
+- **Web dashboard v1**: localhost:25569 web UI with:
+  - Skills viewer and category browser
+  - Markdown renderer for saved plans
+  - Theme toggle (light/dark)
+  - Docs viewer for plugin documentation
+- 新增 Web 仪表板 v1：技能浏览、计划渲染、主题切换、文档查看。
+
+- **Web dashboard v2** → **v4 dashboard**:
+  - Schema config editor with JSON validation
+  - AI HTML viewer for generated pages
+  - Modern UI with sidebar navigation
+  - Dashboard status endpoint integration
+- Web 仪表板 v2→v4：Schema 配置编辑器、AI HTML 查看器、侧栏导航、状态集成。
+
+- **Shared server fix**: lock file coordination for multi-window MCP server
+  startup; parent exit detection for clean server shutdown.
+- 共享服务器修复：多窗口 MCP 锁文件协调、父进程退出检测。
+
+#### Third-Party Skills（第三方技能）
+
+- **Registered ThirdParty skills** as OpenCode skill paths:
+  `html-anything-skills` (47 skills), `guizang-html-ppt` (Apache-2.0),
+  `html-ppt-skill` (MIT). Converted git submodules to committed files.
+- 注册第三方技能路径：47 个 HTML 设计技能、PPT 技能。
+
+- **Removed `.git` internals** from ThirdParty skill directories to prevent
+  git conflicts during packaging.
+- 移除第三方技能目录中的 `.git` 内部文件。
+
+- **`THIRD_PARTY_NOTICES.md`**: full provenance tracking with Section 5
+  (Integrated Skills) and Section 6 (Contribution Guidelines).
+- 更新 Third-Party Notices，完整标注所有第三方技能出处。
+
+### Fixed / 修复
+
+- **Plugin path resolution**: replaced build-time `__dirname` hardcoding with
+  runtime `getPackageRoot(import.meta.url)`. Previously, `src/skills` and
+  `ThirdParty` paths were baked to the build machine's filesystem at build
+  time, causing skill discovery to fail on npm-installed copies.
+- 修复插件路径硬编码：构建时 `__dirname` → 运行时 `import.meta.url`。
+  此前路径绑定到构建机器的绝对路径，npm 安装后技能发现失败。
+
+- **Bio skills catalog**: replaced hardcoded routing guide with auto-generated
+  entries from catalog.json. Removed absolute path leakage from
+  `<bio_skills_loaded>` block.
+- Bio Skills 目录路由指南从硬编码改为 catalog.json 自动生成，移除绝对路径暴露。
+
+- **MCP server**: switched from raw TCP to `StdioServerTransport` with proper
+  SDK Server class. Added dual logging (stderr for SDK, stdout for protocol).
+  Fixes OpenCode v1.14+ protocol compatibility.
+- MCP 服务器修复：改用 SDK Server+StdioServerTransport，修复协议兼容性。
+
+- **Delete guard**: expanded tool name matching to cover bash, shell, exec,
+  execute_command, powershell, run_command, system, cmd, terminal (v1.0.24+).
+- 删除护栏：扩展匹配工具名覆盖范围。
+
+- **Cross-session auto_continue**: global fallback on state load when
+  session-specific state is missing. Ensures continuation survives crashes.
+- 跨会话 auto_continue：状态加载时全局回退，确保续跑能在崩溃后存活。
+
+- **Abort loop fix**: 30-second suppression window + `abortedByUser` flag after
+  user cancellation. Clears on next user activity to prevent double-abort.
+- 中止循环修复：30 秒抑制窗口 + `abortedByUser` 标记，防止重复中止。
+
+- **Review command cleanup**: `review` now delegates to valid `@oracle`
+  subagent; removed dead `/ol-review` command.
+- 审查命令清理：`review` 委派到有效 `@oracle` 子代理，移除无效 `/ol-review`。
+
+- **save_plan tool**: enhanced description with explicit prohibition against
+  outputting plan content to conversation.
+- `save_plan` 工具描述强化，禁止将计划内容输出到对话。
+
+- **Start Work command**: improved cross-window state recovery with explicit
+  context section for path information injection.
+- Start Work 命令：跨窗口状态恢复增强，注入明确的路径信息上下文。
 
 ### Changed / 变更
 
-- **`package.json` files**: added `resources/academicSkills` to published
-  package manifest.
+- **`package.json`**: added `resources/academicSkills` to published manifest.
 - npm 包新增 `resources/academicSkills` 目录发布。
 
-- **`src/index.ts`**: registered `resources/academicSkills` path in
-  `opencodeConfig.skills.paths` and `external_directory` permission rules.
-- 注册学术技能路径和文件读取权限。
+- **`src/index.ts`**: registered `resources/academicSkills` path in skill
+  discovery and `external_directory` permission rules. Registered academic
+  MCP tools (`academic_check_tools`, `academic_build_docx`).
+- 注册学术技能路径和文件读取权限，注册学术 MCP 工具。
+
+- **`AGENTS.md`**: rewritten with agent delegation rules, batch execution
+  model, subagent policy, session reuse, task complexity assessment,
+  context pressure management, auto-review system, MCP architecture,
+  cross-window state management, delete guard, subagent philosophy.
+- 重写 `AGENTS.md`：完整的工作流规则和代理编排文档。
+
+### Known Issues Resolved / 已解决
+
+- ✅ Plugin Skill Path Resolution (build-time `__dirname` — fixed)
+- ✅ MCP Multi-Window Sharing (removed shared logic — fixed)
+- ✅ Delete Command Guard (expanded tool matching — fixed)
+- ✅ Plan Mode Prompt Overhead (optimized save_plan description — fixed)
+- ✅ MCP Server Protocol (StdioServerTransport + dual logging — fixed)
+- ✅ Auto-Review Dual Mode (self-review + @oracle — implemented)
+- ✅ Subagent Delegation Model (three-mode execution — implemented)
+- ✅ Academic Paper Mode (P0 + v4 spec — complete)
+- ⚠️ Start Work Command Detection (improved, may need further testing)
 
 ## v1.0.24 - 2026-05-11
 

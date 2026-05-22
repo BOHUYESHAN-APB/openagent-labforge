@@ -1,384 +1,135 @@
 ---
 name: academic-md2docx
-description: Convert Markdown papers to properly formatted DOCX using Pandoc (recommended) or HTML intermediate pipeline. Pandoc is the most reliable tool for academic document conversion with full support for citations, cross-references, templates, and formatting. Use when the user has a Markdown manuscript and needs a formatted Word document.
-tool_type: cli
-primary_tool: pandoc
+description: Convert Markdown papers to properly formatted DOCX. Three pipelines: (A) Python direct parse v4 — REF field codes + auto-numbering, recommended for final output; (B) Pandoc — general purpose; (C) HTML intermediate — fallback only.
+tool_type: python + cli
+primary_tool: python-docx + pandoc
 ---
 
 # Academic MD → DOCX
 
-Convert Markdown academic papers to properly formatted DOCX files using Pandoc.
+Convert Markdown academic papers to properly formatted DOCX files.
 
-## Recommended: Pandoc Direct Conversion
+## Three Pipelines Overview
 
-**Pandoc is the industry-standard tool for academic document conversion.**
-It handles citations, cross-references, templates, and formatting reliably.
+| Pipeline | Method | Citations | REF Field Codes | Chinese Formatting | Reliability |
+|----------|--------|-----------|-----------------|-------------------|-------------|
+| **A. Python Direct (v4)** | python-docx low-level XML | ✅ Word REF field codes | ✅ Full support | ✅ Full control | ⭐⭐⭐⭐⭐ |
+| **B. Pandoc Direct** | pandoc --citeproc | ✅ Pandoc citeproc | ❌ Pandoc不支持 | ⚠️ 依赖template.docx | ⭐⭐⭐⭐ |
+| **C. HTML Intermediate** | MD→HTML→python-docx | ❌ 易出错 | ❌ 会断 | ⚠️ 手动设置 | ⭐⭐ |
 
-### Basic Usage
+**推荐**：Pipeline A (Python Direct v4) 用于最终论文输出。Pipeline B (Pandoc) 用于快速草稿。**禁止使用 Pipeline C 用于正式输出**——HTML→DOCX 必然出现 XML 映射错误，导致引用和超链接不可用。
 
-```bash
-# Simple conversion
-pandoc paper.md -o paper.docx
+---
 
-# With citation processing
-pandoc paper.md --citeproc --bibliography=refs.bib -o paper.docx
+## Pipeline A: Python Direct v4（推荐用于最终输出）
 
-# With reference template (recommended for Chinese papers)
-pandoc paper.md \
-  --reference-doc=template.docx \
-  --citeproc \
-  --bibliography=refs.bib \
-  -o paper.docx
+直接解析 Markdown，用 python-docx 底层 XML 操作生成 DOCX。这是经过生产验证的 v4 方案。
+
+### 核心能力
+
+- **REF field codes**：`{ REF ref-N \h }` 实现 Ctrl+点击跳转（非 HYPERLINK）
+- **Word 自动编号**：通过自定义 `word/numbering.xml` 实现 `[1][2][3]` 格式
+- **多引用紧贴**：`[5][6]` 无逗号无空格
+- **完整中文排版**：宋体/TNR/黑体，14pt，1.5倍行距，0.74cm首行缩进
+
+### 生产参考脚本
+
+```
+F:\swxxx\scripts\build_docx_ref_codes.py
 ```
 
-### Reference Template (template.docx)
-
-Create a `template.docx` with your desired styles:
-
-1. Open a blank Word document
-2. Define styles:
-   - **Normal**: SimSun 14pt, 1.5 line spacing
-   - **Heading 1**: SimHei 16pt (三号)
-   - **Heading 2**: SimHei 15pt (小三)
-   - **Heading 3**: SimHei 14pt (四号)
-   - **Hyperlink**: Blue, underline (for citations)
-3. Save as `template.docx`
-
-Pandoc will apply these styles to the converted document.
-
-### Citation Processing
-
-```bash
-# Markdown with citations
-pandoc paper.md \
-  --citeproc \
-  --bibliography=refs.bib \
-  --csl=gb-t-7714-2015-numeric.csl \
-  -o paper.docx
-```
-
-**Citation styles**:
-- GB/T 7714-2015: `gb-t-7714-2015-numeric.csl`
-- Nature: `nature.csl`
-- APA: `apa.csl`
-
-Download CSL files from: https://github.com/citation-style-language/styles
-
-### Cross-References and Hyperlinks
-
-Pandoc preserves Markdown links as Word hyperlinks:
+### Markdown 源文件格式要求
 
 ```markdown
-See [Section 2](#section-2) for details.
+# 论文标题
 
-## Section 2 {#section-2}
+## 正文
 
-Content here.
-```
-
-This creates clickable cross-references in Word.
-
-### Advanced Options
-
-```bash
-# Full example with all options
-pandoc paper.md \
-  --reference-doc=template.docx \
-  --citeproc \
-  --bibliography=refs.bib \
-  --csl=gb-t-7714-2015-numeric.csl \
-  --number-sections \
-  --toc \
-  --toc-depth=3 \
-  --metadata title="论文标题" \
-  -o paper.docx
-```
-
-**Options explained**:
-- `--reference-doc`: Apply Word template styles
-- `--citeproc`: Process citations from `.bib` file
-- `--bibliography`: BibTeX file path
-- `--csl`: Citation style (CSL file)
-- `--number-sections`: Auto-number headings (1, 1.1, 1.1.1)
-- `--toc`: Generate table of contents
-- `--toc-depth`: TOC depth (1-6)
-- `--metadata`: Set document metadata
-
-### Filters and Lua Scripts
-
-For advanced formatting, use Pandoc Lua filters:
-
-```bash
-pandoc paper.md \
-  --lua-filter=chinese-formatting.lua \
-  -o paper.docx
-```
-
-Example `chinese-formatting.lua`:
-```lua
-function Para(elem)
-  -- Add first-line indent for Chinese paragraphs
-  return elem
-end
-```
-
-## Alternative: HTML Intermediate Pipeline
-
-**Use only when Pandoc is unavailable or specific HTML processing is needed.**
-
-```
-paper.md  →  paper.html (pandoc)  →  paper.docx (python-docx)
-```
-
-This pipeline has limitations:
-- May lose hyperlinks during HTML→DOCX conversion
-- Requires manual font/style application via python-docx
-- More complex, more error-prone
-
-## Two Pipelines Comparison
-
-| Feature | Pandoc Direct | HTML Intermediate |
-|---------|---------------|-------------------|
-| **Reliability** | ⭐⭐⭐⭐⭐ Industry standard | ⭐⭐⭐ May have issues |
-| **Citations** | ✅ Full `--citeproc` support | ⚠️ Manual processing |
-| **Cross-references** | ✅ Preserved as hyperlinks | ❌ Often broken |
-| **Templates** | ✅ `--reference-doc` | ⚠️ Manual styling |
-| **Formatting** | ✅ CSL + template | ⚠️ python-docx manual |
-| **Complexity** | ⭐ Single command | ⭐⭐⭐ Multi-step |
-| **Recommendation** | **Use by default** | Use only if Pandoc unavailable |
-
-### When to Use Which
-
-| Situation | Tool | Command |
-|-----------|------|---------|
-| **Default / Most cases** | **Pandoc** | `pandoc paper.md --reference-doc=template.docx -o paper.docx` |
-| Chinese paper with citations | **Pandoc** | `pandoc paper.md --citeproc --bibliography=refs.bib --csl=gb-t-7714-2015-numeric.csl -o paper.docx` |
-| Need cross-references | **Pandoc** | `pandoc paper.md --reference-doc=template.docx -o paper.docx` |
-| Pandoc not available | HTML pipeline | `python scripts/md2docx.py paper.md --pipeline html` |
-| Custom post-processing | HTML pipeline | Use python-docx for manual edits |
-
-## Citation Formatting (Critical)
-
-### Markdown Source Format
-
-```markdown
-正文中引用第一篇文献[1]，第二篇文献[2]表达上调。
+研究表明[1]，荞麦基因组[2][3]显示...
 
 ## 参考文献
 
-[1] 作者A,作者B,作者C,等.论文标题A[J].期刊名称,2026.
-[2] 作者D.论文标题B[D].大学名称,2025.
+1. LIN H, YAO Y. Haplotype-resolved genomes...[J]. Journal, 2025.
+2. 作者A,作者B. 论文标题[D]. 大学, 2024.
 ```
 
-**Note**: Use placeholder author/title names. Do NOT invent real-sounding
-Chinese names or paper titles — AI may treat them as actual citations.
+**关键规则**：
+- 引用标记：`[N]` 或 `[N][M]`（多引用紧贴）
+- 参考文献：**Markdown 有序列表** `1. ` `2. `（非 `[1]` 手打文本）
+- 加粗：`**文字**`
+- 图片：`图1 标题` 后跟 `文件：path/to/image.png`
 
-### Citation Marker Rules
+### v4 格式规范摘要
 
-- **Format**: `[1]`, `[2]`, etc. (square brackets + number)
-- **Style**: Superscript (上标)
-- **Font size**: Same as body text (14pt / 四号)
-- **Position**: Immediately after the cited content, before punctuation
+| 元素 | 规范 |
+|------|------|
+| 正文字体 | 宋体/Times New Roman，14pt |
+| 行距 | 1.5倍 |
+| 首行缩进 | 0.74cm |
+| 一级标题 | 黑体 15pt 加粗 |
+| 二级标题 | 黑体 14pt 加粗 |
+| 引用上标 | 14pt superscript |
+| 图片/表注 | 12pt 居中 |
+| 参考文献 | 12pt，Word 自动编号 `[1]` 格式 |
+| 页边距 | 上/下 1in，左/右 1.25in |
 
-### Word Cross-Reference (Pipeline B Recommended)
-
-**python-docx does NOT support Word bookmarks or cross-references natively.**
-
-For working hyperlinks in Word, use **Pipeline B** with Pandoc:
-
-```bash
-# Pandoc with citation processing and reference template
-pandoc paper.md \
-  --reference-doc=template.docx \
-  --from markdown \
-  --to docx \
-  -o paper.docx
-```
-
-The `template.docx` should define:
-- Hyperlink style (blue, underline)
-- Superscript style for citation markers
-
-Pandoc will automatically convert `[text](#anchor)` to Word hyperlinks.
-
-### Python-docx Limitations
-
-**What python-docx CAN do:**
-- Set superscript formatting
-- Set font size and family
-- Insert plain text `[1]` markers
-
-**What python-docx CANNOT do:**
-- Create Word bookmarks
-- Create Word cross-references
-- Create clickable hyperlinks that survive Word editing
-
-**Workaround**: Use Pipeline B (Pandoc direct) for documents that need
-working reference hyperlinks.
-
-### Example: Superscript Formatting Only
+### 实现核心：REF Field Code
 
 ```python
-from docx import Document
-from docx.shared import Pt
-
-def add_citation_marker(paragraph, ref_number):
-    """Add superscript citation marker [N] - no hyperlink"""
-    run = paragraph.add_run(f'[{ref_number}]')
-    run.font.superscript = True
-    run.font.size = Pt(14)  # Same as body text
-    run.font.name = 'Times New Roman'
-```
-
-This creates a superscript `[1]` but **without** clickable hyperlink.
-
-### Advanced: REF Field Codes (Clickable Cross-References)
-
-**For users who need clickable citations in python-docx output**, use Word's
-`REF` field codes. This is what Word's "Insert Cross-reference" feature uses.
-
-**Key insight**: `HYPERLINK \l` does NOT work reliably. Use `REF bookmark \h`.
-
-**Markdown Format Requirements:**
-
-```markdown
-## Body Text
-荞麦基因组研究[1]表明...多效唑处理[3]可显著降低株高...
-
-## 参考文献
-
-1. Lin Hao,Yao Yingjun,Sun Pengchuan,et al.Haplotype-resolved genomes...
-2. Zhang Kaixuan,He Ming,Fan Yu,et al.Resequencing of global Tartary...
-3. 作者C,作者D.论文标题C[J].期刊名,2026.
-```
-
-**CRITICAL**: Use Markdown ordered list (`1. 2. 3.`) for references, NOT `[1]`.
-This converts to Word's auto-numbering list, which is a true list style.
-
-**Implementation:**
-
-```python
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-
-_global_bookmark_id = 0
-
 def add_ref_field(paragraph, text, bookmark_name, superscript=False):
-    """
-    Add { REF bookmark_name \\h } Word field code.
-    This creates a clickable cross-reference that jumps to the bookmark.
-    """
-    # 1. Field begin
+    """插入 { REF bookmark_name \\h } Word field code"""
+    # 1. 插入 w:fldChar begin
     r1 = OxmlElement('w:r')
     fld_begin = OxmlElement('w:fldChar')
     fld_begin.set(qn('w:fldCharType'), 'begin')
-    fld_begin.set(qn('w:dirty'), 'true')  # Force Word to recalculate
+    fld_begin.set(qn('w:dirty'), 'true')
     r1.append(fld_begin)
     paragraph._element.append(r1)
-    
-    # 2. Field instruction: " REF bookmark_name \h "
+
+    # 2. 插入 instrText: " REF ref-1 \h "
     r2 = OxmlElement('w:r')
     instr = OxmlElement('w:instrText')
     instr.set(qn('xml:space'), 'preserve')
-    instr.text = f' REF {bookmark_name} \\h '  # Note: spaces required
+    instr.text = f' REF {bookmark_name} \\h '
     r2.append(instr)
     paragraph._element.append(r2)
-    
-    # 3. Field separator
-    r3 = OxmlElement('w:r')
-    fld_sep = OxmlElement('w:fldChar')
-    fld_sep.set(qn('w:fldCharType'), 'separate')
-    r3.append(fld_sep)
-    paragraph._element.append(r3)
-    
-    # 4. Display text (what user sees)
-    r4 = OxmlElement('w:r')
-    rpr = OxmlElement('w:rPr')
-    if superscript:
-        va = OxmlElement('w:vertAlign')
-        va.set(qn('w:val'), 'superscript')
-        rpr.append(va)
-    sz = OxmlElement('w:sz')
-    sz.set(qn('w:val'), '28')  # 14pt * 2
-    rpr.append(sz)
-    r4.append(rpr)
-    t = OxmlElement('w:t')
-    t.set(qn('xml:space'), 'preserve')
-    t.text = text
-    r4.append(t)
-    paragraph._element.append(r4)
-    
-    # 5. Field end
-    r5 = OxmlElement('w:r')
-    fld_end = OxmlElement('w:fldChar')
-    fld_end.set(qn('w:fldCharType'), 'end')
-    r5.append(fld_end)
-    paragraph._element.append(r5)
 
-def add_bookmark(paragraph, name):
-    """Add bookmark to paragraph (for cross-reference target)"""
-    global _global_bookmark_id
-    bid = str(_global_bookmark_id)
-    _global_bookmark_id += 1
-    
-    bm_start = OxmlElement('w:bookmarkStart')
-    bm_start.set(qn('w:id'), bid)
-    bm_start.set(qn('w:name'), name)
-    
-    bm_end = OxmlElement('w:bookmarkEnd')
-    bm_end.set(qn('w:id'), bid)
-    
-    # CRITICAL: bookmarkStart must come AFTER w:pPr
-    ppr = paragraph._element.find(qn('w:pPr'))
-    if ppr is not None:
-        idx = list(paragraph._element).index(ppr) + 1
-        paragraph._element.insert(idx, bm_start)
-    else:
-        paragraph._element.insert(0, bm_start)
-    paragraph._element.append(bm_end)
+    # 3. 插入 fldChar separate
+    ...
 
-def add_ref(text, ref_num):
-    """Add reference entry with Word auto-numbering and bookmark."""
-    p = doc.add_paragraph(style='List Number')  # Word built-in numbering
-    p.paragraph_format.line_spacing = 1.5
-    p.paragraph_format.first_line_indent = Cm(0)
-    
-    r = p.add_run(text)
-    set_run_font(r, 12)
-    
-    if ref_num:
-        add_bookmark(p, f'ref-{ref_num}')
+    # 4. 插入显示文本（上标 [N]）
+    r4 = make_simple_run(text, 14, superscript=True)
 
-# Parse Markdown ordered list in reference section:
-if in_refs:
-    m = re.match(r'^(\d+)\.\s+(.+)$', stripped)  # Match "1. Author..."
-    if m:
-        ref_num = m.group(1)
-        ref_text = m.group(2)
-        add_ref(ref_text, ref_num)
-
-# In body text, parse [1] and create REF field:
-parts = re.split(r'(\[\d+(?:,\d+)*\])', text)
-for part in parts:
-    if re.match(r'^\[\d+(?:,\d+)*\]$', part):
-        nums = re.findall(r'\d+', part)
-        for n in nums:
-            add_ref_field(p, f'[{n}]', f'ref-{n}', superscript=True)
+    # 5. 插入 fldChar end
+    ...
 ```
 
-**Post-processing: Enable field updates**
+### 实现核心：自定义编号格式
 
-After saving the DOCX, modify `word/settings.xml` to auto-update fields:
+通过替换 `word/numbering.xml` 实现 `[1]` 而非 `1.`：
+
+```xml
+<w:numbering xmlns:w="...">
+  <w:abstractNum w:abstractNumId="0">
+    <w:lvl w:ilvl="0">
+      <w:start w:val="1"/>
+      <w:numFmt w:val="decimal"/>
+      <w:lvlText w:val="[%1] "/>  <!-- 关键：编号格式 -->
+      <w:ind w:left="0" w:hanging="0"/>  <!-- 紧贴 -->
+    </w:lvl>
+  </w:abstractNum>
+  <w:num w:numId="1">
+    <w:abstractNumId w:val="0"/>
+  </w:num>
+</w:numbering>
+```
+
+### 生成后处理
 
 ```python
-import zipfile
-
-# Save document first
-doc.save('paper_tmp.docx')
-
-# Add updateFields flag
-with zipfile.ZipFile('paper_tmp.docx', 'r') as zin:
-    with zipfile.ZipFile('paper.docx', 'w', zipfile.ZIP_DEFLATED) as zout:
+# 注入 updateFields 标记
+with zipfile.ZipFile(tmp_path, 'r') as zin:
+    with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
             if item.filename == 'word/settings.xml':
@@ -387,140 +138,93 @@ with zipfile.ZipFile('paper_tmp.docx', 'r') as zin:
                         b'</w:settings>',
                         b'<w:updateFields w:val="true"/></w:settings>'
                     )
+            elif item.filename == 'word/numbering.xml':
+                data = CUSTOM_NUMBERING_XML
             zout.writestr(item, data)
-
-os.remove('paper_tmp.docx')
 ```
 
-**Verification in Word:**
-1. Select citation `[1]` → entire field should have gray background
-2. Press `Alt+F9` → shows `{ REF ref-1 \h }`
-3. `Ctrl+Click` → jumps to reference entry
-4. Reference list should be Word auto-numbered (right-click → "Adjust List Indents")
+### 文档元数据清理
 
-**Why REF + List Number works:**
-
-| Approach | Reference Format | Advantages | Disadvantages |
-|----------|------------------|------------|---------------|
-| Manual `[1]` text | Plain text `[1] Author...` | Simple | Not a real list, hard to adjust formatting |
-| Markdown ordered list | Word auto-numbering `1. Author...` | True list style, unified formatting | Requires correct parsing |
-
-**Reference**: Full working implementation at user's desktop files (verified v2).
-
-### Common Mistakes to Avoid
-
-❌ **Wrong**: Assuming python-docx supports bookmarks
 ```python
-# This does NOT work - python-docx has no bookmark API
-add_bookmark(paragraph, 'ref1')  # No such function
+doc.core_properties.author = ''
+doc.core_properties.last_modified_by = ''
+# 仅当用户明确指定作者时填写
 ```
 
-❌ **Wrong**: Using HTML `<sup>` tags in Markdown
-```markdown
-正文引用<sup>[1]</sup>  # HTML tags leak into Word
-```
+---
 
-❌ **Wrong**: Inventing realistic-sounding citations in examples
-```markdown
-[1] 李金哲,刘斯超.烯效唑对番茄...  # AI may treat as real citation
-```
+## Pipeline B: Pandoc Direct（用于快速草稿）
 
-✅ **Correct**: Use Pandoc for hyperlinks
-```bash
-pandoc paper.md --to docx -o paper.docx  # Preserves [text](#anchor)
-```
-
-✅ **Correct**: Use placeholder names in examples
-```markdown
-[1] 作者A,作者B.论文标题[J].期刊,2026.  # Clearly a placeholder
-```
-
-## Quick Start
+当不需要 REF field code、不需要自定义编号时的快速输出方案。
 
 ```bash
-# Recommended: Pandoc with template
-pandoc paper.md --reference-doc=template.docx -o paper.docx
+# 基本转换
+pandoc paper.md -o paper.docx
 
-# With citations
+# 带引用处理
+pandoc paper.md --citeproc --bibliography=refs.bib -o paper.docx
+
+# 带格式模板
 pandoc paper.md \
+  --reference-doc=template.docx \
   --citeproc \
   --bibliography=refs.bib \
   --csl=gb-t-7714-2015-numeric.csl \
-  --reference-doc=template.docx \
+  --number-sections \
   -o paper.docx
-
-# Fallback: HTML pipeline (if Pandoc unavailable)
-python scripts/md2docx.py paper.md -o paper.docx --pipeline html
 ```
 
-## Formatting Rules (Template-based)
+**注意**：Pandoc 不支持 REF field code，引用为静态文本超链接。
 
-| Element | Chinese | English |
-|---------|---------|---------|
-| Body font | SimSun (宋体) | Times New Roman |
-| Heading font | SimHei (黑体) | Times New Roman |
-| Size | 14pt body, 15pt heading | Same |
-| Line spacing | 1.5× | Same |
-| Reference list | 14pt, hanging indent | Same |
+---
 
-## Workflow Tips
+## Pipeline C: HTML Intermediate（仅紧急兜底）
 
-- **Use Pandoc by default** — most reliable for academic documents
-- Create a `template.docx` with your institution's style requirements
-- For citation-heavy papers, use `--citeproc` with `.bib` file
-- Download CSL files from https://github.com/citation-style-language/styles
-- Always verify output: check fonts, page numbers, reference formatting
-- Use HTML pipeline only when Pandoc is unavailable
+```bash
+# Pandoc MD→HTML
+pandoc paper.md -o paper.html
 
-## Dependencies
-
-- `pandoc` — Document converter (primary tool, **required**)
-- `python-docx` — DOCX generation (for HTML pipeline fallback)
-- `markdown` — MD→HTML conversion (for HTML pipeline)
-
-## Document Metadata Rules
-
-### Author Information
-
-**Default behavior**: Remove author metadata from generated DOCX/PPTX files.
-
-python-docx and python-pptx automatically insert default author names
-(e.g., "python-docx" or system username). This should be cleared:
-
-```python
-from docx import Document
-
-doc = Document()
-# ... add content ...
-
-# Clear default author metadata before saving
-doc.core_properties.author = ''
-doc.core_properties.last_modified_by = ''
-
-doc.save('paper.docx')
+# Python HTML→DOCX
+python scripts/html2docx.py paper.html -o paper.docx
 ```
 
-**Exception**: If the user explicitly specifies an author name, use it:
+**已知问题**：python-docx 无法创建 Word 书签和交叉引用，HTML 中的超链接在转换后可能断裂。**仅当 Pandoc 和 python-docx 低层 XML 都不可用时使用。**
 
-```python
-# Only if user says "作者写成张三"
-doc.core_properties.author = '张三'
+---
+
+## 三管线决策树
+
+```
+需要最终论文输出（REF field code + 自动编号）？
+  ├─ 是 → Pipeline A (Python Direct v4)
+  └─ 需要快速草稿？
+       ├─ 需要引用处理 → Pipeline B (Pandoc + citeproc)
+       └─ 纯文本 → Pipeline B (Pandoc 基本转换)
+
+Pandoc 和 python-docx 都不可用？
+  └─ Pipeline C (HTML 中间) — 但不保证引用可用
 ```
 
-**When to ask**: If a tool or template requires author information, ask the
-user first. Do NOT use placeholder names or system defaults.
+---
 
-### Same Rule for PPTX
+## 依赖
+
+| 管线 | 依赖 | 安装 |
+|------|------|------|
+| A | python-docx | `pip install python-docx` |
+| B | pandoc | https://pandoc.org/installing.html |
+| C | pandoc + python-docx | 两者都需要 |
+
+### 工具检查
 
 ```python
-from pptx import Presentation
+# 检查 Pipeline A
+python -c "from docx import Document; print('OK')"
 
-prs = Presentation()
-# ... add slides ...
+# 检查 Pipeline B
+pandoc --version
 
-# Clear author metadata
-prs.core_properties.author = ''
-prs.core_properties.last_modified_by = ''
-
-prs.save('presentation.pptx')
+# 检查 CSL 文件
+ls gb-t-7714-2015-numeric.csl
+# 下载：https://github.com/citation-style-language/styles
 ```

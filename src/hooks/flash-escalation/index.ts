@@ -57,7 +57,13 @@ export function createFlashEscalationHook(_ctx: PluginInput) {
 
     'chat.params': async (
       input: { sessionID: string; model: { id?: string; providerID?: string } },
-      output: { temperature: number; topP: number; topK: number; maxOutputTokens: number | undefined; options: Record<string, unknown> },
+      output: {
+        temperature: number;
+        topP: number;
+        topK: number;
+        maxOutputTokens: number | undefined;
+        options: Record<string, unknown>;
+      },
     ): Promise<void> => {
       const state = ensureSession(input.sessionID);
       if (state.escalated) return;

@@ -46,15 +46,11 @@ const FOREIGN_PROVIDER_PATTERNS = [
 const THINKING_LANGUAGE_MARKER = '[THINKING_LANGUAGE_INJECTED]';
 
 function isChineseProvider(model: string): boolean {
-  return CN_PROVIDER_PATTERNS.some((p) =>
-    model.toLowerCase().includes(p),
-  );
+  return CN_PROVIDER_PATTERNS.some((p) => model.toLowerCase().includes(p));
 }
 
 function isForeignProvider(model: string): boolean {
-  return FOREIGN_PROVIDER_PATTERNS.some((p) =>
-    model.toLowerCase().includes(p),
-  );
+  return FOREIGN_PROVIDER_PATTERNS.some((p) => model.toLowerCase().includes(p));
 }
 
 function isPrimarilyChinese(text: string): boolean {
@@ -107,11 +103,13 @@ export function createThinkingLanguageHook() {
 
     // Hook 2: Capture model from chat.params
     'chat.params': async (
-      input: { model?: { providerID?: string; id?: string }; sessionID?: string },
+      input: {
+        model?: { providerID?: string; id?: string };
+        sessionID?: string;
+      },
       _output: unknown,
     ) => {
-      const modelId =
-        input.model?.id || input.model?.providerID;
+      const modelId = input.model?.id || input.model?.providerID;
       if (modelId && input.sessionID) {
         modelBySession.set(input.sessionID, modelId);
       }
@@ -136,9 +134,7 @@ export function createThinkingLanguageHook() {
       if (userLang !== 'zh') return; // Non-Chinese user → no injection
 
       // Chinese user → decide based on model
-      const model = sessionID
-        ? modelBySession.get(sessionID)
-        : undefined;
+      const model = sessionID ? modelBySession.get(sessionID) : undefined;
 
       if (model && isForeignProvider(model)) {
         // Foreign model → English thinking for cost efficiency

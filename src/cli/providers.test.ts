@@ -6,11 +6,7 @@ import { generateLiteConfig, MODEL_MAPPINGS } from './providers';
 describe('providers', () => {
   test('MODEL_MAPPINGS includes supported providers', () => {
     const keys = Object.keys(MODEL_MAPPINGS);
-    expect(keys.sort()).toEqual([
-      'ds-first',
-      'openai',
-      'openai-go',
-    ]);
+    expect(keys.sort()).toEqual(['ds-first', 'openai', 'openai-go']);
   });
 
   test('generateLiteConfig defaults to free and includes all presets', () => {
@@ -46,7 +42,9 @@ describe('providers', () => {
     });
 
     const agents = (config.presets as any)['ds-first'];
-    expect(agents.orchestrator.model).toBe(MODEL_MAPPINGS['ds-first'].orchestrator.model);
+    expect(agents.orchestrator.model).toBe(
+      MODEL_MAPPINGS['ds-first'].orchestrator.model,
+    );
     expect(agents.orchestrator.variant).toBe('max');
     expect(agents.oracle.model).toBe('opencode-go/deepseek-v4-pro');
     expect(agents.oracle.variant).toBe('high');

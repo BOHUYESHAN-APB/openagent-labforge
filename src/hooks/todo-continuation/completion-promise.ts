@@ -55,7 +55,8 @@ export async function detectCompletionPromise(
     }
 
     const scopedMessages =
-      typeof options.sinceMessageIndex === 'number' && options.sinceMessageIndex >= 0
+      typeof options.sinceMessageIndex === 'number' &&
+      options.sinceMessageIndex >= 0
         ? messages.slice(options.sinceMessageIndex)
         : messages;
 
@@ -68,7 +69,11 @@ export async function detectCompletionPromise(
       if (!msg.parts) continue;
 
       for (const part of msg.parts) {
-        if (part.type === 'text' && part.text && COMPLETION_PATTERN.test(part.text)) {
+        if (
+          part.type === 'text' &&
+          part.text &&
+          COMPLETION_PATTERN.test(part.text)
+        ) {
           return { found: true, atIndex: i };
         }
       }
@@ -90,5 +95,7 @@ export async function detectCompletionPromise(
  * This function detects that signal for the failure handler.
  */
 export function isReworkVerdict(verdict: string): boolean {
-  return verdict === 'reject' || verdict === 'needs_user' || verdict === 'blocked';
+  return (
+    verdict === 'reject' || verdict === 'needs_user' || verdict === 'blocked'
+  );
 }

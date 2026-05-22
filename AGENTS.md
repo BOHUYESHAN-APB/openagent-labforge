@@ -260,7 +260,7 @@ Before working on any task, read `codemap.md` to understand:
 
 For deep work on a specific folder, also read that folder's `codemap.md`.
 
-## Best Practices (v1.1.0+)
+## Best Practices (v1.0.24+)
 
 ### Command System Architecture
 
@@ -295,7 +295,7 @@ Tool descriptions are the **only** way LLMs decide when and how to use tools. Fo
 3. **Provide context**: Explain when to use the tool
 4. **One source of truth**: Don't repeat instructions in prompts — put them in the tool description
 
-### Auto-Review System (v1.1.0)
+### Auto-Review System (v1.0.24)
 
 The auto-review system now supports **two modes**:
 
@@ -311,10 +311,10 @@ The auto-review system now supports **two modes**:
 
 **Design principle**: Give the LLM the choice. It knows the task complexity better than we do.
 
-### MCP Server Architecture (v1.1.0)
+### MCP Server Architecture (v1.0.24)
 
-**Before v1.1.0**: Shared server logic (first window works, subsequent windows fail)
-**After v1.1.0**: Independent servers (each window gets its own MCP server instance)
+**Before v1.0.24**: Shared server logic (first window works, subsequent windows fail)
+**After v1.0.24**: Independent servers (each window gets its own MCP server instance)
 
 **Why the change**: MCP stdio transport is 1:1 — cannot share across processes. Attempting to share causes connection failures in subsequent windows.
 
@@ -330,7 +330,7 @@ When executing `/ol-start-work` in a **new window** (isolated context):
 
 **Common mistake**: LLM claims it "cannot find the plan" → Actually, the plan path is in the injected context. The LLM should read the context, not ask the user.
 
-**Fix**: Enhanced hook context with explicit "Cross-window state recovery" section (v1.1.0).
+**Fix**: Enhanced hook context with explicit "Cross-window state recovery" section (v1.0.24).
 
 ### Context Pressure Management
 
@@ -354,7 +354,7 @@ When executing `/ol-start-work` in a **new window** (isolated context):
 
 The delete guard intercepts destructive commands in these tools:
 - bash, shell, exec, execute_command, powershell
-- run_command, system, cmd, terminal (v1.1.0+)
+- run_command, system, cmd, terminal (v1.0.24+)
 
 **How it works**:
 1. Detects dangerous patterns (rm -rf, Remove-Item, etc.)

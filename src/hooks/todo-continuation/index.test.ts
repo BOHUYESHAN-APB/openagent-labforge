@@ -1563,9 +1563,7 @@ describe('createTodoContinuationHook', () => {
         .calls[1][0];
       expect(call.body.parts[0].text).toContain('[Auto-review');
       expect(call.body.parts[0].text).toContain('Review Options');
-      expect(call.body.parts[0].text).toContain(
-        'Option A: Self-Review',
-      );
+      expect(call.body.parts[0].text).toContain('Option A: Self-Review');
     });
 
     test('review approve disables auto for completed batch', async () => {
