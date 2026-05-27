@@ -87,6 +87,18 @@ All config files support **JSONC** (JSON with Comments):
 
 Presets can also be switched at runtime without restarting using the `/ol-preset` command. See [Preset Switching](preset-switching.md) for details.
 
+**Built-in presets** (available without configuration):
+
+| Preset | Command | Description |
+|--------|---------|-------------|
+| `free` | `/ol-preset-free` | No binding — use current OpenCode model (default) |
+| `ds-first` | `/ol-preset-ds-first` | DeepSeek V4 Pro main, Flash workers, MiMo vision |
+| `openai` | `/ol-preset-openai` | GPT-5.4 daily, 5.5 for reviews only |
+| `openai-go` | `/ol-preset-openai-go` | Dual sub: GPT review + DS workers |
+| `mimo` | `/ol-preset-mimo` | Xiaomi MiMo V2.5 (pro + flash) |
+| `mimo-ds` | `/ol-preset-mimo-ds` | MiMo + DeepSeek combined |
+| `custom` | `/ol-preset-custom` | Per-agent model from config |
+
 | `presets` | object | — | Named preset configurations |
 |-----------|--------|---|-----------------------------|
 | `presets.<name>.<agent>.model` | string | — | Model ID in `provider/model` format |
@@ -133,7 +145,7 @@ Notes:
 | `council.timeout` | number | `180000` | Per-councillor timeout (ms) |
 | `council.councillor_execution_mode` | string | `"parallel"` | Run councillors in `parallel` or `serial`; use `serial` for single-model setups |
 | `council.councillor_retries` | number | `3` | Max retries per councillor on empty provider response (0–5) |
-| `todoContinuation.maxContinuations` | integer | `5` | Max consecutive auto-continuations before stopping (1–50) |
+| `todoContinuation.maxContinuations` | integer | `100` | Max consecutive auto-continuations before stopping (1–500) |
 | `todoContinuation.cooldownMs` | integer | `3000` | Delay in ms before auto-continuing — gives user time to abort (0–30000) |
 | `todoContinuation.autoEnable` | boolean | `false` | Automatically enable auto-continue when session has enough todos |
 | `todoContinuation.autoEnableThreshold` | integer | `4` | Number of todos that triggers auto-enable (only used when `autoEnable` is true, 1–50) |

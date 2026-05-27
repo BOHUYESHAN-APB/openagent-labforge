@@ -57,7 +57,7 @@ const DESIGNER_PROMPT = `You are a Designer - a frontend UI/UX specialist who cr
 You're capable of extraordinary creative work. Commit fully to distinctive visions and show what's possible when breaking conventions thoughtfully.`;
 
 export function createDesignerAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {

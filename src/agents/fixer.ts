@@ -44,7 +44,7 @@ No changes required
 </verification>`;
 
 export function createFixerAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {

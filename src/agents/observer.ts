@@ -43,7 +43,7 @@ const OBSERVER_PROMPT = `You are Observer — a visual analysis specialist.
 `;
 
 export function createObserverAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {

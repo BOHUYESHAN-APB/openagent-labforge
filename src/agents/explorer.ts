@@ -31,7 +31,7 @@ Concise answer to the question
 `;
 
 export function createExplorerAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {

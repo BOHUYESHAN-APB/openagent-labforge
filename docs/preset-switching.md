@@ -25,6 +25,20 @@ and verify against explicit goals. It does not replace or overlap `/ol-preset`.
 | `/ol-preset` | List available presets (highlights the active one) |
 | `/ol-preset <name>` | Switch to the named preset immediately |
 
+## Built-in Presets
+
+The following presets are available without configuration:
+
+| Preset | Command | Description |
+|--------|---------|-------------|
+| `free` | `/ol-preset-free` | No binding — use current OpenCode model (default) |
+| `ds-first` | `/ol-preset-ds-first` | DeepSeek V4 Pro main, Flash workers, MiMo vision |
+| `openai` | `/ol-preset-openai` | GPT-5.4 daily, 5.5 for reviews only |
+| `openai-go` | `/ol-preset-openai-go` | Dual sub: GPT review + DS workers |
+| `mimo` | `/ol-preset-mimo` | Xiaomi MiMo V2.5 (pro + flash) |
+| `mimo-ds` | `/ol-preset-mimo-ds` | MiMo + DeepSeek combined |
+| `custom` | `/ol-preset-custom` | Per-agent model from config |
+
 ## How It Works
 
 1. Define named presets in `extendai-lab.jsonc` under the `presets` field

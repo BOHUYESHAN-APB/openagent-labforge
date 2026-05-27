@@ -23,7 +23,7 @@ const LIBRARIAN_PROMPT = `You are Librarian - a research specialist for codebase
 `;
 
 export function createLibrarianAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {

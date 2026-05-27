@@ -100,7 +100,7 @@ describe('agent alias backward compatibility', () => {
 });
 
 describe('fixer agent fallback', () => {
-  test('fixer inherits librarian model when no fixer config provided', () => {
+  test('fixer inherits main agent model when no fixer config provided', () => {
     const config: PluginConfig = {
       agents: {
         librarian: { model: 'librarian-custom-model' },
@@ -110,7 +110,10 @@ describe('fixer agent fallback', () => {
     const agents = createAgents(config);
     const fixer = agents.find((a) => a.name === 'fixer');
     const librarian = agents.find((a) => a.name === 'librarian');
-    expect(fixer?.config.model).toBe(librarian?.config.model);
+    // With DEFAULT_MODELS all undefined, fixer inherits main agent model (undefined)
+    // not librarian's model
+    expect(fixer?.config.model).toBeUndefined();
+    expect(librarian?.config.model).toBe('librarian-custom-model');
   });
 
   test('fixer uses its own model when explicitly configured', () => {
@@ -391,9 +394,9 @@ describe('getAgentConfigs', () => {
     const configs = getAgentConfigs();
     expect(configs.orchestrator).toBeDefined();
     expect(configs.explorer).toBeDefined();
-    // orchestrator has no hardcoded default model; resolved at runtime via
-    // chat.message hook when _modelArray is configured, or left to the user
-    expect(configs.explorer.model).toBeDefined();
+    // With DEFAULT_MODELS all undefined, sub-agents inherit main agent model
+    // via OpenCode native inheritance (next.model ?? parentModel)
+    expect(configs.explorer.model).toBeUndefined();
   });
 
   test('includes description in SDK config', () => {

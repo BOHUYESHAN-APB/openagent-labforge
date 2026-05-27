@@ -211,6 +211,8 @@ Five preset modes. **Default is `free`** — no model binding, no recommendation
 | `/ol-preset-ds-first` | `ds-first` | DS V4 Pro main, Flash workers, MiMo vision — OpenCode Go $10/mo |
 | `/ol-preset-openai` | `openai` | GPT-5.4 daily, 5.5 for reviews only — ChatGPT Plus/Pro |
 | `/ol-preset-openai-go` | `openai-go` | Dual sub: GPT review + DS workers — best of both |
+| `/ol-preset-mimo` | `mimo` | Xiaomi MiMo V2.5 (pro + flash) — new |
+| `/ol-preset-mimo-ds` | `mimo-ds` | MiMo + DeepSeek combined — new |
 | `/ol-preset-custom` | `custom` | Per-agent model + variant from `extendai-lab.jsonc` |
 
 **Per-agent strategy** (ds-first example):
@@ -380,6 +382,32 @@ bun run check:ci   # Lint + format + organize imports
 ---
 
 ## Changelog
+
+### v1.1.2 (2026-05-27)
+
+**Sub-agent Model Inheritance Fix**
+
+- **Sub-agent model inheritance**: `DEFAULT_MODELS` all set to `undefined` so sub-agents inherit the main agent's model via OpenCode's native inheritance (`next.model ?? parentModel`). Previously, hardcoded defaults broke inheritance.
+- **Preset command interception**: `/ol-preset-ds-first` and other preset subcommands no longer leak output as prompts to the LLM. Model switching happens silently via `client.config.update()`.
+- **Preset JSON syntax**: removed trailing `}` errors in `deepseek.json`, `openai.json`, `mixed.json`.
+- **Xiaomi MiMo presets**: new `mimo` and `mimo-ds` presets for Xiaomi MiMo V2.5 models.
+- **Preset file auto-loading**: `switchPreset()` now loads from preset files when the preset is not in `config.presets`.
+- **Type safety**: Fixed subagent factory type signatures (`model: string` → `string | undefined`).
+- **Path resolution**: Fixed `loadPresetFromFile` to use `import.meta.url` instead of `__dirname`.
+
+### v1.1.1 (2026-05-22)
+
+**Academic Paper Mode & Architecture Overhaul**
+
+- **Academic Paper Mode**: New skill system with CNKI parser, citation matching, MD→DOCX pipeline, LaTeX templates, and local citation vector database.
+- **Storm-breaker hook**: Sliding-window duplicate tool call suppression to prevent infinite loops.
+- **Prefix-stability hook**: SHA-256 system prompt fingerprint drift detection.
+- **Schema-sanitize hook**: JSON Schema cleanup for DeepSeek strict mode.
+- **Flash-escalation hook**: Failure-count-based auto model escalation.
+- **Delegation model v2**: Three-mode subagent execution (blocking/fire-and-forget/batch) with shared-prefix snapshot protocol.
+- **Review system v2**: Dual-mode review (main-agent self-review + @oracle delegation).
+- **Dashboard**: Web UI v1-v4 with skills viewer, plan renderer, theme toggle, schema editor.
+- **MCP server**: Independent per-window instances via `StdioServerTransport`.
 
 ### v1.0.24 (2026-05-22)
 

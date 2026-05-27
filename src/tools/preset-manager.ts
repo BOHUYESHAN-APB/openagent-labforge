@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { PluginInput } from '@opencode-ai/plugin';
 import type {
   AgentOverrideConfig,
@@ -35,6 +36,9 @@ const PRESET_SUBCOMMANDS = {
  * Returns the preset object or null if not found.
  */
 function loadPresetFromFile(presetName: string): Preset | null {
+  // ESM-compatible __dirname
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
   // Search in multiple locations
   const searchDirs = [
     path.join(__dirname, '..', 'config', 'presets'),

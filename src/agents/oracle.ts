@@ -25,7 +25,7 @@ const ORACLE_PROMPT = `You are Oracle - a strategic technical advisor and code r
 `;
 
 export function createOracleAgent(
-  model: string,
+  model: string | undefined,
   customPrompt?: string,
   customAppendPrompt?: string,
 ): AgentDefinition {
