@@ -360,39 +360,36 @@ export function createAgents(config?: PluginConfig): AgentDefinition[] {
   const subagentPolicy = config?.subagentPolicy;
   const allowedCustomSubagents = new Set(subagentPolicy?.allowedAgents ?? []);
 
-  // TEMP: If fixer has no config, inherit from librarian's model to avoid breaking
-  // existing users who don't have fixer in their config yet
+  // Model resolution: per-agent override > modelPreferences > inherit (undefined).
+  // When undefined is returned, OpenCode's native model inheritance kicks in —
+  // the sub-agent uses whatever model the main agent is using.
   const getModelForAgent = (
     name: SubagentName | PrimaryAgentName,
   ): string | string[] | undefined => {
-    // 1. Check if model preferences are enabled
+    // 1. Per-agent override from config (highest priority)
+    const override = getAgentOverride(config, name);
+    if (override?.model) {
+      const m = override.model;
+      if (typeof m === 'string') return m;
+      if (Array.isArray(m) && m.length > 0) {
+        const first = m[0];
+        return typeof first === 'string' ? first : first.id;
+      }
+    }
+
+    // 2. modelPreferences (global or per-agent)
     const prefs = config?.modelPreferences;
     if (prefs?.enabled) {
-      // Per-agent override takes precedence
       if (prefs.perAgent?.[name]) {
         return prefs.perAgent[name];
       }
-      // Then customModel (global default)
       if (prefs.customModel) {
         return prefs.customModel;
       }
-      // Fall through to defaults
     }
 
-    // 2. Existing logic: fixer inherits from librarian
-    if (name === 'fixer' && !getAgentOverride(config, 'fixer')?.model) {
-      const librarianOverride = getAgentOverride(config, 'librarian')?.model;
-      let librarianModel: string | undefined;
-      if (Array.isArray(librarianOverride)) {
-        const first = librarianOverride[0];
-        librarianModel = typeof first === 'string' ? first : first?.id;
-      } else {
-        librarianModel = librarianOverride;
-      }
-      return librarianModel ?? (DEFAULT_MODELS.librarian as string);
-    }
-    // Subagents always have a defined default model; cast is safe here
-    return DEFAULT_MODELS[name];
+    // 3. Inherit from main agent (return undefined → OpenCode native)
+    return undefined;
   };
 
   // 1. Create all primary agents (orchestrator + new primary agents)

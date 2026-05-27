@@ -5,6 +5,39 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
+## v1.2.0 — 2026-05-27
+
+### Fixed / 修复
+
+- **Sub-agent model inheritance**: `DEFAULT_MODELS` all set to `undefined`
+  so sub-agents inherit the main agent's model via OpenCode's native
+  inheritance (`next.model ?? parentModel`). Previously, hardcoded defaults
+  like `openai/gpt-5.4-mini` broke inheritance — a main agent using MiMo
+  would spawn sub-agents on Gemini.
+- 子 agent 模型继承修复：`DEFAULT_MODELS` 全部设为 `undefined`，子 agent
+  通过 OpenCode 原生机制继承主 agent 模型。之前硬编码的默认值会破坏继承。
+
+- **Preset command interception**: `/ol-preset-ds-first` and other preset
+  subcommands no longer leak output as prompts to the LLM. Model switching
+  happens silently via `client.config.update()`.
+- 预设指令拦截修复：`/ol-preset-ds-first` 等指令不再将输出作为提示词
+  发送给 LLM。模型切换通过 `client.config.update()` 静默执行。
+
+- **Preset JSON syntax**: removed trailing `}` errors in `deepseek.json`,
+  `openai.json`, `mixed.json`.
+- 预设 JSON 语法修复：移除多余的 `}`。
+
+### Added / 新增
+
+- **Xiaomi MiMo presets**: new `mimo` and `mimo-ds` presets for Xiaomi
+  MiMo V2.5 models (`mimo-v2.5-pro`, `mimo-v2.5-flash`).
+- 小米 MiMo 预设：新增 `mimo` 和 `mimo-ds` 预设，支持 MiMo V2.5 系列模型。
+
+- **Preset file auto-loading**: `switchPreset()` now loads from preset files
+  (`src/config/presets/{name}.json`) when the preset is not in `config.presets`.
+- 预设文件自动加载：`switchPreset()` 在 `config.presets` 中找不到时自动从
+  预设文件加载。
+
 ## v1.1.1 — 2026-05-22
 
 ### Breaking Changes / 破坏性变更

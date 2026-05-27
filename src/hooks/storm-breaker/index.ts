@@ -1,5 +1,5 @@
-import type { PluginInput } from '@opencode-ai/plugin';
 import { createHash } from 'node:crypto';
+import type { PluginInput } from '@opencode-ai/plugin';
 
 /**
  * Storm breaker: detects and suppresses repeat-loop tool calls.

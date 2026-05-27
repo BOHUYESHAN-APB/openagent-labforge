@@ -1,5 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { sanitizeSchema, type JsonValue } from './index';
+import { type JsonValue, sanitizeSchema } from './index';
 
 /**
  * Schema sanitize hook: sanitizes tool JSON Schemas before

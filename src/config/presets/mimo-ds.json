@@ -1,0 +1,45 @@
+{
+  "orchestrator": [
+    "xiaomi-token-plan-cn/mimo-v2.5-pro",
+    "deepseek/deepseek-chat"
+  ],
+  "deep-worker": [
+    "xiaomi-token-plan-cn/mimo-v2.5-pro",
+    "deepseek/deepseek-chat"
+  ],
+  "prometheus": [
+    "xiaomi-token-plan-cn/mimo-v2.5-pro",
+    "deepseek/deepseek-chat"
+  ],
+  "atlas": ["xiaomi-token-plan-cn/mimo-v2.5-pro", "deepseek/deepseek-chat"],
+  "bio-orchestrator": [
+    "xiaomi-token-plan-cn/mimo-v2.5-pro",
+    "deepseek/deepseek-chat"
+  ],
+  "explorer": [
+    "xiaomi-token-plan-cn/mimo-v2.5-flash",
+    "deepseek/deepseek-chat"
+  ],
+  "librarian": [
+    "xiaomi-token-plan-cn/mimo-v2.5-flash",
+    "deepseek/deepseek-chat"
+  ],
+  "oracle": ["xiaomi-token-plan-cn/mimo-v2.5-pro", "deepseek/deepseek-chat"],
+  "designer": [
+    "xiaomi-token-plan-cn/mimo-v2.5-flash",
+    "deepseek/deepseek-chat"
+  ],
+  "fixer": ["xiaomi-token-plan-cn/mimo-v2.5-flash", "deepseek/deepseek-chat"],
+  "council": ["xiaomi-token-plan-cn/mimo-v2.5-flash", "deepseek/deepseek-chat"],
+  "councillor": [
+    "xiaomi-token-plan-cn/mimo-v2.5-flash",
+    "deepseek/deepseek-chat"
+  ],
+  "metis": ["xiaomi-token-plan-cn/mimo-v2.5-flash", "deepseek/deepseek-chat"],
+  "momus": ["xiaomi-token-plan-cn/mimo-v2.5-pro", "deepseek/deepseek-chat"],
+  "multimodal-looker": [
+    "xiaomi-token-plan-cn/mimo-v2.5-flash",
+    "deepseek/deepseek-chat"
+  ],
+  "reviewer": ["xiaomi-token-plan-cn/mimo-v2.5-pro", "deepseek/deepseek-chat"]
+}

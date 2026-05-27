@@ -1,5 +1,5 @@
-import type { PluginInput } from '@opencode-ai/plugin';
 import { createHash } from 'node:crypto';
+import type { PluginInput } from '@opencode-ai/plugin';
 
 /**
  * Prefix cache stability monitor.

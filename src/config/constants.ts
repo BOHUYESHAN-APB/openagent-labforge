@@ -115,29 +115,31 @@ export const SUBAGENT_DELEGATION_RULES: Record<AgentName, readonly string[]> = {
   reviewer: [],
 };
 
-// Default models for each agent
-// orchestrator is undefined so its model is fully resolved at runtime via priority fallback
+// Default models for each agent.
+// ALL undefined by default — sub-agents inherit the main agent's model
+// via OpenCode's native inheritance. Only set explicitly when a preset
+// or user config overrides a specific agent.
 export const DEFAULT_MODELS: Record<AgentName, string | undefined> = {
   // Primary agents
   orchestrator: undefined,
   'deep-worker': undefined,
-  prometheus: 'openai/gpt-5.5',
-  atlas: 'openai/gpt-5.5',
+  prometheus: undefined,
+  atlas: undefined,
   'bio-orchestrator': undefined,
-  // Subagents
-  oracle: 'openai/gpt-5.5',
-  librarian: 'openai/gpt-5.4-mini',
-  explorer: 'openai/gpt-5.4-mini',
-  designer: 'openai/gpt-5.4-mini',
-  fixer: 'openai/gpt-5.4-mini',
-  observer: 'openai/gpt-5.4-mini',
-  council: 'openai/gpt-5.4-mini',
-  councillor: 'openai/gpt-5.4-mini',
+  // Subagents — all inherit from main agent by default
+  oracle: undefined,
+  librarian: undefined,
+  explorer: undefined,
+  designer: undefined,
+  fixer: undefined,
+  observer: undefined,
+  council: undefined,
+  councillor: undefined,
   // New subagents
-  metis: 'openai/gpt-5.4-mini',
-  momus: 'openai/gpt-5.5',
-  'multimodal-looker': 'openai/gpt-5.4-mini',
-  reviewer: 'openai/gpt-5.5',
+  metis: undefined,
+  momus: undefined,
+  'multimodal-looker': undefined,
+  reviewer: undefined,
 };
 
 // Polling configuration

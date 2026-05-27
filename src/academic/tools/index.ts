@@ -4,8 +4,8 @@
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
+export type { Environment, ToolStatus } from './check.js';
 export { checkTools, detectEnvironment } from './check.js';
-export type { ToolStatus, Environment } from './check.js';
 export { handleAcademicBuildDocx } from './handlers.js';
 
 /**

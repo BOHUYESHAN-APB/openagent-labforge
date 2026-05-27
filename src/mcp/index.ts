@@ -2,6 +2,7 @@ import type { McpName, WebsearchConfig } from '../config';
 import { normalizeLocalMcpCommand } from '../utils/mcp-command-normalizer';
 import { bioNext, uniprot } from './bioinformatics';
 import { context7 } from './context7';
+import { extendaiLab } from './extendai-lab';
 import {
   arxiv_mcp,
   browser_puppeteer,
@@ -11,7 +12,6 @@ import {
   paper_search_mcp,
   semantic_scholar_fastmcp,
 } from './extended';
-import { extendaiLab } from './extendai-lab';
 import { grep_app } from './grep-app';
 import type { McpConfig } from './types';
 import { createWebsearchConfig, websearch } from './websearch';

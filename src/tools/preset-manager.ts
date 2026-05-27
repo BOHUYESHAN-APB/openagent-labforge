@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { PluginInput } from '@opencode-ai/plugin';
 import type {
   AgentOverrideConfig,
@@ -23,8 +25,40 @@ const PRESET_SUBCOMMANDS = {
   'ol-preset-ds-first': 'ds-first',
   'ol-preset-openai': 'openai',
   'ol-preset-openai-go': 'openai-go',
+  'ol-preset-mimo': 'mimo',
+  'ol-preset-mimo-ds': 'mimo-ds',
   'ol-preset-custom': 'custom',
 } as const;
+
+/**
+ * Load a preset from the presets directory (src/config/presets/{name}.json).
+ * Returns the preset object or null if not found.
+ */
+function loadPresetFromFile(presetName: string): Preset | null {
+  // Search in multiple locations
+  const searchDirs = [
+    path.join(__dirname, '..', 'config', 'presets'),
+    path.join(process.cwd(), '.extendai-lab', 'presets'),
+    path.join(
+      process.env.HOME || process.env.USERPROFILE || '',
+      '.extendai-lab',
+      'presets',
+    ),
+  ];
+
+  for (const dir of searchDirs) {
+    const filePath = path.join(dir, `${presetName}.json`);
+    if (fs.existsSync(filePath)) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        return JSON.parse(content) as Preset;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }
+  return null;
+}
 
 /**
  * Creates a preset manager for the /ol-preset slash command.
@@ -62,7 +96,10 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       PRESET_SUBCOMMANDS[input.command as keyof typeof PRESET_SUBCOMMANDS];
     if (subcommandPreset) {
       output.parts.length = 0;
-      await switchPreset(subcommandPreset, config.presets ?? {}, output);
+      await switchPreset(subcommandPreset, config.presets ?? {});
+      // Don't add anything to output.parts — the model change happens
+      // silently via client.config.update(). Writing to output.parts
+      // would leak as a prompt to the LLM.
       return;
     }
 
@@ -80,7 +117,7 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
     const presets = config.presets ?? {};
 
     if (!arg) {
-      // List available presets
+      // List available presets — this IS intentional user-facing output
       output.parts.push(createInternalAgentTextPart(formatPresetList(presets)));
       return;
     }
@@ -96,8 +133,10 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       return;
     }
 
-    // Switch to named preset
-    await switchPreset(arg, presets, output);
+    // Switch to named preset — no output to LLM, model change is silent
+    await switchPreset(arg, presets);
+    // Clear output.parts to prevent any leaked content
+    output.parts.length = 0;
   }
 
   /**
@@ -145,6 +184,14 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       'Switch preset: openai-go — dual OpenAI + Go subscription optimal mix',
     );
     ensureCommand(
+      'ol-preset-mimo',
+      'Switch preset: mimo — Xiaomi MiMo V2.5 (pro + flash)',
+    );
+    ensureCommand(
+      'ol-preset-mimo-ds',
+      'Switch preset: mimo-ds — Xiaomi MiMo + DeepSeek combined',
+    );
+    ensureCommand(
       'ol-preset-custom',
       'Switch preset: custom — user-defined per-agent model config',
     );
@@ -152,31 +199,25 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
 
   /**
    * Switch to the given preset name by calling client.config.update().
+   * Does NOT write to output.parts — the model change is silent.
    */
   async function switchPreset(
     presetName: string,
     presets: Record<string, Preset>,
-    output: { parts: Array<{ type: string; text?: string }> },
   ): Promise<void> {
-    const preset = presets[presetName];
+    // Try config.presets first, then load from preset files
+    let preset = presets[presetName];
     if (!preset) {
-      const available = Object.keys(presets);
-      const hint =
-        available.length > 0
-          ? `Available presets: ${available.join(', ')}`
-          : 'No presets configured. Define presets in extendai-lab.jsonc.';
-      output.parts.push(
-        createInternalAgentTextPart(
-          `Preset "${presetName}" not found. ${hint}`,
-        ),
-      );
-      return;
+      // Try loading from preset files (src/config/presets/{name}.json)
+      const loadedPreset = loadPresetFromFile(presetName);
+      if (loadedPreset) {
+        preset = loadedPreset;
+      } else {
+        return;
+      }
     }
 
     // Build the agent config overrides from the preset.
-    // Each preset value is { agentName: AgentOverrideConfig }.
-    // We need to convert to SDK AgentConfig format:
-    // { agent: { agentName: { model, temperature, ... } } }
     const agentUpdates: Record<
       string,
       {
@@ -195,9 +236,6 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
     }
 
     // Build reset updates for agents in the old preset but not the new one.
-    // The SDK accumulates client.config.update() calls, so switching from
-    // Preset A to Preset B leaks A's variant/temperature/options on agents
-    // that aren't in B. Reset them to the config-file baseline values.
     const currentRuntimePreset = getActiveRuntimePreset();
     const resetUpdates: Record<
       string,
@@ -212,14 +250,9 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       const oldPreset = config.presets[currentRuntimePreset];
       for (const rawName of Object.keys(oldPreset)) {
         const resolvedOld = AGENT_ALIASES[rawName] ?? rawName;
-        if (resolvedOld in agentUpdates) continue; // new preset handles this agent
+        if (resolvedOld in agentUpdates) continue;
         const baseline = config.agents?.[resolvedOld];
         if (baseline) {
-          // Note: mapOverrideToAgentConfig(baseline) only emits fields
-          // the baseline defines. Scalar fields (variant/temperature/options)
-          // not in baseline are NOT cleared here. The config() hook in
-          // src/index.ts handles complete cleanup using the previous
-          // preset's override keys to drive deletion.
           resetUpdates[resolvedOld] = mapOverrideToAgentConfig(baseline);
         }
       }
@@ -228,11 +261,6 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
     const hasAgentUpdates = Object.keys(agentUpdates).length > 0;
     const allUpdates = { ...resetUpdates, ...agentUpdates };
     if (!hasAgentUpdates) {
-      output.parts.push(
-        createInternalAgentTextPart(
-          `Preset "${presetName}" is empty (no agent overrides defined).`,
-        ),
-      );
       return;
     }
 
@@ -245,35 +273,8 @@ export function createPresetManager(ctx: PluginInput, config: PluginConfig) {
       });
 
       activePreset = presetName;
-
-      const summaryParts: string[] = [];
-      for (const [name, cfg] of Object.entries(agentUpdates)) {
-        const parts: string[] = [name];
-        if (cfg.model) parts.push(`model: ${cfg.model}`);
-        if (cfg.variant) parts.push(`variant: ${cfg.variant}`);
-        if (cfg.temperature !== undefined)
-          parts.push(`temp: ${cfg.temperature}`);
-        if (cfg.options) parts.push('options: yes');
-        summaryParts.push(parts.join(' → '));
-      }
-      if (Object.keys(resetUpdates).length > 0) {
-        summaryParts.push(
-          `Reset to baseline: ${Object.keys(resetUpdates).join(', ')}`,
-        );
-      }
-
-      output.parts.push(
-        createInternalAgentTextPart(
-          `Switched to preset "${presetName}":\n${summaryParts.join('\n')}`,
-        ),
-      );
     } catch (err) {
       rollbackRuntimePreset(previousPreset);
-      output.parts.push(
-        createInternalAgentTextPart(
-          `Failed to switch preset "${presetName}": ${String(err)}`,
-        ),
-      );
     }
   }
 

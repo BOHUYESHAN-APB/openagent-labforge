@@ -5,6 +5,7 @@ export { createChatHeadersHook } from './chat-headers';
 export { createContextPressureHook } from './context-pressure';
 export { createDelegateTaskRetryHook } from './delegate-task-retry';
 export { createFilterAvailableSkillsHook } from './filter-available-skills';
+export { createFlashEscalationHook } from './flash-escalation';
 export {
   ForegroundFallbackManager,
   isRateLimitError,
@@ -15,10 +16,9 @@ export { createMemoryCommandsHook } from './memory-commands';
 export { createModeDetectorHook } from './mode-detector';
 export { createPhaseReminderHook } from './phase-reminder';
 export { createPostFileToolNudgeHook } from './post-file-tool-nudge';
-export { createStartWorkHook } from './start-work';
-export { createTaskSessionManagerHook } from './task-session-manager';
-export { createFlashEscalationHook } from './flash-escalation';
 export { createPrefixStabilityHook } from './prefix-stability';
 export { createSchemaSanitizeHook } from './schema-sanitize/hook';
+export { createStartWorkHook } from './start-work';
 export { createStormBreakerHook } from './storm-breaker';
+export { createTaskSessionManagerHook } from './task-session-manager';
 export { createTodoContinuationHook } from './todo-continuation';

@@ -13,9 +13,9 @@
  *   const result = await parsePdf('paper.pdf');
  */
 
-import { crossSpawn } from '../../utils/compat.js';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { crossSpawn } from '../../utils/compat.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = join(__dirname, 'scripts');

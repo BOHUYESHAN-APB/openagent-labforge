@@ -2,23 +2,24 @@
  * extendai-lab MCP Server + Web Dashboard v3
  * Shared server: one process across OpenCode windows via lock file.
  */
-import {
-  readFile,
-  readdir,
-  writeFile,
-  mkdir,
-  appendFile,
-} from 'node:fs/promises';
+
 import {
   existsSync,
-  readFileSync,
   readdirSync,
-  writeFileSync,
+  readFileSync,
   statSync,
   unlinkSync,
+  writeFileSync,
 } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import {
+  appendFile,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+} from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -27,23 +28,23 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import {
-  renderDashboard,
-  renderSkillsList,
-  renderSkillDetail,
-  renderDocs,
-  renderDocFile,
-  renderPlans,
-  renderPlanFile,
-  renderConfigEditor,
-  renderHtmlViewer,
-  renderHtmlPage,
-  renderError,
-} from './pages';
-import {
   academicTools,
   checkTools,
   handleAcademicBuildDocx,
 } from '../academic/tools/index.js';
+import {
+  renderConfigEditor,
+  renderDashboard,
+  renderDocFile,
+  renderDocs,
+  renderError,
+  renderHtmlPage,
+  renderHtmlViewer,
+  renderPlanFile,
+  renderPlans,
+  renderSkillDetail,
+  renderSkillsList,
+} from './pages';
 
 // ── Constants ─────────────────────────────────────────
 const PORT = 25569;
@@ -60,7 +61,7 @@ const _getPluginRoot = () => {
     return process.cwd();
   }
 };
-let pluginRoot: string = _getPluginRoot();
+const pluginRoot: string = _getPluginRoot();
 let currentTheme = 'dark';
 let logFilePath = '';
 

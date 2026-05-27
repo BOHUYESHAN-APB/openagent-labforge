@@ -16,5 +16,3 @@
   "multimodal-looker": ["deepseek/deepseek-chat", "deepseek/deepseek-chat"],
   "reviewer": ["deepseek/deepseek-chat", "deepseek/deepseek-chat"]
 }
-  }
-}

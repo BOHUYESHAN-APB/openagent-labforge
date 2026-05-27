@@ -1,15 +1,15 @@
-import type { PluginInput } from '@opencode-ai/plugin';
-import { tool } from '@opencode-ai/plugin/tool';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { PluginInput } from '@opencode-ai/plugin';
+import { tool } from '@opencode-ai/plugin/tool';
 import {
   createInternalAgentTextPart,
   log,
   SLIM_INTERNAL_INITIATOR_MARKER,
 } from '../../utils';
+import { createCrashRecovery } from './crash-recovery';
 import { createTodoHygiene } from './todo-hygiene';
 import { detectUserIntent, shouldSkipContinuation } from './user-intent';
-import { createCrashRecovery } from './crash-recovery';
 
 const HOOK_NAME = 'todo-continuation';
 const COMMAND_NAME = 'ol-auto-continue';

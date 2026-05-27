@@ -126,11 +126,9 @@ describe('createPresetManager', () => {
         output,
       );
 
+      // Silent — no output to LLM
       const text = getOutputText(output);
-      expect(text).toContain('Switched to preset "cheap"');
-      expect(text).toContain('orchestrator');
-      expect(text).toContain('anthropic/claude-3.5-haiku');
-      expect(text).toContain('explorer');
+      expect(text).toBe('');
       expect(ctx.client.config.update).toHaveBeenCalledTimes(1);
       expect(ctx.client.config.update).toHaveBeenCalledWith({
         body: {
@@ -215,9 +213,9 @@ describe('createPresetManager', () => {
         output,
       );
 
+      // Silent — no output to LLM
       const text = getOutputText(output);
-      expect(text).toContain('not found');
-      expect(text).toContain('cheap');
+      expect(text).toBe('');
       expect(ctx.client.config.update).not.toHaveBeenCalled();
     });
 
@@ -232,9 +230,9 @@ describe('createPresetManager', () => {
         output,
       );
 
+      // Silent — no output to LLM
       const text = getOutputText(output);
-      expect(text).toContain('not found');
-      expect(text).toContain('No presets configured');
+      expect(text).toBe('');
     });
 
     test('handles config.update error gracefully', async () => {
@@ -255,9 +253,9 @@ describe('createPresetManager', () => {
         output,
       );
 
+      // Silent — no output to LLM
       const text = getOutputText(output);
-      expect(text).toContain('Failed to switch preset');
-      expect(text).toContain('Server unavailable');
+      expect(text).toBe('');
     });
 
     test('shows empty preset message when preset has no valid overrides', async () => {
@@ -278,7 +276,7 @@ describe('createPresetManager', () => {
       );
 
       const text = getOutputText(output);
-      expect(text).toContain('empty');
+      expect(text).toBe('');
       expect(ctx.client.config.update).not.toHaveBeenCalled();
     });
 
@@ -334,7 +332,7 @@ describe('createPresetManager', () => {
       );
 
       const text = getOutputText(output);
-      expect(text).toContain('Switched to preset "cheap"');
+      expect(text).toBe('');
       expect(ctx.client.config.update).toHaveBeenCalledTimes(1);
     });
 
@@ -399,7 +397,7 @@ describe('createPresetManager', () => {
       );
 
       const text = getOutputText(output);
-      expect(text).toContain('Switched to preset "mixed"');
+      expect(text).toBe('');
       // Only orchestrator and oracle should be forwarded
       expect(ctx.client.config.update).toHaveBeenCalledWith({
         body: {
@@ -431,7 +429,7 @@ describe('createPresetManager', () => {
       );
 
       const text = getOutputText(output);
-      expect(text).toContain('Switched to preset "fallback"');
+      expect(text).toBe('');
       expect(ctx.client.config.update).toHaveBeenCalledWith({
         body: {
           agent: {
@@ -497,8 +495,7 @@ describe('createPresetManager', () => {
       );
 
       const text = getOutputText(output);
-      expect(text).toContain('variant: thinking');
-      expect(text).toContain('options: yes');
+      expect(text).toBe('');
     });
 
     test('tracks active preset after switch', async () => {
@@ -511,13 +508,13 @@ describe('createPresetManager', () => {
       };
       const manager = createPresetManager(ctx, config);
 
-      // Switch to cheap
+      // Switch to cheap — silent, no output to LLM
       const output1 = createOutput();
       await manager.handleCommandExecuteBefore(
         { command: 'preset', sessionID: 's1', arguments: 'cheap' },
         output1,
       );
-      expect(getOutputText(output1)).toContain('Switched');
+      expect(getOutputText(output1)).toBe('');
 
       // List presets should now show cheap as active
       const output2 = createOutput();
@@ -527,13 +524,13 @@ describe('createPresetManager', () => {
       );
       expect(getOutputText(output2)).toContain('cheap ← active');
 
-      // Switch to powerful
+      // Switch to powerful — silent, no output to LLM
       const output3 = createOutput();
       await manager.handleCommandExecuteBefore(
         { command: 'preset', sessionID: 's1', arguments: 'powerful' },
         output3,
       );
-      expect(getOutputText(output3)).toContain('Switched to preset "powerful"');
+      expect(getOutputText(output3)).toBe('');
 
       // List should now show powerful as active
       const output4 = createOutput();
@@ -749,7 +746,8 @@ describe('createPresetManager', () => {
 
       // Active preset should still be "cheap" after error
       expect(getActiveRuntimePreset()).toBe('cheap');
-      expect(getOutputText(output2)).toContain('Failed to switch preset');
+      // No output to LLM — preset switching is silent
+      expect(getOutputText(output2)).toBe('');
 
       // Cleanup
       setActiveRuntimePreset(null);

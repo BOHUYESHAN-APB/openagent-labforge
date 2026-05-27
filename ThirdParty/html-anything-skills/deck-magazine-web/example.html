@@ -931,7 +931,7 @@ strong { font-weight: 500; }
 <div class='deck-progress'><div class='bar'></div></div>
 
 <script>
-(function () {
+(() => {
   var deck = document.getElementById('deck');
   if (!deck) return;
   var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
@@ -942,12 +942,12 @@ strong { font-weight: 500; }
 
   deck.style.width = (total * 100) + 'vw';
 
-  slides.forEach(function (s, i) {
+  slides.forEach((s, i) => {
     var b = document.createElement('button');
     b.className = 'dot';
     b.dataset.i = i;
     b.setAttribute('aria-label', 'Slide ' + (i + 1));
-    b.onclick = function () { go(i); };
+    b.onclick = () => { go(i); };
     nav.appendChild(b);
   });
 
@@ -963,8 +963,8 @@ strong { font-weight: 500; }
     /* load-bearing: .slide.active is read by Open Design's host bridge
        (src/runtime/srcdoc.ts findActiveByClass) to drive the slide
        counter. No CSS targets it — do not remove. */
-    slides.forEach(function (s, i) { s.classList.toggle('active', i === idx); });
-    nav.querySelectorAll('.dot').forEach(function (d, i) {
+    slides.forEach((s, i) => { s.classList.toggle('active', i === idx); });
+    nav.querySelectorAll('.dot').forEach((d, i) => {
       d.classList.toggle('active', i === idx);
     });
     if (bar) bar.style.width = (((idx + 1) / total) * 100) + '%';
@@ -974,7 +974,7 @@ strong { font-weight: 500; }
     if (lock) return;
     applySlide(n);
     lock = true;
-    setTimeout(function () { lock = false; }, 700);
+    setTimeout(() => { lock = false; }, 700);
   }
 
   /* ESC overview */
@@ -992,7 +992,7 @@ strong { font-weight: 500; }
     ov.appendChild(head);
     var grid = document.createElement('div');
     grid.className = 'ov-grid';
-    slides.forEach(function (s, i) {
+    slides.forEach((s, i) => {
       var card = document.createElement('div');
       card.className = 'ov-card' + (i === idx ? ' active' : '');
       var thumb = document.createElement('div');
@@ -1007,7 +1007,7 @@ strong { font-weight: 500; }
         (s.dataset.slideKind || '') + '</span>';
       card.appendChild(thumb);
       card.appendChild(label);
-      card.onclick = function () { toggleOverview(); go(i); };
+      card.onclick = () => { toggleOverview(); go(i); };
       grid.appendChild(card);
     });
     ov.appendChild(grid);
@@ -1019,7 +1019,7 @@ strong { font-weight: 500; }
     else { ov.style.display = 'none'; }
   }
 
-  addEventListener('keydown', function (e) {
+  addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); toggleOverview(); return; }
     if (overviewOn) return;
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -1034,7 +1034,7 @@ strong { font-weight: 500; }
   });
 
   var wheelTO = null, wheelAcc = 0;
-  addEventListener('wheel', function (e) {
+  addEventListener('wheel', (e) => {
     if (overviewOn) return;
     wheelAcc += e.deltaY + e.deltaX;
     if (Math.abs(wheelAcc) > 60) {
@@ -1042,14 +1042,14 @@ strong { font-weight: 500; }
       wheelAcc = 0;
     }
     clearTimeout(wheelTO);
-    wheelTO = setTimeout(function () { wheelAcc = 0; }, 150);
+    wheelTO = setTimeout(() => { wheelAcc = 0; }, 150);
   }, { passive: true });
 
   var tx = 0, ty = 0;
-  addEventListener('touchstart', function (e) {
+  addEventListener('touchstart', (e) => {
     tx = e.touches[0].clientX; ty = e.touches[0].clientY;
   }, { passive: true });
-  addEventListener('touchend', function (e) {
+  addEventListener('touchend', (e) => {
     if (overviewOn) return;
     var dx = e.changedTouches[0].clientX - tx;
     var dy = e.changedTouches[0].clientY - ty;
@@ -1070,7 +1070,7 @@ strong { font-weight: 500; }
           deck transform onto the active index for class changes that
           don't come through a message — chiefly the bridge's
           restoreInitialSlide path, which calls setActive() directly. */
-  addEventListener('message', function (e) {
+  addEventListener('message', (e) => {
     var data = e && e.data;
     if (!data || data.type !== 'od:slide') return;
     if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
@@ -1082,7 +1082,7 @@ strong { font-weight: 500; }
   });
 
   if (typeof MutationObserver !== 'undefined') {
-    var syncFromActiveClass = function () {
+    var syncFromActiveClass = () => {
       for (var i = 0; i < slides.length; i++) {
         if (slides[i].classList && slides[i].classList.contains('active') && i !== idx) {
           applySlide(i);
@@ -1091,7 +1091,7 @@ strong { font-weight: 500; }
       }
     };
     var mo = new MutationObserver(syncFromActiveClass);
-    slides.forEach(function (s) { mo.observe(s, { attributes: true, attributeFilter: ['class'] }); });
+    slides.forEach((s) => { mo.observe(s, { attributes: true, attributeFilter: ['class'] }); });
   }
 
   applySlide(0);
