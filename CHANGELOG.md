@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
-## v1.2.0 — 2026-05-27
+## v1.1.2 — 2026-05-27
 
 ### Fixed / 修复
 
