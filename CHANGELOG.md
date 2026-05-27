@@ -5,6 +5,22 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
+## v1.1.3 — 2026-05-27
+
+### Added / 新增
+
+- **Session Goal**: `/goal` command for setting session objectives that keep
+  todos, delegation, and verification aligned. Supports manual goals, interview
+  integration, and goal inheritance for child sessions.
+- 会话目标：`/goal` 命令用于设置会话目标，保持 todo、委派和验证对齐。
+  支持手动目标、面试集成和子会话目标继承。
+
+- **Subtask**: `/subtask` tool for running bounded child workers. Creates a
+  separate orchestrator session for focused work, returns structured summary
+  to the parent session.
+- 子任务：`/subtask` 工具用于运行有界子任务。创建独立的协调器会话执行
+  聚焦工作，返回结构化摘要到父会话。
+
 ## v1.1.2 — 2026-05-27
 
 ### Fixed / 修复

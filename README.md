@@ -264,6 +264,8 @@ See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for full referenc
 | `/ol-subagents-UM/M/F/C/MO` | Policy | View subagent policy guidance |
 | `/ol-preset [name]` | Config | Switch model/provider preset |
 | `/ol-karpathy [task]` | Guidance | Apply Karpathy coding guidelines |
+| `/goal [objective]` | Session | Set or show session goal |
+| `/subtask [task]` | Worker | Run bounded child worker |
 
 ---
 
