@@ -65,6 +65,7 @@ import {
   createPostFileToolNudgeHook,
   createPrefixStabilityHook,
   createSchemaSanitizeHook,
+  createSessionGoalHook,
   createStartWorkHook,
   createStormBreakerHook,
   createTaskSessionManagerHook,
@@ -91,9 +92,11 @@ import {
   createMediaInventoryTool,
   createPresetManager,
   createSavePlanTool,
+  createSubtaskTool,
   createWebfetchTool,
   loadAgentInstructionsTool,
 } from './tools';
+import { createSubtaskState } from './tools/subtask/state';
 import { detectBioTaskTool } from './tools/detect-bio-task.js';
 import {
   createDisplayNameMentionRewriter,
@@ -377,6 +380,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let presetManager: ReturnType<typeof createPresetManager>;
   let startWorkHook: ReturnType<typeof createStartWorkHook>;
   let memoryCommandsHook: ReturnType<typeof createMemoryCommandsHook>;
+  let sessionGoalHook: ReturnType<typeof createSessionGoalHook>;
+  let subtaskState: ReturnType<typeof createSubtaskState>;
   let councilTools: Record<string, unknown>;
   let webfetch: ReturnType<typeof createWebfetchTool>;
   let rewriteDisplayNameMentions: ReturnType<
@@ -688,6 +693,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     presetManager = createPresetManager(ctx, config);
     startWorkHook = createStartWorkHook(ctx);
     memoryCommandsHook = createMemoryCommandsHook(ctx, checkpointManager);
+    sessionGoalHook = createSessionGoalHook(ctx, config, {
+      getAgentName: (sessionID) => sessionAgentMap.get(sessionID),
+    });
+    subtaskState = createSubtaskState();
 
     toolCount =
       Object.keys(councilTools).length +
@@ -767,6 +776,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       ast_grep_replace,
       detect_bio_task: detectBioTaskTool,
       load_agent_instructions: loadAgentInstructionsTool,
+      subtask: createSubtaskTool(ctx, subtaskState),
       ...(bioSkillsManager
         ? { load_bio_skills: createLoadBioSkillsTool(bioSkillsManager) }
         : {}),
@@ -1103,6 +1113,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       interviewManager.registerCommand(opencodeConfig);
       presetManager.registerCommand(opencodeConfig);
       memoryCommandsHook.registerCommands(opencodeConfig);
+      sessionGoalHook.registerCommand(opencodeConfig);
       registerSubagentPolicyCommand(
         opencodeConfig as { command?: Record<string, unknown> },
       );
@@ -1298,6 +1309,12 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         },
       );
 
+      sessionGoalHook.handleEvent(
+        input as {
+          event: { type: string; properties?: Record<string, unknown> };
+        },
+      );
+
       await taskSessionManagerHook.event(
         input as {
           event: {
@@ -1409,6 +1426,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       );
 
       await startWorkHook.handleCommandExecuteBefore(
+        effectiveInput,
+        typedOutput,
+      );
+
+      await sessionGoalHook.handleCommandExecuteBefore(
         effectiveInput,
         typedOutput,
       );
@@ -1538,6 +1560,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       }
 
       await todoContinuationHook.handleSystemTransform(input, output);
+
+      sessionGoalHook.handleSystemTransform(input, output);
 
       await phaseReminderHook['experimental.chat.system.transform'](
         input,

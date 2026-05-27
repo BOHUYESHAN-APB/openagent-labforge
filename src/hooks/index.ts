@@ -18,6 +18,7 @@ export { createPhaseReminderHook } from './phase-reminder';
 export { createPostFileToolNudgeHook } from './post-file-tool-nudge';
 export { createPrefixStabilityHook } from './prefix-stability';
 export { createSchemaSanitizeHook } from './schema-sanitize/hook';
+export { createSessionGoalHook } from './session-goal';
 export { createStartWorkHook } from './start-work';
 export { createStormBreakerHook } from './storm-breaker';
 export { createTaskSessionManagerHook } from './task-session-manager';

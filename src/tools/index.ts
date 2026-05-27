@@ -7,3 +7,4 @@ export type { PresetManager } from './preset-manager';
 export { createPresetManager } from './preset-manager';
 export { createSavePlanTool } from './save-plan';
 export { createWebfetchTool } from './smartfetch';
+export { createSubtaskTool } from './subtask';
