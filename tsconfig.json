@@ -10,7 +10,13 @@
     "skipLibCheck": true,
     "types": ["bun-types"],
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "paths": {
+      "@oh-my-opencode/utils": ["./src/shared/utils-shim.ts"],
+      "@oh-my-opencode/model-core": ["./src/shared/model-core-shim.ts"],
+      "@oh-my-openagent/utils": ["./src/shared/utils-shim.ts"],
+      "@oh-my-openagent/model-core": ["./src/shared/model-core-shim.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

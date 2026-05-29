@@ -4,8 +4,8 @@ import {
   isRetryableModelError,
   selectFallbackProviderWithCache,
   shouldRetryError,
-} from "@oh-my-opencode/model-core"
-import type { ErrorInfo } from "@oh-my-opencode/model-core"
+} from "./model-core-shim"
+import type { ErrorInfo } from "./model-core-shim"
 import * as connectedProvidersCache from "./connected-providers-cache"
 
 export type { ErrorInfo }

@@ -1820,3 +1820,4 @@ export type {
   TmuxLayout,
 } from './config';
 export type { RemoteMcpConfig } from './mcp';
+export * from './features/team-mode/index.js';
