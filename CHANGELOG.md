@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 本文件记录项目的重要变更。由于 `v1.0.5` 之前主要是内部开发、迁移和
 checkpoint 式迭代，早期版本条目为基于现有提交历史和功能阶段整理的补记。
 
+## v1.1.4 — 2026-05-27
+
+### Fixed / 修复
+
+- **MCP server port conflict**: Changed from fixed port 25569 to dynamic
+  port (OS-assigned). Multiple OpenCode windows can now run simultaneously
+  without port conflicts.
+- MCP 服务器端口冲突修复：从固定端口 25569 改为动态端口（系统分配）。
+  多个 OpenCode 窗口现在可以同时运行而不会发生端口冲突。
+
 ## v1.1.3 — 2026-05-27
 
 ### Added / 新增
