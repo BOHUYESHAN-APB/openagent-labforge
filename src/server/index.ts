@@ -47,7 +47,10 @@ import {
 } from './pages';
 
 // ── Constants ─────────────────────────────────────────
-const PORT = 25569;
+// Use port 0 to let the OS assign an available port dynamically.
+// This prevents port conflicts when multiple OpenCode windows run
+// simultaneously. The actual port is logged after server starts.
+const PORT = 0;
 const HOST = '127.0.0.1';
 const OPENCODE_LOG_DIR = resolve(homedir(), '.local', 'share', 'opencode');
 const PLUGIN_LOG_DIR = resolve(OPENCODE_LOG_DIR, 'extendai-lab');
@@ -445,10 +448,13 @@ async function main() {
   if (ri >= 0 && args[ri + 1]) workspaceRoot = resolve(args[ri + 1]);
   workspaceRoot = process.env.EXTENDAI_WORKSPACE ?? workspaceRoot;
 
+  // Track actual port assigned by the OS
+  let actualPort = PORT;
+
   // ── Start independent server (no sharing) ───────────
   // Each OpenCode window gets its own MCP server instance.
   // stdio transport is 1:1, so sharing doesn't work.
-  await srvLog(`Starting independent server on port ${PORT}`);
+  await srvLog('Starting independent server with dynamic port');
   const skills = scanAllSkills();
   await srvLog(`Scanned ${skills.length} skills`);
 
@@ -475,7 +481,7 @@ async function main() {
             text: JSON.stringify({
               workspace: workspaceRoot,
               skills: skills.length,
-              port: PORT,
+              port: actualPort,
             }),
           },
         ],
@@ -502,13 +508,14 @@ async function main() {
 
     return {
       content: [
-        { type: 'text' as const, text: `Dashboard: http://${HOST}:${PORT}` },
+        { type: 'text' as const, text: `Dashboard: http://${HOST}:${actualPort}` },
       ],
     };
   });
 
-  Bun.serve({ port: PORT, hostname: HOST, fetch: handleRequest });
-  await srvLog(`HTTP: http://${HOST}:${PORT}`);
+  const server = Bun.serve({ port: PORT, hostname: HOST, fetch: handleRequest });
+  actualPort = server.port ?? 0;
+  await srvLog(`HTTP: http://${HOST}:${actualPort}`);
 
   const trans = new StdioServerTransport();
   await mcp.connect(trans);
