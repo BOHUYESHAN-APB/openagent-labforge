@@ -1,139 +1,31 @@
-import { mkdir, readdir, stat, chmod } from "node:fs/promises"
+// Team registry paths
+import { join } from "node:path"
 import { homedir } from "node:os"
-import path from "node:path"
 
-import type { TeamModeConfig } from "../../../config/schema/team-mode"
-import { log } from "../../../shared/logger"
-
-type TeamSpecEntry = {
-  name: string
-  scope: "project" | "user"
-  path: string
+export function getTeamBaseDir(): string {
+  return join(homedir(), ".omo", "teams")
 }
 
-function getTeamDirectory(baseDir: string, teamName: string, scope: "user" | "project", projectRoot?: string): string {
-  if (scope === "project") {
-    return path.join(projectRoot ?? "", ".omo", "teams", teamName)
-  }
-
-  return path.join(baseDir, "teams", teamName)
+export function getTeamDir(teamName: string): string {
+  return join(getTeamBaseDir(), teamName)
 }
 
-export function resolveBaseDir(config: TeamModeConfig): string {
-  return config.base_dir ?? path.join(homedir(), ".omo")
+export function getTeamConfigPath(teamName: string): string {
+  return join(getTeamDir(teamName), "config.json")
 }
 
-export function getTeamSpecPath(
-  baseDir: string,
-  teamName: string,
-  scope: "user" | "project",
-  projectRoot?: string,
-): string {
-  return path.join(getTeamDirectory(baseDir, teamName, scope, projectRoot), "config.json")
+export function getTeamStatePath(teamName: string): string {
+  return join(getTeamDir(teamName), "state.json")
 }
 
-export function getRuntimeStateDir(baseDir: string, teamRunId: string): string {
-  return path.join(baseDir, "runtime", teamRunId)
+export function getTeamMailboxDir(teamName: string): string {
+  return join(getTeamDir(teamName), "mailbox")
 }
 
-export function getInboxDir(baseDir: string, teamRunId: string, memberName: string): string {
-  return path.join(baseDir, "runtime", teamRunId, "inboxes", memberName)
+export function getTeamTasklistPath(teamName: string): string {
+  return join(getTeamDir(teamName), "tasklist.jsonl")
 }
 
-export function getTasksDir(baseDir: string, teamRunId: string): string {
-  return path.join(baseDir, "runtime", teamRunId, "tasks")
-}
-
-export function getWorktreeDir(baseDir: string, teamRunId: string, memberName: string): string {
-  return path.join(baseDir, "worktrees", teamRunId, memberName)
-}
-
-async function readTeamSpecDirectories(directoryPath: string, scope: "project" | "user"): Promise<TeamSpecEntry[]> {
-  try {
-    const entries = await readdir(directoryPath, { withFileTypes: true })
-
-    return entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => ({
-        name: entry.name,
-        scope,
-        path: path.resolve(directoryPath, entry.name, "config.json"),
-      }))
-  } catch {
-    return []
-  }
-}
-
-export async function discoverTeamSpecs(
-  config: TeamModeConfig,
-  projectRoot: string,
-): Promise<Array<{ name: string; scope: "project" | "user"; path: string }>> {
-  const baseDir = resolveBaseDir(config)
-  const projectTeamsDir = path.resolve(projectRoot, ".omo", "teams")
-  const userTeamsDir = path.resolve(baseDir, "teams")
-
-  const [projectTeamSpecs, userTeamSpecs] = await Promise.all([
-    readTeamSpecDirectories(projectTeamsDir, "project"),
-    readTeamSpecDirectories(userTeamsDir, "user"),
-  ])
-
-  const discoveredTeamSpecs: TeamSpecEntry[] = [...projectTeamSpecs]
-  const projectTeamNames = new Set(projectTeamSpecs.map((entry) => entry.name))
-
-  for (const userTeamSpec of userTeamSpecs) {
-    if (projectTeamNames.has(userTeamSpec.name)) {
-      const projectTeamSpec = projectTeamSpecs.find((entry) => entry.name === userTeamSpec.name)
-      if (projectTeamSpec) {
-        log("team-spec collision", {
-          event: "team-spec-collision",
-          teamName: userTeamSpec.name,
-          projectPath: projectTeamSpec.path,
-          userPath: userTeamSpec.path,
-        })
-      }
-      continue
-    }
-
-    discoveredTeamSpecs.push(userTeamSpec)
-  }
-
-  return discoveredTeamSpecs
-}
-
-async function safeChmod(directoryPath: string, mode: number): Promise<void> {
-  try {
-    await chmod(directoryPath, mode)
-  } catch (error) {
-    const errnoError = error as NodeJS.ErrnoException
-    if (errnoError?.code === "EPERM" || errnoError?.code === "ENOTSUP" || errnoError?.code === "EINVAL") {
-      log("team-mode: chmod refused on base directory; continuing with existing permissions", {
-        path: directoryPath,
-        code: errnoError.code,
-        syscall: errnoError.syscall,
-      })
-      return
-    }
-    throw error
-  }
-}
-
-export async function ensureBaseDirs(baseDir: string): Promise<void> {
-  const directories = [
-    baseDir,
-    path.join(baseDir, "teams"),
-    path.join(baseDir, "runtime"),
-    path.join(baseDir, "worktrees"),
-  ]
-
-  for (const directoryPath of directories) {
-    await mkdir(directoryPath, { recursive: true, mode: 0o700 })
-    await safeChmod(directoryPath, 0o700)
-  }
-
-  await Promise.all(directories.map(async (directoryPath) => {
-    const directoryStat = await stat(directoryPath)
-    if ((directoryStat.mode & 0o777) !== 0o700) {
-      await safeChmod(directoryPath, 0o700)
-    }
-  }))
+export function getTeamWorktreeDir(teamName: string, memberName: string): string {
+  return join(getTeamDir(teamName), "worktrees", memberName)
 }

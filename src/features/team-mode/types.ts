@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { createParseMember } from "./member-parser"
 
+// Message kinds
 export const MESSAGE_KINDS = [
   "message",
   "shutdown_request",
@@ -9,10 +9,13 @@ export const MESSAGE_KINDS = [
   "announcement",
 ] as const
 
+// Member kinds
 export const MEMBER_KINDS = ["category", "subagent_type"] as const
 
+// Task statuses
 export const TASK_STATUSES = ["pending", "claimed", "in_progress", "completed", "deleted"] as const
 
+// Runtime statuses
 export const RUNTIME_STATUSES = [
   "creating",
   "active",
@@ -23,6 +26,7 @@ export const RUNTIME_STATUSES = [
   "orphaned",
 ] as const
 
+// Member base schema
 const MemberBaseSchema = z.object({
   name: z.string().min(1).regex(/^[a-z0-9-]+$/),
   cwd: z.string().optional(),
@@ -33,27 +37,30 @@ const MemberBaseSchema = z.object({
   isActive: z.boolean().default(true),
 }).strict()
 
+// Category member schema
 export const CategoryMemberSchema = MemberBaseSchema.extend({
   kind: z.literal("category"),
   category: z.string().min(1),
   prompt: z.string().min(1),
 })
 
+// Subagent member schema
 export const SubagentMemberSchema = MemberBaseSchema.extend({
   kind: z.literal("subagent_type"),
   subagent_type: z.string().min(1),
   prompt: z.string().optional(),
 })
 
+// Member schema (discriminated union)
 export const MemberSchema = z.discriminatedUnion("kind", [CategoryMemberSchema, SubagentMemberSchema])
 
+// Team reference schema
 const TeamReferenceSchema = z.object({
   path: z.string(),
   description: z.string().optional(),
 }).strict()
 
-const MISSING_TEAM_LEAD_MESSAGE = "leadAgentId required (or write a `lead: {...}` field, or mark one member with `isLead: true`)"
-
+// Team spec schema
 export const TeamSpecSchema = z.object({
   version: z.literal(1).default(1),
   name: z.string().min(1).regex(/^[a-z0-9-]+$/),
@@ -63,30 +70,21 @@ export const TeamSpecSchema = z.object({
   teamAllowedPaths: z.array(z.string()).optional(),
   sessionPermission: z.string().optional(),
   members: z.array(MemberSchema).min(1).max(8),
-}).superRefine((teamSpec, ctx) => {
-  if (teamSpec.leadAgentId === undefined && teamSpec.members.length > 1) {
-    ctx.addIssue({
-      code: "custom",
-      message: MISSING_TEAM_LEAD_MESSAGE,
-      path: ["leadAgentId"],
-    })
-  }
 }).transform((teamSpec) => {
   if (teamSpec.leadAgentId !== undefined) {
     return teamSpec
   }
-
   const firstMember = teamSpec.members[0]
   if (!firstMember) {
-    throw new Error(MISSING_TEAM_LEAD_MESSAGE)
+    throw new Error("leadAgentId required")
   }
-
   return {
     ...teamSpec,
     leadAgentId: firstMember.name,
   }
 })
 
+// Message schema
 export const MessageSchema = z.object({
   version: z.literal(1),
   messageId: z.string().uuid(),
@@ -101,6 +99,7 @@ export const MessageSchema = z.object({
   color: z.string().optional(),
 })
 
+// Task schema
 export const TaskSchema = z.object({
   version: z.literal(1),
   id: z.string(),
@@ -117,6 +116,7 @@ export const TaskSchema = z.object({
   claimedAt: z.number().int().positive().optional(),
 })
 
+// Runtime state member model schema
 const RuntimeStateMemberModelSchema = z.object({
   providerID: z.string(),
   modelID: z.string(),
@@ -131,6 +131,7 @@ const RuntimeStateMemberModelSchema = z.object({
   }).optional(),
 }).strict()
 
+// Runtime state member schema
 const RuntimeStateMemberSchema = z.object({
   name: z.string(),
   sessionId: z.string().optional(),
@@ -147,6 +148,7 @@ const RuntimeStateMemberSchema = z.object({
   pendingInjectedMessageIds: z.array(z.string()).default([]),
 }).strict()
 
+// Runtime bounds schema
 const RuntimeBoundsSchema = z.object({
   maxMembers: z.number().int().default(8),
   maxParallelMembers: z.number().int().default(4),
@@ -155,6 +157,7 @@ const RuntimeBoundsSchema = z.object({
   maxMemberTurns: z.number().int().default(500),
 }).strict()
 
+// Shutdown request schema
 const ShutdownRequestSchema = z.object({
   memberId: z.string(),
   requesterName: z.string(),
@@ -164,6 +167,7 @@ const ShutdownRequestSchema = z.object({
   rejectedAt: z.number().int().positive().optional(),
 }).strict()
 
+// Runtime state tmux layout schema
 const RuntimeStateTmuxLayoutSchema = z.object({
   ownedSession: z.boolean(),
   targetSessionId: z.string(),
@@ -171,6 +175,7 @@ const RuntimeStateTmuxLayoutSchema = z.object({
   gridWindowId: z.string().optional(),
 }).strict()
 
+// Runtime state schema
 export const RuntimeStateSchema = z.object({
   version: z.literal(1),
   teamRunId: z.string().uuid(),
@@ -185,6 +190,7 @@ export const RuntimeStateSchema = z.object({
   bounds: RuntimeBoundsSchema,
 })
 
+// Agent eligibility registry
 export const AGENT_ELIGIBILITY_REGISTRY: Readonly<Record<string, {
   verdict: "eligible" | "conditional" | "hard-reject"
   rejectionMessage?: string
@@ -192,75 +198,59 @@ export const AGENT_ELIGIBILITY_REGISTRY: Readonly<Record<string, {
   sisyphus: { verdict: "eligible" },
   hephaestus: {
     verdict: "conditional",
-    rejectionMessage:
-      "Agent 'hephaestus' lacks teammate permission. Either apply D-36 (add teammate: \"allow\" in tool-config-handler.ts) or use subagent_type: \"sisyphus\" instead.",
+    rejectionMessage: "Agent 'hephaestus' lacks teammate permission.",
   },
   oracle: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'oracle' is read-only (cannot write files). Team members must write to mailbox inbox files. Use delegate-task with subagent_type: 'oracle' for read-only analysis instead.",
+    rejectionMessage: "Agent 'oracle' is read-only. Use delegate-task instead.",
   },
   librarian: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'librarian' is read-only (write/edit denied). Cannot write to mailbox as team member. Use delegate-task for research queries instead.",
+    rejectionMessage: "Agent 'librarian' is read-only. Use delegate-task instead.",
   },
   explore: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'explore' is read-only (write/edit denied). Cannot write to mailbox as team member. Use delegate-task for codebase exploration instead.",
+    rejectionMessage: "Agent 'explore' is read-only. Use delegate-task instead.",
   },
   "multimodal-looker": {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'multimodal-looker' has read-only tool access (only 'read' allowed). Cannot write to mailbox as team member.",
+    rejectionMessage: "Agent 'multimodal-looker' is read-only. Use delegate-task instead.",
   },
   metis: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'metis' is read-only (pre-planning consultant). Cannot write to mailbox as team member. Use delegate-task for pre-planning analysis instead.",
+    rejectionMessage: "Agent 'metis' is read-only. Use delegate-task instead.",
   },
   momus: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'momus' is read-only (plan reviewer). Cannot write to mailbox as team member. Use delegate-task for plan review instead.",
+    rejectionMessage: "Agent 'momus' is read-only. Use delegate-task instead.",
   },
   atlas: { verdict: "eligible" },
   prometheus: {
     verdict: "hard-reject",
-    rejectionMessage:
-      "Agent 'prometheus' is plan-mode-only; can only write to .omo/*.md (enforced by prometheusMdOnly hook). Cannot write to team mailbox. Use delegate-task with subagent_type: 'plan' instead.",
+    rejectionMessage: "Agent 'prometheus' is plan-mode-only. Use delegate-task instead.",
   },
   "sisyphus-junior": { verdict: "eligible" },
 } as const
 
-/**
- * §V.3 member validation error messages live in member-parser.ts.
- * Includes: "Unknown subagent_type '<name>'. Available ELIGIBLE agents: sisyphus, atlas, sisyphus-junior, hephaestus (if D-36 applied). Use delegate-task for read-only agents like oracle, librarian, explore, metis, momus, multimodal-looker."
- */
-
-const parseMemberBase = createParseMember(MemberSchema, AGENT_ELIGIBILITY_REGISTRY)
-
+// Parse member function
 export function parseMember(input: unknown): Member {
-  if (input == null || typeof input !== "object") {
-    return parseMemberBase(input)
+  const result = MemberSchema.safeParse(input)
+  if (!result.success) {
+    throw new Error(`Invalid member: ${result.error.message}`)
   }
-
-  const raw = input as Record<string, unknown>
-  if (raw.subagent_type !== undefined) {
-    if (typeof raw.subagent_type !== "string" || !(raw.subagent_type in AGENT_ELIGIBILITY_REGISTRY)) {
-      return parseMemberBase(input)
-    }
-
-    const entry = AGENT_ELIGIBILITY_REGISTRY[raw.subagent_type]
-    if (entry.verdict === "hard-reject") {
+  
+  const member = result.data
+  if (member.kind === "subagent_type") {
+    const entry = AGENT_ELIGIBILITY_REGISTRY[member.subagent_type]
+    if (entry && entry.verdict === "hard-reject") {
       throw new Error(entry.rejectionMessage)
     }
   }
-
-  return parseMemberBase(input)
+  
+  return member
 }
 
+// Export types
 export type TeamSpec = z.infer<typeof TeamSpecSchema>
 export type Member = z.infer<typeof MemberSchema>
 export type CategoryMember = z.infer<typeof CategoryMemberSchema>
