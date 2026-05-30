@@ -190,46 +190,79 @@ export const RuntimeStateSchema = z.object({
   bounds: RuntimeBoundsSchema,
 })
 
-// Agent eligibility registry
+// Agent eligibility registry - Updated for our agent names
+// Primary agents: orchestrator, deep-worker, prometheus, atlas, bio-orchestrator
+// Subagents: explorer, librarian, oracle, designer, fixer, observer, council, councillor, metis, momus, multimodal-looker, reviewer
 export const AGENT_ELIGIBILITY_REGISTRY: Readonly<Record<string, {
   verdict: "eligible" | "conditional" | "hard-reject"
   rejectionMessage?: string
 }>> = {
-  sisyphus: { verdict: "eligible" },
-  hephaestus: {
+  // Primary agents - eligible
+  orchestrator: { verdict: "eligible" },
+  atlas: { verdict: "eligible" },
+  "bio-orchestrator": { verdict: "eligible" },
+  
+  // Primary agents - conditional
+  "deep-worker": {
     verdict: "conditional",
-    rejectionMessage: "Agent 'hephaestus' lacks teammate permission.",
+    rejectionMessage: "Agent 'deep-worker' requires high-context model. Use subagent_type: 'orchestrator' instead if teammate permission is not granted.",
   },
-  oracle: {
+  
+  // Primary agents - hard-reject
+  prometheus: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'oracle' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'prometheus' is plan-mode-only (read-only). Use delegate-task for planning tasks instead.",
+  },
+  
+  // Subagents - all hard-reject (read-only)
+  explorer: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'explorer' is read-only (codebase search). Use delegate-task for exploration tasks instead.",
   },
   librarian: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'librarian' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'librarian' is read-only (docs/code search). Use delegate-task for research tasks instead.",
   },
-  explore: {
+  oracle: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'explore' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'oracle' is read-only (architecture consultation). Use delegate-task for analysis tasks instead.",
   },
-  "multimodal-looker": {
+  designer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'multimodal-looker' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'designer' is read-only (UI/UX design). Use delegate-task for design tasks instead.",
+  },
+  fixer: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'fixer' is read-only (quick fixes). Use delegate-task for fix tasks instead.",
+  },
+  observer: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'observer' is read-only. Use delegate-task instead.",
+  },
+  council: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'council' is read-only (council member). Use delegate-task instead.",
+  },
+  councillor: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'councillor' is read-only (council coordinator). Use delegate-task instead.",
   },
   metis: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'metis' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'metis' is read-only (requirements analysis). Use delegate-task for analysis tasks instead.",
   },
   momus: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'momus' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'momus' is read-only (plan review). Use delegate-task for review tasks instead.",
   },
-  atlas: { verdict: "eligible" },
-  prometheus: {
+  "multimodal-looker": {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'prometheus' is plan-mode-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'multimodal-looker' is read-only (image/PDF analysis). Use delegate-task for visual tasks instead.",
   },
-  "sisyphus-junior": { verdict: "eligible" },
+  reviewer: {
+    verdict: "hard-reject",
+    rejectionMessage: "Agent 'reviewer' is read-only (code review). Use delegate-task for review tasks instead.",
+  },
 } as const
 
 // Parse member function

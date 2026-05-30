@@ -14,5 +14,11 @@
   "metis": "xiaomi-token-plan-cn/mimo-v2.5-flash",
   "momus": "xiaomi-token-plan-cn/mimo-v2.5-pro",
   "multimodal-looker": "xiaomi-token-plan-cn/mimo-v2.5-flash",
-  "reviewer": "xiaomi-token-plan-cn/mimo-v2.5-pro"
+  "reviewer": "xiaomi-token-plan-cn/mimo-v2.5-pro",
+  "team_mode": {
+    "enabled": false,
+    "max_members": 8,
+    "max_parallel_members": 4,
+    "tmux_visualization": false
+  }
 }
