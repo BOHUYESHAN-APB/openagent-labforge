@@ -135,6 +135,7 @@ const RuntimeStateMemberModelSchema = z.object({
 const RuntimeStateMemberSchema = z.object({
   name: z.string(),
   sessionId: z.string().optional(),
+  taskId: z.string().optional(),
   tmuxPaneId: z.string().optional(),
   tmuxGridPaneId: z.string().optional(),
   agentType: z.enum(["leader", "general-purpose"]),
