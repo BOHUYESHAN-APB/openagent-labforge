@@ -38,6 +38,7 @@ This document tracks the provenance and licenses of third-party components
 | open_websearch_mcp | [open-websearch](https://github.com/) | Apache-2.0 | `npx -y open-websearch@2.0.0` |
 | paper_search_mcp | [paper-search-mcp](https://github.com/) | MIT | `uvx --from paper-search-mcp ...` |
 | semantic_scholar_fastmcp | [semantic-scholar-fastmcp](https://github.com/) | MIT | `uvx --from semantic-scholar-fastmcp<3.0 ...` |
+| open_computer_use | [iFurySt/open-codex-computer-use](https://github.com/iFurySt/open-codex-computer-use) | MIT | `open-computer-use mcp` (requires `npm install -g open-computer-use`) |
 
 ### Bioinformatics MCPs (Project-installable templates)
 
@@ -91,6 +92,7 @@ Before enabling any MCP in default profiles:
 - `semantic_scholar_fastmcp` uses `SEMANTIC_SCHOLAR_ENABLE_HTTP_BRIDGE=0` env var (not `--no-http` flag, which is invalid)
 - Augmented-Nature servers (PDB, AlphaFold, GeneOntology, STRING) have non-commercial licenses — NOT integrated
 - PubMed MCP (NCBI) and Semantic Scholar (Allen AI) serve different databases — no conflict, can coexist
+- `open_computer_use` requires manual installation: `npm install -g open-computer-use`. On macOS, also requires Accessibility and Screen Recording permissions. Enable via `enabled_mcps: ["open_computer_use"]` in config
 
 ## Section 5: Integrated Third-Party Skills
 
@@ -157,4 +159,4 @@ These tools are not bundled but referenced as runtime dependencies:
 
 ---
 
-*Last updated: 2026-05-20*
+*Last updated: 2026-05-30*
