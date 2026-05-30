@@ -207,6 +207,7 @@ export function loadPluginConfig(directory: string): PluginConfig {
       ),
       fallback: deepMerge(config.fallback, projectConfig.fallback),
       council: deepMerge(config.council, projectConfig.council),
+      team_mode: deepMerge(config.team_mode, projectConfig.team_mode),
     };
   }
 
