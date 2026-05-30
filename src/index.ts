@@ -1806,7 +1806,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   };
 };
 
-export default OhMyOpenCodeLite;
+export default {
+  id: 'extendai-lab',
+  server: OhMyOpenCodeLite,
+};
 
 export type {
   AgentName,
