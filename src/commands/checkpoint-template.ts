@@ -33,40 +33,73 @@ Execute these tools to collect current state:
 
 ### PHASE 3: WRITE CHECKPOINT FILES
 
-The plugin system handles file persistence automatically via \`createVersionedCheckpoint()\`.
-You do NOT need to write files manually. Instead, provide the structured content below.
+CRITICAL: You MUST write files yourself using the Write tool. The plugin does NOT automatically persist checkpoints.
 
-**Provide this structured data (the plugin will persist it):**
+Write to \`.opencode/extendai-lab/checkpoints/\`:
 
+**File 1: \`latest.md\`** - Main checkpoint content:
 \`\`\`
-CHECKPOINT ID: [auto-generated]
-SESSION ID: [current session]
-LEVEL: [light|heavy]
-TRIGGER: manual
+CHECKPOINT CONTEXT
+==================
 
-GOAL: [One short paragraph]
+SOURCE SESSION
+--------------
+- Session ID: $SESSION_ID
+- Created At: $TIMESTAMP
+- Checkpoint Kind: [light|heavy]
+- Trigger: manual
 
-WORK COMPLETED / CURRENT STATE: [Concrete work done, first person]
+USER REQUESTS (AS-IS)
+---------------------
+[Exact verbatim user requests]
 
-PENDING TASKS:
-- [task 1]
-- [task 2]
+GOAL
+----
+[One short paragraph]
 
-KEY FILES: [Max 12 files with descriptions]
+WORK COMPLETED
+--------------
+[Concrete work done, first person]
 
-IMPORTANT DECISIONS:
-- [decision 1]
-- [decision 2]
+CURRENT STATE
+-------------
+[Code/research/document state]
 
-OPEN ISSUES:
-- [issue 1]
+PENDING TASKS
+-------------
+[From todoread(), still-open tasks]
 
-RESUME INSTRUCTIONS: [How next session should pick up]
+KEY FILES
+---------
+[Max 12 files with descriptions]
+
+IMPORTANT DECISIONS
+-------------------
+[Technical decisions and rationale]
+
+RESUME INSTRUCTIONS
+-------------------
+[How next session should pick up]
+\`\`\`
+
+**File 2: \`by-session/$SESSION_ID.md\`** - Same content as latest.md (copy it)
+
+**File 3: \`latest.meta.json\`** - Metadata:
+\`\`\`json
+{
+  "checkpoint_kind": "[light|heavy]",
+  "checkpoint_scope": "[same-session|cross-session]",
+  "source_session_id": "$SESSION_ID",
+  "created_at": "$TIMESTAMP",
+  "goal": "...",
+  "status": "pending",
+  "session_switch_recommendation": "[stay|recommend-switch]"
+}
 \`\`\`
 
 ### PHASE 4: RESPOND TO USER
-1. Print the checkpoint level (light/heavy)
-2. Print checkpoint ID
+1. Print the checkpoint file path
+2. Print checkpoint kind (light/heavy)
 3. If heavy: recommend switching to new session
 4. If light: suggest continuing in current session
 
@@ -75,8 +108,8 @@ RESUME INSTRUCTIONS: [How next session should pick up]
 - Keep full words accepted for readability and backwards compatibility.
 
 ### CONSTRAINTS
+- Use Write tool for ALL file creation
 - Keep checkpoint concise (< 500 lines)
 - Preserve user requests verbatim
 - Use workspace-relative paths
-- No sensitive information (secrets, keys)
-- The plugin system handles file persistence — you provide the content structure`;
+- No sensitive information (secrets, keys)`;
