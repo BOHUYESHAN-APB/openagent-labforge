@@ -5,19 +5,36 @@ Checkpoint is the "reinforcement board" for compaction — it preserves detailed
 
 ### PHASE 0: RESOLVE CHECKPOINT SOURCE
 Determine which checkpoint to load:
-- No argument: Read the latest checkpoint for current session, falling back to workspace latest
-- Session ID argument: Read that session's checkpoint
-- "latest" argument: Read workspace-level latest checkpoint
-- Path argument: Read that file directly
 
-**Resolution order:**
-1. If session ID provided → read \`.opencode/extendai-lab/checkpoints/by-session/$SESSION_ID.md\`
-2. If no argument → read current session's checkpoint, then workspace latest
-3. Fallback to legacy \`.opencode/openagent-labforge/checkpoints/latest.md\`
+**Priority order:**
+1. If session ID argument provided → read that session's checkpoint
+2. If no argument → read current session's checkpoint
+3. If "latest" argument → read workspace-level latest checkpoint
+
+**File resolution order (per session):**
+1. \`.opencode/extendai-lab/checkpoints/by-session/$SESSION_ID.md\` (manual checkpoint — preferred)
+2. \`.opencode/extendai-lab/checkpoints/by-session-auto/$SESSION_ID.md\` (auto-compaction checkpoint — fallback)
+3. \`.opencode/extendai-lab/checkpoints/latest.md\` (workspace latest — last resort)
+
+**Directory structure:**
+\`\`\`
+.opencode/extendai-lab/checkpoints/
+├── latest.md                    ← 最新的人工 checkpoint
+├── latest.meta.json
+├── by-session/
+│   └── {session-id}.md          ← 该会话最新的人工 checkpoint（优先读取）
+├── by-session-auto/
+│   └── {session-id}.md          ← 自动压缩 checkpoint（fallback）
+└── history/
+    └── {session-id}/
+        └── {timestamp}-{level}.md
+\`\`\`
 
 ### PHASE 1: LOAD CHECKPOINT CONTEXT
-1. Read the checkpoint markdown file
-2. Read \`.opencode/extendai-lab/checkpoints/latest.meta.json\` if exists
+1. Read the checkpoint markdown file (using priority order above)
+2. Read metadata:
+   - For manual: \`.opencode/extendai-lab/checkpoints/latest.meta.json\`
+   - For auto: \`.opencode/extendai-lab/checkpoints/by-session-auto/$SESSION_ID.meta.json\`
 3. Extract: goal, current state, pending tasks, key decisions, resume instructions
 4. Check if checkpoint was created before compaction (pre_compaction flag)
 
@@ -29,7 +46,7 @@ Determine which checkpoint to load:
 5. If checkpoint was pre-compaction: note that some context may have been compressed
 
 ### PHASE 3: UPDATE METADATA
-If checkpoint has \`latest.meta.json\`, update:
+If checkpoint has metadata file, update:
 \`\`\`json
 {
   "checkpoint_status": "consumed",
@@ -39,7 +56,7 @@ If checkpoint has \`latest.meta.json\`, update:
 \`\`\`
 
 ### PHASE 4: RESPOND
-1. Confirm checkpoint loaded (show level: light/heavy)
+1. Confirm checkpoint loaded (show level: light/heavy, source: manual/auto)
 2. Show restored goal and current state
 3. Show restored todo list
 4. If pre-compaction checkpoint: warn that context was compressed
@@ -50,4 +67,4 @@ If checkpoint has \`latest.meta.json\`, update:
 - Preserve all context from checkpoint
 - Create todos from pending tasks immediately
 - Do not modify original checkpoint .md files
-- You MAY update latest.meta.json to mark checkpoint as consumed`;
+- You MAY update metadata file to mark checkpoint as consumed`;

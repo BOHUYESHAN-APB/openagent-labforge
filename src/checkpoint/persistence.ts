@@ -129,6 +129,24 @@ export function saveCheckpointStorage(
 }
 
 // ── File-based checkpoint persistence ────────────────────────────────
+//
+// Directory structure:
+//   checkpoints/
+//   ├── latest.md                    ← 最新的人工 checkpoint（h 或 l）
+//   ├── latest.meta.json
+//   ├── by-session/
+//   │   └── {session-id}.md          ← 该会话最新的人工 checkpoint
+//   ├── by-session-auto/
+//   │   └── {session-id}.md          ← 该会话最新的自动压缩 checkpoint
+//   └── history/
+//       └── {session-id}/
+//           ├── {timestamp}-heavy.md ← 历史存档（所有 checkpoint）
+//           └── {timestamp}-light.md
+//
+// 规则：
+//   - 人工 checkpoint（/ol-checkpoint）→ latest.md + by-session/ + history/
+//   - 自动压缩 checkpoint → by-session-auto/ + history/（不覆盖人工 checkpoint）
+//   - 恢复时：优先 by-session/（人工），fallback 到 by-session-auto/（自动）
 
 function getCheckpointDir(workspaceRoot: string): string {
   return join(workspaceRoot, '.opencode', 'extendai-lab', 'checkpoints');
@@ -142,34 +160,18 @@ function getCheckpointHistoryDir(
 }
 
 /**
- * Write a checkpoint markdown file.
- * Returns the file path.
+ * Generate checkpoint markdown content.
  */
-export function writeCheckpointFile(
-  workspaceRoot: string,
-  checkpoint: ContextCheckpoint,
-  content: {
-    summary: string;
-    goal: string;
-    keyDecisions: string[];
-    openIssues: string[];
-    pendingTasks: string[];
-    keyFiles: string[];
-    resumeInstructions: string;
-  },
-): string {
-  const checkpointDir = getCheckpointDir(workspaceRoot);
-  const historyDir = getCheckpointHistoryDir(workspaceRoot, checkpoint.sessionID);
-  mkdirSync(historyDir, { recursive: true });
-
-  const timestamp = new Date(checkpoint.timestamp)
-    .toISOString()
-    .replace(/[:.]/g, '-')
-    .slice(0, 19);
-  const filename = `${timestamp}-${checkpoint.level}.md`;
-  const filePath = join(historyDir, filename);
-
-  const md = `CHECKPOINT CONTEXT
+function generateCheckpointMd(checkpoint: ContextCheckpoint, content: {
+  summary: string;
+  goal: string;
+  keyDecisions: string[];
+  openIssues: string[];
+  pendingTasks: string[];
+  keyFiles: string[];
+  resumeInstructions: string;
+}): string {
+  return `CHECKPOINT CONTEXT
 ==================
 
 SOURCE SESSION
@@ -213,71 +215,177 @@ RESUME INSTRUCTIONS
 -------------------
 ${content.resumeInstructions}
 `;
+}
 
+/**
+ * Write a checkpoint markdown file.
+ * Returns the file path.
+ *
+ * For manual checkpoints (trigger != 'auto-compaction'):
+ *   - Writes to history/{sessionID}/{timestamp}-{level}.md
+ *   - Updates by-session/{sessionID}.md
+ *   - Updates latest.md
+ *
+ * For auto-compaction checkpoints:
+ *   - Writes to history/{sessionID}/{timestamp}-{level}.md
+ *   - Updates by-session-auto/{sessionID}.md
+ *   - Does NOT update latest.md or by-session/ (preserves manual checkpoints)
+ */
+export function writeCheckpointFile(
+  workspaceRoot: string,
+  checkpoint: ContextCheckpoint,
+  content: {
+    summary: string;
+    goal: string;
+    keyDecisions: string[];
+    openIssues: string[];
+    pendingTasks: string[];
+    keyFiles: string[];
+    resumeInstructions: string;
+  },
+): string {
+  const checkpointDir = getCheckpointDir(workspaceRoot);
+  const historyDir = getCheckpointHistoryDir(workspaceRoot, checkpoint.sessionID);
+  mkdirSync(historyDir, { recursive: true });
+
+  const timestamp = new Date(checkpoint.timestamp)
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .slice(0, 19);
+  const filename = `${timestamp}-${checkpoint.level}.md`;
+  const filePath = join(historyDir, filename);
+
+  const md = generateCheckpointMd(checkpoint, content);
   writeFileSync(filePath, md, 'utf-8');
 
-  // Also update the session's latest.md
-  const sessionLatestPath = join(
-    checkpointDir,
-    'by-session',
-    `${checkpoint.sessionID}.md`,
-  );
-  mkdirSync(join(checkpointDir, 'by-session'), { recursive: true });
-  writeFileSync(sessionLatestPath, md, 'utf-8');
+  const isAutoCompaction = checkpoint.trigger === 'auto-compaction';
 
-  // Also update workspace latest.md
-  const workspaceLatestPath = join(checkpointDir, 'latest.md');
-  writeFileSync(workspaceLatestPath, md, 'utf-8');
+  if (isAutoCompaction) {
+    // Auto-compaction: only write to by-session-auto/ (don't overwrite manual checkpoints)
+    const autoDir = join(checkpointDir, 'by-session-auto');
+    mkdirSync(autoDir, { recursive: true });
+    const autoPath = join(autoDir, `${checkpoint.sessionID}.md`);
+    writeFileSync(autoPath, md, 'utf-8');
+  } else {
+    // Manual checkpoint: write to by-session/ and latest.md
+    const sessionDir = join(checkpointDir, 'by-session');
+    mkdirSync(sessionDir, { recursive: true });
+    const sessionPath = join(sessionDir, `${checkpoint.sessionID}.md`);
+    writeFileSync(sessionPath, md, 'utf-8');
+
+    const latestPath = join(checkpointDir, 'latest.md');
+    writeFileSync(latestPath, md, 'utf-8');
+  }
 
   return filePath;
 }
 
 /**
- * Write checkpoint metadata to latest.meta.json
+ * Write checkpoint metadata.
+ * For manual checkpoints: writes to latest.meta.json
+ * For auto-compaction: writes to by-session-auto/{sessionID}.meta.json
  */
 export function writeCheckpointMeta(
   workspaceRoot: string,
   meta: CheckpointMeta,
+  sessionID?: string,
+  trigger?: string,
 ): void {
   const checkpointDir = getCheckpointDir(workspaceRoot);
   mkdirSync(checkpointDir, { recursive: true });
 
-  const metaPath = join(checkpointDir, 'latest.meta.json');
-  writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
-}
+  const isAutoCompaction = trigger === 'auto-compaction';
 
-/**
- * Read checkpoint metadata from latest.meta.json
- */
-export function readCheckpointMeta(
-  workspaceRoot: string,
-): CheckpointMeta | null {
-  const metaPath = join(
-    getCheckpointDir(workspaceRoot),
-    'latest.meta.json',
-  );
-  if (!existsSync(metaPath)) return null;
-
-  try {
-    return JSON.parse(readFileSync(metaPath, 'utf-8')) as CheckpointMeta;
-  } catch {
-    return null;
+  if (isAutoCompaction && sessionID) {
+    // Auto-compaction: write to by-session-auto/
+    const autoDir = join(checkpointDir, 'by-session-auto');
+    mkdirSync(autoDir, { recursive: true });
+    const metaPath = join(autoDir, `${sessionID}.meta.json`);
+    writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
+  } else {
+    // Manual: write to latest.meta.json
+    const metaPath = join(checkpointDir, 'latest.meta.json');
+    writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
   }
 }
 
 /**
+ * Read checkpoint metadata.
+ * For manual checkpoints: reads from latest.meta.json
+ * For auto-compaction: reads from by-session-auto/{sessionID}.meta.json
+ */
+export function readCheckpointMeta(
+  workspaceRoot: string,
+  sessionID?: string,
+): CheckpointMeta | null {
+  const checkpointDir = getCheckpointDir(workspaceRoot);
+
+  // Try manual checkpoint meta first
+  const manualMetaPath = join(checkpointDir, 'latest.meta.json');
+  if (existsSync(manualMetaPath)) {
+    try {
+      return JSON.parse(readFileSync(manualMetaPath, 'utf-8')) as CheckpointMeta;
+    } catch {
+      // Continue to try auto meta
+    }
+  }
+
+  // Try auto-compaction checkpoint meta
+  if (sessionID) {
+    const autoMetaPath = join(checkpointDir, 'by-session-auto', `${sessionID}.meta.json`);
+    if (existsSync(autoMetaPath)) {
+      try {
+        return JSON.parse(readFileSync(autoMetaPath, 'utf-8')) as CheckpointMeta;
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Read a checkpoint markdown file by session ID.
+ * Priority: by-session/ (manual) > by-session-auto/ (auto)
  * Returns the file content or null if not found.
  */
 export function readCheckpointFile(
   workspaceRoot: string,
   sessionID: string,
 ): string | null {
-  const filePath = join(
-    getCheckpointDir(workspaceRoot),
-    'by-session',
-    `${sessionID}.md`,
-  );
+  const checkpointDir = getCheckpointDir(workspaceRoot);
+
+  // Try manual checkpoint first
+  const manualPath = join(checkpointDir, 'by-session', `${sessionID}.md`);
+  if (existsSync(manualPath)) {
+    try {
+      return readFileSync(manualPath, 'utf-8');
+    } catch {
+      // Continue to try auto
+    }
+  }
+
+  // Try auto-compaction checkpoint
+  const autoPath = join(checkpointDir, 'by-session-auto', `${sessionID}.md`);
+  if (existsSync(autoPath)) {
+    try {
+      return readFileSync(autoPath, 'utf-8');
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Read the workspace-level latest checkpoint.
+ */
+export function readLatestCheckpoint(
+  workspaceRoot: string,
+): string | null {
+  const filePath = join(getCheckpointDir(workspaceRoot), 'latest.md');
   if (!existsSync(filePath)) return null;
 
   try {
@@ -288,12 +396,17 @@ export function readCheckpointFile(
 }
 
 /**
- * Read the workspace-level latest checkpoint.
+ * Read auto-compaction checkpoint for a session.
  */
-export function readLatestCheckpoint(
+export function readAutoCompactionCheckpoint(
   workspaceRoot: string,
+  sessionID: string,
 ): string | null {
-  const filePath = join(getCheckpointDir(workspaceRoot), 'latest.md');
+  const filePath = join(
+    getCheckpointDir(workspaceRoot),
+    'by-session-auto',
+    `${sessionID}.md`,
+  );
   if (!existsSync(filePath)) return null;
 
   try {

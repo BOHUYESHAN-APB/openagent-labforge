@@ -36,9 +36,23 @@ Execute these tools to collect current state:
 
 CRITICAL: You MUST write files yourself using the Write tool. The plugin does NOT automatically persist checkpoints.
 
-Write to \`.opencode/extendai-lab/checkpoints/\`:
+**File structure:**
+\`\`\`
+.opencode/extendai-lab/checkpoints/
+├── latest.md                    ← 永远是最新的人工 checkpoint（本次写入）
+├── latest.meta.json
+├── by-session/
+│   └── {session-id}.md          ← 该会话最新的人工 checkpoint（本次写入）
+├── by-session-auto/
+│   └── {session-id}.md          ← 自动压缩 checkpoint（插件写入，不要手动写）
+└── history/
+    └── {session-id}/
+        └── {timestamp}-{level}.md
+\`\`\`
 
-**File 1: \`latest.md\`** - Main checkpoint content:
+**Write these files:**
+
+**File 1: \`.opencode/extendai-lab/checkpoints/latest.md\`** - Main checkpoint content:
 \`\`\`
 CHECKPOINT CONTEXT
 ==================
@@ -83,10 +97,9 @@ RESUME INSTRUCTIONS
 [How next session should pick up]
 \`\`\`
 
-**File 2: \`by-session/$SESSION_ID.md\`** - Same content as latest.md (copy it).
-Note: The Write tool will create the by-session directory automatically if it doesn't exist.
+**File 2: \`.opencode/extendai-lab/checkpoints/by-session/$SESSION_ID.md\`** - Same content as latest.md
 
-**File 3: \`latest.meta.json\`** - Metadata:
+**File 3: \`.opencode/extendai-lab/checkpoints/latest.meta.json\`** - Metadata:
 \`\`\`json
 {
   "checkpoint_kind": "[light|heavy]",
@@ -114,4 +127,5 @@ Note: The Write tool will create the by-session directory automatically if it do
 - Keep checkpoint concise (< 500 lines)
 - Preserve user requests verbatim
 - Use workspace-relative paths
-- No sensitive information (secrets, keys)`;
+- No sensitive information (secrets, keys)
+- Do NOT write to by-session-auto/ (that directory is for automatic compaction checkpoints only)`;

@@ -219,10 +219,13 @@ export class CheckpointManager {
     // Write checkpoint file
     const session = this.sessionMemory.get(sessionID);
     if (session) {
+      // writeCheckpointFile automatically handles:
+      // - Manual checkpoints → latest.md + by-session/ + history/
+      // - Auto-compaction → by-session-auto/ + history/ (no overwrite)
       const filePath = writeCheckpointFile(session.workspaceRoot, checkpoint, content);
       checkpoint.filePath = filePath;
 
-      // Update latest.md reference
+      // Update metadata
       writeCheckpointMeta(session.workspaceRoot, {
         checkpoint_id: checkpoint.id,
         checkpoint_level: checkpoint.level,
@@ -234,7 +237,7 @@ export class CheckpointManager {
         session_switch_recommendation:
           options.level === 'heavy' ? 'recommend-switch' : 'stay',
         pre_compaction: !!options.preCompactionTimestamp,
-      });
+      }, sessionID, options.trigger);
 
       this.persist();
     }

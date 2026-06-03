@@ -23,10 +23,13 @@ const HOOK_NAME = 'compaction'
 /** Post-compaction recovery message injected into user's next message */
 const POST_COMPACTION_RECOVERY = `**Post-Compaction Recovery**: A context compaction just occurred. Before continuing work, read the checkpoint file to recover detailed context:
 
-1. Read \`.opencode/extendai-lab/checkpoints/latest.md\`
-2. Read \`.opencode/extendai-lab/checkpoints/latest.meta.json\`
-3. If checkpoint has pending tasks, continue from where you left off
-4. This checkpoint was automatically created before compaction and contains the full context you need
+**File resolution order:**
+1. \`.opencode/extendai-lab/checkpoints/by-session/$SESSION_ID.md\` (manual checkpoint — preferred)
+2. \`.opencode/extendai-lab/checkpoints/by-session-auto/$SESSION_ID.md\` (auto-compaction checkpoint — fallback)
+3. \`.opencode/extendai-lab/checkpoints/latest.md\` (workspace latest — last resort)
+
+Replace $SESSION_ID with the actual session ID. Read the first file that exists.
+If checkpoint has pending tasks, continue from where you left off.
 
 ---`
 
