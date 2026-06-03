@@ -351,6 +351,50 @@ Output: `manuscripts/paper.docx` with proper Chinese/English font separation, GB
 
 ---
 
+## Desktop Automation (CUA)
+
+Control desktop applications with mouse, keyboard, and screen interaction via [CUA Driver](https://github.com/trycua/cua).
+
+### Features
+
+- **Background operation** — doesn't steal cursor or focus
+- **Cross-platform** — macOS, Windows, Linux
+- **One-line install** — no npm required
+- **MCP integration** — works with Claude Code, Cursor, Codex, OpenClaw
+
+### Installation
+
+**macOS / Linux:**
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh)"
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.ps1 | iex
+```
+
+### Enable in Plugin
+
+Add to your config (`~/.config/opencode/extendai-lab.jsonc`):
+
+```jsonc
+{
+  "enabled_mcps": ["cua_driver"]
+}
+```
+
+### Usage
+
+Once installed and enabled, the AI can:
+- Click buttons, type text, navigate UIs
+- Take screenshots for visual verification
+- Automate desktop workflows
+
+**Documentation**: [cua.ai/docs](https://cua.ai/docs)
+
+---
+
 ## Development
 
 ```bash
