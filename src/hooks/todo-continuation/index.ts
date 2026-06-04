@@ -1290,10 +1290,40 @@ export function createTodoContinuationHook(
                 );
                 return;
               }
-              // verdict === 'none' — agent hasn't given verdict yet, wait
-              log(`[${HOOK_NAME}] Review pending — no verdict found yet`, {
+              // verdict === 'none' — agent hasn't given verdict yet
+              // Reset review state and re-inject review prompt automatically
+              // This prevents the model from stopping without a verdict
+              log(`[${HOOK_NAME}] Review pending — no verdict found, re-injecting review`, {
                 sessionID,
               });
+              state.reviewInjectedBySession.delete(sessionID);
+              state.reviewVerdictBySession.delete(sessionID);
+
+              // Automatically re-inject review prompt
+              state.isAutoInjecting = true;
+              try {
+                await emitUserVisibleNotification(
+                  sessionID,
+                  buildUserVisibleReviewNotification({ stage: 'starting' }),
+                );
+                await ctx.client.session.prompt({
+                  path: { id: sessionID },
+                  body: {
+                    parts: [createInternalAgentTextPart(REVIEW_PROMPT)],
+                  },
+                });
+                state.reviewInjectedBySession.add(sessionID);
+                state.reviewVerdictBySession.set(sessionID, 'pending');
+                incrementConsecutiveContinuations(state, sessionID);
+                log(`[${HOOK_NAME}] Re-injected review prompt`, { sessionID });
+              } catch (error) {
+                log(`[${HOOK_NAME}] Error: failed to re-inject review prompt`, {
+                  sessionID,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              } finally {
+                state.isAutoInjecting = false;
+              }
               return;
             }
           } catch (error) {
