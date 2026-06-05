@@ -67,20 +67,65 @@ oh-my-opencode-slim/
 ├── src/
 │   ├── agents/       # Agent factories (orchestrator, explorer, oracle, etc.)
 │   ├── cli/          # CLI entry point
+│   ├── commands/     # Slash command templates (/ol-checkpoint, /ol-grill, etc.)
 │   ├── config/       # Constants, schemas, MCP defaults
 │   ├── council/      # Council manager (multi-LLM session orchestration)
 │   ├── hooks/        # OpenCode lifecycle hooks
 │   ├── mcp/          # MCP server definitions
 │   ├── multiplexer/  # Tmux/Zellij pane integration for child sessions
 │   ├── skills/       # Skill definitions (included in package publish)
+│   ├── template-skills/ # Template skill system (category-based loading)
 │   ├── tools/        # Tool definitions (council, webfetch, AST-grep, etc.)
 │   └── utils/        # Shared utilities (tmux, session helpers)
+├── ThirdParty/       # Third-party skills (HTML templates, PPT generators)
+├── resources/        # Bio skills and academic skills
 ├── dist/             # Built JavaScript and declarations
 ├── docs/             # User-facing documentation
 ├── biome.json        # Biome configuration
 ├── tsconfig.json     # TypeScript configuration
 └── package.json      # Project manifest and scripts
 ```
+
+## Skill Registration — Three Methods
+
+This plugin uses three distinct methods to register skills. Understanding which method to use is critical.
+
+### Method 1: Standard Registration (`configSkills.paths`)
+
+Skills in directories listed in `configSkills.paths` are **fully exposed** — they appear in the user's skill list AND the AI can load them via the `skill` tool.
+
+**Use for:** Skills that users may actively trigger via `/skill-name` (complete workflows).
+
+**Currently registered:** `src/skills/` only (academic-writing, team-mode, agent-browser, playwright, dev-browser, git-master, frontend-ui-ux, etc.)
+
+### Method 2: Tool-Based Loading (`load_skill_template` / `load_bio_skills`)
+
+Skills loaded on-demand by the AI via dedicated tools. **Not exposed to users** — the AI sees only the tool description with category names.
+
+**Use for:** Template collections, domain-specific toolkits, anything with many variants that would overwhelm the user.
+
+**Implementation:** See `src/template-skills/` (template skills) and `src/bio-skills/` (bioinformatics).
+
+**Categories:**
+- `html-deck` — HTML presentations (html-ppt, guizang-ppt)
+- `html-templates` — 70+ HTML page templates (dashboards, landing pages, cards, etc.)
+- `academic-tools` — Academic tools (CNKI parser, citation matching, MD→DOCX, LaTeX)
+- Bio skills: 442 skills across 64 categories via `load_bio_skills`
+
+### Method 3: Built-in Prompts (TS code / agent system prompt)
+
+Skills whose content is embedded directly in agent prompts or TypeScript code. **Not exposed to users, not loaded via tools** — always available to the agent.
+
+**Use for:** Behavioral guidelines, coding philosophy, internal conventions that agents should always follow.
+
+**Examples:** `code-philosophy`, `frontend-philosophy`, `karpathy-guidelines`, `plan-protocol`, `document-formatting`
+
+### How to Add a New Skill
+
+1. **Determine the method:** Is it user-triggered (Method 1)? Template/tool (Method 2)? Always-on guidance (Method 3)?
+2. **Method 1:** Add SKILL.md to `src/skills/<name>/`. It auto-registers via `configSkills.paths`.
+3. **Method 2:** Add SKILL.md to the appropriate `ThirdParty/` or `resources/` directory. Add the directory to `TEMPLATE_SKILL_CATEGORIES` in `src/template-skills/catalog.ts`. The tool handles the rest.
+4. **Method 3:** Embed content in agent prompts or create a command template in `src/commands/`.
 
 ## Key Dependencies
 

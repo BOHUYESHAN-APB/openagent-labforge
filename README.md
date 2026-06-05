@@ -257,13 +257,21 @@ See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for full referenc
 | Command | Mode | Description |
 |---------|------|-------------|
 | `/ol-light` / `/ol-heavy` / `/ol-turbo` | Prompt | Switch prompt mode |
-| `/ol-checkpoint-light [goal]` | Checkpoint | Light checkpoint (same-session) |
-| `/ol-checkpoint-heavy [goal]` | Checkpoint | Heavy checkpoint (cross-session) |
+| `/ol-checkpoint [l\|h\|light\|heavy] [goal]` | Checkpoint | Create checkpoint (light: same-session, heavy: cross-session) |
+| `/ol-checkpoint-resume [id]` | Checkpoint | Resume from checkpoint |
+| `/ol-handoff [goal]` | Checkpoint | Create context summary for new session |
 | `/ol-start-work [name]` | Workflow | Execute a saved plan |
 | `/ol-auto-continue-on/off` | Continuation | Toggle auto-continuation |
+| `/ol-grill [topic]` | Workflow | Get interviewed about your plan before coding |
+| `/ol-tdd [feature]` | Workflow | Test-driven development: failing test first |
+| `/ol-diagnose [bug]` | Workflow | Disciplined diagnosis loop for bugs |
+| `/ol-simplify [file]` | Workflow | Simplify code without changing behavior |
+| `/ol-review [files]` | Workflow | Code review with severity classification |
 | `/ol-subagents-UM/M/F/C/MO` | Policy | View subagent policy guidance |
 | `/ol-preset [name]` | Config | Switch model/provider preset |
 | `/ol-karpathy [task]` | Guidance | Apply Karpathy coding guidelines |
+| `/ol-ralph-loop [task]` | Workflow | Self-referential loop until completion |
+| `/ol-stop-continuation` | Control | Stop all continuation mechanisms |
 | `/goal [objective]` | Session | Set or show session goal |
 | `/subtask [task]` | Worker | Run bounded child worker |
 
@@ -279,6 +287,26 @@ load_bio_skills({ categories: ["chip-seq"] })  // ChIP-seq analysis
 ```
 
 Built-in MCPs: UniProt (proteins), BioNext (multi-omics), Semantic Scholar (papers)
+
+---
+
+## Template Skills
+
+**70+ HTML templates, presentations, and academic tools**, loaded on-demand by category:
+
+```typescript
+load_skill_template({ categories: ["html-deck"] })       // HTML presentations
+load_skill_template({ categories: ["html-templates"] })   // 70+ page templates
+load_skill_template({ categories: ["academic-tools"] })   // CNKI, citations, LaTeX
+```
+
+| Category | Count | Contents |
+|----------|-------|----------|
+| `html-deck` | 2 | HTML PPT Studio (36 themes, 15 decks, presenter mode), Guizang PPT (WebGL, magazine/Swiss) |
+| `html-templates` | 70+ | Dashboards, landing pages, cards, posters, resumes, invoices, kanban, etc. |
+| `academic-tools` | 5 | CNKI parser, citation matching, MD→DOCX, LaTeX pipeline, citation database |
+
+These skills are **not exposed in the user's skill list** — the AI loads them automatically when the task requires a template.
 
 ---
 
