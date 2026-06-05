@@ -34,6 +34,9 @@ const PRIMARY_AGENTS = new Set([
 ]);
 
 /** Retry configuration for MCP connect/disconnect */
+// TODO(#1): Remove retry logic after upstream fixes Windows MCP process cleanup
+// See: https://github.com/anomalyco/opencode/issues/26336
+// See: https://github.com/anomalyco/opencode/issues/29939
 const MCP_RETRY_MAX = 3;
 const MCP_RETRY_BASE_DELAY_MS = 2000;
 
