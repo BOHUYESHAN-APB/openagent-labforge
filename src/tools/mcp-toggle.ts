@@ -34,9 +34,8 @@ const PRIMARY_AGENTS = new Set([
 ]);
 
 /** Retry configuration for MCP connect/disconnect */
-// TODO(#1): Remove retry logic after upstream fixes Windows MCP process cleanup
-// See: https://github.com/anomalyco/opencode/issues/26336
-// See: https://github.com/anomalyco/opencode/issues/29939
+// TODO(#1): Remove retry after upstream fixes Windows MCP process cleanup
+// Upstream: anomalyco/opencode#26336, anomalyco/opencode#29939
 const MCP_RETRY_MAX = 3;
 const MCP_RETRY_BASE_DELAY_MS = 2000;
 
@@ -146,7 +145,11 @@ NOTE: If enable fails with timeout, retry automatically (multi-window race condi
         return `MCP server "${name}" disabled for this session.`;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        return `Failed to ${action} MCP "${name}" after ${MCP_RETRY_MAX} attempts: ${msg}`;
+        const retryInfo =
+          action === 'enable'
+            ? ` after ${MCP_RETRY_MAX} attempts`
+            : '';
+        return `Failed to ${action} MCP "${name}"${retryInfo}: ${msg}`;
       }
     },
   });
