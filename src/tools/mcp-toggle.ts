@@ -33,10 +33,42 @@ const PRIMARY_AGENTS = new Set([
   'atlas',
 ]);
 
+/** Retry configuration for MCP connect/disconnect */
+const MCP_RETRY_MAX = 3;
+const MCP_RETRY_BASE_DELAY_MS = 2000;
+
+/**
+ * Retry an async operation with exponential backoff.
+ * Handles multi-window race conditions where MCP server startup
+ * may fail due to npx/uvx cache locks or process cleanup delays.
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  label: string,
+  maxRetries = MCP_RETRY_MAX,
+): Promise<T> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries - 1) {
+        const delay = MCP_RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError ?? new Error(`${label} failed after ${maxRetries} attempts`);
+}
+
 /**
  * Creates a tool that allows the AI to enable/disable MCP servers
  * for the current session only (does not modify global config).
  * Only available to primary orchestrator agents.
+ *
+ * Includes retry logic with exponential backoff to handle multi-window
+ * race conditions (npx/uvx cache locks, Windows process cleanup delays).
  */
 export function createMcpToggleTool(
   client: PluginInput['client'],
@@ -59,7 +91,9 @@ Available MCPs:
 - bioNext — Multi-omics data (disabled by default)
 - uniprot — Protein data (disabled by default)
 - deepwiki_mcp — DeepWiki (disabled by default)
-- open_websearch_mcp — Open web search (disabled by default)`,
+- open_websearch_mcp — Open web search (disabled by default)
+
+NOTE: If enable fails with timeout, retry automatically (multi-window race condition).`,
     args: {
       action: z
         .enum(['enable', 'disable'])
@@ -92,8 +126,13 @@ Available MCPs:
       }
       try {
         if (action === 'enable') {
-          // SDK v1 path format: { path: { name } }
-          await (client.mcp as any).connect({ path: { name } });
+          // Retry with backoff — handles multi-window race conditions
+          // where npx/uvx cache locks or Windows process cleanup delays
+          // cause first-attempt failures
+          await withRetry(
+            () => (client.mcp as any).connect({ path: { name } }),
+            `enable MCP "${name}"`,
+          );
           const warning = PAPER_MCPS.includes(name)
             ? `\nNote: Only enable ONE paper search MCP at a time.`
             : '';
@@ -104,7 +143,7 @@ Available MCPs:
         return `MCP server "${name}" disabled for this session.`;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        return `Failed to ${action} MCP "${name}": ${msg}`;
+        return `Failed to ${action} MCP "${name}" after ${MCP_RETRY_MAX} attempts: ${msg}`;
       }
     },
   });

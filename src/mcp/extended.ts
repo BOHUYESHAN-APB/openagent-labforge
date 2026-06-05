@@ -1,6 +1,8 @@
 import type { McpConfig } from './types';
 
-const LOCAL_MCP_STARTUP_TIMEOUT_MS = 90_000;
+// Increased from 90s to 120s to handle multi-window race conditions
+// where npx/uvx cache locks or Windows process cleanup delays cause timeouts
+const LOCAL_MCP_STARTUP_TIMEOUT_MS = 120_000;
 
 export const arxiv_mcp: McpConfig = {
   type: 'local',
