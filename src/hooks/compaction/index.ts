@@ -9,6 +9,7 @@
  * - 仅替换压缩提示词，不改变触发逻辑
  * - 压缩前自动创建 checkpoint（补强板机制）
  * - 压缩后注入恢复指令（用户发消息时自动注入）
+ * - 压缩后自动继续：如果有未完成的 todo，自动继续工作
  * - 语言感知：检测对话语言，输出对应语言
  * - 增量压缩：检测历史压缩摘要并更新
  * - 9 章节结构化输出
@@ -40,6 +41,8 @@ export interface CompactionHookOptions {
   customInstructions?: string
   /** Checkpoint manager instance for auto-checkpoint creation */
   checkpointManager?: CheckpointManager
+  /** 是否启用压缩后自动继续（默认 true） */
+  autoContinueEnabled?: boolean
 }
 
 /**
@@ -47,6 +50,7 @@ export interface CompactionHookOptions {
  *
  * 通过 experimental.session.compacting hook 替换 OpenCode 原生压缩提示词，
  * 并在压缩前自动创建 checkpoint，压缩后注入恢复指令。
+ * 如果有未完成的 todo，压缩后自动继续工作。
  */
 export function createCompactionHook(
   options?: CompactionHookOptions,
@@ -55,6 +59,17 @@ export function createCompactionHook(
     input: { sessionID?: string },
     output: { context: string[]; prompt?: string },
   ) => void
+  'experimental.compaction.autocontinue': (
+    input: {
+      sessionID: string
+      agent: string
+      model: unknown
+      provider: unknown
+      message: unknown
+      overflow: boolean
+    },
+    output: { enabled: boolean },
+  ) => Promise<void>
   'chat.message': (
     input: { sessionID: string },
     output: {
@@ -66,6 +81,7 @@ export function createCompactionHook(
   const enabled = options?.enabled !== false
   const customInstructions = options?.customInstructions
   const checkpointManager = options?.checkpointManager
+  const autoContinueEnabled = options?.autoContinueEnabled !== false
 
   // Track which sessions just had compaction
   const postCompactionSessions = new Set<string>()
@@ -124,6 +140,36 @@ export function createCompactionHook(
         promptLength: improvedPrompt.length,
         hasCustomInstructions: !!customInstructions,
       })
+    },
+
+    'experimental.compaction.autocontinue': async (
+      input: {
+        sessionID: string
+        agent: string
+        model: unknown
+        provider: unknown
+        message: unknown
+        overflow: boolean
+      },
+      output: { enabled: boolean },
+    ): Promise<void> => {
+      if (!enabled || !autoContinueEnabled) {
+        output.enabled = false
+        return
+      }
+
+      // Enable auto-continue after compaction
+      // This allows the system to automatically continue working on incomplete todos
+      output.enabled = true
+
+      log(
+        `[${HOOK_NAME}] Post-compaction auto-continue enabled for session ${input.sessionID}`,
+        {
+          sessionID: input.sessionID,
+          agent: input.agent,
+          overflow: input.overflow,
+        },
+      )
     },
 
     'chat.message': (

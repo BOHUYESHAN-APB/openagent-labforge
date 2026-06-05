@@ -2048,6 +2048,24 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       compactionHook['experimental.session.compacting'](input, output);
     },
 
+    // Auto-continue after compaction if there are incomplete todos
+    'experimental.compaction.autocontinue': async (
+      input: {
+        sessionID: string
+        agent: string
+        model: unknown
+        provider: unknown
+        message: unknown
+        overflow: boolean
+      },
+      output: { enabled: boolean },
+    ): Promise<void> => {
+      await compactionHook['experimental.compaction.autocontinue'](
+        input,
+        output,
+      );
+    },
+
     // Cleanup session state when plugin is disposed
     dispose: async (): Promise<void> => {
       if (bioSkillsManager) {
