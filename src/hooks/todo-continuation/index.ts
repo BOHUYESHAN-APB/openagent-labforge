@@ -33,19 +33,19 @@ const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finis
 
 ## Review Instructions
 
-Delegate the review to @reviewer using the task tool:
+Delegate the review to @oracle using the task tool:
 \`\`\`
-task(subagent_type="reviewer", description="auto review", prompt="Review the completed work against user requirements and todos. Check for lazy patterns like 'If you need, I can do X' — if the AI could have done it, it should have done it. Output [APPROVE] or [REJECT: <reason>].")
+task(subagent_type="oracle", description="auto review", prompt="Review the completed work against user requirements and todos. Check for lazy patterns like 'If you need, I can do X' — if the AI could have done it, it should have done it. Output [APPROVE] or [REJECT: <reason>].")
 \`\`\`
 
-Provide @reviewer with context:
+Provide @oracle with context:
 - Original user requests (verbatim from conversation)
 - All todo items and their current status
 - Changed files (from git diff)
 - Uncommitted files
 - Plan file (if exists)
 
-## What @reviewer Will Check
+## What @oracle Will Check
 
 1. **User Requirements** — Are all original requirements addressed?
 2. **Todo Completion** — Are todos genuinely complete, not just marked complete?
@@ -56,9 +56,9 @@ Provide @reviewer with context:
    - Partial implementations with "for now" or "as a starting point"
 4. **Work Quality** — Are there obvious bugs, half-done implementations, or TODO comments?
 
-## After @reviewer Completes
+## After @oracle Completes
 
-@reviewer will output ONE of:
+@oracle will output ONE of:
 
 **[APPROVE]** — Work is complete, requirements met, no lazy patterns found.
 
@@ -74,7 +74,7 @@ Provide @reviewer with context:
 - NEVER disable auto-continue — the system handles this automatically after approval
 - DO NOT revert git commits — make corrective commits instead
 - DO NOT claim completion without running diagnostics
-- If @reviewer outputs [REJECT], create new todos and continue working]`;
+- If @oracle outputs [REJECT], create new todos and continue working]`;
 
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';
