@@ -614,6 +614,11 @@ export function getAgentConfigs(
       // Internal agent — subagent mode, hidden from @ autocomplete
       sdkConfig.mode = 'subagent';
       sdkConfig.hidden = true;
+    } else if (name === 'reviewer') {
+      // Internal agent — subagent mode, hidden from @ autocomplete
+      // Only used by auto-review system, not exposed to users
+      sdkConfig.mode = 'subagent';
+      sdkConfig.hidden = true;
     } else if (isPrimaryAgent(name)) {
       // Primary agents are visible in UI
       sdkConfig.mode = 'primary';
@@ -624,7 +629,7 @@ export function getAgentConfigs(
     }
   };
 
-  const isInternalOnly = (name: string): boolean => name === 'councillor';
+  const isInternalOnly = (name: string): boolean => name === 'councillor' || name === 'reviewer';
 
   const entries: Array<[string, SDKAgentConfig]> = [];
 
