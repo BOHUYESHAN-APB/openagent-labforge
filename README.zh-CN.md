@@ -355,6 +355,21 @@ load_bio_skills({ categories: ["rna-seq", "single-cell"] })  // 多类别
 
 内置 MCP：UniProt（蛋白质序列与注释）、BioNext（多组学整合）、Semantic Scholar（学术文献检索）
 
+### 第三方技能来源
+
+本插件集成以下开源项目的技能。所有第三方技能保留原始许可证——集成**不会**重新授权上游作品。完整出处详见 `THIRD_PARTY_NOTICES.md`。
+
+| 类别 | 来源 | 许可证 | 技能数 | 说明 |
+|------|------|--------|--------|------|
+| 学术写作 | [codex-claude-academic-skills](https://github.com/zLanqing/codex-claude-academic-skills) | MIT | 3 | 论文写作、Office 文档、科研计算 |
+| HTML 模板 | [html-anything](https://github.com/opencode-ai/html-anything) | MIT | 75+ | 仪表板、演示文稿、海报、卡片、简历 |
+| HTML PPT | 社区 | MIT | 2 | HTML PPT Studio、Guizang PPT |
+| 生物信息学 | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | Apache-2.0 | 37 | AlphaFold、Ensembl、ClinVar、UniProt、文献搜索 |
+| 生物信息学 | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | MIT | 143 | BioPython、Astropy、DeepChem、临床数据库 |
+| Office 自动化 | [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) | Apache-2.0 | CLI | Word/Excel/PowerPoint 操作（推荐配套工具） |
+
+**注意：** 生物信息学技能偏向科学研究，涵盖数据库查询、分子生物学和实验分析。但它们也能在软件开发工作流中保证科学性和严谨性。
+
 ---
 
 ## 成本优化（国内用户必读）

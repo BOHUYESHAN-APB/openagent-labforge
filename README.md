@@ -364,6 +364,21 @@ load_skill_template({ categories: ["academic-tools"] })   // CNKI, citations, La
 
 These skills are **not exposed in the user's skill list** — the AI loads them automatically when the task requires a template.
 
+### Third-Party Skills
+
+This plugin integrates skills from the following open-source projects. All third-party skills retain their original licenses — integration does **not** relicense the upstream work. See `THIRD_PARTY_NOTICES.md` for full provenance details.
+
+| Category | Source | License | Skills | Description |
+|----------|--------|---------|--------|-------------|
+| Academic Writing | [codex-claude-academic-skills](https://github.com/zLanqing/codex-claude-academic-skills) | MIT | 3 | Paper writing, Office docs, scientific computing |
+| HTML Templates | [html-anything](https://github.com/opencode-ai/html-anything) | MIT | 75+ | Dashboards, decks, posters, cards, resumes |
+| HTML PPT | Community | MIT | 2 | HTML PPT Studio, Guizang PPT |
+| Bioinformatics | [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | Apache-2.0 | 37 | AlphaFold, Ensembl, ClinVar, UniProt, literature search |
+| Bioinformatics | [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | MIT | 143 | BioPython, Astropy, DeepChem, clinical databases |
+| Office Automation | [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) | Apache-2.0 | CLI | Word/Excel/PowerPoint manipulation (recommended companion tool) |
+
+**Note:** The bioinformatics skills are more science-oriented, covering databases, molecular biology, and experimental analysis. However, they also ensure scientific rigor in software development workflows.
+
 ---
 
 ## Academic Writing
