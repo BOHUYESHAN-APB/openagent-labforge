@@ -134,6 +134,17 @@ skills. These skills are **bundled** in `resources/academicSkills/`:
 | html-ppt-skill | Community | MIT | HTML PPT Studio — presentation templates |
 | guizang-ppt-skill | Community | MIT | Horizontal-swipe web PPT with magazine/Swiss styles |
 
+### Bioinformatics Skills (Referenced Repositories)
+
+These upstream repositories are cloned as reference material for our bio-skills
+system. Selected skills are integrated into `resources/bioSkills/` with proper
+attribution. The full repos are available in `Future/skills/` for reference.
+
+| Repository | License | Skills | Use |
+|------------|---------|--------|-----|
+| [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) | Apache-2.0 | 37 | AlphaFold, Ensembl, ClinVar, UniProt, literature search |
+| [K-Dense-AI/scientific-agent-skills](https://github.com/K-Dense-AI/scientific-agent-skills) | MIT | 143 | BioPython, Astropy, DeepChem, clinical databases, molecular dynamics |
+
 ### Dependency Tools (Referenced by Skills)
 
 These tools are not bundled but referenced as runtime dependencies:
@@ -159,4 +170,4 @@ These tools are not bundled but referenced as runtime dependencies:
 
 ---
 
-*Last updated: 2026-06-05*
+*Last updated: 2026-06-06*
