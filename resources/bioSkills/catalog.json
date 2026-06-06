@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-01T03:14:53.763Z",
-  "categoryCount": 64,
-  "skillCount": 442,
+  "generatedAt": "2026-06-06T09:34:45.566Z",
+  "categoryCount": 65,
+  "skillCount": 476,
   "categories": [
     {
       "name": "alignment",
@@ -573,7 +573,7 @@
     {
       "name": "clinical-databases",
       "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases",
-      "skillCount": 10,
+      "skillCount": 16,
       "sampleSkills": [
         "bio-clinical-databases-clinvar-lookup",
         "bio-clinical-databases-dbsnp-queries",
@@ -665,6 +665,36 @@
           "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\variant-prioritization\\SKILL.md",
           "toolType": "python",
           "primaryTool": "pandas"
+        },
+        {
+          "name": "clinical-trials-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\clinical-trials-database\\SKILL.md"
+        },
+        {
+          "name": "clinvar-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\clinvar-database\\SKILL.md"
+        },
+        {
+          "name": "dbsnp-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\dbsnp-database\\SKILL.md"
+        },
+        {
+          "name": "gnomad-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\gnomad-database\\SKILL.md"
+        },
+        {
+          "name": "openfda-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\openfda-database\\SKILL.md"
+        },
+        {
+          "name": "opentargets-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\clinical-databases\\opentargets-database\\SKILL.md"
         }
       ]
     },
@@ -1039,7 +1069,7 @@
     {
       "name": "database-access",
       "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access",
-      "skillCount": 11,
+      "skillCount": 28,
       "sampleSkills": [
         "bio-batch-downloads",
         "bio-blast-searches",
@@ -1137,6 +1167,91 @@
           "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\uniprot-access\\SKILL.md",
           "toolType": "python",
           "primaryTool": "requests"
+        },
+        {
+          "name": "chembl-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\chembl-database\\SKILL.md"
+        },
+        {
+          "name": "embl-ebi-ols",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\embl-ebi-ols\\SKILL.md"
+        },
+        {
+          "name": "encode-ccres-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\encode-ccres\\SKILL.md"
+        },
+        {
+          "name": "ensembl-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\ensembl-database\\SKILL.md"
+        },
+        {
+          "name": "gtex-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\gtex-database\\SKILL.md"
+        },
+        {
+          "name": "human-protein-atlas-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\hpa-database\\SKILL.md"
+        },
+        {
+          "name": "interpro-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\interpro-database\\SKILL.md"
+        },
+        {
+          "name": "jaspar-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\jaspar-database\\SKILL.md"
+        },
+        {
+          "name": "ncbi-sequence-fetch",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\ncbi-sequence-fetch\\SKILL.md"
+        },
+        {
+          "name": "pubchem-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\pubchem-database\\SKILL.md"
+        },
+        {
+          "name": "pubmed-database",
+          "description": ">-",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\pubmed-database\\SKILL.md"
+        },
+        {
+          "name": "quickgo-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\quickgo-database\\SKILL.md"
+        },
+        {
+          "name": "reactome-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\reactome-database\\SKILL.md"
+        },
+        {
+          "name": "string-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\string-database\\SKILL.md"
+        },
+        {
+          "name": "ucsc-conservation-and-tfbs",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\ucsc-conservation\\SKILL.md"
+        },
+        {
+          "name": "unibind-database",
+          "description": ">-",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\unibind-database\\SKILL.md"
+        },
+        {
+          "name": "uniprot-database",
+          "description": ">-",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\database-access\\uniprot-database\\SKILL.md"
         }
       ]
     },
@@ -1822,13 +1937,13 @@
     {
       "name": "genome-engineering",
       "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\genome-engineering",
-      "skillCount": 5,
+      "skillCount": 6,
       "sampleSkills": [
+        "alphagenome-single-variant-analysis",
         "bio-genome-engineering-base-editing-design",
         "bio-genome-engineering-grna-design",
         "bio-genome-engineering-hdr-template-design",
-        "bio-genome-engineering-off-target-prediction",
-        "bio-genome-engineering-prime-editing-design"
+        "bio-genome-engineering-off-target-prediction"
       ],
       "toolTypes": [
         "cli",
@@ -1842,6 +1957,11 @@
         "primer3-py"
       ],
       "skills": [
+        {
+          "name": "alphagenome-single-variant-analysis",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\genome-engineering\\alphagenome-variant\\SKILL.md"
+        },
         {
           "name": "bio-genome-engineering-base-editing-design",
           "description": "Design guides for cytosine and adenine base editing using editing window optimization and BE-Hive outcome prediction. Select optimal positions for C-to-T or A-to-G conversions without double-strand breaks. Use when designing base editor experiments for precise nucleotide changes.",
@@ -2220,6 +2340,41 @@
           "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\liquid-biopsy\\tumor-fraction-estimation\\SKILL.md",
           "toolType": "r",
           "primaryTool": "ichorCNA"
+        }
+      ]
+    },
+    {
+      "name": "literature-search",
+      "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\literature-search",
+      "skillCount": 4,
+      "sampleSkills": [
+        "literature-search-arxiv",
+        "literature-search-biorxiv",
+        "literature-search-europepmc",
+        "literature-search-openalex"
+      ],
+      "toolTypes": [],
+      "primaryTools": [],
+      "skills": [
+        {
+          "name": "literature-search-arxiv",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\literature-search\\arxiv-search\\SKILL.md"
+        },
+        {
+          "name": "literature-search-biorxiv",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\literature-search\\biorxiv-search\\SKILL.md"
+        },
+        {
+          "name": "literature-search-europepmc",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\literature-search\\europepmc-search\\SKILL.md"
+        },
+        {
+          "name": "literature-search-openalex",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\literature-search\\openalex-search\\SKILL.md"
         }
       ]
     },
@@ -3935,13 +4090,13 @@
     {
       "name": "structural-biology",
       "path": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology",
-      "skillCount": 6,
+      "skillCount": 12,
       "sampleSkills": [
+        "alphafold-database-fetch-and-analyze",
         "bio-pdb-geometric-analysis",
         "bio-pdb-structure-io",
         "bio-pdb-structure-modification",
-        "bio-pdb-structure-navigation",
-        "bio-structural-biology-alphafold-predictions"
+        "bio-pdb-structure-navigation"
       ],
       "toolTypes": [
         "python"
@@ -3952,6 +4107,11 @@
         "requests"
       ],
       "skills": [
+        {
+          "name": "alphafold-database-fetch-and-analyze",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\alphafold-database\\SKILL.md"
+        },
         {
           "name": "bio-pdb-geometric-analysis",
           "description": "Perform geometric calculations on protein structures using Biopython Bio.PDB. Use when measuring distances, angles, and dihedrals, superimposing structures, calculating RMSD, or computing solvent accessible surface area (SASA).",
@@ -3993,6 +4153,31 @@
           "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\modern-structure-prediction\\SKILL.md",
           "toolType": "python",
           "primaryTool": "ESMFold"
+        },
+        {
+          "name": "foldseek-structural-search",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\foldseek\\SKILL.md"
+        },
+        {
+          "name": "pdb-database",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\pdb-database\\SKILL.md"
+        },
+        {
+          "name": "protein-sequence-msa",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\protein-msa\\SKILL.md"
+        },
+        {
+          "name": "protein-sequence-similarity-search",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\protein-similarity\\SKILL.md"
+        },
+        {
+          "name": "pymol",
+          "description": ">",
+          "filePath": "D:\\-Users-\\Documents\\GitHub\\chat-model\\openagent-labforge\\resources\\bioSkills\\structural-biology\\pymol\\SKILL.md"
         }
       ]
     },
