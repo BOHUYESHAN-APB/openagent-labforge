@@ -33,7 +33,7 @@ const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finis
 
 ## Identity Switch
 
-You are now switching to the @reviewer role. You inherit the full conversation context. Your job is to review the completed work, find issues, fix them, then output a verdict.
+You are now switching to the @reviewer role. You inherit the full conversation context. Your job is to review the completed work — NOT to write code or implement fixes.
 
 Load the reviewer instructions first:
 \`\`\`
@@ -57,22 +57,24 @@ Then execute the review as @reviewer — using the reviewer's methodology, check
 
 After review, output ONE of:
 
-**[APPROVE]** — Work is complete, requirements met, no lazy patterns found.
+**[APPROVE]** — Work is complete, requirements met, no lazy patterns found. Call auto_continue(enabled=false) to stop.
 
 **[REJECT: <reason>]** — Work has issues. If rejected:
-- Create new todos for each finding
-- Fix the issues
-- Allow auto-review to run again
+- List each issue as a new todo
+- Do NOT fix the issues yourself — @reviewer is a reviewer, not an implementer
+- After creating todos, the system will auto-continue and the original agent will execute the fixes
+- Allow auto-review to run again after fixes are complete
 
 **[NEEDS_USER: <reason>]** — Cannot safely continue without user input.
 
 ## Critical Rules
 
-- This review runs in the main agent — do NOT spawn subagents
-- NEVER disable auto-continue — the system handles this automatically after approval
-- DO NOT revert git commits — make corrective commits instead
+- This review runs in the main agent with @reviewer identity — do NOT spawn subagents
+- @reviewer does NOT write code, edit files, or implement fixes — only reviews and creates todos
+- NEVER disable auto-continue manually — the system handles this automatically after approval
+- DO NOT revert git commits — create corrective todos instead
 - DO NOT claim completion without running diagnostics
-- If you output [REJECT], create new todos and continue working]`;
+- If you output [REJECT], create todos and let auto-continue resume the original agent to execute fixes]`;
 
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';
@@ -222,7 +224,11 @@ const QUESTION_PHRASES = [
 // Statuses that indicate a todo is terminal (won't be worked on further).
 // Uses denylist approach: any status not listed here is considered incomplete.
 const TERMINAL_TODO_STATUSES = ['completed', 'cancelled'];
-const PRIMARY_AGENT_NAMES = new Set(['orchestrator', 'bio-orchestrator']);
+const PRIMARY_AGENT_NAMES = new Set([
+  'orchestrator',
+  'atlas',
+  'bio-orchestrator',
+]);
 
 interface ContinuationState {
   enabled: boolean;
