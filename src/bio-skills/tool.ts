@@ -10,7 +10,20 @@ export function createLoadBioSkillsTool(
 ): ToolDefinition {
   return tool({
     description:
-      'Load bio skills from specific categories. Use this when you need specialized bioinformatics workflows or tools. Available categories are listed in the system prompt.',
+      `Load bio skills from specific categories. Use this when you need specialized bioinformatics workflows or tools.
+
+Key categories (64 total, see bio_skills_catalog in system prompt for full list):
+- rna-seq: RNA sequencing analysis
+- variant-calling: Variant detection and annotation
+- single-cell: Single-cell analysis
+- alignment: Read alignment tools
+- phylogenetics: Phylogenetic analysis
+- genome-assembly: Genome assembly workflows
+- proteomics: Mass spectrometry proteomics
+
+Examples:
+- load_bio_skills(categories=["rna-seq"]) — load RNA-seq skills
+- load_bio_skills(categories=["variant-calling", "alignment"]) — load multiple categories`,
     args: {
       categories: z
         .array(z.string())
