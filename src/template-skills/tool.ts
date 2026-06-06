@@ -14,11 +14,12 @@ export function createLoadSkillTemplateTool(
 Available categories:
 - html-deck: HTML 幻灯片/PPT 模板（横向翻页、演讲者模式、WebGL 背景）
 - html-templates: HTML 页面模板（70+ 种：仪表板、落地页、卡片、文档页、海报、PPT、数据报告、社交卡片等）
-- academic-tools: 学术工具（CNKI 解析、引用匹配、MD 转 DOCX、LaTeX 编译、引用数据库、论文写作、Office 文档、科研计算）
+- academic-tools: 学术工具（CNKI 解析、引用匹配、MD 转 DOCX、LaTeX 编译、引用数据库、论文写作、学术管线、Office 文档、科研计算）
 
 Examples:
 - load_skill_template(categories=["html-deck"]) — load presentation templates
 - load_skill_template(categories=["html-templates"]) — load HTML page templates
+- load_skill_template(categories=["academic-tools"]) — load academic tools (CNKI parser, citation matching, academic pipeline, LaTeX, DOCX, etc.)
 - load_skill_template(categories=["html-deck", "html-templates"]) — load both`,
     args: {
       categories: z

@@ -17,6 +17,80 @@ with this plugin.
 
 ---
 
+## Skill Registration — Three Methods
+
+This plugin uses three distinct methods to register skills. Understanding which method to use is critical.
+
+### Method 1: Standard Registration (`configSkills.paths`)
+
+Skills in directories listed in `configSkills.paths` are **fully exposed** — they appear in the user's skill list AND the AI can load them via the `skill` tool.
+
+**Use for:** Skills that users may actively trigger via `/skill-name` (complete workflows).
+
+**Currently registered (20 skills):**
+
+| Skill | Description |
+|-------|-------------|
+| `academic-writing` | Academic writing workflow with literature management, citation validation, multi-format citations |
+| `agent-browser` | Browser automation via agent-browser CLI |
+| `ai-slop-remover` | Removes AI-generated code smells |
+| `cnki-citation` | CNKI export parsing |
+| `code-philosophy` | Internal logic and data flow philosophy |
+| `code-review` | Comprehensive code review methodology |
+| `codemap` | Repository codemap generation |
+| `dev-browser` | Browser automation with persistent page state |
+| `document-formatting` | DOCX formatting rules (Chinese academic) |
+| `frontend-philosophy` | Visual & UI philosophy |
+| `frontend-ui-ux` | UI/UX design guidelines |
+| `git-master` | Git workflow management |
+| `karpathy-guidelines` | Coding behavior guardrails |
+| `plan-protocol` | Implementation plan guidelines |
+| `plan-review` | Plan review criteria |
+| `playwright` | Browser automation via Playwright MCP |
+| `playwright-cli` | Browser automation via playwright-cli |
+| `review-work` | Work review guidelines |
+| `simplify` | Behavior-preserving code simplification |
+| `team-mode` | Parallel multi-agent coordination |
+
+### Method 2: Tool-Based Loading (`load_skill_template` / `load_bio_skills`)
+
+Skills loaded on-demand by the AI via dedicated tools. **Not exposed to users** — the AI sees only the tool description with category names.
+
+**Use for:** Template collections, domain-specific toolkits, anything with many variants that would overwhelm the user.
+
+**Categories:**
+
+| Category | Tool | Skills | Location |
+|----------|------|--------|----------|
+| `academic-tools` | `load_skill_template` | 9 | `resources/academicSkills/` |
+| `html-deck` | `load_skill_template` | 2 | `ThirdParty/html-ppt-skill`, `ThirdParty/guizang-ppt-skill` |
+| `html-templates` | `load_skill_template` | 75+ | `ThirdParty/html-anything-skills` |
+| Bio skills (89 categories) | `load_bio_skills` | 617 | `resources/bioSkills/` |
+
+**Academic tools breakdown:**
+
+| Skill | Purpose |
+|-------|---------|
+| `academic-pipeline` | Complete research-to-publication pipeline (6 stages, 7 agents) |
+| `cnki-parser` | CNKI export → BibTeX converter |
+| `cite-match` | Body-text citation matching engine |
+| `md2docx` | Markdown → HTML → DOCX pipeline |
+| `latex-pipeline` | LaTeX template + compilation |
+| `citation-database` | Local vector database for citations |
+| `research-writing-skill` | Paper writing, revision, peer review |
+| `office-academic-skill` | Academic Word/PPT generation |
+| `scientific-toolkit-skill` | Scientific computing (MATLAB/Python) |
+
+### Method 3: Built-in Prompts (TS code / agent system prompt)
+
+Skills whose content is embedded directly in agent prompts or TypeScript code. **Not exposed to users, not loaded via tools** — always available to the agent.
+
+**Use for:** Behavioral guidelines, coding philosophy, internal conventions that agents should always follow.
+
+**Examples:** `code-philosophy`, `frontend-philosophy`, `karpathy-guidelines`, `plan-protocol`, `document-formatting`
+
+---
+
 ## Available Skills
 
 ### Recommended (via installer)
