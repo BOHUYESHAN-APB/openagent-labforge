@@ -31,34 +31,31 @@ const CONTINUATION_PROMPT =
 
 const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
 
-## Review Instructions
+## Identity Switch
 
-Delegate the review to @reviewer using the task tool:
+You are now switching to the @reviewer role. You inherit the full conversation context. Your job is to review the completed work, find issues, fix them, then output a verdict.
+
+Load the reviewer instructions first:
 \`\`\`
-task(subagent_type="reviewer", description="auto review", prompt="Review the completed work against user requirements and todos. Check for lazy patterns like 'If you need, I can do X' — if the AI could have done it, it should have done it. Output [APPROVE] or [REJECT: <reason>].")
+load_agent_instructions(agent="reviewer")
 \`\`\`
 
-Provide @reviewer with context:
-- Original user requests (verbatim from conversation)
-- All todo items and their current status
-- Changed files (from git diff)
-- Uncommitted files
-- Plan file (if exists)
+Then execute the review as @reviewer — using the reviewer's methodology, checklist, and output format.
 
-## What @reviewer Will Check
+## What You Must Check
 
 1. **User Requirements** — Are all original requirements addressed?
 2. **Todo Completion** — Are todos genuinely complete, not just marked complete?
-3. **Lazy Patterns** (CRITICAL) — Reject if AI said:
+3. **Lazy Patterns** (CRITICAL) — Reject if you find:
    - "If you need, I can do X" — should have done X already
    - "Let me know if you want me to..." — should have done it
    - "I could also..." — should have done it if possible
    - Partial implementations with "for now" or "as a starting point"
 4. **Work Quality** — Are there obvious bugs, half-done implementations, or TODO comments?
 
-## After @reviewer Completes
+## Verdict
 
-@reviewer will output ONE of:
+After review, output ONE of:
 
 **[APPROVE]** — Work is complete, requirements met, no lazy patterns found.
 
@@ -71,10 +68,11 @@ Provide @reviewer with context:
 
 ## Critical Rules
 
+- This review runs in the main agent — do NOT spawn subagents
 - NEVER disable auto-continue — the system handles this automatically after approval
 - DO NOT revert git commits — make corrective commits instead
 - DO NOT claim completion without running diagnostics
-- If @reviewer outputs [REJECT], create new todos and continue working]`;
+- If you output [REJECT], create new todos and continue working]`;
 
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';
@@ -992,17 +990,19 @@ export function createTodoContinuationHook(
           ? (toolContext as { sessionID?: string }).sessionID
           : undefined;
 
-      // Permission: only reviewer agent can disable auto-continue
-      // Primary agents (engineer, bio, chem) can enable but not disable
-      // Other agents can only enable. Internal/system calls (no agent) allowed.
+      // Permission: primary agents (orchestrator, engineer, etc.) can disable
+      // auto-continue after completing a review cycle. The review runs in the
+      // main agent with @reviewer identity — not as a subagent.
       if (!enabled) {
         const callerAgent =
           (toolContext as { agent?: string } | undefined)?.agent ?? '';
         if (callerAgent) {
-          const isReviewer =
-            callerAgent === 'reviewer' || callerAgent.includes('review');
-          if (!isReviewer) {
-            return 'Auto-continue can only be disabled by the @reviewer agent after a review cycle. If review has completed and approved, the @reviewer will call auto_continue(enabled=false).';
+          const isPrimaryOrReviewer =
+            callerAgent === 'reviewer' ||
+            callerAgent.includes('review') ||
+            PRIMARY_AGENT_NAMES.has(callerAgent as any);
+          if (!isPrimaryOrReviewer) {
+            return 'Auto-continue can only be disabled by primary agents or @reviewer after a review cycle.';
           }
         }
       }
