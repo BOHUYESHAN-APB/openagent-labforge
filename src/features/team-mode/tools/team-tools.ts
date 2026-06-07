@@ -250,13 +250,14 @@ export function createTeamStatusTool(ctx: TeamToolsContext): ToolDefinition {
     },
     async execute(args) {
       try {
-        const state = await loadRuntimeState(args.teamName)
-        if (!state) {
+        const { aggregateStatus } = await import('../team-runtime/status.js')
+        const status = await aggregateStatus(args.teamName, ctx.config)
+        if (!status) {
           const spec = await loadTeamSpec(args.teamName)
           if (!spec) return `Team "${args.teamName}" not found.`
           return `Team "${args.teamName}" config found but no active runtime state.`
         }
-        return JSON.stringify(state, null, 2)
+        return JSON.stringify(status, null, 2)
       } catch (error) {
         return `Error getting team status: ${error instanceof Error ? error.message : String(error)}`
       }

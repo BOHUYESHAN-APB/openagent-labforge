@@ -471,6 +471,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let checkpointManager: CheckpointManager;
   let promptModeManager: PromptModeManager;
   let modeCommandHandler: ReturnType<typeof createModeCommandHandler>;
+  let teamSessionEventHandler: ((event: { type: string; properties?: unknown }) => Promise<void>) | null = null;
 
   // Counters for post-init health check (set inside try, checked outside)
   let toolCount = 0;
@@ -646,6 +647,17 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       ctx,
       multiplexerConfig,
     );
+
+    // Initialize team session event handler (tracks session.idle/deleted for team members)
+    if (config.team_mode?.enabled) {
+      try {
+        const { createTeamSessionEventHandler } = await import('./features/team-mode/team-runtime/session-event-handler.js');
+        teamSessionEventHandler = createTeamSessionEventHandler(config.team_mode);
+        log('info', 'Team session event handler initialized');
+      } catch (error) {
+        log('warn', `Failed to initialize team session event handler: ${error}`);
+      }
+    }
 
     // Initialize auto-update checker hook
     autoUpdateChecker = createAutoUpdateCheckerHook(ctx, {
@@ -1465,6 +1477,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
       // Handle session.deleted events for pane cleanup
       await multiplexerSessionManager.onSessionDeleted(event);
+
+      // Handle team session events (track session.idle/deleted for team members)
+      if (teamSessionEventHandler) {
+        await teamSessionEventHandler(event);
+      }
 
       await interviewManager.handleEvent(
         input as {
