@@ -12,14 +12,23 @@ export function createLoadSkillTemplateTool(
       `Load skill templates by category. Use when you need HTML page templates, presentation decks, academic tools, or document generation templates. Returns SKILL.md content for the requested categories.
 
 Available categories:
-- html-deck: HTML 幻灯片/PPT 模板（横向翻页、演讲者模式、WebGL 背景）
-- html-templates: HTML 页面模板（70+ 种：仪表板、落地页、卡片、文档页、海报、PPT、数据报告、社交卡片等）
-- academic-tools: 学术工具（CNKI 解析、引用匹配、MD 转 DOCX、LaTeX 编译、引用数据库、论文写作、学术管线、Office 文档、科研计算）
+- html-deck: HTML 幻灯片/PPT 模板（横向翻页、演讲者模式、WebGL 背景）— 2 skills
+- html-templates: HTML 页面模板（仪表板、落地页、卡片、文档页、海报、PPT、数据报告、社交卡片等）— 75+ skills
+- academic-tools: 学术工具 — 9 skills:
+  • academic-pipeline: 完整研究到发表管线（6 阶段 7 代理）
+  • cnki-parser: CNKI 导出→BibTeX 转换器
+  • cite-match: 正文引用匹配引擎
+  • md2docx: Markdown→HTML→DOCX 管线
+  • latex-pipeline: LaTeX 模板+编译
+  • citation-database: 本地引用向量数据库
+  • research-writing-skill: 论文写作、修改、润色、审稿回复
+  • office-academic-skill: 学术 Word/PPT 生成
+  • scientific-toolkit-skill: 科研计算（MATLAB/Python）
 
 Examples:
 - load_skill_template(categories=["html-deck"]) — load presentation templates
 - load_skill_template(categories=["html-templates"]) — load HTML page templates
-- load_skill_template(categories=["academic-tools"]) — load academic tools (CNKI parser, citation matching, academic pipeline, LaTeX, DOCX, etc.)
+- load_skill_template(categories=["academic-tools"]) — load academic tools
 - load_skill_template(categories=["html-deck", "html-templates"]) — load both
 
 IMPORTANT: Do NOT use the built-in 'skill' tool for these. Use load_skill_template instead.`,

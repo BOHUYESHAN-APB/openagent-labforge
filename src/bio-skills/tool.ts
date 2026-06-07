@@ -13,33 +13,33 @@ export function createLoadBioSkillsTool(
       `Load bio skills from specific categories. Use this when you need specialized bioinformatics workflows or tools.
 
 Key categories (88 total):
-- rna-seq: RNA sequencing analysis
-- variant-calling: Variant detection and annotation
-- single-cell: Single-cell analysis
-- alignment: Read alignment tools
-- phylogenetics: Phylogenetic analysis
-- genome-assembly: Genome assembly workflows
-- proteomics: Mass spectrometry proteomics
-- chip-seq: ChIP-seq analysis
-- atac-seq: ATAC-seq analysis
-- differential-expression: DE analysis
-- pathway-analysis: Pathway enrichment
-- metagenomics: Metagenomics analysis
-- spatial-transcriptomics: Spatial analysis
-- machine-learning: ML for biology
-- structural-biology: Protein structure
-- clinical-databases: Clinical data access
-- database-access: 100+ scientific databases
-- drug-discovery: Molecular docking, ADMET
+- rna-quantification: RNA sequencing analysis (salmon, featureCounts, tximport)
+- variant-calling: Variant detection and annotation (bcftools, GATK, DeepVariant)
+- single-cell: Single-cell analysis (scanpy, seurat, celltypist)
+- alignment: Read alignment tools (STAR, HISAT2, bowtie2, bwa-mem2)
+- phylogenetics: Phylogenetic analysis (BEAST2, IQ-TREE, ASTRAL)
+- genome-assembly: Genome assembly workflows (Flye, CheckM2, QUAST)
+- proteomics: Mass spectrometry proteomics (DIA-NN, MSstats, limma)
+- chip-seq: ChIP-seq analysis (HOMER, DiffBind, ChIPseeker)
+- atac-seq: ATAC-seq analysis (deeptools, chromVAR, NucleoATAC)
+- differential-expression: DE analysis (DESeq2, edgeR, limma)
+- pathway-analysis: Pathway enrichment (clusterProfiler, ReactomePA, GSEA)
+- metagenomics: Metagenomics analysis (Kraken, HUMAnN, MetaPhlAn)
+- spatial-transcriptomics: Spatial analysis (squidpy, cell2location, scimap)
+- machine-learning: ML for biology (scvi-tools, SHAP, lifelines)
+- structural-biology: Protein structure (AlphaFold, ESMFold, Bio.PDB)
+- clinical-databases: Clinical data access (ClinVar, gnomAD, dbSNP)
+- database-access: 100+ scientific databases (BLAST, Entrez, STRINGdb)
+- drug-discovery: Molecular docking, ADMET (DeepChem, DiffDock, RDKit)
 - quantum-computing: Cirq, Qiskit, PennyLane
 - data-processing: Dask, Polars, Vaex
-- scientific-communication: Writing, review, posters
-- research-methodology: Brainstorming, hypothesis
+- scientific-communication: Writing, review, posters (27 skills)
+- research-methodology: Brainstorming, hypothesis (11 skills)
 
 See bio_skills_catalog in system prompt for full list.
 
 Examples:
-- load_bio_skills(categories=["rna-seq"]) — load RNA-seq skills
+- load_bio_skills(categories=["rna-quantification"]) — load RNA-seq skills
 - load_bio_skills(categories=["variant-calling", "alignment"]) — load multiple categories
 - load_bio_skills(categories=["database-access"]) — load 100+ database skills`,
     args: {
