@@ -44,6 +44,10 @@ import {
   renderPlans,
   renderSkillDetail,
   renderSkillsList,
+  renderTeamsPage,
+  renderSessionsPage,
+  renderChangesPage,
+  renderExplorePage,
 } from './pages';
 
 // ── Constants ─────────────────────────────────────────
@@ -378,6 +382,79 @@ async function handleRequest(req: Request): Promise<Response> {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       } as any);
     }
+    if (p === '/teams') {
+      try {
+        const { listAllTeamStatuses } = await import('../features/team-mode/team-runtime/status.js');
+        const config = {} as any;
+        const teams = await listAllTeamStatuses(config);
+        return new Response(renderTeamsPage(teams, t), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        } as any);
+      } catch {
+        return new Response(renderTeamsPage([], t), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        } as any);
+      }
+    }
+    if (p === '/sessions') {
+      const boulderFile = join(workspaceRoot, '.opencode', 'extendai-lab', 'boulder.json');
+      const plansDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'plans');
+      let boulder = {};
+      if (existsSync(boulderFile)) {
+        try { boulder = JSON.parse(readFileSync(boulderFile, 'utf8')); } catch {}
+      }
+      const plans = existsSync(plansDir)
+        ? readdirSync(plansDir).filter(f => f.endsWith('.md')).map(f => {
+            const content = readFileSync(join(plansDir, f), 'utf8');
+            const total = (content.match(/- \[ \]/g) || []).length;
+            const completed = (content.match(/- \[x\]/g) || []).length;
+            return { name: f, total, completed };
+          })
+        : [];
+      return new Response(renderSessionsPage({ boulder, plans }, t), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      } as any);
+    }
+    if (p === '/changes') {
+      const changesDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'changes');
+      let changes: any[] = [];
+      try {
+        changes = readdirSync(changesDir, { withFileTypes: true })
+          .filter(e => e.isDirectory())
+          .map(e => {
+            const statusFile = join(changesDir, e.name, 'status.json');
+            try {
+              const status = JSON.parse(readFileSync(statusFile, 'utf8'));
+              return { name: e.name, ...status };
+            } catch {
+              return { name: e.name, status: 'unknown' };
+            }
+          });
+      } catch {}
+      return new Response(renderChangesPage(changes, t), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      } as any);
+    }
+    if (p === '/explore') {
+      const exploreDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'explore');
+      let explorations: any[] = [];
+      try {
+        explorations = readdirSync(exploreDir, { withFileTypes: true })
+          .filter(e => e.isDirectory())
+          .map(e => {
+            const contextFile = join(exploreDir, e.name, 'context.json');
+            try {
+              const context = JSON.parse(readFileSync(contextFile, 'utf8'));
+              return { name: e.name, ...context };
+            } catch {
+              return { name: e.name };
+            }
+          });
+      } catch {}
+      return new Response(renderExplorePage(explorations, t), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      } as any);
+    }
     if (p === '/config/project' || p === '/config/global') {
       const scope = p.includes('global') ? 'global' : 'project';
       const cp =
@@ -406,22 +483,47 @@ async function handleRequest(req: Request): Promise<Response> {
 
     // ── Team Agent API ──────────────────────────────────
     if (p === '/api/teams') {
-      const teamsDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'teams');
       try {
-        const teams = readdirSync(teamsDir, { withFileTypes: true })
-          .filter(e => e.isDirectory())
-          .map(e => {
-            const statusFile = join(teamsDir, e.name, 'status.json');
-            try {
-              const status = JSON.parse(readFileSync(statusFile, 'utf8'));
-              return { name: e.name, ...status };
-            } catch {
-              return { name: e.name, status: 'unknown' };
-            }
-          });
+        // Use the enhanced status aggregation
+        const { listAllTeamStatuses } = await import('../features/team-mode/team-runtime/status.js');
+        const config = {} as any; // TODO: load actual config
+        const teams = await listAllTeamStatuses(config);
         return Response.json({ teams });
+      } catch (error) {
+        // Fallback to file-based status
+        const teamsDir = join(workspaceRoot, '.opencode', 'extendai-lab', 'teams');
+        try {
+          const teams = readdirSync(teamsDir, { withFileTypes: true })
+            .filter(e => e.isDirectory())
+            .map(e => {
+              const statusFile = join(teamsDir, e.name, 'status.json');
+              try {
+                const status = JSON.parse(readFileSync(statusFile, 'utf8'));
+                return { name: e.name, ...status };
+              } catch {
+                return { name: e.name, status: 'unknown' };
+              }
+            });
+          return Response.json({ teams });
+        } catch {
+          return Response.json({ teams: [] });
+        }
+      }
+    }
+
+    if (p.startsWith('/api/teams/') && !p.includes('/tasks') && !p.includes('/messages')) {
+      // Get specific team status
+      const teamRunId = p.split('/')[3];
+      try {
+        const { aggregateStatus } = await import('../features/team-mode/team-runtime/status.js');
+        const config = {} as any; // TODO: load actual config
+        const status = await aggregateStatus(teamRunId, config);
+        if (status) {
+          return Response.json(status);
+        }
+        return Response.json({ error: 'Team not found' }, { status: 404 });
       } catch {
-        return Response.json({ teams: [] });
+        return Response.json({ error: 'Failed to get team status' }, { status: 500 });
       }
     }
 
@@ -444,6 +546,17 @@ async function handleRequest(req: Request): Promise<Response> {
         return Response.json({ team: teamName, messages });
       } catch {
         return Response.json({ team: teamName, messages: [] });
+      }
+    }
+
+    // ── Session-to-Team Registry API ────────────────────
+    if (p === '/api/team-sessions') {
+      try {
+        const { getAllTeamSessions } = await import('../features/team-mode/team-runtime/session-to-team-registry.js');
+        const sessions = getAllTeamSessions();
+        return Response.json({ sessions });
+      } catch {
+        return Response.json({ sessions: [] });
       }
     }
 
