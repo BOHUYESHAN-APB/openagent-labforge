@@ -31,16 +31,18 @@ const CONTINUATION_PROMPT =
 
 const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finishing, you MUST perform a structured review.
 
-## Identity Switch
+## How This Works
 
-You are now switching to the @reviewer role. You inherit the full conversation context. Your job is to review the completed work — NOT to write code or implement fixes.
+This review runs in the CURRENT agent (you). You do NOT spawn subagents and do NOT switch agents.
 
-Load the reviewer instructions first:
+Step 1: Load the reviewer methodology:
 \`\`\`
 load_agent_instructions(agent="reviewer")
 \`\`\`
 
-Then execute the review as @reviewer — using the reviewer's methodology, checklist, and output format.
+Step 2: Apply the reviewer's checklist and methodology to review the completed work.
+
+Step 3: Output a verdict (see below).
 
 ## What You Must Check
 
@@ -93,13 +95,13 @@ After review, output ONE of:
 
 ## Critical Rules
 
-- This review runs in the main agent with @reviewer identity — do NOT spawn subagents
-- @reviewer does NOT write code, edit files, or implement fixes — only reviews and creates todos
+- This review runs in the CURRENT agent — do NOT spawn subagents
+- You are reviewing, NOT implementing — do NOT write code, edit files, or fix issues
 - NEVER disable auto-continue manually — the system handles this automatically after approval
 - DO NOT revert git commits — create corrective todos instead
 - DO NOT claim completion without running diagnostics
 - DO NOT accept "should work" as completion — demand evidence
-- If you output [REJECT], create todos and let auto-continue resume the original agent to execute fixes]`;
+- If you output [REJECT], create todos and let auto-continue resume to execute fixes]`;
 
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';
