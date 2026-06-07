@@ -1929,6 +1929,23 @@ Trigger: PPT、幻灯片、HTML页面、landing page、dashboard
 Trigger: MATLAB、Python数据分析、信号处理、图像处理、仿真
 → First: load_skill_template(categories=["academic-tools"]) for scientific-toolkit-skill
 
+## Browser Automation (CRITICAL)
+
+When using agent-browser, playwright, or dev-browser skills:
+
+1. ALWAYS close browser when task is complete: agent-browser close / browser_close
+2. NEVER leave browser running after task finishes
+3. If task fails or is interrupted, still close the browser
+
+The browser process will hang the session if not closed. This is a known OpenCode limitation.
+
+## Long-Running Process Cleanup
+
+After any long-running process (pty_spawn, agent-browser, dev-server), you MUST:
+1. Check if process is still running
+2. Kill it with pty_kill or agent-browser close
+3. Confirm cleanup before reporting task complete
+
 SKIPPING THESE RULES = TASK FAILURE
 </skills_tool_guide>`);
 
