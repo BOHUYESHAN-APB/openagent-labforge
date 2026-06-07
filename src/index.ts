@@ -1889,6 +1889,47 @@ For Method 2 skills (bioinformatics, HTML templates, academic tools), you MUST u
 - **load_skill_template** — for HTML templates, academic tools, presentations
 
 Do NOT use the built-in 'skill' tool for these categories. The built-in 'skill' tool only works for Method 1 skills like code-review, karpathy-guidelines, etc.
+
+## Terminal Usage (CRITICAL)
+
+OpenCode's default 'bash' tool has a 5-minute timeout and blocks the session.
+For long-running commands (Python scripts, bioinformatics tools, builds), you MUST use pty_spawn:
+
+- **pty_spawn** — start persistent background terminal (no timeout)
+- **pty_read** — read output from background terminal
+- **pty_write** — send input to background terminal
+- **pty_kill** — terminate background terminal
+
+If pty_spawn is not available, ask the user to install opencode-pty plugin:
+"Please install opencode-pty for persistent terminal support: npm install -g opencode-pty"
+
+## Mandatory Workflow Rules
+
+When user request matches these scenarios, you MUST load skills BEFORE executing:
+
+### Academic Writing
+Trigger: 写论文、学术写作、paper、manuscript、投稿、SCI、文献综述
+→ First: load_skill_template(categories=["academic-tools"])
+→ Then: skill("academic-writing")
+
+### Data Visualization
+Trigger: 画图、plot、图表、figure、volcano、heatmap、PCA、可视化
+→ First: load_bio_skills(categories=["data-visualization"])
+
+### Bioinformatics Analysis
+Trigger: RNA-seq、差异表达、variant calling、alignment、ChIP-seq、通路分析、单细胞
+→ First: detect_bio_task to identify type
+→ Then: load_bio_skills(categories=[corresponding category])
+
+### HTML/PPT Creation
+Trigger: PPT、幻灯片、HTML页面、landing page、dashboard
+→ First: load_skill_template(categories=["html-templates"]) or ["html-deck"]
+
+### Scientific Computing
+Trigger: MATLAB、Python数据分析、信号处理、图像处理、仿真
+→ First: load_skill_template(categories=["academic-tools"]) for scientific-toolkit-skill
+
+SKIPPING THESE RULES = TASK FAILURE
 </skills_tool_guide>`);
 
           // Always show catalog
