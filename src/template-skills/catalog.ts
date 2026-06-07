@@ -145,7 +145,7 @@ function scanSkillNames(dirPath: string): string[] {
 function extractSkillName(filePath: string): string | null {
   try {
     const content = readFileSync(filePath, 'utf8');
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
+    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!match) return null;
 
     const frontmatter = match[1];

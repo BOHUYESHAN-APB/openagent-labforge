@@ -123,7 +123,7 @@ function scanAllSkills(): SkillInfo[] {
         if (!existsSync(skillMd)) continue;
         try {
           const content = readFileSync(skillMd, 'utf8');
-          const fm = content.match(/^---\n([\s\S]*?)\n---/);
+          const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
           let name = e.name,
             zhName = e.name,
             description = '',
