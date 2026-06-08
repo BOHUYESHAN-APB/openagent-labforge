@@ -666,6 +666,56 @@ bun run check:ci   # Lint + format + organize imports
 
 ---
 
+## How to Cite
+
+If you use ExtendAI Lab in your research, please cite it using one of the following formats:
+
+### GB/T 7714-2015 (Chinese Standard)
+
+```
+BOHUYESHAN. ExtendAI Lab: Agent orchestration system for OpenCode 
+with bioinformatics and academic writing support (Version 1.2.3) 
+[EB/OL]. (2026-06-08)[2026-XX-XX]. 
+https://github.com/BOHUYESHAN-APB/openagent-labforge-bio.
+```
+
+### APA 7th Edition
+
+```
+BOHUYESHAN. (2026). ExtendAI Lab (Version 1.2.3) [Computer software]. 
+GitHub. https://github.com/BOHUYESHAN-APB/openagent-labforge-bio
+```
+
+### IEEE
+
+```
+BOHUYESHAN, "ExtendAI Lab: Agent orchestration system for OpenCode," 
+GitHub, Version 1.2.3, Jun. 2026. [Online]. Available: 
+https://github.com/BOHUYESHAN-APB/openagent-labforge-bio
+```
+
+### BibTeX
+
+```bibtex
+@software{extendai-lab,
+  author = {BOHUYESHAN},
+  title = {ExtendAI Lab: Agent orchestration system for OpenCode with 
+           bioinformatics and academic writing support},
+  version = {1.2.3},
+  year = {2026},
+  month = {6},
+  url = {https://github.com/BOHUYESHAN-APB/openagent-labforge-bio},
+  note = {Accessed: 2026-XX-XX}
+}
+```
+
+### Short Citation (In-text)
+
+- First citation: ExtendAI Lab (BOHUYESHAN, 2026)
+- Subsequent: (ExtendAI Lab, 2026)
+
+---
+
 ## License & Credits
 
 [Apache-2.0](LICENSE)
