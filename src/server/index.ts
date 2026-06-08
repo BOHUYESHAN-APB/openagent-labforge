@@ -298,24 +298,11 @@ async function handleRequest(req: Request): Promise<Response> {
 
     if (p === '/' || p === '/dashboard') {
       const skills = scanAllSkills();
-      const pagesDir = join(
-        workspaceRoot,
-        '.opencode',
-        'extendai-lab',
-        'pages',
-      );
-      let recentHtml: string[] = [];
-      try {
-        recentHtml = readdirSync(pagesDir)
-          .filter((f) => f.endsWith('.html'))
-          .slice(-6);
-      } catch {}
       return new Response(
         renderDashboard(t, {
           skills: skills.length,
           workspace: workspaceRoot,
           port: PORT,
-          recentHtml,
         }),
         { headers: { 'Content-Type': 'text/html; charset=utf-8' } } as any,
       );

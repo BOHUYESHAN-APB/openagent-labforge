@@ -181,13 +181,8 @@ export function renderDashboard(
     skills?: number;
     workspace?: string;
     port?: number;
-    recentHtml?: string[];
   },
 ): string {
-  const recentSection = info?.recentHtml?.length
-    ? `<h3 class="cat-head">Recent HTML Pages</h3><div class="grid-3">${info.recentHtml.map((f) => `<a href="/view/${encodeURIComponent(f)}" class="card-link"><span class="ico">🌐</span><h4>${f}</h4></a>`).join('')}</div>`
-    : '<p class="sub">No HTML pages yet. AI can write them to .opencode/extendai-lab/pages/</p>';
-
   return base(
     'Dashboard',
     `
@@ -208,11 +203,6 @@ export function renderDashboard(
       <a href="/changes" class="card-link"><span class="ico">🔀</span><h3>Changes</h3><p>Change proposals & tracking</p></a>
       <a href="/explore" class="card-link"><span class="ico">🔍</span><h3>Explore</h3><p>Exploration notes & research</p></a>
     </div>
-    ${recentSection}
-    <script>
-      // Auto-refresh dashboard every 30 seconds
-      setTimeout(() => location.reload(), 30000);
-    </script>
   `,
     theme,
   );
