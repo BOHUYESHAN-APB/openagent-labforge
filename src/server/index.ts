@@ -38,7 +38,6 @@ import {
   renderDocFile,
   renderDocs,
   renderError,
-  renderHtmlPage,
   renderHtmlViewer,
   renderPlanFile,
   renderPlans,
@@ -311,20 +310,6 @@ async function handleRequest(req: Request): Promise<Response> {
       return new Response(renderHtmlViewer(t), {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       } as any);
-    if (p.startsWith('/view/')) {
-      const name = decodeURIComponent(p.slice(6));
-      const pagesDir = join(
-        workspaceRoot,
-        '.opencode',
-        'extendai-lab',
-        'pages',
-      );
-      const fp = join(pagesDir, name);
-      if (!existsSync(fp)) return err(404, 'Page not found: ' + name);
-      return new Response(renderHtmlPage(name, readFileSync(fp, 'utf8'), t), {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      } as any);
-    }
     if (p === '/api/html-pages') {
       const pagesDir = join(
         workspaceRoot,
@@ -333,9 +318,10 @@ async function handleRequest(req: Request): Promise<Response> {
         'pages',
       );
       try {
-        return Response.json(
-          readdirSync(pagesDir).filter((f) => f.endsWith('.html')),
-        );
+        const files = readdirSync(pagesDir).filter((f) => f.endsWith('.html'));
+        // Return full paths for file:// URLs
+        const fullPaths = files.map((f) => join(pagesDir, f));
+        return Response.json(fullPaths);
       } catch {
         return Response.json([]);
       }

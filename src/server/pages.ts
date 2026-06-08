@@ -379,13 +379,16 @@ export function renderHtmlViewer(theme: string): string {
     'HTML Viewer',
     `
     <h2>AI-Generated HTML Viewer</h2>
-    <p class="sub">AI writes HTML files to <code>.opencode/extendai-lab/pages/</code> — they appear here.</p>
+    <p class="sub">HTML files are in <code>.opencode/extendai-lab/pages/</code> — open them directly in your browser.</p>
     <div id="pages-list"><p class="sub">Loading...</p></div>
     <script>
       fetch('/api/html-pages').then(r=>r.json()).then(pages=>{
         const el=document.getElementById('pages-list');
         if(!pages.length){el.innerHTML='<p class="sub">No HTML pages yet. Ask the AI to create one.</p>';return}
-        el.innerHTML='<div class="grid-3">'+pages.map(p=>'<a href="/view/'+p+'" class="card-link"><h4>'+p+'</h4></a>').join('')+'</div>';
+        el.innerHTML='<div class="grid-3">'+pages.map(p=>{
+          const fileUrl = 'file:///' + p.replace(/\\\\/g, '/');
+          return '<a href="'+fileUrl+'" target="_blank" class="card-link"><h4>'+p.split('/').pop().split('\\\\').pop()+'</h4><p class="sub">'+p+'</p></a>';
+        }).join('')+'</div>';
       });
     </script>
   `,
