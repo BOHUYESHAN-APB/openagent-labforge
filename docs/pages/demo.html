@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo - ExtendAI Lab</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+  
+  .demo-card {
+    background: rgba(26,26,46,0.6);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  
+  .demo-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+  
+  .demo-preview {
+    height: 300px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .demo-preview iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    transform: scale(0.5);
+    transform-origin: top left;
+  }
+  
+  .demo-preview::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: linear-gradient(transparent, var(--bg));
+  }
+  
+  .demo-info {
+    padding: 24px;
+  }
+  
+  .demo-info h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  
+  .demo-info p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  
+  .demo-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .demo-tag {
+    padding: 4px 12px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  /* Paper Preview */
+  .paper-preview {
+    background: #fff;
+    color: #000;
+    padding: 60px 40px;
+    font-family: 'SimSun', 'Times New Roman', serif;
+    font-size: 14px;
+    line-height: 1.8;
+    max-width: 800px;
+    margin: 0 auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  
+  .paper-preview h1 {
+    font-family: 'SimHei', 'Arial', sans-serif;
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 24px;
+    background: none;
+    -webkit-text-fill-color: #000;
+  }
+  
+  .paper-preview h2 {
+    font-family: 'SimHei', 'Arial', sans-serif;
+    font-size: 16px;
+    margin: 24px 0 12px;
+    color: #000;
+  }
+  
+  .paper-preview p {
+    text-indent: 2em;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  
+  .paper-preview .abstract {
+    margin: 24px 0;
+    padding: 16px 24px;
+    background: #f5f5f5;
+    border-left: 3px solid #0066cc;
+  }
+  
+  .paper-preview .reference {
+    font-size: 12px;
+    margin-left: 2em;
+    text-indent: -2em;
+  }
+  
+  .paper-preview sup {
+    color: #0066cc;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="main-nav">
+  <div class="nav-container">
+    <a href="../index.html" class="logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L2 9l14 7 14-7-14-7zM2 23l14 7 14-7M2 16l14 7 14-7" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      ExtendAI Lab
+    </a>
+    <div class="nav-links">
+      <a href="../index.html">Home</a>
+      <a href="skills.html">Skills</a>
+      <a href="demo.html" class="active">Demo</a>
+      <a href="about.html">About</a>
+      <a href="https://github.com/BOHUYESHAN-APB/openagent-labforge-bio" class="btn btn-github">GitHub</a>
+    </div>
+    <button class="mobile-menu" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+
+<!-- Demo Header -->
+<section class="section" style="padding-top: 140px;">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">Demo</span>
+      <h2>See It In Action</h2>
+      <p>Examples of academic paper formatting and bioinformatics analysis</p>
+    </div>
+  </div>
+</section>
+
+<!-- Paper Formatting Demo -->
+<section class="section" style="padding-top: 0;">
+  <div class="container">
+    <div class="section-header">
+      <h3 style="color: var(--accent); margin-bottom: 32px;">📄 Academic Paper Formatting</h3>
+    </div>
+    
+    <div class="paper-preview">
+      <h1>基于深度学习的RNA-seq差异表达基因分析方法研究</h1>
+      
+      <p style="text-align: center; text-indent: 0; color: #666; font-size: 13px;">
+        张三<sup>1</sup>，李四<sup>1,2</sup>，王五<sup>2</sup>
+      </p>
+      <p style="text-align: center; text-indent: 0; color: #999; font-size: 12px;">
+        1. 北京大学生命科学学院，北京 100871<br>
+        2. 中国科学院生物物理研究所，北京 100101
+      </p>
+      
+      <div class="abstract">
+        <p style="text-indent: 0;"><strong>摘要：</strong>RNA测序（RNA-seq）技术已成为研究基因表达差异的重要工具。本研究提出了一种基于深度学习的差异表达分析方法DeepDE，通过卷积神经网络对基因表达谱进行特征提取和分类。实验结果表明，DeepDE在模拟数据和真实数据集上均优于传统方法DESeq2和edgeR，准确率提升15.3%，召回率提升12.7%。<sup>[1]</sup></p>
+      </div>
+      
+      <h2>1 引言</h2>
+      <p>RNA测序（RNA-seq）是目前应用最广泛的转录组学技术之一，能够全面、准确地检测基因表达水平<sup>[2]</sup>。差异表达分析是RNA-seq数据分析的核心步骤，旨在识别在不同条件下表达水平发生显著变化的基因<sup>[3]</sup>。</p>
+      
+      <h2>2 材料与方法</h2>
+      <p>本研究使用了TCGA数据库中的乳腺癌RNA-seq数据，包含1097个样本（535个肿瘤样本和562个正常样本）。数据预处理包括质量控制、比对、定量和标准化等步骤<sup>[4]</sup>。</p>
+      
+      <h2>3 结果</h2>
+      <p>DeepDE模型在测试集上的AUC值为0.987，显著高于DESeq2（0.923）和edgeR（0.918）。进一步分析发现，DeepDE能够识别到更多低表达差异基因，这些基因在传统方法中往往被忽略<sup>[5]</sup>。</p>
+      
+      <h2>参考文献</h2>
+      <p class="reference">[1] 张三, 李四. 深度学习在生物信息学中的应用[J]. 计算生物学, 2025, 15(3): 123-135.</p>
+      <p class="reference">[2] Wang Z, Gerstein M, Snyder M. RNA-seq: a revolutionary tool for transcriptomics[J]. Nat Rev Genet, 2009, 10(1): 57-63.</p>
+      <p class="reference">[3] Anders S, Huber W. Differential expression analysis for sequence count data[J]. Genome Biol, 2010, 11(10): R106.</p>
+      <p class="reference">[4] Dobin A, Davis CA, Schlesinger F, et al. STAR: ultrafast universal RNA-seq aligner[J]. Bioinformatics, 2013, 29(1): 15-21.</p>
+      <p class="reference">[5] Love MI, Huber W, Anders S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2[J]. Genome Biol, 2014, 15(12): 550.</p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 32px;">
+      <p style="color: var(--text-muted); font-size: 14px;">
+        ✅ GB/T 7714-2015 格式 • ✅ 宋体/黑体/Times New Roman • ✅ REF field code 交叉引用
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Bioinformatics Demo -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h3 style="color: var(--accent2); margin-bottom: 32px;">🧬 Bioinformatics Analysis Demo</h3>
+    </div>
+    
+    <div class="demo-grid">
+      <div class="demo-card">
+        <div class="demo-info">
+          <h3>RNA-seq Differential Expression</h3>
+          <p>Complete workflow from raw reads to differentially expressed genes using STAR, featureCounts, and DESeq2.</p>
+          <div class="demo-tags">
+            <span class="demo-tag">STAR</span>
+            <span class="demo-tag">DESeq2</span>
+            <span class="demo-tag">edgeR</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="demo-card">
+        <div class="demo-info">
+          <h3>Single-cell RNA-seq</h3>
+          <p>Clustering, annotation, and trajectory analysis using Scanpy and Seurat.</p>
+          <div class="demo-tags">
+            <span class="demo-tag">Scanpy</span>
+            <span class="demo-tag">Seurat</span>
+            <span class="demo-tag">UMAP</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="demo-card">
+        <div class="demo-info">
+          <h3>Variant Calling Pipeline</h3>
+          <p>GATK best practices for germline and somatic variant detection.</p>
+          <div class="demo-tags">
+            <span class="demo-tag">GATK</span>
+            <span class="demo-tag">DeepVariant</span>
+            <span class="demo-tag">VEP</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="demo-card">
+        <div class="demo-info">
+          <h3>Protein Structure Prediction</h3>
+          <p>AlphaFold integration for protein structure prediction and analysis.</p>
+          <div class="demo-tags">
+            <span class="demo-tag">AlphaFold</span>
+            <span class="demo-tag">PyMOL</span>
+            <span class="demo-tag">3Dmol.js</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-logo">
+        <svg viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L2 9l14 7 14-7-14-7zM2 23l14 7 14-7M2 16l14 7 14-7" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        ExtendAI Lab
+      </div>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="skills.html">Skills</a>
+        <a href="demo.html">Demo</a>
+        <a href="about.html">About</a>
+        <a href="https://github.com/BOHUYESHAN-APB/openagent-labforge-bio">GitHub</a>
+      </div>
+      <div class="footer-citation">
+        BOHUYESHAN. ExtendAI Lab (Version 1.2.3) [EB/OL]. 2026.
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "Hemoglobin subunit beta (HBB)",
+  "organism": "Homo sapiens",
+  "length": 147,
+  "sequence": "MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH",
+  "properties": {
+    "A": "nonpolar",
+    "V": "nonpolar",
+    "I": "nonpolar",
+    "L": "nonpolar",
+    "M": "nonpolar",
+    "F": "nonpolar",
+    "W": "nonpolar",
+    "P": "nonpolar",
+    "S": "polar",
+    "T": "polar",
+    "C": "polar",
+    "Y": "polar",
+    "N": "polar",
+    "Q": "polar",
+    "K": "positive",
+    "R": "positive",
+    "H": "positive",
+    "D": "negative",
+    "E": "negative",
+    "G": "special"
+  },
+  "colors": {
+    "nonpolar": "#ff6b6b",
+    "polar": "#00d4ff",
+    "positive": "#00ff88",
+    "negative": "#ffd700",
+    "special": "#b0b0b0"
+  }
+}
