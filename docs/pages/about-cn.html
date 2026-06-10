@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About - ExtendAI Lab</title>
+<title>关于 - ExtendAI Lab</title>
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
 <nav id="main-nav">
   <div class="nav-container">
-    <a href="../index.html" class="logo">
+    <a href="../index-cn.html" class="logo">
       <svg viewBox="0 0 32 32" fill="none"><path d="M16 2L2 9l14 7 14-7-14-7zM2 23l14 7 14-7M2 16l14 7 14-7" stroke="currentColor" stroke-width="2"/></svg>
       ExtendAI Lab
     </a>
     <div class="nav-links">
-      <a href="../index.html">Home</a>
-      <a href="skills.html">Skills</a>
-      <a href="demo.html">Demo</a>
-      <a href="about.html" class="active">About</a>
+      <a href="../index-cn.html">首页</a>
+      <a href="skills-cn.html">技能</a>
+      <a href="demo-cn.html">演示</a>
+      <a href="about-cn.html" class="active">关于</a>
       <a href="https://github.com/BOHUYESHAN-APB/openagent-labforge-bio" class="btn btn-github">GitHub</a>
-      <a href="about-cn.html" class="lang-switch">CN</a>
+      <a href="about.html" class="lang-switch">EN</a>
     </div>
     <button class="mobile-menu" onclick="toggleMenu()">&#9776;</button>
   </div>
@@ -29,27 +29,27 @@
 <section class="section" style="padding-top: 140px;">
   <div class="container">
     <div class="section-header">
-      <span class="section-badge">About</span>
-      <h2>About ExtendAI Lab</h2>
-      <p>AI-powered bioinformatics agent orchestration</p>
+      <span class="section-badge">关于</span>
+      <h2>关于 ExtendAI Lab</h2>
+      <p>AI驱动的生物信息学智能体编排</p>
     </div>
 
     <div class="about-grid">
       <div class="about-card">
-        <h3>&#127919; Mission</h3>
-        <p>Bridge the gap between AI coding assistants and domain-specific bioinformatics expertise. Provide a plugin system that brings 617 professional skills to OpenCode, enabling researchers to leverage AI for complex bioinformatics workflows.</p>
+        <h3>&#127919; 使命</h3>
+        <p>弥合 AI 编程助手与领域特定生物信息学专业知识之间的差距。提供一个插件系统，将617个专业技能带到 OpenCode，使研究人员能够利用 AI 处理复杂的生物信息学工作流。</p>
       </div>
       <div class="about-card">
-        <h3>&#127959; Architecture</h3>
-        <p>Built as an OpenCode plugin, ExtendAI Lab uses a multi-agent architecture with 15 specialized agents. Features persistent memory, auto-continue, and seamless integration with bioinformatics tools.</p>
+        <h3>&#127959; 架构</h3>
+        <p>作为 OpenCode 插件构建，ExtendAI Lab 使用包含15个专业智能体的多智能体架构。具有持久化记忆、自动继续功能，并与生物信息学工具无缝集成。</p>
       </div>
       <div class="about-card">
-        <h3>&#128218; Skills</h3>
-        <p>617 bioinformatics skills across 88 categories, covering genomics, transcriptomics, proteomics, single-cell analysis, clinical bioinformatics, and more.</p>
+        <h3>&#128218; 技能</h3>
+        <p>覆盖88个分类的617个生物信息学技能，涵盖基因组学、转录组学、蛋白质组学、单细胞分析、临床生物信息学等。</p>
       </div>
       <div class="about-card">
-        <h3>&#128221; Academic Writing</h3>
-        <p>Complete academic writing pipeline with GB/T 7714-2015 citation format, MD&#8594;DOCX conversion, proper font handling (Song/TNR/Hei), and REF field code cross-references.</p>
+        <h3>&#128221; 学术写作</h3>
+        <p>完整的学术写作管线，支持 GB/T 7714-2015 引用格式、MD&#8594;DOCX 转换、正确的字体处理（宋体/TNR/黑体）以及 REF 字段代码交叉引用。</p>
       </div>
     </div>
   </div>
@@ -58,25 +58,25 @@
 <section class="section">
   <div class="container">
     <div class="section-header">
-      <span class="section-badge">Design</span>
-      <h2>Design Philosophy</h2>
+      <span class="section-badge">设计</span>
+      <h2>设计理念</h2>
     </div>
     <div class="design-grid">
       <div class="design-card">
-        <h4>Main-Agent-First</h4>
-        <p>The main agent retains full context and control. Child sessions are spawned only when necessary, with results fed back to maintain coherence.</p>
+        <h4>主智能体优先</h4>
+        <p>主智能体保留完整的上下文和控制权。仅在必要时生成子会话，结果反馈回主会话以保持连贯性。</p>
       </div>
       <div class="design-card">
-        <h4>Cost Optimization</h4>
-        <p>Use <code>load_agent_instructions</code> instead of spawning child sessions when possible. Preserves cache and reduces token usage.</p>
+        <h4>成本优化</h4>
+        <p>尽可能使用 <code>load_agent_instructions</code> 代替生成子会话。保持缓存并减少 Token 使用。</p>
       </div>
       <div class="design-card">
-        <h4>Cross-Window State</h4>
-        <p>Plan files, boulder.json, and session IDs persist across windows. Hook-injected context ensures state recovery in isolated contexts.</p>
+        <h4>跨窗口状态</h4>
+        <p>计划文件、boulder.json 和会话 ID 跨窗口持久化。钩子注入的上下文确保隔离上下文中的状态恢复。</p>
       </div>
       <div class="design-card">
-        <h4>Independent MCP</h4>
-        <p>Each window gets its own MCP server instance. No shared stdio transport conflicts across processes.</p>
+        <h4>独立 MCP</h4>
+        <p>每个窗口获得独立的 MCP 服务器实例。跨进程无共享 stdio 传输冲突。</p>
       </div>
     </div>
   </div>
@@ -85,25 +85,25 @@
 <section class="section">
   <div class="container">
     <div class="section-header">
-      <span class="section-badge">Timeline</span>
-      <h2>Project Timeline</h2>
+      <span class="section-badge">时间线</span>
+      <h2>项目时间线</h2>
     </div>
     <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-date">v1.0.0</div>
-        <div class="timeline-content">Initial release with basic agent orchestration</div>
+        <div class="timeline-content">初始发布，基础智能体编排</div>
       </div>
       <div class="timeline-item">
         <div class="timeline-date">v1.0.24</div>
-        <div class="timeline-content">Independent MCP servers, auto-review system, cross-window state recovery</div>
+        <div class="timeline-content">独立 MCP 服务器、自动审查系统、跨窗口状态恢复</div>
       </div>
       <div class="timeline-item">
         <div class="timeline-date">v1.2.0</div>
-        <div class="timeline-content">Bioinformatics skills integration, 617 skills, 88 categories</div>
+        <div class="timeline-content">生物信息学技能集成，617个技能，88个分类</div>
       </div>
       <div class="timeline-item">
         <div class="timeline-date">v1.2.3</div>
-        <div class="timeline-content">Academic writing pipeline, template skills, browser automation</div>
+        <div class="timeline-content">学术写作管线、模板技能、浏览器自动化</div>
       </div>
     </div>
   </div>
@@ -112,15 +112,15 @@
 <section class="section">
   <div class="container">
     <div class="section-header">
-      <span class="section-badge">Upstream</span>
-      <h2>Upstream Projects</h2>
+      <span class="section-badge">上游</span>
+      <h2>上游项目</h2>
     </div>
     <div class="upstream-list">
       <div class="upstream-item">
         <div class="upstream-icon">&#128268;</div>
         <div class="upstream-info">
           <h3>OpenCode</h3>
-          <p>Open-source programming agent. ExtendAI Lab is a plugin for OpenCode.</p>
+          <p>开源编程智能体。ExtendAI Lab 是 OpenCode 的插件。</p>
           <a href="https://github.com/anomalyco/opencode" class="upstream-link">github.com/anomalyco/opencode</a>
         </div>
       </div>
@@ -128,7 +128,7 @@
         <div class="upstream-icon">&#128230;</div>
         <div class="upstream-info">
           <h3>oh-my-opencode-slim</h3>
-          <p>Slimmed, cleaned, and optimized fork of oh-my-opencode. The foundation of ExtendAI Lab.</p>
+          <p>精简、清理和优化的 oh-my-opencode 分支。ExtendAI Lab 的基础。</p>
           <a href="https://github.com/alvinunreal/oh-my-opencode-slim" class="upstream-link">github.com/alvinunreal/oh-my-opencode-slim</a>
         </div>
       </div>
@@ -136,7 +136,7 @@
         <div class="upstream-icon">&#129516;</div>
         <div class="upstream-info">
           <h3>bioSkills</h3>
-          <p>Collection of SKILL.md files for AI agents doing bioinformatics.</p>
+          <p>用于 AI 智能体进行生物信息学的 SKILL.md 文件集合。</p>
           <a href="https://github.com/BOHUYESHAN-APB/bioSkills" class="upstream-link">github.com/BOHUYESHAN-APB/bioSkills</a>
         </div>
       </div>
@@ -147,8 +147,8 @@
 <section class="section">
   <div class="container">
     <div class="section-header">
-      <span class="section-badge">Citation</span>
-      <h2>How to Cite</h2>
+      <span class="section-badge">引用</span>
+      <h2>如何引用</h2>
     </div>
     <div class="citation-boxes">
       <div class="citation-box">
@@ -175,13 +175,13 @@
         ExtendAI Lab
       </div>
       <div class="footer-links">
-        <a href="../index.html">Home</a>
-        <a href="skills.html">Skills</a>
-        <a href="demo.html">Demo</a>
-        <a href="about.html">About</a>
+        <a href="../index-cn.html">首页</a>
+        <a href="skills-cn.html">技能</a>
+        <a href="demo-cn.html">演示</a>
+        <a href="about-cn.html">关于</a>
       </div>
       <div class="footer-citation">
-        BOHUYESHAN. ExtendAI Lab (Version 1.2.3) [EB/OL]. 2026.
+        BOHUYESHAN. ExtendAI Lab (版本 1.2.3) [EB/OL]. 2026.
       </div>
     </div>
   </div>

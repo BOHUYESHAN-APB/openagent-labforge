@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExtendAI Lab - AI驱动的生物信息学</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<nav id="main-nav">
+  <div class="nav-container">
+    <a href="index-cn.html" class="logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L2 9l14 7 14-7-14-7zM2 23l14 7 14-7M2 16l14 7 14-7" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      ExtendAI Lab
+    </a>
+    <div class="nav-links">
+      <a href="index-cn.html" class="active">首页</a>
+      <a href="pages/skills-cn.html">技能</a>
+      <a href="pages/demo-cn.html">演示</a>
+      <a href="pages/about-cn.html">关于</a>
+      <a href="https://github.com/BOHUYESHAN-APB/openagent-labforge-bio" class="btn btn-github">GitHub</a>
+      <a href="index.html" class="lang-switch">EN</a>
+    </div>
+    <button class="mobile-menu" onclick="toggleMenu()">&#9776;</button>
+  </div>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="pulse-dot"></span>
+      OpenCode 插件 &bull; v1.2.3
+    </div>
+    <h1 class="glitch" data-text="ExtendAI Lab">ExtendAI Lab</h1>
+    <p class="hero-subtitle">
+      AI驱动的生物信息学智能体编排<br>
+      <span class="typing-text">617个生物技能 &bull; 88个分类 &bull; 15个专家智能体</span>
+    </p>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-number" data-target="617">0</div><div class="stat-label">生物技能</div></div>
+      <div class="stat"><div class="stat-number" data-target="88">0</div><div class="stat-label">分类</div></div>
+      <div class="stat"><div class="stat-number" data-target="15">0</div><div class="stat-label">智能体</div></div>
+      <div class="stat"><div class="stat-number" data-target="1221">0</div><div class="stat-label">测试</div></div>
+    </div>
+    <div class="hero-cta">
+      <a href="pages/demo-cn.html" class="btn btn-primary">
+        <span>在线演示</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#install" class="btn btn-outline">快速开始</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="architecture">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">架构</span>
+      <h2>多智能体编排</h2>
+      <p>5个编排器协调15个专业智能体</p>
+    </div>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <div class="arch-icon">&#9881;</div>
+        <h3>工程师</h3>
+        <p>全栈开发、代码审查、测试</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-icon">&#128300;</div>
+        <h3>深度工作者</h3>
+        <p>长时间任务、研究、分析</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-icon">&#128203;</div>
+        <h3>规划师</h3>
+        <p>任务分解、路线图创建</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-icon">&#9889;</div>
+        <h3>执行器</h3>
+        <p>自动继续执行、检查点管理</p>
+      </div>
+      <div class="arch-card">
+        <div class="arch-icon">&#129516;</div>
+        <h3>生物分析师</h3>
+        <p>基因组学、转录组学、蛋白质组学流程</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="agents">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">智能体</span>
+      <h2>15个专业智能体</h2>
+    </div>
+    <div class="agent-grid">
+      <div class="agent-card"><span class="agent-emoji">&#128269;</span><h4>探索者</h4><p>代码库导航</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128218;</span><h4>图书管理员</h4><p>文档搜索</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#127959;</span><h4>架构师</h4><p>系统设计</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128104;&#8205;&#128187;</span><h4>前端</h4><p>UI/UX实现</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#9881;</span><h4>后端</h4><p>API与数据库</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#129302;</span><h4>测试</h4><p>测试自动化</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128200;</span><h4>数据</h4><p>数据工程</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128274;</span><h4>安全</h4><p>安全审计</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128640;</span><h4>DevOps</h4><p>CI/CD流水线</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#129516;</span><h4>生物信息</h4><p>生物信息学分析</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128221;</span><h4>写作</h4><p>学术写作</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128300;</span><h4>研究员</h4><p>文献综述</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128161;</span><h4>神谕</h4><p>代码审查与分析</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128736;</span><h4>构建者</h4><p>构建与编译</p></div>
+      <div class="agent-card"><span class="agent-emoji">&#128260;</span><h4>多路复用器</h4><p>会话管理</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="workflow">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">工作流</span>
+      <h2>工作流程</h2>
+    </div>
+    <div class="workflow-steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>创建计划</h3>
+        <p>使用 /ol-plan 生成包含任务和里程碑的结构化Markdown计划</p>
+      </div>
+      <div class="step-arrow">&#10132;</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>开始工作</h3>
+        <p>启动 /ol-start-work 开始执行，带持久化会话跟踪</p>
+      </div>
+      <div class="step-arrow">&#10132;</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>自动继续</h3>
+        <p>智能体自动继续执行，直到所有任务完成</p>
+      </div>
+      <div class="step-arrow">&#10132;</div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>审查与提交</h3>
+        <p>使用 /review 在提交更改前进行代码审查</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="comparison">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">对比</span>
+      <h2>ExtendAI Lab vs 基础 OpenCode</h2>
+    </div>
+    <table class="comparison-table">
+      <thead>
+        <tr><th>功能</th><th>基础 OpenCode</th><th>ExtendAI Lab</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>生物信息学技能</td><td>&#10060;</td><td>&#9989; 617个技能</td></tr>
+        <tr><td>学术写作</td><td>&#10060;</td><td>&#9989; GB/T 7714 + MD&#8594;DOCX</td></tr>
+        <tr><td>多智能体编排</td><td>&#10060;</td><td>&#9989; 15个智能体</td></tr>
+        <tr><td>持久化记忆</td><td>&#10060;</td><td>&#9989; 跨会话计划</td></tr>
+        <tr><td>自动继续</td><td>&#10060;</td><td>&#9989; 直到完成</td></tr>
+        <tr><td>检查点系统</td><td>&#10060;</td><td>&#9989; /ol-checkpoint</td></tr>
+        <tr><td>MCP服务器</td><td>&#10060;</td><td>&#9989; 每窗口独立实例</td></tr>
+        <tr><td>模板技能</td><td>&#10060;</td><td>&#9989; 70+ HTML模板</td></tr>
+        <tr><td>浏览器自动化</td><td>&#10060;</td><td>&#9989; Playwright + agent-browser</td></tr>
+        <tr><td>Git集成</td><td>基础</td><td>&#9989; 带 /review 的高级功能</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section install-section" id="install">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">安装</span>
+      <h2>快速开始</h2>
+    </div>
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="terminal-dot red"></div>
+        <div class="terminal-dot yellow"></div>
+        <div class="terminal-dot green"></div>
+        <span>终端</span>
+      </div>
+      <div class="terminal-body">
+        <div class="line"><span class="prompt">$</span><span class="comment"># 克隆仓库</span></div>
+        <div class="line"><span class="prompt">$</span><span class="cmd">git clone https://github.com/BOHUYESHAN-APB/openagent-labforge-bio.git</span></div>
+        <div class="output">&#10003; 仓库已克隆</div>
+        <div class="line"><span class="prompt">$</span><span class="comment"># 构建</span></div>
+        <div class="line"><span class="prompt">$</span><span class="cmd">cd openagent-labforge-bio && bun install && bun run build</span></div>
+        <div class="output">&#10003; 构建完成</div>
+        <div class="line"><span class="prompt">$</span><span class="comment"># 添加到 ~/.config/opencode/opencode.json</span></div>
+        <div class="line"><span class="prompt">$</span><span class="cmd">"plugin": ["file:///path/to/openagent-labforge-bio"]</span></div>
+        <div class="line"><span class="prompt">$</span><span class="comment"># 启动</span></div>
+        <div class="line"><span class="prompt">$</span><span class="cmd">opencode</span></div>
+        <div class="output">&#129302; ExtendAI Lab 已就绪！</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-logo">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M16 2L2 9l14 7 14-7-14-7zM2 23l14 7 14-7M2 16l14 7 14-7" stroke="currentColor" stroke-width="2"/></svg>
+        ExtendAI Lab
+      </div>
+      <div class="footer-links">
+        <a href="pages/skills-cn.html">技能</a>
+        <a href="pages/demo-cn.html">演示</a>
+        <a href="pages/about-cn.html">关于</a>
+        <a href="https://github.com/BOHUYESHAN-APB/openagent-labforge-bio">GitHub</a>
+      </div>
+      <div class="footer-citation">
+        BOHUYESHAN. ExtendAI Lab (版本 1.2.3) [EB/OL]. 2026.
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script src="js/dna3d.js"></script>
+</body>
+</html>
