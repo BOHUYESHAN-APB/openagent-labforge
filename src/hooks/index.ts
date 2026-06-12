@@ -23,4 +23,6 @@ export { createSessionGoalHook } from './session-goal';
 export { createStartWorkHook } from './start-work';
 export { createStormBreakerHook } from './storm-breaker';
 export { createTaskSessionManagerHook } from './task-session-manager';
+export { createThinkingFloorHook } from './thinking-floor';
+export type { ThinkingFloorLevel } from './thinking-floor';
 export { createTodoContinuationHook } from './todo-continuation';

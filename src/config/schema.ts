@@ -414,6 +414,31 @@ export const CompressionConfigSchema = z.object({
 
 export type CompressionConfig = z.infer<typeof CompressionConfigSchema>;
 
+// Thinking floor configuration
+export const ThinkingFloorConfigSchema = z.object({
+  enabled: z
+    .boolean()
+    .default(true)
+    .describe(
+      'Enable thinking floor enforcement. Ensures models always operate with sufficient thinking depth. Default: true.',
+    ),
+  floor: z
+    .enum(['none', 'low', 'medium', 'high', 'xhigh', 'max'])
+    .default('high')
+    .describe(
+      'Minimum reasoning effort level. Models below this level will be upgraded. Default: high.',
+    ),
+  minBudgetTokens: z
+    .number()
+    .min(1000)
+    .default(10000)
+    .describe(
+      'Minimum budgetTokens for Anthropic thinking when floor is active. Default: 10000.',
+    ),
+});
+
+export type ThinkingFloorConfig = z.infer<typeof ThinkingFloorConfigSchema>;
+
 // Model profile presets (7 options)
 export const ModelProfileSchema = z.enum([
   'free',
@@ -618,6 +643,7 @@ export const PluginConfigSchema = z
     checkpoint: CheckpointCleanupConfigSchema.optional(),
     bioSkills: BioSkillsConfigSchema.optional(),
     compression: CompressionConfigSchema.optional(),
+    thinkingFloor: ThinkingFloorConfigSchema.optional(),
     modelPreferences: ModelPreferencesConfigSchema.optional(),
     promptMode: PromptModeConfigSchema.optional(),
     fallback: FailoverConfigSchema.optional(),

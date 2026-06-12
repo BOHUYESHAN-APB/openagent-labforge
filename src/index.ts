@@ -86,6 +86,7 @@ import {
 } from './hooks';
 import { processImageAttachments } from './hooks/image-hook';
 import { createThinkingLanguageHook } from './hooks/thinking-language';
+import { createThinkingFloorHook } from './hooks/thinking-floor';
 import { createInterviewManager } from './interview';
 import { createBuiltinMcps } from './mcp';
 import {
@@ -476,6 +477,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let taskSessionManagerHook: ReturnType<typeof createTaskSessionManagerHook>;
   let modeDetectorHook: ReturnType<typeof createModeDetectorHook>;
   let thinkingLanguageHook: ReturnType<typeof createThinkingLanguageHook>;
+  let thinkingFloorHook: ReturnType<typeof createThinkingFloorHook>;
   let interviewManager: ReturnType<typeof createInterviewManager>;
   let presetManager: ReturnType<typeof createPresetManager>;
   let startWorkHook: ReturnType<typeof createStartWorkHook>;
@@ -823,6 +825,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     });
     modeDetectorHook = createModeDetectorHook();
     thinkingLanguageHook = createThinkingLanguageHook();
+    thinkingFloorHook = createThinkingFloorHook({
+      enabled: config.thinkingFloor?.enabled !== false,
+      floor: config.thinkingFloor?.floor ?? 'high',
+      minBudgetTokens: config.thinkingFloor?.minBudgetTokens ?? 10000,
+    });
     interviewManager = createInterviewManager(ctx, config);
     presetManager = createPresetManager(ctx, config);
     startWorkHook = createStartWorkHook(ctx);
@@ -1706,6 +1713,17 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           sessionID: string;
           model: { id?: string; providerID?: string };
         },
+        _output as {
+          temperature: number;
+          topP: number;
+          topK: number;
+          maxOutputTokens: number | undefined;
+          options: Record<string, unknown>;
+        },
+      );
+      // Thinking floor: enforce minimum reasoning effort
+      thinkingFloorHook['chat.params'](
+        input,
         _output as {
           temperature: number;
           topP: number;
