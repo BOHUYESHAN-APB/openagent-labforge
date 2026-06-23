@@ -288,7 +288,7 @@ export async function buildCompatStatusReport(
       : []),
     '',
     'Current product order: OpenCode -> OpenClaude -> Codex -> closed-source Claude later.',
-    'Current default subagent mode: ultra-minimal.',
+    'Current default subagent mode: full.',
     ...(priorityNotes.length ? ['', ...priorityNotes] : []),
   ].join('\n');
 }

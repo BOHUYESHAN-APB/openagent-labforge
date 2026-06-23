@@ -27,6 +27,13 @@ When all todos are complete during an auto-work batch, the orchestrator is force
 
 That review now starts with its own **user-visible review notification** before the internal review prompt is injected. If the review rejects the work, or concludes that user input / an external blocker is stopping progress, the hook also emits a user-visible review status reminder instead of only relying on internal/system control prompts.
 
+The review stage now uses a dedicated **review overlay**:
+
+- effective execution agent = `reviewer`
+- the visible UI agent may stay unchanged
+- the review turn gets a reviewer-specific system prompt stack instead of inheriting the ordinary orchestrator prompt
+- the reply is marked as `reviewer` for that turn without permanently changing the session's main-agent identity
+
 That review now explicitly requires the agent to:
 
 - re-read the **earliest real user request(s)**

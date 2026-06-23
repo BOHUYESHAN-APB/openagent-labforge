@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { describe, expect, test } from 'bun:test';
 import type { PluginConfig } from '../config';
 import {
@@ -372,20 +374,20 @@ describe('agent classification', () => {
 });
 
 describe('createAgents', () => {
-  test('creates ultra-minimal agents without config', () => {
+  test('creates full specialist availability without config', () => {
     const agents = createAgents();
     const names = agents.map((a) => a.name);
     expect(names).toContain('orchestrator');
     expect(names).toContain('explorer');
     expect(names).toContain('librarian');
     expect(names).toContain('oracle');
-    expect(names).not.toContain('fixer');
-    expect(names).not.toContain('designer');
+    expect(names).toContain('fixer');
+    expect(names).toContain('designer');
   });
 
-  test('creates exactly 10 agents by default (6 primary + councillor + 3 ultra-minimal subagents)', () => {
+  test('creates all built-in agents by default except disabled observer', () => {
     const agents = createAgents();
-    expect(agents.length).toBe(10);
+    expect(agents.length).toBe(17);
   });
 });
 
@@ -432,6 +434,11 @@ describe('council agent model resolution', () => {
             alpha: { model: 'openai/gpt-5.4-mini' },
           },
         },
+        timeout: 180000,
+        default_preset: 'default',
+        councillor_execution_mode: 'parallel',
+        councillor_retries: 3,
+        _deprecated: undefined,
         _legacyMasterModel: 'anthropic/claude-opus-4-6',
       },
     };
@@ -455,6 +462,11 @@ describe('council agent model resolution', () => {
             alpha: { model: 'openai/gpt-5.4-mini' },
           },
         },
+        timeout: 180000,
+        default_preset: 'default',
+        councillor_execution_mode: 'parallel',
+        councillor_retries: 3,
+        _deprecated: undefined,
         _legacyMasterModel: 'anthropic/claude-opus-4-6',
       },
     };
@@ -475,6 +487,12 @@ describe('council agent model resolution', () => {
             alpha: { model: 'openai/gpt-5.4-mini' },
           },
         },
+        timeout: 180000,
+        default_preset: 'default',
+        councillor_execution_mode: 'parallel',
+        councillor_retries: 3,
+        _deprecated: undefined,
+        _legacyMasterModel: undefined,
       },
     };
     const agents = createAgents({
@@ -810,7 +828,7 @@ describe('PluginConfigSchema custom-agent-only prompt fields', () => {
 });
 
 describe('subagentPolicy', () => {
-  test('ultra-minimal is the default strict main-agent-first set', () => {
+  test('full is the default lane-driven set', () => {
     const agents = createAgents();
     const names = agents.map((a) => a.name);
     const prompt = agents.find((a) => a.name === 'orchestrator')?.config.prompt;
@@ -818,11 +836,11 @@ describe('subagentPolicy', () => {
     expect(names).toContain('explorer');
     expect(names).toContain('librarian');
     expect(names).toContain('oracle');
-    expect(names).not.toContain('fixer');
-    expect(names).not.toContain('designer');
-    expect(names).not.toContain('council');
+    expect(names).toContain('fixer');
+    expect(names).toContain('designer');
+    expect(names).toContain('council');
     expect(names).not.toContain('observer');
-    expect(prompt).toContain('Ultra minimal / main-agent-first');
+    expect(prompt).toContain('Full registration / lane-driven default');
     expect(prompt).toContain('shared-prefix snapshot');
     expect(prompt).toContain('[SHARED_CONTEXT_START]');
   });
@@ -841,7 +859,7 @@ describe('subagentPolicy', () => {
     expect(names).not.toContain('designer');
     expect(names).not.toContain('council');
     expect(names).not.toContain('observer');
-    expect(prompt).toContain('Minimal / cache-first');
+    expect(prompt).toContain('Minimal / legacy compatibility');
   });
 
   test('full enables configured subagents but still keeps main-agent-first guidance', () => {
@@ -855,7 +873,7 @@ describe('subagentPolicy', () => {
     expect(names).toContain('designer');
     expect(names).toContain('council');
     expect(names).toContain('observer');
-    expect(prompt).toContain('Full registration / explicit delegation only');
+    expect(prompt).toContain('Full registration / lane-driven default');
     expect(prompt).toContain(
       'main agent must still execute work directly by default',
     );
@@ -913,7 +931,7 @@ describe('subagentPolicy', () => {
 
   test('orchestrator prompt includes stable shared prefix template', () => {
     const prompt = buildOrchestratorPrompt(undefined, {
-      mode: 'ultra-minimal',
+      mode: 'full',
     });
 
     expect(prompt).toContain('[SHARED_CONTEXT_START]');
@@ -923,12 +941,12 @@ describe('subagentPolicy', () => {
     expect(prompt).toContain('create_session, add_message');
   });
 
-  test('ultra-minimal prompt describes both delegation modes', () => {
+  test('full prompt describes both delegation modes', () => {
     const prompt = buildOrchestratorPrompt(undefined, {
-      mode: 'ultra-minimal',
+      mode: 'full',
     });
 
-    expect(prompt).toContain('tool-like local main-agent checklists');
+    expect(prompt).toContain('lane-driven default');
     expect(prompt).toContain('background=false');
     expect(prompt).toContain('background=true');
     expect(prompt).toContain('fire-and-forget');
@@ -1026,13 +1044,13 @@ describe('disabled_agents', () => {
 
   test('agent count decreases when agents are disabled', () => {
     const agents = createAgents();
-    expect(agents.length).toBe(10); // 6 primary + councillor + 3 ultra-minimal subagents
+    expect(agents.length).toBe(17); // 6 primary + 11 subagents, observer disabled by default
 
     const disabledConfig: PluginConfig = {
       disabled_agents: ['observer', 'designer'],
     };
     const disabledAgents = createAgents(disabledConfig);
-    expect(disabledAgents.length).toBe(10); // observer/designer already disabled by ultra-minimal policy
+    expect(disabledAgents.length).toBe(16); // observer disabled by default, designer explicitly disabled
   });
 
   test('getDisabledAgents respects protection rules', () => {
@@ -1071,13 +1089,13 @@ describe('disabled_agents', () => {
     expect(enabled).not.toContain('janitor');
   });
 
-  test('empty disabled_agents does not enable observer within ultra-minimal policy', () => {
+  test('empty disabled_agents enables observer within default full policy', () => {
     const config: PluginConfig = {
       disabled_agents: [],
     };
     const agents = createAgents(config);
-    expect(agents.length).toBe(10); // observer still excluded by ultra-minimal policy
-    expect(agents.map((a) => a.name)).not.toContain('observer');
+    expect(agents.length).toBe(18); // observer becomes enabled when not explicitly disabled
+    expect(agents.map((a) => a.name)).toContain('observer');
   });
 
   test('empty disabled_agents enables observer within legacy minimal policy', () => {

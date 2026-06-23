@@ -181,6 +181,10 @@ readLatestCheckpoint(workspaceRoot): string | null
 | `/ol-checkpoint-resume latest` | 从工作区最新 checkpoint 恢复 |
 | `/ol-checkpoint-resume {session-id}` | 从指定会话的 checkpoint 恢复 |
 
+恢复时，如果 checkpoint 含有 active execution plan 信息，hook 会优先恢复
+`atlas` 执行通道、重建 `boulder.json` 执行态，并要求按当前 plan
+顶层 checkbox 重新同步 todo，而不是继续信任旧的会话内 todo。
+
 ---
 
 ## 与上游 Compaction 的关系
@@ -254,3 +258,4 @@ bun test
 2. **文件覆盖** — `latest.md` 和 `by-session/{id}.md` 每次覆盖，`history/` 目录保留完整历史
 3. **pre-compaction 检测** — resume 时通过 `pre_compaction` 标志判断是否是压缩前创建的 checkpoint
 4. **无自动清理** — 需要手动或通过 `cleanup()` 清理旧 checkpoint
+5. **恢复后执行态** — `/ol-checkpoint-resume` 如检测到 active execution plan，会自动重建 `boulder.json`、激活 `atlas` executor overlay、标记 metadata consumed

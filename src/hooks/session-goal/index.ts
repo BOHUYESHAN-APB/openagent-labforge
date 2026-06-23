@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import type { PluginInput } from '@opencode-ai/plugin';
 import type { PluginConfig } from '../../config';
+import { PRIMARY_AGENT_NAMES } from '../../config';
 import {
   extractSummarySection,
   extractTitle,
@@ -231,7 +232,13 @@ export function createSessionGoalHook(
 
       const agentName = options?.getAgentName?.(input.sessionID);
       const { goal, inherited } = resolved;
-      if (!inherited && agentName && agentName !== 'orchestrator') return;
+      if (
+        !inherited &&
+        agentName &&
+        !(PRIMARY_AGENT_NAMES as readonly string[]).includes(agentName)
+      ) {
+        return;
+      }
 
       const block = formatGoal(goal, inherited);
       if (output.system.some((entry) => entry.includes(block))) return;

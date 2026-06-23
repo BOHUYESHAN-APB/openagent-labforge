@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { describe, expect, test } from 'bun:test';
 import {
   existsSync,
@@ -34,7 +36,7 @@ describe.skip('compat CLI reports', () => {
     expect(report).toContain('Capability matrix:');
   });
 
-  test('status report includes open-source-first order and ultra-minimal default', async () => {
+  test('status report includes open-source-first order and full default', async () => {
     const report = await buildCompatStatusReport(process.cwd());
 
     expect(report).toContain('ExtendAI Lab Compatibility Status');
@@ -45,7 +47,7 @@ describe.skip('compat CLI reports', () => {
     expect(report).toContain(
       'Current product order: OpenCode -> OpenClaude -> Codex -> closed-source Claude later.',
     );
-    expect(report).toContain('Current default subagent mode: ultra-minimal.');
+    expect(report).toContain('Current default subagent mode: full.');
     expect(report).toContain('Optional compat SDK providers:');
     expect(report).toContain('Unified storage baseline:');
     expect(report).toContain('Current install/apply completion state:');

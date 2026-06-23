@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
+import { createReviewerAgent } from '../../agents/reviewer';
+import { getPlanProgress, readBoulderState } from '../../boulder';
+import type { EffectiveAgentOverlayManager } from '../../utils';
 import {
   createInternalAgentTextPart,
   log,
@@ -33,16 +36,13 @@ const REVIEW_PROMPT = `[Auto-review: All todos are marked complete. Before finis
 
 ## How This Works
 
-This review runs in the CURRENT agent (you). You do NOT spawn subagents and do NOT switch agents.
+The runtime has already switched this review turn into a dedicated review overlay.
 
-Step 1: Load the reviewer methodology:
-\`\`\`
-load_agent_instructions(agent="reviewer")
-\`\`\`
+- Effective execution agent: reviewer
+- Visible UI agent may remain unchanged
+- This turn is review-only: do NOT implement, edit, or expand scope
 
-Step 2: Apply the reviewer's checklist and methodology to review the completed work.
-
-Step 3: Output a verdict (see below).
+Apply the active reviewer methodology in the system prompt, then output a verdict.
 
 ## What You Must Check
 
@@ -95,7 +95,7 @@ After review, output ONE of:
 
 ## Critical Rules
 
-- This review runs in the CURRENT agent — do NOT spawn subagents
+- This review runs in the review overlay — do NOT spawn subagents
 - You are reviewing, NOT implementing — do NOT write code, edit files, or fix issues
 - NEVER disable auto-continue manually — the system handles this automatically after approval
 - DO NOT revert git commits — create corrective todos instead
@@ -106,6 +106,9 @@ After review, output ONE of:
 const AUTO_CONTINUE_USER_NOTIFICATION_PREFIX = '⎔ Auto-continue';
 const CONTEXT_PRESSURE_USER_NOTIFICATION_PREFIX = '⚠ Context pressure';
 const AUTO_REVIEW_USER_NOTIFICATION_PREFIX = '🔎 Auto-review';
+const REVIEW_OVERLAY_SYSTEM_OPEN = '<review_overlay>';
+const REVIEW_OVERLAY_SYSTEM_CLOSE = '</review_overlay>';
+const REVIEW_EFFECTIVE_AGENT = 'reviewer';
 
 function buildUserVisibleContextPressureNotification(args: {
   level: number;
@@ -162,11 +165,34 @@ function buildContinuationPrompt(todos: TodoItem[]): string {
   )}`;
 }
 
+function buildPlanResyncPrompt(workspaceRoot?: string): string {
+  const boulderState = workspaceRoot ? readBoulderState(workspaceRoot) : null;
+  let planDetails = '';
+  if (boulderState?.active_plan) {
+    planDetails += `\n- Active plan: ${boulderState.plan_name}`;
+    planDetails += `\n- Plan file: ${boulderState.active_plan}`;
+    try {
+      const content = readFileSync(boulderState.active_plan, 'utf8');
+      const progress = getPlanProgress(content);
+      if (progress.total > 0) {
+        planDetails += `\n- Top-level progress: ${progress.completed}/${progress.total} completed, ${progress.remaining} remaining`;
+      }
+    } catch {
+      // plan file may be unreadable during recovery
+    }
+  }
+  return (
+    '[CRITICAL: Active saved plan changed during execution. Execution state must be rebuilt from the canonical saved plan, not from stale in-session state.' +
+    planDetails +
+    '\n\nRequired recovery workflow:\n1. RE-READ the saved plan file immediately - do not trust existing todos or previous execution state.\n2. CLEAR the current todo list - it reflects stale plan state.\n3. REBUILD todos from every current top-level checkbox in the plan file.\n4. Continue execution from the first still-unfinished top-level task.\n5. Do NOT stop or enter review until the plan top-level checkboxes are all complete and verified.\n\nThis is a forced plan-todo resync. The previous todo state is no longer authoritative.]'
+  );
+}
+
 function buildUserVisibleReviewNotification(args: {
   stage: 'starting' | 'rejected' | 'needs_user' | 'blocked';
   findings?: string;
 }): string {
-  const lines = [`${AUTO_REVIEW_USER_NOTIFICATION_PREFIX}:`];
+  const lines = ['\uD83D\uDD0E Auto-review:'];
 
   if (args.stage === 'starting') {
     lines.push(
@@ -197,18 +223,26 @@ function buildUserVisibleReviewNotification(args: {
   return lines.join('\n');
 }
 
-function buildReviewPrompt(args?: {
-  level: number;
-  ratio: number;
-  totalTokens: number;
-  contextLimit: number;
-  strategy: string;
-}): string {
+function buildReviewPrompt(
+  args?: {
+    level: number;
+    ratio: number;
+    totalTokens: number;
+    contextLimit: number;
+    strategy: string;
+  },
+  phase?: string,
+): string {
+  const phaseLine = phase
+    ? `\n\n## Phase Context\n\nThe work being reviewed was performed during the **${phase}** phase. Evaluate the deliverables against the expectations of that phase:\n- **Execute phase**: code implementation, tests, verification — check code quality, test coverage, evidence.\n- **Review phase**: meta-review of a prior review pass — check that the prior review verdict was correct.\n- **Plan phase**: planning output, architecture decisions — check logical consistency, traceability to requirements.\n`
+    : '';
+
+  const base = REVIEW_PROMPT + phaseLine;
   if (!args || args.level < 2) {
-    return REVIEW_PROMPT;
+    return base;
   }
 
-  return `${REVIEW_PROMPT}
+  return `${base}
 
 ## High Pressure Finish Requirement
 
@@ -222,6 +256,94 @@ If you output [APPROVE], your brief summary MUST also function as a restart-safe
 - the exact next step if this work is reopened later
 
 Keep that handoff delta-only and concise. Do not expand into a long recap.`;
+}
+
+function buildReviewOverlaySystemPrompt(reviewerPrompt: string): string {
+  return [
+    REVIEW_OVERLAY_SYSTEM_OPEN,
+    'Review overlay is active for this turn.',
+    `Effective execution agent: ${REVIEW_EFFECTIVE_AGENT}`,
+    reviewerPrompt,
+    REVIEW_OVERLAY_SYSTEM_CLOSE,
+  ].join('\n');
+}
+
+function hasIncompleteActivePlan(workspaceRoot: string):
+  | {
+      hasIncompletePlan: boolean;
+      planName?: string;
+      remaining?: number;
+    }
+  | {
+      hasIncompletePlan: false;
+    } {
+  const boulderState = readBoulderState(workspaceRoot);
+  if (!boulderState?.active_plan) {
+    return { hasIncompletePlan: false };
+  }
+
+  try {
+    const progress = getPlanProgress(
+      readFileSync(boulderState.active_plan, 'utf8'),
+    );
+    if (!progress.isComplete) {
+      return {
+        hasIncompletePlan: true,
+        planName: boulderState.plan_name,
+        remaining: progress.remaining,
+      };
+    }
+  } catch {
+    return {
+      hasIncompletePlan: true,
+      planName: boulderState.plan_name,
+    };
+  }
+
+  return { hasIncompletePlan: false };
+}
+
+function getActivePlanStateForWorkspace(workspaceRoot: string | undefined):
+  | {
+      hasIncompletePlan: boolean;
+      planName?: string;
+      remaining?: number;
+    }
+  | {
+      hasIncompletePlan: false;
+    } {
+  if (!workspaceRoot) {
+    return { hasIncompletePlan: false };
+  }
+
+  return hasIncompleteActivePlan(workspaceRoot);
+}
+
+function getActivePlanSignature(
+  workspaceRoot: string | undefined,
+): string | null {
+  if (!workspaceRoot) {
+    return null;
+  }
+
+  const boulderState = readBoulderState(workspaceRoot);
+  if (!boulderState?.active_plan) {
+    return null;
+  }
+
+  try {
+    const content = readFileSync(boulderState.active_plan, 'utf8');
+    const topLevelTasks = content
+      .split(/\r?\n/)
+      .map((line) => line.match(/^- \[( |x|X)\] (.+)$/))
+      .filter((match): match is RegExpMatchArray => Boolean(match))
+      .filter((match) => /^(?:\d+\.|F\d+\.)\s+/.test(match[2]?.trim() ?? ''))
+      .map((match) => `${match[1] ?? ' '}:${match[2]?.trim() ?? ''}`)
+      .join('|');
+    return `${boulderState.plan_name}::${topLevelTasks}`;
+  } catch {
+    return `${boulderState.plan_name}::unreadable`;
+  }
 }
 
 type ReviewVerdict = 'approve' | 'reject' | 'needs_user' | 'blocked' | 'none';
@@ -251,7 +373,7 @@ const QUESTION_PHRASES = [
 // Statuses that indicate a todo is terminal (won't be worked on further).
 // Uses denylist approach: any status not listed here is considered incomplete.
 const TERMINAL_TODO_STATUSES = ['completed', 'cancelled'];
-const PRIMARY_AGENT_NAMES = new Set([
+const PRIMARY_AGENT_NAMES = new Set<string>([
   'orchestrator',
   'atlas',
   'bio-orchestrator',
@@ -274,10 +396,53 @@ interface ContinuationState {
   notificationBusyUntilBySession: Map<string, number>;
   reviewVerdictBySession: Map<string, StoredReviewVerdict>;
   reviewInjectedBySession: Set<string>;
+  reviewOverlayActiveBySession: Set<string>;
+  reviewResponsePendingBySession: Set<string>;
   autoEnableSuppressedSessionIds: Set<string>;
   autoEnableSuppressedGlobally: boolean;
   lastPressureCheckpointKeyBySession: Map<string, string>;
   transientFailureCountBySession: Map<string, number>;
+}
+
+type AutoContinueHookTool = ToolDefinition & {
+  execute: (
+    args: { enabled: boolean },
+    toolContext?: { sessionID?: string; agent?: string },
+  ) => Promise<unknown>;
+};
+
+interface TodoContinuationHook {
+  tool: {
+    auto_continue: AutoContinueHookTool;
+  };
+  handleToolExecuteAfter: (
+    input: {
+      tool: string;
+      sessionID?: string;
+    },
+    output?: { output?: unknown },
+  ) => Promise<void>;
+  handleMessagesTransform: (output: {
+    messages: ChatTransformMessage[];
+  }) => Promise<void>;
+  handleSystemTransform: (
+    input: { sessionID?: string },
+    output: { system: string[] },
+  ) => Promise<void>;
+  handleEvent: (input: {
+    event: { type: string; properties?: Record<string, unknown> };
+  }) => Promise<void>;
+  handleChatMessage: (input: { sessionID: string; agent?: string }) => void;
+  handleCommandExecuteBefore: (
+    input: {
+      command: string;
+      sessionID: string;
+      arguments: string;
+    },
+    output: { parts: Array<{ type: string; text?: string }> },
+  ) => Promise<void>;
+  getEffectiveAgentForSession: (sessionID: string) => string | undefined;
+  getResponseAgentForSession: (sessionID: string) => string | undefined;
 }
 
 // ── State persistence (OMO ralph-loop pattern) ────────────────────
@@ -292,6 +457,7 @@ interface PersistedContinuationState {
   suppressUntil: number;
   reviewVerdictBySession: Array<[string, StoredReviewVerdict]>;
   reviewInjectedBySession: string[];
+  reviewOverlayActiveBySession: string[];
   autoEnableSuppressedSessionIds: string[];
   autoEnableSuppressedGlobally: boolean;
   lastPressureCheckpointKeyBySession: Array<[string, string]>;
@@ -326,6 +492,9 @@ function saveContinuationState(
         state.reviewVerdictBySession.entries(),
       ),
       reviewInjectedBySession: Array.from(state.reviewInjectedBySession),
+      reviewOverlayActiveBySession: Array.from(
+        state.reviewOverlayActiveBySession,
+      ),
       autoEnableSuppressedSessionIds: Array.from(
         state.autoEnableSuppressedSessionIds,
       ),
@@ -372,6 +541,9 @@ function loadContinuationState(
     }
     for (const sessionID of persisted.reviewInjectedBySession) {
       state.reviewInjectedBySession.add(sessionID);
+    }
+    for (const sessionID of persisted.reviewOverlayActiveBySession ?? []) {
+      state.reviewOverlayActiveBySession.add(sessionID);
     }
     for (const sessionID of persisted.autoEnableSuppressedSessionIds) {
       state.autoEnableSuppressedSessionIds.add(sessionID);
@@ -534,6 +706,8 @@ function resetState(state: ContinuationState): void {
   state.notificationBusyUntilBySession.clear();
   state.reviewVerdictBySession.clear();
   state.reviewInjectedBySession.clear();
+  state.reviewOverlayActiveBySession.clear();
+  state.reviewResponsePendingBySession.clear();
   state.autoEnableSuppressedSessionIds.clear();
   state.autoEnableSuppressedGlobally = false;
   state.lastPressureCheckpointKeyBySession.clear();
@@ -544,6 +718,8 @@ export function createTodoContinuationHook(
   config?: {
     maxContinuations?: number;
     autoReviewModel?: string;
+    reviewOverlayPrompt?: string;
+    overlayManager?: EffectiveAgentOverlayManager;
     cooldownMs?: number;
     autoEnable?: boolean;
     autoEnableThreshold?: number;
@@ -582,41 +758,19 @@ export function createTodoContinuationHook(
       summary: string;
     }) => void | Promise<void>;
   },
-): {
-  tool: Record<string, unknown>;
-  handleToolExecuteAfter: (
-    input: {
-      tool: string;
-      sessionID?: string;
-    },
-    output?: { output?: unknown },
-  ) => Promise<void>;
-  handleMessagesTransform: (output: {
-    messages: ChatTransformMessage[];
-  }) => Promise<void>;
-  handleSystemTransform: (
-    input: { sessionID?: string },
-    output: { system: string[] },
-  ) => Promise<void>;
-  handleEvent: (input: {
-    event: { type: string; properties?: Record<string, unknown> };
-  }) => Promise<void>;
-  handleChatMessage: (input: { sessionID: string; agent?: string }) => void;
-  handleCommandExecuteBefore: (
-    input: {
-      command: string;
-      sessionID: string;
-      arguments: string;
-    },
-    output: { parts: Array<{ type: string; text?: string }> },
-  ) => Promise<void>;
-} {
+): TodoContinuationHook {
   const maxContinuations = config?.maxContinuations ?? 5;
   const cooldownMs = config?.cooldownMs ?? 3000;
   const autoEnable = config?.autoEnable ?? false;
   const autoEnableThreshold = config?.autoEnableThreshold ?? 4;
   const requestSignatureBySession = new Map<string, string>();
+  const activePlanSignatureBySession = new Map<string, string>();
   const pendingHygieneReminderBySession = new Map<string, string>();
+  const planResyncRequiredBySession = new Set<string>();
+  const reviewOverlayPrompt =
+    config?.reviewOverlayPrompt?.trim() ||
+    createReviewerAgent('placeholder-model').config.prompt ||
+    '';
 
   const state: ContinuationState = {
     enabled: false,
@@ -634,6 +788,8 @@ export function createTodoContinuationHook(
     notificationBusyUntilBySession: new Map<string, number>(),
     reviewVerdictBySession: new Map(),
     reviewInjectedBySession: new Set(),
+    reviewOverlayActiveBySession: new Set(),
+    reviewResponsePendingBySession: new Set(),
     autoEnableSuppressedSessionIds: new Set(),
     autoEnableSuppressedGlobally: false,
     lastPressureCheckpointKeyBySession: new Map(),
@@ -779,7 +935,12 @@ export function createTodoContinuationHook(
     if (!lastUserMessage.sessionID) {
       for (const sessionID of state.orchestratorSessionIds) {
         requestSignatureBySession.delete(sessionID);
+        activePlanSignatureBySession.delete(sessionID);
+        planResyncRequiredBySession.delete(sessionID);
         state.lastPressureCheckpointKeyBySession.delete(sessionID);
+        state.reviewOverlayActiveBySession.delete(sessionID);
+        state.reviewResponsePendingBySession.delete(sessionID);
+        config?.overlayManager?.clear(sessionID, 'review');
         hygiene.handleRequestStart({ sessionID });
       }
       return;
@@ -807,6 +968,26 @@ export function createTodoContinuationHook(
       }
       return;
     }
+
+    const nextPlanSignature = getActivePlanSignature(ctx.directory);
+    const previousPlanSignature = activePlanSignatureBySession.get(
+      lastUserMessage.sessionID,
+    );
+    if (
+      nextPlanSignature &&
+      previousPlanSignature &&
+      nextPlanSignature !== previousPlanSignature
+    ) {
+      planResyncRequiredBySession.add(lastUserMessage.sessionID);
+      pendingHygieneReminderBySession.set(
+        lastUserMessage.sessionID,
+        'The active saved plan changed since the last execution turn. Re-sync the todo list from the current top-level plan checkboxes before continuing implementation.',
+      );
+    }
+
+    state.reviewOverlayActiveBySession.delete(lastUserMessage.sessionID);
+    state.reviewResponsePendingBySession.delete(lastUserMessage.sessionID);
+    config?.overlayManager?.clear(lastUserMessage.sessionID, 'review');
 
     // Detect user intent from message text
     const userMessageText =
@@ -865,9 +1046,24 @@ export function createTodoContinuationHook(
       lastUserMessage.sessionID,
       lastUserMessage.signature,
     );
+    if (nextPlanSignature) {
+      activePlanSignatureBySession.set(
+        lastUserMessage.sessionID,
+        nextPlanSignature,
+      );
+    } else {
+      activePlanSignatureBySession.delete(lastUserMessage.sessionID);
+    }
     state.lastPressureCheckpointKeyBySession.delete(lastUserMessage.sessionID);
-    pendingHygieneReminderBySession.delete(lastUserMessage.sessionID);
-    hygiene.handleRequestStart({ sessionID: lastUserMessage.sessionID });
+    if (
+      pendingHygieneReminderBySession.get(lastUserMessage.sessionID) !==
+      'The active saved plan changed since the last execution turn. Re-sync the todo list from the current top-level plan checkboxes before continuing implementation.'
+    ) {
+      pendingHygieneReminderBySession.delete(lastUserMessage.sessionID);
+    }
+    if (!planResyncRequiredBySession.has(lastUserMessage.sessionID)) {
+      hygiene.handleRequestStart({ sessionID: lastUserMessage.sessionID });
+    }
   }
 
   async function handleSystemTransform(
@@ -875,6 +1071,12 @@ export function createTodoContinuationHook(
     output: { system: string[] },
   ): Promise<void> {
     if (!input.sessionID || !isOrchestratorSession(input.sessionID)) {
+      return;
+    }
+
+    if (state.reviewOverlayActiveBySession.has(input.sessionID)) {
+      output.system.length = 0;
+      output.system.push(buildReviewOverlaySystemPrompt(reviewOverlayPrompt));
       return;
     }
 
@@ -956,6 +1158,10 @@ export function createTodoContinuationHook(
     clearNotificationState(sessionID);
     state.reviewVerdictBySession.delete(sessionID);
     state.reviewInjectedBySession.delete(sessionID);
+    state.reviewOverlayActiveBySession.delete(sessionID);
+    state.reviewResponsePendingBySession.delete(sessionID);
+    config?.overlayManager?.clear(sessionID, 'review');
+    planResyncRequiredBySession.delete(sessionID);
     if (suppressAutoEnable) {
       state.autoEnableSuppressedSessionIds.add(sessionID);
     }
@@ -1046,6 +1252,13 @@ export function createTodoContinuationHook(
     }
 
     state.sawChatMessage = true;
+    if (
+      input.agent === REVIEW_EFFECTIVE_AGENT &&
+      state.reviewResponsePendingBySession.has(input.sessionID)
+    ) {
+      state.reviewResponsePendingBySession.delete(input.sessionID);
+      return;
+    }
     if (isPrimaryAgentName(input.agent)) {
       registerOrchestratorSession(input.sessionID);
     }
@@ -1065,8 +1278,8 @@ export function createTodoContinuationHook(
           : undefined;
 
       // Permission: primary agents (orchestrator, engineer, etc.) can disable
-      // auto-continue after completing a review cycle. The review runs in the
-      // main agent with @reviewer identity — not as a subagent.
+      // auto-continue after completing a review cycle. The review now runs in
+      // an isolated reviewer overlay, not as a child subagent.
       if (!enabled) {
         const callerAgent =
           (toolContext as { agent?: string } | undefined)?.agent ?? '';
@@ -1074,7 +1287,7 @@ export function createTodoContinuationHook(
           const isPrimaryOrReviewer =
             callerAgent === 'reviewer' ||
             callerAgent.includes('review') ||
-            PRIMARY_AGENT_NAMES.has(callerAgent as any);
+            PRIMARY_AGENT_NAMES.has(callerAgent);
           if (!isPrimaryOrReviewer) {
             return 'Auto-continue can only be disabled by primary agents or @reviewer after a review cycle.';
           }
@@ -1272,6 +1485,26 @@ export function createTodoContinuationHook(
       }
 
       if (!hasIncompleteTodos) {
+        const activePlanState = getActivePlanStateForWorkspace(ctx.directory);
+        if (activePlanState.hasIncompletePlan) {
+          log(
+            `[${HOOK_NAME}] Todos complete but active plan still incomplete`,
+            {
+              sessionID,
+              planName: activePlanState.planName,
+              remaining: activePlanState.remaining,
+            },
+          );
+          hasIncompleteTodos = true;
+          planResyncRequiredBySession.add(sessionID);
+          incompleteCount = Math.max(
+            incompleteCount,
+            activePlanState.remaining ?? 1,
+          );
+        }
+      }
+
+      if (!hasIncompleteTodos) {
         log(`[${HOOK_NAME}] All todos complete`, { sessionID });
 
         // === AUTO-REVIEW: Only in full-auto mode ===
@@ -1301,6 +1534,9 @@ export function createTodoContinuationHook(
                   verdict,
                   findings,
                 });
+                state.reviewOverlayActiveBySession.delete(sessionID);
+                state.reviewResponsePendingBySession.delete(sessionID);
+                config?.overlayManager?.clear(sessionID, 'review');
                 disableContinuationForCompletedBatch(sessionID);
                 return; // Allow stop
               }
@@ -1312,6 +1548,9 @@ export function createTodoContinuationHook(
                 });
                 state.reviewVerdictBySession.set(sessionID, 'reject');
                 state.reviewInjectedBySession.delete(sessionID);
+                state.reviewOverlayActiveBySession.delete(sessionID);
+                state.reviewResponsePendingBySession.delete(sessionID);
+                config?.overlayManager?.clear(sessionID, 'review');
                 setConsecutiveContinuations(state, sessionID, 0);
                 log(`[${HOOK_NAME}] Review REJECTED — injecting rework`, {
                   sessionID,
@@ -1349,6 +1588,9 @@ export function createTodoContinuationHook(
                   findings,
                 });
                 state.reviewVerdictBySession.set(sessionID, verdict);
+                state.reviewOverlayActiveBySession.delete(sessionID);
+                state.reviewResponsePendingBySession.delete(sessionID);
+                config?.overlayManager?.clear(sessionID, 'review');
                 await disableContinuationForReviewStop(
                   sessionID,
                   verdict,
@@ -1375,6 +1617,19 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Injecting auto-review prompt`, { sessionID });
         state.reviewInjectedBySession.add(sessionID);
         state.reviewVerdictBySession.set(sessionID, 'pending');
+        state.reviewOverlayActiveBySession.add(sessionID);
+        state.reviewResponsePendingBySession.add(sessionID);
+
+        // Capture phase before activating review overlay
+        const priorOverlay = config?.overlayManager?.getCurrent(sessionID);
+        const priorPhase = priorOverlay?.phase ?? 'execute';
+
+        config?.overlayManager?.activate(sessionID, {
+          phase: 'review',
+          agent: REVIEW_EFFECTIVE_AGENT,
+          source: 'auto-review',
+          returnAgent: priorOverlay?.returnAgent,
+        });
         const contextPressure = config?.contextPressure;
         const reviewPressureState = contextPressure?.getState(sessionID);
         const reviewPrompt = buildReviewPrompt(
@@ -1385,6 +1640,7 @@ export function createTodoContinuationHook(
                   contextPressure?.getRecommendedStrategy(sessionID) ?? '',
               }
             : undefined,
+          priorPhase,
         );
         state.isAutoInjecting = true;
         try {
@@ -1395,6 +1651,7 @@ export function createTodoContinuationHook(
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
+              agent: REVIEW_EFFECTIVE_AGENT,
               parts: [createInternalAgentTextPart(reviewPrompt)],
             },
           });
@@ -1578,10 +1835,14 @@ export function createTodoContinuationHook(
         return;
       }
 
-      // Schedule continuation
+      // Schedule continuation (faster when plan resync needed)
+      const effectiveDelay = planResyncRequiredBySession.has(sessionID)
+        ? Math.min(cooldownMs, 500)
+        : cooldownMs;
       log(`[${HOOK_NAME}] Scheduling continuation`, {
         sessionID,
-        delayMs: cooldownMs,
+        delayMs: effectiveDelay,
+        planResync: planResyncRequiredBySession.has(sessionID),
       });
 
       // Show countdown notification (noReply = agent doesn't respond)
@@ -1610,14 +1871,22 @@ export function createTodoContinuationHook(
 
         state.isAutoInjecting = true;
         try {
+          const needsPlanResync = planResyncRequiredBySession.has(sessionID);
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
               parts: [
-                createInternalAgentTextPart(buildContinuationPrompt(todos)),
+                createInternalAgentTextPart(
+                  needsPlanResync
+                    ? buildPlanResyncPrompt(ctx.directory)
+                    : buildContinuationPrompt(todos),
+                ),
               ],
             },
           });
+          if (needsPlanResync) {
+            planResyncRequiredBySession.delete(sessionID);
+          }
           const consecutive = incrementConsecutiveContinuations(
             state,
             sessionID,
@@ -1634,7 +1903,7 @@ export function createTodoContinuationHook(
         } finally {
           state.isAutoInjecting = false;
         }
-      }, cooldownMs);
+      }, effectiveDelay);
     } else if (event.type === 'session.status') {
       const status = properties.status as { type: string };
       const sessionID = properties.sessionID as string;
@@ -1656,6 +1925,7 @@ export function createTodoContinuationHook(
         // not for internal notifications.
         if (
           !isNotification &&
+          !state.isAutoInjecting &&
           isOrchestrator &&
           getConsecutiveContinuations(state, sessionID) > 0
         ) {
@@ -1713,6 +1983,7 @@ export function createTodoContinuationHook(
         state.consecutiveContinuationsBySession.delete(deletedSessionId);
         state.autoEnableSuppressedSessionIds.delete(deletedSessionId);
         state.lastPressureCheckpointKeyBySession.delete(deletedSessionId);
+        planResyncRequiredBySession.delete(deletedSessionId);
         clearNotificationState(deletedSessionId);
         if (state.orchestratorSessionIds.size === 0) {
           resetState(state);
@@ -1846,22 +2117,47 @@ export function createTodoContinuationHook(
         ),
       );
     } else {
-      output.parts.push(
-        createInternalAgentTextPart(
-          `[Auto-continue: enabled for up to ${maxContinuations} continuations. No incomplete todos right now.]`,
-        ),
-      );
+      const activePlanState = getActivePlanStateForWorkspace(ctx.directory);
+      if (activePlanState.hasIncompletePlan) {
+        const planLabel = activePlanState.planName
+          ? `active plan ${activePlanState.planName}`
+          : 'the active saved plan';
+        const remainingLabel = activePlanState.remaining
+          ? ` (${activePlanState.remaining} top-level tasks remaining)`
+          : '';
+        output.parts.push(
+          createInternalAgentTextPart(
+            `[Auto-continue: enabled for up to ${maxContinuations} continuations. Todos are temporarily complete, but ${planLabel} is still incomplete${remainingLabel}. Continue execution instead of stopping.]`,
+          ),
+        );
+      } else {
+        output.parts.push(
+          createInternalAgentTextPart(
+            `[Auto-continue: enabled for up to ${maxContinuations} continuations. No incomplete todos right now.]`,
+          ),
+        );
+      }
     }
   }
 
   return {
-    tool: { auto_continue: autoContinue },
+    tool: {
+      auto_continue: autoContinue as unknown as AutoContinueHookTool,
+    },
     handleToolExecuteAfter: hygiene.handleToolExecuteAfter,
     handleMessagesTransform,
     handleSystemTransform,
     handleEvent,
     handleChatMessage,
     handleCommandExecuteBefore,
+    getEffectiveAgentForSession: (sessionID: string) =>
+      state.reviewOverlayActiveBySession.has(sessionID)
+        ? REVIEW_EFFECTIVE_AGENT
+        : undefined,
+    getResponseAgentForSession: (sessionID: string) =>
+      state.reviewResponsePendingBySession.has(sessionID)
+        ? REVIEW_EFFECTIVE_AGENT
+        : undefined,
   };
 }
 

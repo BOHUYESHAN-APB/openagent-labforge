@@ -24,12 +24,6 @@ import {
   formatLoadedSkillsForPrompt,
   scanBioSkillsCatalog,
 } from './bio-skills';
-import {
-  TemplateSkillsSessionManager,
-  buildTemplateCatalog,
-  createLoadSkillTemplateTool,
-  formatTemplateCatalogForPrompt,
-} from './template-skills';
 import { CheckpointManager } from './checkpoint';
 import {
   CANCEL_RALPH_TEMPLATE,
@@ -64,22 +58,37 @@ import {
 } from './config/runtime-preset';
 import { CouncilManager } from './council';
 import {
+  createTeamApproveShutdownTool,
+  createTeamCreateTool,
+  createTeamDeleteTool,
+  createTeamListTool,
+  createTeamRejectShutdownTool,
+  createTeamSendTool,
+  createTeamShutdownRequestTool,
+  createTeamStatusTool,
+  createTeamTaskCreateTool,
+  createTeamTaskGetTool,
+  createTeamTaskListTool,
+  createTeamTaskUpdateTool,
+} from './features/team-mode/tools/team-tools';
+import {
   createApplyPatchHook,
   createAutoUpdateCheckerHook,
+  createBashTimeoutRecoveryHook,
   createChatHeadersHook,
+  createCheckpointResumeHook,
   createCompactionHook,
   createContextPressureHook,
   createDelegateTaskRetryHook,
   createFilterAvailableSkillsHook,
-  createBashTimeoutRecoveryHook,
   createFlashEscalationHook,
   createJsonErrorRecoveryHook,
   createMemoryCommandsHook,
   createModeDetectorHook,
   createPhaseReminderHook,
   createPostFileToolNudgeHook,
-  createPtyAvailabilityHook,
   createPrefixStabilityHook,
+  createPtyAvailabilityHook,
   createSchemaSanitizeHook,
   createSessionGoalHook,
   createStartWorkHook,
@@ -89,8 +98,8 @@ import {
   ForegroundFallbackManager,
 } from './hooks';
 import { processImageAttachments } from './hooks/image-hook';
-import { createThinkingLanguageHook } from './hooks/thinking-language';
 import { createThinkingFloorHook } from './hooks/thinking-floor';
+import { createThinkingLanguageHook } from './hooks/thinking-language';
 import { createInterviewManager } from './interview';
 import { createBuiltinMcps } from './mcp';
 import {
@@ -103,39 +112,33 @@ import { createModeCommandHandler } from './prompt-mode/commands.js';
 import { PromptModeManager } from './prompt-mode/manager.js';
 import { createDeleteGuardHook } from './safety/delete-guard.js';
 import {
+  buildTemplateCatalog,
+  createLoadSkillTemplateTool,
+  formatTemplateCatalogForPrompt,
+  TemplateSkillsSessionManager,
+} from './template-skills';
+import {
   ast_grep_replace,
   ast_grep_search,
+  createCancelTaskTool,
   createCouncilTool,
-  createMediaInventoryTool,
   createMcpToggleTool,
+  createMediaInventoryTool,
   createPresetManager,
   createSavePlanTool,
   createSubtaskTool,
   createWebfetchTool,
   loadAgentInstructionsTool,
 } from './tools';
+import { detectBioTaskTool } from './tools/detect-bio-task.js';
 import { createSaveChangeTool } from './tools/save-change';
 import { createSaveExploreTool } from './tools/save-explore';
 import { createSaveScratchTool } from './tools/save-scratch';
 import { createSubtaskState } from './tools/subtask/state';
-import { detectBioTaskTool } from './tools/detect-bio-task.js';
-import {
-  createTeamCreateTool,
-  createTeamDeleteTool,
-  createTeamSendTool,
-  createTeamTaskCreateTool,
-  createTeamTaskListTool,
-  createTeamTaskUpdateTool,
-  createTeamTaskGetTool,
-  createTeamStatusTool,
-  createTeamListTool,
-  createTeamShutdownRequestTool,
-  createTeamApproveShutdownTool,
-  createTeamRejectShutdownTool,
-} from './features/team-mode/tools/team-tools';
 import {
   createDisplayNameMentionRewriter,
   createInternalAgentTextPart,
+  EffectiveAgentOverlayManager,
   resolveRuntimeAgentName,
 } from './utils';
 import { initLogger, log } from './utils/logger';
@@ -222,15 +225,22 @@ function writeExtendaiConfig(config: Record<string, unknown>): void {
  */
 function getAllowedAgentsForMode(mode: string): string[] {
   const modeAgents: Record<string, string[]> = {
-    'ultra-minimal': ['explorer', 'librarian', 'oracle'],
-    minimal: ['explorer', 'librarian', 'oracle', 'fixer'],
+    // Ultra-minimal/minimal: only OpenCode's built-in default agents
+    // (engineer/planner), no custom subagents registered
+    'ultra-minimal': [],
+    minimal: [],
+    // Full: all 15+ custom agents available
     full: [
       'explorer',
       'librarian',
       'oracle',
-      'fixer',
       'designer',
+      'fixer',
+      'observer',
       'council',
+      'metis',
+      'momus',
+      'multimodal-looker',
       'reviewer',
     ],
     custom: [], // 从配置文件读取
@@ -273,7 +283,7 @@ const HEALTH_CHECK = {
 const SUBAGENT_POLICY_COMMAND = 'ol-subagents';
 
 const SUBAGENT_POLICY_USAGE =
-  'Commands: /ol-subagents-UM ultra-minimal, /ol-subagents-M minimal, /ol-subagents-F full, /ol-subagents-C custom, /ol-subagents-MO main-only. Real agent registration changes require config reload/restart.';
+  'Compatibility commands: /ol-subagents-UM ultra-minimal, /ol-subagents-M minimal, /ol-subagents-F full, /ol-subagents-C custom, /ol-subagents-MO main-only. Real agent registration changes require config reload/restart.';
 
 const CHECKPOINT_LIGHT_COMMAND = 'ol-checkpoint-light';
 const CHECKPOINT_HEAVY_COMMAND = 'ol-checkpoint-heavy';
@@ -312,12 +322,15 @@ const SUBAGENT_POLICY_COMMAND_DESCRIPTIONS: Record<
   string
 > = {
   'ol-subagents-UM':
-    'Subagent policy: UM=ultra-minimal, strict main-agent-first default',
-  'ol-subagents-M': 'Subagent policy: M=minimal, cache-first low-agent mode',
+    'Subagent policy: UM=ultra-minimal — only OpenCode built-in agents, no custom subagents',
+  'ol-subagents-M':
+    'Subagent policy: M=minimal — same as ultra-minimal, only built-in agents',
   'ol-subagents-F':
-    'Subagent policy: F=full registration, but main-agent execution remains default',
-  'ol-subagents-C': 'Subagent policy: C=custom, use allowedAgents allowlist',
-  'ol-subagents-MO': 'Subagent policy: MO=main-only, disable child sessions',
+    'Subagent policy: F=full — all 15+ custom agents available (default)',
+  'ol-subagents-C':
+    'Subagent policy: C=custom — use allowedAgents allowlist',
+  'ol-subagents-MO':
+    'Subagent policy: MO=main-only — disable all subagents',
 };
 
 function parseSubagentPolicyMode(
@@ -351,7 +364,7 @@ function formatSubagentPolicyStatus(
   requestedMode?: SubagentPolicyMode,
 ): string {
   const policy = config.subagentPolicy;
-  const mode = policy?.mode ?? 'ultra-minimal';
+  const mode = policy?.mode ?? 'full';
   const allowed = policy?.allowedAgents?.length
     ? policy.allowedAgents.join(', ')
     : '(none configured)';
@@ -359,7 +372,7 @@ function formatSubagentPolicyStatus(
     ? `\nRequested mode: ${requestedMode}\nConfig value: { "subagentPolicy": { "mode": "${requestedMode}" } }\n`
     : '';
 
-  return `[Subagent policy]\n${SUBAGENT_POLICY_USAGE}\n\nActive mode: ${mode}\nAllowed agents: ${allowed}${requestNote}\nRuntime note: this command reports the active policy for the currently loaded plugin instance. Real changes to registered child agents/tools usually require updating config and reloading/restarting the plugin.\n\nExecution rule: the main agent should perform work directly by default. Registered specialists should be treated as local checklists/tooling references first, not automatic child-session targets. Only use real child sessions when the active policy permits it, the work is genuinely parallel or independently judgment-heavy, and the user has explicitly allowed child-session use. When delegation is still worthwhile, put the same shared-prefix snapshot first for every child, then role/task-specific instructions. If shared-context MCP tools are visible, write that same snapshot to the shared session and tell children to read/search it before work. Prefer resuming existing specialist sessions when possible.`;
+  return `[Subagent policy]\n${SUBAGENT_POLICY_USAGE}\n\nActive mode: ${mode}\nAllowed agents: ${allowed}${requestNote}\nRuntime note: this command reports the active compatibility policy for the currently loaded plugin instance. Real changes to registered child agents/tools usually require updating config and reloading/restarting the plugin.\n\nProduct note: the preferred architecture is lane-driven with full specialist availability by default; these policy modes remain as compatibility controls.\n\nExecution rule: the main agent should perform work directly by default. Registered specialists should be treated as local checklists/tooling references first, not automatic child-session targets. Only use real child sessions when the active policy permits it, the work is genuinely parallel or independently judgment-heavy, and the user has explicitly allowed child-session use. When delegation is still worthwhile, put the same shared-prefix snapshot first for every child, then role/task-specific instructions. If shared-context MCP tools are visible, write that same snapshot to the shared session and tell children to read/search it before work. Prefer resuming existing specialist sessions when possible.`;
 }
 
 function registerSubagentPolicyCommand(opencodeConfig: {
@@ -487,8 +500,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let interviewManager: ReturnType<typeof createInterviewManager>;
   let presetManager: ReturnType<typeof createPresetManager>;
   let startWorkHook: ReturnType<typeof createStartWorkHook>;
+  let checkpointResumeHook: ReturnType<typeof createCheckpointResumeHook>;
   let memoryCommandsHook: ReturnType<typeof createMemoryCommandsHook>;
   let sessionGoalHook: ReturnType<typeof createSessionGoalHook>;
+  let effectiveAgentOverlayManager: EffectiveAgentOverlayManager;
   let subtaskState: ReturnType<typeof createSubtaskState>;
   let councilTools: Record<string, unknown>;
   let webfetch: ReturnType<typeof createWebfetchTool>;
@@ -500,7 +515,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
   let checkpointManager: CheckpointManager;
   let promptModeManager: PromptModeManager;
   let modeCommandHandler: ReturnType<typeof createModeCommandHandler>;
-  let teamSessionEventHandler: ((event: { type: string; properties?: unknown }) => Promise<void>) | null = null;
+  let teamSessionEventHandler:
+    | ((event: { type: string; properties?: unknown }) => Promise<void>)
+    | null = null;
+  let getRuntimeEffectiveAgent: (sessionID: string) => string | undefined;
+  let shouldManagePrimarySession: (sessionID: string) => boolean;
 
   // Counters for post-init health check (set inside try, checked outside)
   let toolCount = 0;
@@ -668,16 +687,21 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     {
       const templateCatalog = buildTemplateCatalog(packageRoot);
       if (templateCatalog.length > 0) {
-        templateSkillsManager = new TemplateSkillsSessionManager(templateCatalog);
-        log('info', `Template Skills: ${templateCatalog.length} categories available`);
+        templateSkillsManager = new TemplateSkillsSessionManager(
+          templateCatalog,
+        );
+        log(
+          'info',
+          `Template Skills: ${templateCatalog.length} categories available`,
+        );
       } else {
         log('info', 'Template Skills: no categories found');
       }
     }
 
     // Initialize MultiplexerSessionManager to handle OpenCode's built-in
-      // Task tool sessions
-      multiplexerSessionManager = new MultiplexerSessionManager(
+    // Task tool sessions
+    multiplexerSessionManager = new MultiplexerSessionManager(
       ctx,
       multiplexerConfig,
     );
@@ -685,11 +709,19 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Initialize team session event handler (tracks session.idle/deleted for team members)
     if (config.team_mode?.enabled) {
       try {
-        const { createTeamSessionEventHandler } = await import('./features/team-mode/team-runtime/session-event-handler.js');
-        teamSessionEventHandler = createTeamSessionEventHandler(config.team_mode);
+        const { createTeamSessionEventHandler } = await import(
+          './features/team-mode/team-runtime/session-event-handler.js'
+        );
+        teamSessionEventHandler = createTeamSessionEventHandler(
+          config.team_mode,
+          ctx.client,
+        );
         log('info', 'Team session event handler initialized');
       } catch (error) {
-        log('warn', `Failed to initialize team session event handler: ${error}`);
+        log(
+          'warn',
+          `Failed to initialize team session event handler: ${error}`,
+        );
       }
     }
 
@@ -710,21 +742,30 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // Initialize compaction hook to replace OpenCode's native compaction prompt
     // with our improved Chinese prompt (combining OpenCode + OpenClaude + Codex)
     // Also auto-creates checkpoint before compaction (checkpoint is compaction's reinforcement board)
+    // Track session → agent mapping for serve-mode system prompt injection
+    sessionAgentMap = new Map<string, string>();
+    effectiveAgentOverlayManager = new EffectiveAgentOverlayManager();
+
     compactionHook = createCompactionHook({
       enabled: config.compression?.enabled !== false,
       checkpointManager,
+      getCurrentOverlay: (sessionID: string) =>
+        effectiveAgentOverlayManager.getCurrent(sessionID) ?? null,
     });
 
     // Initialize available skills filter hook
     filterAvailableSkillsHook = createFilterAvailableSkillsHook(ctx, config);
-
-    // Track session → agent mapping for serve-mode system prompt injection
-    sessionAgentMap = new Map<string, string>();
+    getRuntimeEffectiveAgent = (sessionID: string) =>
+      effectiveAgentOverlayManager.getCurrent(sessionID)?.agent ??
+      sessionAgentMap.get(sessionID);
+    shouldManagePrimarySession = (sessionID: string) => {
+      const agentName = getRuntimeEffectiveAgent(sessionID);
+      return agentName === 'orchestrator' || agentName === 'atlas';
+    };
 
     // Initialize post-file-tool nudge hook
     postFileToolNudgeHook = createPostFileToolNudgeHook({
-      shouldInject: (sessionID) =>
-        sessionAgentMap.get(sessionID) === 'orchestrator',
+      shouldInject: (sessionID) => shouldManagePrimarySession(sessionID),
     });
 
     chatHeadersHook = createChatHeadersHook(ctx);
@@ -762,9 +803,17 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
     // Initialize todo-continuation hook (opt-in auto-continue for
     // incomplete todos)
+    const reviewerAgentDef = agentDefs.find(
+      (agentDef) => agentDef.name === 'reviewer',
+    );
     todoContinuationHook = createTodoContinuationHook(ctx, {
       maxContinuations: config.todoContinuation?.maxContinuations ?? 100,
       autoReviewModel: config.todoContinuation?.autoReviewModel,
+      reviewOverlayPrompt:
+        typeof reviewerAgentDef?.config.prompt === 'string'
+          ? reviewerAgentDef.config.prompt
+          : undefined,
+      overlayManager: effectiveAgentOverlayManager,
       cooldownMs: config.todoContinuation?.cooldownMs ?? 3000,
       autoEnable: config.todoContinuation?.autoEnable ?? false,
       autoEnableThreshold: config.todoContinuation?.autoEnableThreshold ?? 4,
@@ -776,6 +825,13 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           `workspace:${ctx.directory}`,
         );
         checkpointManager.recordReviewOutcome(sessionID, verdict, findings);
+        if (
+          verdict === 'approve' ||
+          verdict === 'needs_user' ||
+          verdict === 'blocked'
+        ) {
+          effectiveAgentOverlayManager.clear(sessionID, 'execute');
+        }
       },
       onBatchSummary: ({ sessionID, summary }) => {
         checkpointManager.ensureSession(
@@ -833,8 +889,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       maxSessionsPerAgent: config.sessionManager?.maxSessionsPerAgent ?? 2,
       readContextMinLines: config.sessionManager?.readContextMinLines ?? 10,
       readContextMaxFiles: config.sessionManager?.readContextMaxFiles ?? 8,
-      shouldManageSession: (sessionID) =>
-        sessionAgentMap.get(sessionID) === 'orchestrator',
+      shouldManageSession: (sessionID) => shouldManagePrimarySession(sessionID),
     });
     modeDetectorHook = createModeDetectorHook();
     thinkingLanguageHook = createThinkingLanguageHook();
@@ -845,10 +900,17 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     });
     interviewManager = createInterviewManager(ctx, config);
     presetManager = createPresetManager(ctx, config);
-    startWorkHook = createStartWorkHook(ctx);
+    startWorkHook = createStartWorkHook(ctx, {
+      overlayManager: effectiveAgentOverlayManager,
+      getCurrentAgent: (sessionID) => sessionAgentMap.get(sessionID),
+    });
+    checkpointResumeHook = createCheckpointResumeHook(ctx, {
+      overlayManager: effectiveAgentOverlayManager,
+      getCurrentAgent: (sessionID) => sessionAgentMap.get(sessionID),
+    });
     memoryCommandsHook = createMemoryCommandsHook(ctx, checkpointManager);
     sessionGoalHook = createSessionGoalHook(ctx, config, {
-      getAgentName: (sessionID) => sessionAgentMap.get(sessionID),
+      getAgentName: (sessionID) => getRuntimeEffectiveAgent(sessionID),
     });
     subtaskState = createSubtaskState();
 
@@ -933,29 +995,74 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       ast_grep_replace,
       detect_bio_task: detectBioTaskTool,
       load_agent_instructions: loadAgentInstructionsTool,
+      cancel_task: createCancelTaskTool({
+        client: ctx.client,
+        backgroundJobBoard: taskSessionManagerHook.backgroundJobBoard,
+        shouldManageSession: (sessionID) =>
+          shouldManagePrimarySession(sessionID),
+      }),
       subtask: createSubtaskTool(ctx, subtaskState),
       ...(bioSkillsManager
         ? { load_bio_skills: createLoadBioSkillsTool(bioSkillsManager) }
         : {}),
       ...(templateSkillsManager
-        ? { load_skill_template: createLoadSkillTemplateTool(templateSkillsManager) }
+        ? {
+            load_skill_template: createLoadSkillTemplateTool(
+              templateSkillsManager,
+            ),
+          }
         : {}),
       mcp_toggle: createMcpToggleTool(ctx.client),
       // Team Mode tools (only registered when team_mode.enabled)
-      ...(config.team_mode?.enabled ? {
-        team_create: createTeamCreateTool({ config: config.team_mode, ctx }),
-        team_delete: createTeamDeleteTool({ config: config.team_mode, ctx }),
-        team_send_message: createTeamSendTool({ config: config.team_mode, ctx }),
-        team_task_create: createTeamTaskCreateTool({ config: config.team_mode, ctx }),
-        team_task_list: createTeamTaskListTool({ config: config.team_mode, ctx }),
-        team_task_update: createTeamTaskUpdateTool({ config: config.team_mode, ctx }),
-        team_task_get: createTeamTaskGetTool({ config: config.team_mode, ctx }),
-        team_status: createTeamStatusTool({ config: config.team_mode, ctx }),
-        team_list: createTeamListTool({ config: config.team_mode, ctx }),
-        team_shutdown_request: createTeamShutdownRequestTool({ config: config.team_mode, ctx }),
-        team_approve_shutdown: createTeamApproveShutdownTool({ config: config.team_mode, ctx }),
-        team_reject_shutdown: createTeamRejectShutdownTool({ config: config.team_mode, ctx }),
-      } : {}),
+      ...(config.team_mode?.enabled
+        ? {
+            team_create: createTeamCreateTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_delete: createTeamDeleteTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_send_message: createTeamSendTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_task_create: createTeamTaskCreateTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_task_list: createTeamTaskListTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_task_update: createTeamTaskUpdateTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_task_get: createTeamTaskGetTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_status: createTeamStatusTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_list: createTeamListTool({ config: config.team_mode, ctx }),
+            team_shutdown_request: createTeamShutdownRequestTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_approve_shutdown: createTeamApproveShutdownTool({
+              config: config.team_mode,
+              ctx,
+            }),
+            team_reject_shutdown: createTeamRejectShutdownTool({
+              config: config.team_mode,
+              ctx,
+            }),
+          }
+        : {}),
     },
 
     mcp: mcps,
@@ -1346,7 +1453,10 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       // Allow reading bundled academicSkills and ThirdParty skills
       // (needed by load_skill_template tool even though not in configSkills.paths)
       {
-        const academicSkillsPath = join(packageRoot, 'resources/academicSkills');
+        const academicSkillsPath = join(
+          packageRoot,
+          'resources/academicSkills',
+        );
         const thirdPartyPaths = [
           join(packageRoot, 'ThirdParty', 'html-anything-skills'),
           join(packageRoot, 'ThirdParty', 'html-ppt-skill'),
@@ -1462,8 +1572,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       if (!configCommand?.['ol-simplify']) {
         (opencodeConfig.command as Record<string, unknown>)['ol-simplify'] = {
           template: SIMPLIFY_TEMPLATE,
-          description:
-            'Simplify code for clarity without changing behavior',
+          description: 'Simplify code for clarity without changing behavior',
           argumentHint: '[file-or-function]',
         };
       }
@@ -1555,6 +1664,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           depthTracker.cleanup(sessionID);
         }
         if (sessionID) {
+          effectiveAgentOverlayManager.clear(sessionID);
           sessionAgentMap.delete(sessionID);
           checkpointManager.cleanupSession(sessionID);
         }
@@ -1656,6 +1766,11 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         typedOutput,
       );
 
+      await checkpointResumeHook.handleCommandExecuteBefore(
+        effectiveInput,
+        typedOutput,
+      );
+
       await sessionGoalHook.handleCommandExecuteBefore(
         effectiveInput,
         typedOutput,
@@ -1676,10 +1791,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           parseSubagentPolicyMode(typedInput.arguments);
 
         // If it's a mode switch command, modify the config file
-        if (
-          requestedMode &&
-          typedInput.command !== SUBAGENT_POLICY_COMMAND
-        ) {
+        if (requestedMode && typedInput.command !== SUBAGENT_POLICY_COMMAND) {
           // Read current config
           const currentConfig = readExtendaiConfig();
 
@@ -1702,9 +1814,7 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 注意: 当前对话仍使用旧的 policy，新 policy 将在下一轮对话中生效`;
 
           typedOutput.parts.length = 0;
-          typedOutput.parts.push(
-            createInternalAgentTextPart(confirmation),
-          );
+          typedOutput.parts.push(createInternalAgentTextPart(confirmation));
         } else {
           // View current policy
           typedOutput.parts.length = 0;
@@ -1758,12 +1868,22 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
     // injection)
     'chat.message': async (
       input: { sessionID: string; agent?: string },
-      output?: { message?: { agent?: string }; parts?: Array<{ type: string; text?: string }> },
+      output?: {
+        message?: { agent?: string };
+        parts?: Array<{ type: string; text?: string }>;
+      },
     ) => {
       const rawAgent = input.agent ?? output?.message?.agent;
-      const agent = rawAgent
+      const resolvedAgent = rawAgent
         ? resolveRuntimeAgentName(config, rawAgent)
         : undefined;
+      const persistentOverlayAgent = effectiveAgentOverlayManager.getCurrent(
+        input.sessionID,
+      )?.agent;
+      const responseOverlayAgent =
+        todoContinuationHook.getResponseAgentForSession(input.sessionID);
+      const agent =
+        responseOverlayAgent ?? persistentOverlayAgent ?? resolvedAgent;
 
       if (
         agent &&
@@ -1773,8 +1893,15 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         output.message.agent = agent;
       }
 
-      if (agent) {
-        sessionAgentMap.set(input.sessionID, agent);
+      if (resolvedAgent && !responseOverlayAgent) {
+        const currentMappedAgent = sessionAgentMap.get(input.sessionID);
+        const shouldUpdateBaseAgent =
+          !persistentOverlayAgent ||
+          resolvedAgent !== persistentOverlayAgent ||
+          !currentMappedAgent;
+        if (shouldUpdateBaseAgent) {
+          sessionAgentMap.set(input.sessionID, resolvedAgent);
+        }
       }
       contextPressureHook.handleChatMessage({
         sessionID: input.sessionID,
@@ -1798,43 +1925,56 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       }
     },
 
-    // Inject orchestrator system prompt for serve-mode sessions. In serve
-    // mode, the agent's prompt field may be absent from the agents
-    // registry (built before plugin config hooks run). This hook injects
-    // it at LLM call time. Uses the already-resolved prompt from
-    // agentDefs (which has custom replacement or append prompts applied)
-    // instead of rebuilding the default.
+    // Inject the effective agent system prompt for serve-mode sessions.
+    // In serve mode, the agent's prompt field may be absent from the
+    // agents registry (built before plugin config hooks run). This hook
+    // injects it at LLM call time. Overlay agents (for example execute or
+    // review lanes) also use this path to isolate the active prompt from
+    // the visible UI agent.
     'experimental.chat.system.transform': async (
       input: { sessionID?: string },
       output: { system: string[] },
     ): Promise<void> => {
-      const agentName = input.sessionID
+      const overlayAgentName = input.sessionID
+        ? (effectiveAgentOverlayManager.getCurrent(input.sessionID)?.agent ??
+          todoContinuationHook.getEffectiveAgentForSession(input.sessionID))
+        : undefined;
+
+      if (overlayAgentName === 'reviewer') {
+        await todoContinuationHook.handleSystemTransform(input, output);
+        collapseSystemInPlace(output.system);
+        return;
+      }
+
+      const baseAgentName = input.sessionID
         ? sessionAgentMap.get(input.sessionID)
         : undefined;
-      if (agentName === 'orchestrator') {
-        const alreadyInjected = output.system.some(
-          (s) =>
-            typeof s === 'string' &&
-            s.includes('<Role>') &&
-            s.includes('orchestrator'),
+      const promptAgentName = overlayAgentName ?? baseAgentName;
+      if (promptAgentName) {
+        const promptAgentDef = agentDefs.find(
+          (a) => a.name === promptAgentName,
         );
-        if (!alreadyInjected) {
-          // Prepend the orchestrator prompt to the system array. Use the
-          // resolved prompt from the orchestrator agent definition (which
-          // includes any custom replacement or append from orchestrator.md
-          // / orchestrator_append.md) Fall back to
-          // buildOrchestratorPrompt only if the resolved prompt is
-          // missing.
-          const orchestratorDef = agentDefs.find(
-            (a) => a.name === 'orchestrator',
+        const promptText =
+          typeof promptAgentDef?.config?.prompt === 'string'
+            ? promptAgentDef.config.prompt
+            : promptAgentName === 'orchestrator'
+              ? buildOrchestratorPrompt(disabledAgents)
+              : undefined;
+        const shouldIsolateOverlayPrompt = Boolean(
+          overlayAgentName && promptText,
+        );
+
+        if (shouldIsolateOverlayPrompt && promptText) {
+          output.system.length = 0;
+          output.system.push(promptText);
+        } else if (promptText) {
+          const alreadyInjected = output.system.some(
+            (s) => typeof s === 'string' && s.includes('<Role>'),
           );
-          const orchestratorPrompt =
-            typeof orchestratorDef?.config?.prompt === 'string'
-              ? orchestratorDef.config.prompt
-              : buildOrchestratorPrompt(disabledAgents);
-          output.system[0] =
-            orchestratorPrompt +
-            (output.system[0] ? `\n\n${output.system[0]}` : '');
+          if (!alreadyInjected) {
+            output.system[0] =
+              promptText + (output.system[0] ? `\n\n${output.system[0]}` : '');
+          }
         }
       }
 
@@ -1867,7 +2007,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
       // Inject mode-specific prompt variants for primary agents
       if (input.sessionID) {
         const currentMode = promptModeManager.getCurrentMode(input.sessionID);
-        const agentForMode = sessionAgentMap.get(input.sessionID);
+        const agentForMode =
+          overlayAgentName ?? sessionAgentMap.get(input.sessionID);
 
         if (
           currentMode !== 'light' &&
@@ -1916,7 +2057,8 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
 
       // Inject Bio Skills catalog and loaded skills
       if (bioSkillsManager && input.sessionID) {
-        const agentName = sessionAgentMap.get(input.sessionID);
+        const agentName =
+          overlayAgentName ?? sessionAgentMap.get(input.sessionID);
         const allowedAgents = config.bioSkills?.allowedAgents ?? ['*'];
         const isAllowed =
           allowedAgents.includes('*') ||
@@ -2035,13 +2177,19 @@ SKIPPING THESE RULES = TASK FAILURE
 
       // Team mode context injection for team members
       if (config.team_mode?.enabled && input.sessionID) {
-        const { lookupTeamSession } = await import('./features/team-mode/team-session-registry');
+        const { lookupTeamSession } = await import(
+          './features/team-mode/team-session-registry'
+        );
         const teamEntry = lookupTeamSession(input.sessionID);
         if (teamEntry) {
-          const { loadRuntimeState } = await import('./features/team-mode/team-state-store/index');
+          const { loadRuntimeState } = await import(
+            './features/team-mode/team-state-store/index'
+          );
           const state = await loadRuntimeState(teamEntry.teamName);
           if (state && state.status === 'active') {
-            const member = state.members.find(m => m.name === teamEntry.memberName);
+            const member = state.members.find(
+              (m) => m.name === teamEntry.memberName,
+            );
             if (member) {
               const isLead = teamEntry.role === 'lead';
               const teamInfo = [
@@ -2049,7 +2197,10 @@ SKIPPING THESE RULES = TASK FAILURE
                 `You are ${isLead ? 'the lead' : 'a member'} of team "${state.teamName}".`,
                 `TeamRunId: ${state.teamRunId}`,
                 `### Team Members`,
-                ...state.members.map(m => `- ${m.status === 'running' ? '?' : '?'} ${m.name}: ${m.status}`),
+                ...state.members.map(
+                  (m) =>
+                    `- ${m.status === 'running' ? '?' : '?'} ${m.name}: ${m.status}`,
+                ),
                 `### Communication`,
                 `Use team_send_message to communicate with team members.`,
                 `Use team_task_update to report task progress.`,
@@ -2111,6 +2262,10 @@ SKIPPING THESE RULES = TASK FAILURE
         log,
       });
 
+      await taskSessionManagerHook['experimental.chat.messages.transform'](
+        input,
+        typedOutput,
+      );
       await todoContinuationHook.handleMessagesTransform({
         messages: typedOutput.messages,
       });
@@ -2216,12 +2371,12 @@ SKIPPING THESE RULES = TASK FAILURE
     // Auto-continue after compaction if there are incomplete todos
     'experimental.compaction.autocontinue': async (
       input: {
-        sessionID: string
-        agent: string
-        model: unknown
-        provider: unknown
-        message: unknown
-        overflow: boolean
+        sessionID: string;
+        agent: string;
+        model: unknown;
+        provider: unknown;
+        message: unknown;
+        overflow: boolean;
       },
       output: { enabled: boolean },
     ): Promise<void> => {
@@ -2260,5 +2415,5 @@ export type {
   TmuxConfig,
   TmuxLayout,
 } from './config';
-export type { RemoteMcpConfig } from './mcp';
 export * from './features/team-mode/index.js';
+export type { RemoteMcpConfig } from './mcp';

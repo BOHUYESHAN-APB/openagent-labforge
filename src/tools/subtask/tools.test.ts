@@ -6,6 +6,17 @@ import { SubagentDepthTracker } from '../../utils/subagent-depth';
 import { createSubtaskState } from './state';
 import { createReadSessionTool, createSubtaskTool } from './tools';
 
+function resultText(result: unknown): string {
+  return typeof result === 'string'
+    ? result
+    : typeof result === 'object' &&
+        result !== null &&
+        'output' in result &&
+        typeof (result as { output?: unknown }).output === 'string'
+      ? (result as { output: string }).output
+      : String(result);
+}
+
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'omos-subtask-tool-'));
 }
@@ -55,11 +66,12 @@ describe('subtask tool', () => {
         { sessionID: 'ses_old' } as any,
       );
 
-      expect(result).toContain('task_id: ses_new');
-      expect(result).toContain('<subtask_summary>');
-      expect(result).toContain('Summary from worker');
-      expect(result.match(/<subtask_summary>/g)).toHaveLength(1);
-      expect(result.match(/<\/subtask_summary>/g)).toHaveLength(1);
+      const text = resultText(result);
+      expect(text).toContain('task_id: ses_new');
+      expect(text).toContain('<subtask_summary>');
+      expect(text).toContain('Summary from worker');
+      expect(text.match(/<subtask_summary>/g)).toHaveLength(1);
+      expect(text.match(/<\/subtask_summary>/g)).toHaveLength(1);
       expect(sessionCreate).toHaveBeenCalledWith({
         responseStyle: 'data',
         throwOnError: true,
@@ -70,7 +82,9 @@ describe('subtask tool', () => {
         },
       });
       expect(sessionPrompt).toHaveBeenCalledTimes(1);
-      const promptCall = sessionPrompt.mock.calls[0]?.[0] as {
+      const firstPromptCall = sessionPrompt.mock.calls[0] as unknown as [unknown];
+      expect(firstPromptCall).toBeDefined();
+      const promptCall = firstPromptCall[0] as {
         path: { id: string };
         body: {
           agent: string;
@@ -146,9 +160,10 @@ describe('subtask tool', () => {
         sessionID: 'ses_old',
       } as any);
 
-      expect(result).toContain('Inner');
-      expect(result.match(/<subtask_summary>/g)).toHaveLength(1);
-      expect(result.match(/<\/subtask_summary>/g)).toHaveLength(1);
+      const text = resultText(result);
+      expect(text).toContain('Inner');
+      expect(text.match(/<subtask_summary>/g)).toHaveLength(1);
+      expect(text.match(/<\/subtask_summary>/g)).toHaveLength(1);
     } finally {
       fs.rmSync(directory, { recursive: true, force: true });
     }
@@ -268,7 +283,47 @@ describe('subtask tool', () => {
         { sessionID: 'ses_child', agent: 'oracle' } as any,
       );
 
-      expect(result).toContain('restricted to primary orchestrator agents');
+      expect(resultText(result)).toContain(
+        'restricted to primary orchestrator agents',
+      );
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('background subtask does not immediately abort child session', async () => {
+    const directory = makeTempDir();
+    try {
+      const sessionCreate = mock(async () => ({ data: { id: 'ses_bg' } }));
+      const sessionPrompt = mock(async () => ({}));
+      const sessionAbort = mock(async () => ({}));
+      const state = createSubtaskState();
+      const tool = createSubtaskTool(
+        {
+          directory,
+          client: {
+            session: {
+              abort: sessionAbort,
+              create: sessionCreate,
+              messages: mock(async () => ({ data: [] })),
+              prompt: sessionPrompt,
+            },
+          },
+        } as any,
+        state,
+      );
+
+      const result = await tool.execute(
+        { prompt: 'Run in background', background: true },
+        { sessionID: 'ses_parent' } as any,
+      );
+
+      const text = resultText(result);
+      expect(text).toContain('task_id: ses_bg');
+      expect(text).toContain('state: running');
+      expect(sessionPrompt).toHaveBeenCalledTimes(1);
+      expect(sessionAbort).not.toHaveBeenCalled();
+      expect(state.isSubtaskSession('ses_bg')).toBe(true);
     } finally {
       fs.rmSync(directory, { recursive: true, force: true });
     }

@@ -60,6 +60,47 @@ describe('createSessionGoalHook', () => {
     );
   });
 
+  test('injects active goal into planner and executor primary overlays', async () => {
+    const plannerHook = createSessionGoalHook(
+      { directory: '.' } as Parameters<typeof createSessionGoalHook>[0],
+      { interview: { outputFolder: 'interview' } } as Parameters<
+        typeof createSessionGoalHook
+      >[1],
+      { getAgentName: () => 'prometheus' },
+    );
+    await plannerHook.handleCommandExecuteBefore(
+      { command: 'goal', sessionID: 'plan-ses', arguments: 'Plan carefully.' },
+      { parts: [] },
+    );
+    const plannerOutput = { system: ['base prompt'] };
+    plannerHook.handleSystemTransform({ sessionID: 'plan-ses' }, plannerOutput);
+    expect(plannerOutput.system.join('\n')).toContain('<active_goal>');
+    expect(plannerOutput.system.join('\n')).toContain('Plan carefully.');
+
+    const executorHook = createSessionGoalHook(
+      { directory: '.' } as Parameters<typeof createSessionGoalHook>[0],
+      { interview: { outputFolder: 'interview' } } as Parameters<
+        typeof createSessionGoalHook
+      >[1],
+      { getAgentName: () => 'atlas' },
+    );
+    await executorHook.handleCommandExecuteBefore(
+      {
+        command: 'goal',
+        sessionID: 'exec-ses',
+        arguments: 'Execute carefully.',
+      },
+      { parts: [] },
+    );
+    const executorOutput = { system: ['base prompt'] };
+    executorHook.handleSystemTransform(
+      { sessionID: 'exec-ses' },
+      executorOutput,
+    );
+    expect(executorOutput.system.join('\n')).toContain('<active_goal>');
+    expect(executorOutput.system.join('\n')).toContain('Execute carefully.');
+  });
+
   test('inherits parent goal for child sessions', async () => {
     const hook = createSessionGoalHook(
       { directory: '.' } as Parameters<typeof createSessionGoalHook>[0],

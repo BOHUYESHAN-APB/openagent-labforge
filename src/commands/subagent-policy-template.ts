@@ -13,10 +13,10 @@ The user has executed a subagent policy command. Display the current policy stat
 Current mode: {mode}
 Allowed agents: {agents}
 
-Available modes:
-- /ol-subagents-UM : ultra-minimal (strict main-agent-first)
-- /ol-subagents-M  : minimal (cache-first low-agent)
-- /ol-subagents-F  : full (all configured subagents)
+Compatibility modes:
+- /ol-subagents-F  : full (preferred default; all configured subagents)
+- /ol-subagents-UM : ultra-minimal (legacy reduced-registration mode)
+- /ol-subagents-M  : minimal (legacy reduced-registration mode)
 - /ol-subagents-C  : custom (allowedAgents allowlist)
 - /ol-subagents-MO : main-only (disable child sessions)
 

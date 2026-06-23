@@ -210,9 +210,9 @@ export type SessionManagerConfig = z.infer<typeof SessionManagerConfigSchema>;
 export const SubagentPolicyConfigSchema = z.object({
   mode: z
     .enum(['full', 'ultra-minimal', 'minimal', 'custom', 'main-only'])
-    .default('ultra-minimal')
+    .default('full')
     .describe(
-      'Subagent usage mode: ultra-minimal (strict main-agent-first default), minimal (legacy cache-first low-agent mode), full (all configured subagents), custom (only allowedAgents), main-only (disable built-in orchestratable subagents). Registered agent changes require plugin reload/restart.',
+      'Subagent usage mode: full (default; all 15+ custom agents available), ultra-minimal/minimal (only OpenCode built-in default agents, no custom subagents), custom (only allowedAgents list), main-only (disable all subagents). Registered agent changes require plugin reload/restart.',
     ),
   allowedAgents: z
     .array(z.string())
@@ -274,7 +274,7 @@ export const TodoContinuationConfigSchema = z.object({
     .describe('Delay in ms before auto-continuing (gives user time to abort)'),
   autoEnable: z
     .boolean()
-    .default(false)
+    .default(true)
     .describe(
       'Automatically enable auto-continue when the orchestrator session has enough todos',
     ),
@@ -283,7 +283,7 @@ export const TodoContinuationConfigSchema = z.object({
     .int()
     .min(1)
     .max(50)
-    .default(4)
+    .default(1)
     .describe(
       'Number of todos that triggers auto-enable (only used when autoEnable is true)',
     ),
@@ -465,6 +465,43 @@ export type CustomAgentModel = z.infer<typeof CustomAgentModelSchema>;
 export const CustomModelsSchema = z.record(z.string(), CustomAgentModelSchema);
 export type CustomModels = z.infer<typeof CustomModelsSchema>;
 
+// Role capability buckets for role-aware model presets (Phase 9)
+export const RoleCapabilitySchema = z.enum([
+  'leader',
+  'planner',
+  'executor',
+  'search',
+  'research',
+  'implement',
+  'review',
+  'team_lead',
+  'team_member',
+]);
+export type RoleCapability = z.infer<typeof RoleCapabilitySchema>;
+
+export const CapabilityTendencySchema = z.enum([
+  'reasoning',
+  'coding',
+  'search',
+  'writing',
+  'summarization',
+  'long_context',
+  'vision',
+  'low_cost',
+]);
+export type CapabilityTendency = z.infer<typeof CapabilityTendencySchema>;
+
+export const RoleMappingSchema = z.object({
+  role: RoleCapabilitySchema,
+  model: z.string().describe('provider/model-id for this role'),
+  fallback: z.array(z.string()).optional().describe('fallback model chain'),
+  capabilities: z
+    .array(CapabilityTendencySchema)
+    .optional()
+    .describe('what this model is good at'),
+});
+export type RoleMapping = z.infer<typeof RoleMappingSchema>;
+
 // Model preferences configuration (global model override)
 export const ModelPreferencesConfigSchema = z.object({
   enabled: z
@@ -491,7 +528,13 @@ export const ModelPreferencesConfigSchema = z.object({
     .record(z.string(), z.union([z.string(), z.array(z.string())]))
     .optional()
     .describe(
-      'Per-agent model overrides (agent-name → provider/model or [primary, fallback]). Takes precedence over profile/customModel.',
+      'Per-agent model overrides (agent name → model id). Kept for backward compatibility.',
+    ),
+  roleMappings: z
+    .array(RoleMappingSchema)
+    .optional()
+    .describe(
+      'Role-aware model mappings for capability-based routing. Maps roles (leader, planner, executor, etc.) to provider/model with capability tendencies.',
     ),
 });
 

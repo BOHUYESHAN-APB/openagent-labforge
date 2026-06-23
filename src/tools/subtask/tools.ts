@@ -141,6 +141,7 @@ Do not spawn another subtask.`;
         : `${sessionReference}\n\nTASK:\n${args.prompt}`;
 
       let childSessionID: string | undefined;
+      let shouldCleanupChildSession = true;
       try {
         const session = await client.session.create({
           responseStyle: 'data',
@@ -173,6 +174,7 @@ Do not spawn another subtask.`;
 
         // Background mode: fire and forget
         if (runInBackground) {
+          shouldCleanupChildSession = false;
           void client.session.prompt({
             responseStyle: 'data',
             throwOnError: true,
@@ -240,7 +242,7 @@ Do not spawn another subtask.`;
           '</subtask_summary>',
         ].join('\n');
       } finally {
-        if (childSessionID) {
+        if (childSessionID && shouldCleanupChildSession) {
           try {
             await client.session.abort({
               path: { id: childSessionID },

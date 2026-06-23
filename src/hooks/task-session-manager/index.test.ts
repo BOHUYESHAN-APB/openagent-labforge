@@ -1,3 +1,5 @@
+/// <reference types="bun-types" />
+
 import { describe, expect, mock, test } from 'bun:test';
 import { createTaskSessionManagerHook } from './index';
 
@@ -29,6 +31,36 @@ function createMessages(sessionID: string, text = 'user message') {
       {
         info: { role: 'user', agent: 'orchestrator', sessionID },
         parts: [{ type: 'text', text }],
+      },
+    ],
+  };
+}
+
+function createInjectedCompletionMessages(
+  sessionID: string,
+  text: string,
+  id = 'msg-1',
+) {
+  return {
+    messages: [
+      {
+        info: { id, role: 'user', agent: 'orchestrator', sessionID },
+        parts: [
+          { type: 'text', text },
+          {
+            id: 'part-1',
+            synthetic: true,
+            type: 'text',
+            text: [
+              '<task id="ses_bg_789" state="completed">',
+              '<summary>Background task completed: Search auth flow</summary>',
+              '<task_result>',
+              'Mapped auth flow.',
+              '</task_result>',
+              '</task>',
+            ].join('\n'),
+          },
+        ],
       },
     ],
   };
@@ -76,6 +108,233 @@ describe('task-session-manager hook', () => {
     expect(prompt).toContain('### Resumable Sessions');
     expect(prompt).toContain('explorer: exp-1 config schema');
     expect(prompt).toContain('</resumable_sessions>');
+  });
+
+  test('registers background task launches and shows background job board', async () => {
+    const { hook } = createHook();
+
+    await hook['tool.execute.before'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-1',
+      },
+      {
+        args: {
+          subagent_type: 'explorer',
+          description: 'Search auth flow',
+          background: true,
+        },
+      },
+    );
+
+    await hook['tool.execute.after'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-1',
+      },
+      {
+        output: [
+          '<task id="ses_bg_123" state="running">',
+          '<summary>Background task started</summary>',
+          '<task_result>',
+          'The task is working in the background.',
+          '</task_result>',
+          '</task>',
+        ].join('\n'),
+      },
+    );
+
+    const systemOutput = { system: ['base'] };
+    await hook['experimental.chat.system.transform'](
+      { sessionID: 'parent-1' },
+      systemOutput,
+    );
+
+    const prompt = systemOutput.system.join('\n');
+    expect(prompt).toContain('### Background Job Board');
+    expect(prompt).toContain('SENTINEL: background-job-board-v2');
+    expect(prompt).toContain('exp-1 / ses_bg_123 / explorer / running');
+    expect(prompt).toContain('Objective: Search auth flow');
+  });
+
+  test('updates background job board when terminal task output arrives', async () => {
+    const { hook } = createHook();
+
+    await hook['tool.execute.before'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-1',
+      },
+      {
+        args: {
+          subagent_type: 'oracle',
+          description: 'Review architecture',
+          background: true,
+        },
+      },
+    );
+
+    await hook['tool.execute.after'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-1',
+      },
+      {
+        output: [
+          '<task id="ses_bg_456" state="running">',
+          '<summary>Background task started</summary>',
+          '<task_result>',
+          'Background started',
+          '</task_result>',
+          '</task>',
+        ].join('\n'),
+      },
+    );
+
+    await hook['tool.execute.before'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-2',
+      },
+      {
+        args: {
+          subagent_type: 'oracle',
+          description: 'Review architecture',
+        },
+      },
+    );
+
+    await hook['tool.execute.after'](
+      {
+        tool: 'task',
+        sessionID: 'parent-1',
+        callID: 'call-2',
+      },
+      {
+        output: [
+          '<task id="ses_bg_456" state="completed">',
+          '<summary>Background task completed: Review architecture</summary>',
+          '<task_result>',
+          'Use a lane-specific overlay.',
+          '</task_result>',
+          '</task>',
+        ].join('\n'),
+      },
+    );
+
+    const systemOutput = { system: ['base'] };
+    await hook['experimental.chat.system.transform'](
+      { sessionID: 'parent-1' },
+      systemOutput,
+    );
+
+    const prompt = systemOutput.system.join('\n');
+    expect(prompt).toContain('ora-1 / ses_bg_456 / oracle / completed, unreconciled');
+    expect(prompt).toContain('Result: Use a lane-specific overlay.');
+  });
+
+  test('appends background job board to user messages via messages transform', async () => {
+    const { hook } = createHook();
+
+    await hook['tool.execute.before'](
+      { tool: 'task', sessionID: 'parent-1', callID: 'call-1' },
+      {
+        args: {
+          subagent_type: 'explorer',
+          description: 'Search auth flow',
+          background: true,
+        },
+      },
+    );
+    await hook['tool.execute.after'](
+      { tool: 'task', sessionID: 'parent-1', callID: 'call-1' },
+      {
+        output: [
+          '<task id="ses_bg_123" state="running">',
+          '<summary>Background task started</summary>',
+          '<task_result>',
+          'The task is working in the background.',
+          '</task_result>',
+          '</task>',
+        ].join('\n'),
+      },
+    );
+
+    const messages = createMessages('parent-1', 'continue implementation');
+    await hook['experimental.chat.messages.transform']({}, messages);
+
+    expect(messages.messages[0].parts[0].text).toContain(
+      '### Background Job Board',
+    );
+    expect(messages.messages[0].parts[0].text).toContain(
+      'SENTINEL: background-job-board-v2',
+    );
+  });
+
+  test('reconciles injected terminal background jobs on idle', async () => {
+    const { hook } = createHook();
+
+    await hook['tool.execute.before'](
+      { tool: 'task', sessionID: 'parent-1', callID: 'call-1' },
+      {
+        args: {
+          subagent_type: 'explorer',
+          description: 'Search auth flow',
+          background: true,
+        },
+      },
+    );
+    await hook['tool.execute.after'](
+      { tool: 'task', sessionID: 'parent-1', callID: 'call-1' },
+      {
+        output: [
+          '<task id="ses_bg_789" state="running">',
+          '<summary>Background task started</summary>',
+          '<task_result>',
+          'The task is working in the background.',
+          '</task_result>',
+          '</task>',
+        ].join('\n'),
+      },
+    );
+
+    const messages = createInjectedCompletionMessages(
+      'parent-1',
+      'continue implementation',
+    );
+    await hook['experimental.chat.messages.transform']({}, messages);
+
+    let systemOutput = { system: ['base'] };
+    await hook['experimental.chat.system.transform'](
+      { sessionID: 'parent-1' },
+      systemOutput,
+    );
+    expect(systemOutput.system.join('\n')).toContain(
+      'completed, unreconciled',
+    );
+
+    await hook.event({
+      event: {
+        type: 'session.idle',
+        properties: { sessionID: 'parent-1' },
+      },
+    });
+
+    systemOutput = { system: ['base'] };
+    await hook['experimental.chat.system.transform'](
+      { sessionID: 'parent-1' },
+      systemOutput,
+    );
+    expect(systemOutput.system.join('\n')).toContain('#### Reusable Sessions');
+    expect(systemOutput.system.join('\n')).toContain('reconciled');
+    expect(systemOutput.system.join('\n')).not.toContain(
+      'completed, unreconciled',
+    );
   });
 
   test('exposes a system transform for resumable sessions', async () => {

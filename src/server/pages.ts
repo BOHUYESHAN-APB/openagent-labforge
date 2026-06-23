@@ -72,8 +72,8 @@ const CONFIG_FIELDS: FieldDef[] = [
     label: 'Subagent Policy Mode',
     type: 'select',
     section: 'Subagent',
-    options: ['ultra-minimal', 'minimal', 'full', 'custom', 'main-only'],
-    default: 'ultra-minimal',
+    options: ['full', 'ultra-minimal', 'minimal', 'custom', 'main-only'],
+    default: 'full',
   },
   // Todo Continuation
   {

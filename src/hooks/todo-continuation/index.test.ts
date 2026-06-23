@@ -1,5 +1,14 @@
+/// <reference types="bun-types" />
+
 import { describe, expect, mock, test } from 'bun:test';
-import { SLIM_INTERNAL_INITIATOR_MARKER } from '../../utils';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { getProjectBoulderFile } from '../../paths/plugin-paths';
+import {
+  EffectiveAgentOverlayManager,
+  SLIM_INTERNAL_INITIATOR_MARKER,
+} from '../../utils';
 import { createTodoContinuationHook } from './index';
 import {
   TODO_FINAL_ACTIVE_REMINDER,
@@ -47,8 +56,8 @@ describe('createTodoContinuationHook', () => {
   }
 
   // Notification prompts (noReply:true, no marker) fire immediately when
-  // scheduling a continuation. These helpers check only for actual
-  // continuation prompts (with SLIM_INTERNAL_INITIATOR_MARKER).
+  // scheduling a continuation. These helpers check internal follow-up prompts
+  // that carry SLIM_INTERNAL_INITIATOR_MARKER.
   function hasContinuation(m: ReturnType<typeof mock>): boolean {
     return m.mock.calls.some((c: any[]) =>
       (c[0]?.body?.parts as any[])?.some((p: any) =>
@@ -76,7 +85,7 @@ describe('createTodoContinuationHook', () => {
   }
 
   function getLastPromptCall(m: ReturnType<typeof mock>): any {
-    const call = m.mock.calls.at(-1);
+    const call = m.mock.calls[m.mock.calls.length - 1];
     if (!call) {
       throw new Error('No prompt call found');
     }
@@ -118,7 +127,11 @@ describe('createTodoContinuationHook', () => {
   describe('tool toggle', () => {
     test('calling auto_continue execute with { enabled: true } sets state', async () => {
       const ctx = createMockContext();
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       const result = await hook.tool.auto_continue.execute({ enabled: true });
 
@@ -128,7 +141,11 @@ describe('createTodoContinuationHook', () => {
 
     test('calling auto_continue execute with { enabled: false } disables', async () => {
       const ctx = createMockContext();
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       const result = await hook.tool.auto_continue.execute({ enabled: false });
 
@@ -624,6 +641,84 @@ describe('createTodoContinuationHook', () => {
       expect(systemAllowed.system.join('\n')).toContain(TODO_HYGIENE_REMINDER);
     });
 
+    test('saved plan changes arm a todo resync reminder', async () => {
+      const workspaceRoot = mkdtempSync(join(tmpdir(), 'todo-plan-resync-'));
+      try {
+        mkdirSync(join(workspaceRoot, '.opencode', 'extendai-lab'), {
+          recursive: true,
+        });
+        const planPath = join(workspaceRoot, 'plan.md');
+        writeFileSync(planPath, '- [ ] 1. First\n- [ ] F1. Review\n');
+        writeFileSync(
+          getProjectBoulderFile(workspaceRoot),
+          JSON.stringify(
+            {
+              active_plan: planPath,
+              plan_name: 'plan',
+              started_at: new Date().toISOString(),
+              session_ids: ['main1'],
+              agent: 'atlas',
+            },
+            null,
+            2,
+          ),
+        );
+
+        const ctx = createMockContext({
+          todoResult: {
+            data: [
+              {
+                id: '1',
+                content: 'todo1',
+                status: 'pending',
+                priority: 'high',
+              },
+            ],
+          },
+        });
+        (ctx as { directory: string }).directory = workspaceRoot;
+        const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+        await hook.handleMessagesTransform(
+          userMessages('continue', 'main1', 'orchestrator', undefined, 'u1'),
+        );
+
+        writeFileSync(
+          planPath,
+          '- [ ] 1. First\n- [ ] 2. Added later\n- [ ] F1. Review\n',
+        );
+
+        await hook.handleMessagesTransform(
+          userMessages('continue', 'main1', 'orchestrator', undefined, 'u2'),
+        );
+
+        const systemOutput = { system: [] as string[] };
+        await hook.handleSystemTransform({ sessionID: 'main1' }, systemOutput);
+        expect(systemOutput.system.join('\n')).toContain(
+          'Re-sync the todo list from the current top-level plan checkboxes',
+        );
+
+        ctx.client.session.prompt.mockClear();
+        await hook.tool.auto_continue.execute({ enabled: true });
+        await hook.handleEvent({
+          event: {
+            type: 'session.idle',
+            properties: { sessionID: 'main1' },
+          },
+        });
+        await delay(60);
+
+        expect(
+          ctx.client.session.prompt.mock.calls[1][0].body.parts[0].text,
+        ).toContain('CRITICAL: Active saved plan changed');
+        expect(
+          ctx.client.session.prompt.mock.calls[1][0].body.parts[0].text,
+        ).toContain('- Top-level progress:');
+      } finally {
+        rmSync(workspaceRoot, { recursive: true, force: true });
+      }
+    });
+
     test('attachment-only requests reset stale state without synthetic text parts', async () => {
       const ctx = createMockContext({
         todoResult: {
@@ -1102,7 +1197,11 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       // Do NOT enable auto-continue
 
@@ -1139,7 +1238,11 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       // Enable auto-continue
       await hook.tool.auto_continue.execute({ enabled: true });
@@ -1217,7 +1320,11 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       await hook.tool.auto_continue.execute({ enabled: true });
 
@@ -1254,7 +1361,11 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       await hook.tool.auto_continue.execute({ enabled: true });
 
@@ -1428,7 +1539,12 @@ describe('createTodoContinuationHook', () => {
 
           return {
             data: [
-              { id: '1', content: 'todo1', status: 'pending', priority: 'high' },
+              {
+                id: '1',
+                content: 'todo1',
+                status: 'pending',
+                priority: 'high',
+              },
             ],
           };
         },
@@ -1643,7 +1759,11 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
-      const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        reviewOverlayPrompt:
+          '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+      });
 
       await hook.tool.auto_continue.execute({ enabled: true });
 
@@ -1665,11 +1785,75 @@ describe('createTodoContinuationHook', () => {
       expect(
         ctx.client.session.prompt.mock.calls[0][0].body.parts[0].text,
       ).toContain('🔎 Auto-review');
-      const call = (ctx.client.session.prompt as ReturnType<typeof vi.fn>).mock
+      const call = (ctx.client.session.prompt as ReturnType<typeof mock>).mock
         .calls[1][0];
+      expect(call.body.agent).toBe('reviewer');
       expect(call.body.parts[0].text).toContain('[Auto-review');
-      expect(call.body.parts[0].text).toContain('Review Options');
-      expect(call.body.parts[0].text).toContain('Option A: Self-Review');
+      expect(call.body.parts[0].text).toContain(
+        'Effective execution agent: reviewer',
+      );
+      expect(hook.getEffectiveAgentForSession('session-123')).toBe('reviewer');
+
+      const systemOutput = { system: ['base'] };
+      await hook.handleSystemTransform(
+        { sessionID: 'session-123' },
+        systemOutput,
+      );
+      expect(systemOutput.system).toHaveLength(1);
+      expect(systemOutput.system[0]).toContain('<review_overlay>');
+      expect(systemOutput.system[0]).toContain('Custom Reviewer Overlay');
+      expect(systemOutput.system[0]).toContain(
+        'Effective execution agent: reviewer',
+      );
+    });
+
+    test('inherits return agent from execute overlay during review', async () => {
+      const ctx = createMockContext({
+        todoResult: {
+          data: [
+            {
+              id: '1',
+              content: 'todo1',
+              status: 'completed',
+              priority: 'high',
+            },
+          ],
+        },
+        messagesResult: {
+          data: [
+            {
+              info: { role: 'assistant' },
+              parts: [{ type: 'text', text: 'All done' }],
+            },
+          ],
+        },
+      });
+      const overlayManager = new EffectiveAgentOverlayManager();
+      overlayManager.activate('session-123', {
+        phase: 'execute',
+        agent: 'atlas',
+        source: 'ol-start-work',
+        returnAgent: 'orchestrator',
+      });
+      const hook = createTodoContinuationHook(ctx, {
+        cooldownMs: 50,
+        overlayManager,
+      });
+
+      await hook.tool.auto_continue.execute({ enabled: true });
+      await hook.handleEvent({
+        event: {
+          type: 'session.idle',
+          properties: { sessionID: 'session-123' },
+        },
+      });
+
+      await delay(60);
+
+      const overlay = overlayManager.getCurrent('session-123');
+      expect(overlay?.phase).toBe('review');
+      expect(overlay?.agent).toBe('reviewer');
+      expect(overlay?.returnAgent).toBe('orchestrator');
     });
 
     test('review approve disables auto for completed batch', async () => {
@@ -1738,6 +1922,82 @@ describe('createTodoContinuationHook', () => {
       await delay(60);
 
       expect(ctx.client.session.prompt).not.toHaveBeenCalled();
+    });
+
+    test('does not enter review while active boulder plan remains incomplete', async () => {
+      const workspaceRoot = mkdtempSync(join(tmpdir(), 'todo-plan-guard-'));
+      try {
+        mkdirSync(join(workspaceRoot, '.opencode', 'extendai-lab'), {
+          recursive: true,
+        });
+        const planPath = join(workspaceRoot, 'plan.md');
+        writeFileSync(
+          planPath,
+          '- [x] 1. Done\n- [ ] 2. Still pending\n- [ ] F1. Review\n',
+        );
+        writeFileSync(
+          getProjectBoulderFile(workspaceRoot),
+          JSON.stringify(
+            {
+              active_plan: planPath,
+              plan_name: 'plan',
+              started_at: new Date().toISOString(),
+              session_ids: ['session-123'],
+              agent: 'atlas',
+            },
+            null,
+            2,
+          ),
+        );
+
+        const ctx = createMockContext({
+          todoResult: {
+            data: [
+              {
+                id: '1',
+                content: 'todo1',
+                status: 'completed',
+                priority: 'high',
+              },
+            ],
+          },
+          messagesResult: {
+            data: [
+              {
+                info: { role: 'assistant' },
+                parts: [{ type: 'text', text: 'Working through the plan' }],
+              },
+            ],
+          },
+        });
+        (ctx as { directory: string }).directory = workspaceRoot;
+        const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
+
+        await hook.tool.auto_continue.execute({ enabled: true });
+        ctx.client.session.prompt.mockClear();
+
+        await hook.handleEvent({
+          event: {
+            type: 'session.idle',
+            properties: { sessionID: 'session-123' },
+          },
+        });
+
+        await delay(60);
+
+        expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
+        expect(ctx.client.session.prompt.mock.calls[0][0].body.noReply).toBe(
+          true,
+        );
+        expect(
+          ctx.client.session.prompt.mock.calls[1][0].body.parts[0].text,
+        ).toContain('CRITICAL: Active saved plan changed');
+        expect(
+          ctx.client.session.prompt.mock.calls[1][0].body.parts[0].text,
+        ).not.toContain('[Auto-review');
+      } finally {
+        rmSync(workspaceRoot, { recursive: true, force: true });
+      }
     });
 
     test('review outcome callback receives approve/reject/needs_user verdicts', async () => {
@@ -2977,6 +3237,69 @@ describe('createTodoContinuationHook', () => {
       expect(output.parts[0].text).toContain('No incomplete todos right now');
     });
 
+    test('/ol-auto-continue reports active plan work when todos are temporarily complete', async () => {
+      const workspaceRoot = mkdtempSync(join(tmpdir(), 'todo-command-plan-'));
+      try {
+        mkdirSync(join(workspaceRoot, '.opencode', 'extendai-lab'), {
+          recursive: true,
+        });
+        const planPath = join(workspaceRoot, 'plan.md');
+        writeFileSync(
+          planPath,
+          '- [x] 1. Done\n- [ ] 2. Still pending\n- [ ] F1. Review\n',
+        );
+        writeFileSync(
+          getProjectBoulderFile(workspaceRoot),
+          JSON.stringify(
+            {
+              active_plan: planPath,
+              plan_name: 'plan',
+              started_at: new Date().toISOString(),
+              session_ids: ['session-123'],
+              agent: 'atlas',
+            },
+            null,
+            2,
+          ),
+        );
+
+        const ctx = createMockContext({
+          todoResult: {
+            data: [
+              {
+                id: '1',
+                content: 'todo1',
+                status: 'completed',
+                priority: 'high',
+              },
+            ],
+          },
+        });
+        (ctx as { directory: string }).directory = workspaceRoot;
+        const hook = createTodoContinuationHook(ctx);
+        const output = { parts: [] as Array<{ type: string; text?: string }> };
+
+        await hook.handleCommandExecuteBefore(
+          {
+            command: 'ol-auto-continue',
+            sessionID: 'session-123',
+            arguments: '',
+          },
+          output,
+        );
+
+        expect(output.parts).toHaveLength(1);
+        expect(output.parts[0].text).toContain(
+          'Todos are temporarily complete',
+        );
+        expect(output.parts[0].text).toContain(
+          'active plan plan is still incomplete',
+        );
+      } finally {
+        rmSync(workspaceRoot, { recursive: true, force: true });
+      }
+    });
+
     test('/ol-auto-continue toggles off when already enabled', async () => {
       const ctx = createMockContext();
       const hook = createTodoContinuationHook(ctx);
@@ -4189,7 +4512,10 @@ describe('createTodoContinuationHook', () => {
         },
       } as never);
 
-      await hook.tool.auto_continue.execute({ enabled: true, sessionID: 's1' });
+      await hook.tool.auto_continue.execute(
+        { enabled: true },
+        { sessionID: 's1' },
+      );
       await hook.handleEvent({
         event: {
           type: 'session.idle',
@@ -4199,8 +4525,8 @@ describe('createTodoContinuationHook', () => {
 
       const calls = ctx.client.session.prompt.mock.calls;
       expect(calls.length).toBeGreaterThanOrEqual(2);
-      const warningCall = calls.at(-2)?.[0];
-      const continuationCall = calls.at(-1)?.[0];
+      const warningCall = calls[calls.length - 2]?.[0];
+      const continuationCall = calls[calls.length - 1]?.[0];
 
       expect(warningCall?.body.noReply).toBe(true);
       expect(warningCall?.body.parts[0].text).toContain('⚠ Context pressure');
@@ -4232,7 +4558,10 @@ describe('createTodoContinuationHook', () => {
         },
       });
       const hook = createTodoContinuationHook(ctx, { cooldownMs: 100 });
-      await hook.tool.auto_continue.execute({ enabled: true, sessionID: 's1' });
+      await hook.tool.auto_continue.execute(
+        { enabled: true },
+        { sessionID: 's1' },
+      );
 
       await hook.handleEvent({
         event: {
@@ -4272,7 +4601,10 @@ describe('createTodoContinuationHook', () => {
       });
       const hook = createTodoContinuationHook(ctx, { cooldownMs: 50 });
 
-      await hook.tool.auto_continue.execute({ enabled: true, sessionID: 's1' });
+      await hook.tool.auto_continue.execute(
+        { enabled: true },
+        { sessionID: 's1' },
+      );
       await hook.handleEvent({
         event: {
           type: 'session.idle',

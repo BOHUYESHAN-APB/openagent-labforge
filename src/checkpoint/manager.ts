@@ -1,4 +1,7 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { getPlanProgress } from '../boulder';
 import type { CheckpointCleanupConfig } from '../config/schema';
+import { getProjectBoulderFile } from '../paths/plugin-paths';
 import { cleanupCheckpoints } from './cleaner';
 import { ConversationMemoryStore } from './conversation-memory';
 import {
@@ -14,7 +17,6 @@ import {
   saveCheckpointStorage,
   writeCheckpointFile,
   writeCheckpointMeta,
-  readCheckpointMeta,
 } from './persistence';
 import {
   classifyAutoPreference,
@@ -24,14 +26,49 @@ import { RepositoryMemoryStore } from './repository-memory';
 import { SessionMemoryStore } from './session-memory';
 import type {
   CheckpointLevel,
-  CheckpointStatus,
-  CheckpointTrigger,
   CheckpointStorage,
+  CheckpointTrigger,
   ContextCheckpoint,
   PreferenceMemoryEntry,
 } from './types';
 import { WorkingMemoryStore } from './working-memory';
 import { WorkspaceMemoryStore } from './workspace-memory';
+
+function readActiveExecutionState(workspaceRoot: string): {
+  planName: string;
+  planPath: string;
+  remainingTasks: number;
+} | null {
+  const boulderPath = getProjectBoulderFile(workspaceRoot);
+  if (!existsSync(boulderPath)) {
+    return null;
+  }
+
+  try {
+    const boulderState = JSON.parse(readFileSync(boulderPath, 'utf8')) as {
+      active_plan?: string;
+      plan_name?: string;
+    };
+    if (!boulderState.active_plan || !boulderState.plan_name) {
+      return null;
+    }
+
+    const progress = getPlanProgress(
+      readFileSync(boulderState.active_plan, 'utf8'),
+    );
+    if (progress.isComplete) {
+      return null;
+    }
+
+    return {
+      planName: boulderState.plan_name,
+      planPath: boulderState.active_plan,
+      remainingTasks: progress.remaining,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export class CheckpointManager {
   private storage: CheckpointStorage;
@@ -222,22 +259,31 @@ export class CheckpointManager {
       // writeCheckpointFile automatically handles:
       // - Manual checkpoints → latest.md + by-session/ + history/
       // - Auto-compaction → by-session-auto/ + history/ (no overwrite)
-      const filePath = writeCheckpointFile(session.workspaceRoot, checkpoint, content);
+      const filePath = writeCheckpointFile(
+        session.workspaceRoot,
+        checkpoint,
+        content,
+      );
       checkpoint.filePath = filePath;
 
       // Update metadata
-      writeCheckpointMeta(session.workspaceRoot, {
-        checkpoint_id: checkpoint.id,
-        checkpoint_level: checkpoint.level,
-        checkpoint_status: checkpoint.status,
-        checkpoint_trigger: checkpoint.trigger,
-        source_session_id: sessionID,
-        created_at: new Date(checkpoint.timestamp).toISOString(),
-        goal: content.goal,
-        session_switch_recommendation:
-          options.level === 'heavy' ? 'recommend-switch' : 'stay',
-        pre_compaction: !!options.preCompactionTimestamp,
-      }, sessionID, options.trigger);
+      writeCheckpointMeta(
+        session.workspaceRoot,
+        {
+          checkpoint_id: checkpoint.id,
+          checkpoint_level: checkpoint.level,
+          checkpoint_status: checkpoint.status,
+          checkpoint_trigger: checkpoint.trigger,
+          source_session_id: sessionID,
+          created_at: new Date(checkpoint.timestamp).toISOString(),
+          goal: content.goal,
+          session_switch_recommendation:
+            options.level === 'heavy' ? 'recommend-switch' : 'stay',
+          pre_compaction: !!options.preCompactionTimestamp,
+        },
+        sessionID,
+        options.trigger,
+      );
 
       this.persist();
     }
@@ -248,10 +294,7 @@ export class CheckpointManager {
   /**
    * Mark a checkpoint as consumed (used by a resume).
    */
-  consumeCheckpoint(
-    checkpointID: string,
-    consumedBySession: string,
-  ): boolean {
+  consumeCheckpoint(checkpointID: string, consumedBySession: string): boolean {
     for (const session of Array.from(this.storage.sessionMemory.values())) {
       const checkpoint = session.checkpoints.find(
         (cp: ContextCheckpoint) => cp.id === checkpointID,
@@ -291,7 +334,10 @@ export class CheckpointManager {
     let latest: ContextCheckpoint | undefined;
     for (const session of workspace.sessions.values()) {
       for (const cp of session.checkpoints) {
-        if (cp.status === 'active' && (!latest || cp.timestamp > latest.timestamp)) {
+        if (
+          cp.status === 'active' &&
+          (!latest || cp.timestamp > latest.timestamp)
+        ) {
           latest = cp;
         }
       }
@@ -306,9 +352,7 @@ export class CheckpointManager {
     const session = this.sessionMemory.get(sessionID);
     if (!session) return [];
 
-    return [...session.checkpoints].sort(
-      (a, b) => b.timestamp - a.timestamp,
-    );
+    return [...session.checkpoints].sort((a, b) => b.timestamp - a.timestamp);
   }
 
   /**
@@ -339,6 +383,8 @@ export class CheckpointManager {
       pendingTasks: string[];
       keyFiles: string[];
       recentDecisions: string[];
+      currentPhase?: string;
+      currentAgent?: string;
     },
   ): ContextCheckpoint | null {
     const session = this.sessionMemory.get(sessionID);
@@ -351,7 +397,10 @@ export class CheckpointManager {
       return existing;
     }
 
-    const summary = `Pre-compaction checkpoint: ${currentContext.goal}`;
+    const executionState = readActiveExecutionState(session.workspaceRoot);
+    const summary = executionState
+      ? `Pre-compaction checkpoint: ${currentContext.goal} | Active plan ${executionState.planName} (${executionState.remainingTasks} remaining)`
+      : `Pre-compaction checkpoint: ${currentContext.goal}`;
     const checkpoint = this.createVersionedCheckpoint(
       sessionID,
       {
@@ -359,10 +408,26 @@ export class CheckpointManager {
         goal: currentContext.goal,
         keyDecisions: currentContext.recentDecisions,
         openIssues: [],
-        pendingTasks: currentContext.pendingTasks,
-        keyFiles: currentContext.keyFiles,
-        resumeInstructions:
-          'Resume from this checkpoint to recover context lost during compaction.',
+        pendingTasks: executionState
+          ? [
+              `Active execution plan: ${executionState.planName}`,
+              `Top-level plan tasks remaining: ${executionState.remainingTasks}`,
+              ...currentContext.pendingTasks,
+            ]
+          : currentContext.pendingTasks,
+        keyFiles: executionState
+          ? Array.from(
+              new Set([executionState.planPath, ...currentContext.keyFiles]),
+            )
+          : currentContext.keyFiles,
+        resumeInstructions: executionState
+          ? `Resume from this checkpoint to recover context lost during compaction.
+Active execution plan name: ${executionState.planName}
+Active execution plan path: ${executionState.planPath}
+Top-level plan tasks remaining: ${executionState.remainingTasks}
+Prior phase: ${currentContext.currentPhase ?? 'execute'} (${currentContext.currentAgent ?? 'atlas'})
+Re-read the plan, rebuild todos from current top-level checkboxes if needed, and continue until the active boulder plan is complete.`
+          : 'Resume from this checkpoint to recover context lost during compaction.',
       },
       {
         level: 'light',
@@ -387,7 +452,14 @@ export class CheckpointManager {
   } {
     const session = this.sessionMemory.get(sessionID);
     if (!session) {
-      return { total: 0, active: 0, consumed: 0, superseded: 0, light: 0, heavy: 0 };
+      return {
+        total: 0,
+        active: 0,
+        consumed: 0,
+        superseded: 0,
+        light: 0,
+        heavy: 0,
+      };
     }
 
     const checkpoints = session.checkpoints;

@@ -37,13 +37,15 @@ Determine which checkpoint to load:
    - For auto: \`.opencode/extendai-lab/checkpoints/by-session-auto/$SESSION_ID.meta.json\`
 3. Extract: goal, current state, pending tasks, key decisions, resume instructions
 4. Check if checkpoint was created before compaction (pre_compaction flag)
+5. If checkpoint mentions an active execution plan / boulder-backed plan, treat that as the authoritative execution lane to restore
 
 ### PHASE 2: REBUILD EXECUTION STATE
 1. Restate the carried-forward mission from checkpoint
 2. Restate the goal and current state
-3. Create todo list from pending tasks in checkpoint
-4. Acknowledge any new user request
-5. If checkpoint was pre-compaction: note that some context may have been compressed
+3. If checkpoint contains active execution plan details, re-read that saved plan file first and rebuild todos from the current top-level plan checkboxes before trusting any stale todo state
+4. Create todo list from pending tasks in checkpoint
+5. Acknowledge any new user request
+6. If checkpoint was pre-compaction: note that some context may have been compressed
 
 ### PHASE 3: UPDATE METADATA
 If checkpoint has metadata file, update:
@@ -59,8 +61,9 @@ If checkpoint has metadata file, update:
 1. Confirm checkpoint loaded (show level: light/heavy, source: manual/auto)
 2. Show restored goal and current state
 3. Show restored todo list
-4. If pre-compaction checkpoint: warn that context was compressed
-5. Ask user for next action or continue with their request
+4. If an active execution plan was recovered, say so explicitly and continue from that plan instead of asking for a fresh execution target
+5. If pre-compaction checkpoint: warn that context was compressed
+6. Ask user for next action or continue with their request
 
 ### CONSTRAINTS
 - If checkpoint not found, inform user clearly

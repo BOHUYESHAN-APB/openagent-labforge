@@ -715,7 +715,7 @@ export function getDisabledAgents(config?: PluginConfig): Set<string> {
     }
   }
 
-  const mode = config?.subagentPolicy?.mode ?? 'ultra-minimal';
+  const mode = config?.subagentPolicy?.mode ?? 'full';
   const minimalAgents = new Set(getMinimalSubagentNames());
   const ultraMinimalAgents = new Set(getUltraMinimalSubagentNames());
   const allowedAgents = new Set(config?.subagentPolicy?.allowedAgents ?? []);

@@ -143,16 +143,17 @@ export function getUltraMinimalSubagentNames(): readonly string[] {
  * @returns The complete orchestrator prompt string
  */
 function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
-  const mode = policy?.mode ?? 'ultra-minimal';
+  const mode = policy?.mode ?? 'full';
 
   if (mode === 'full') {
     return `
 
-### Subagent Policy: Full registration / explicit delegation only
+### Subagent Policy: Full registration / lane-driven default
 - Full configured subagent registration is available, but the main agent must still execute work directly by default.
 - Registered specialists are checklist/tooling references first, not automatic spawn targets.
 - Even in full mode, child sessions should be reserved for independent specialist judgment. Use \`background=false\` (blocking) or \`background=true\` (fire-and-forget) as appropriate.
 - If the main agent can do the task directly, do it in the main agent instead of opening a child and waiting.
+- This is the preferred default operating mode; routing should be decided by dependency semantics and lane fit, not by artificially shrinking specialist availability.
 - When multiple independent specialists are needed, batch them in one message (both blocking or both fire-and-forget). Give every child the same shared-prefix snapshot before role-specific instructions so prefix-cache providers can reuse the identical leading context.`;
   }
 
@@ -183,7 +184,7 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
   if (mode === 'minimal') {
     return `
 
-### Subagent Policy: Minimal / cache-first
+### Subagent Policy: Minimal / legacy compatibility
 - Keeps a small specialist set registered, but the main agent still executes directly by default.
 - Default minimal specialists are @explorer, @librarian, @oracle, @fixer, and @observer only when visual/media handling is enabled.
 - Other specialties should be handled as local main-agent checklists instead of fresh child sessions.
@@ -191,13 +192,14 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 - Only spawn a child if it adds specialist judgment the main agent cannot cheaply reproduce, and the user has explicitly allowed child sessions.
 - When multiple independent specialists are needed, batch them in one message (blocking or fire-and-forget as appropriate).
 - When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot constant across all children in the same batch.
-- Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.`;
+- Prefer resuming an existing specialist session over creating a fresh one; reuse improves continuity and cache behavior.
+- This mode is retained for compatibility-sensitive installs and should not be treated as the product's primary orchestration story.`;
   }
 
   return `
 
-### Subagent Policy: Ultra minimal / main-agent-first (default)
-- Default mode. Serve with the main agent first; treat subagents as rare specialist tools.
+### Subagent Policy: Ultra minimal / legacy compatibility
+- Compatibility mode. Serve with the main agent first; treat subagents as rare specialist tools.
 - Fresh child sessions lower cache hit rate. Use \`background=false\` (blocking) for needed results, \`background=true\` (non-blocking) for fire-and-forget parallel work. Only spawn when specialist judgment is truly necessary.
 - Default ultra-minimal specialists are @explorer, @librarian, and @oracle only.
 - Treat @fixer, @designer, @council, @reviewer, @metis, @momus, @multimodal-looker, and most custom specialists as tool-like local main-agent checklists by default.
@@ -206,7 +208,8 @@ function buildSubagentPolicyPrompt(policy?: SubagentPolicyConfig): string {
 - If the main agent can do the task directly, it should act as that specialist itself instead of opening a child session.
 - When multiple independent specialists are needed, batch them in one message (all \`background=false\` sharing wait time, or \`background=true\` for non-blocking fire-and-forget).
 - When delegation is worthwhile, pass the shared-prefix snapshot first, then the role prompt/task. Keep the snapshot constant across all children in the same batch.
-- Prefer resuming an existing specialist session over creating a fresh one.`;
+- Prefer resuming an existing specialist session over creating a fresh one.
+- This mode is retained as a compatibility escape hatch, not as the default architecture.`;
 }
 
 const SHARED_PREFIX_SNAPSHOT_TEMPLATE = `[SHARED_CONTEXT_START]
@@ -297,6 +300,10 @@ The \`task\` tool accepts an optional \`background\` parameter:
 - Can continue working while subagent runs? → \`background=true\` (fire-and-forget mode)
 - Two independent specialist needs simultaneously? → \`background=true\` for both in one message (or batch two blocking calls)
 
+**Dependency rule (higher priority than cost heuristics):**
+- If the parent must see the answer before choosing the next step, keep that specialist call blocking.
+- If the work is informative but not immediately decision-gating, launch it in the background and keep the parent on non-overlapping work.
+
 **Important:** Batch multiple calls in one message ONLY for truly independent tasks. If one result is needed before the next call can start, run sequentially.
 
 ### Parent → child context bridge
@@ -318,9 +325,9 @@ ${buildSubagentPolicyPrompt(subagentPolicy)}
    - 适用：需要特定 agent 专业能力的任务
    - TUI：支持查看子 agent 内容（Ctrl+X 或底部 tab）
 
-2. **subtask**（插件）：简单子 session，文件注入
+2. **subtask**（插件，辅助路径）：简单子 session，文件注入
    - 参数：prompt, files, background
-   - 适用：简单的文件处理任务
+   - 适用：受限、局部、辅助型 worker 任务；不要把它当作主 background lane
    - TUI：不支持查看
 
 3. **team_create**（插件）：多 agent 并行
@@ -372,11 +379,17 @@ Before starting work, assess task complexity to determine execution mode:
 - Refactoring, migration, or architectural changes
 - User explicitly says "do it all", "keep going", "batch", "autonomous"
 
-**How to activate auto mode:**
+**Auto mode (default: ON):**
+- Auto-continuation is enabled by default. When you create todos via the todowrite tool, the system will automatically resume working without needing to manually enable auto-continue.
+- Even a single todo triggers auto mode.
+- System will auto-resume when incomplete todos remain.
+- Post-implementation review triggers automatically before stopping.
+- To stop auto mode: call auto_continue(enabled=false) or use the stop-continuation command.
+
+**How to activate auto mode manually (if disabled):**
 1. Break task into todos using todowrite
-2. If 3+ todos → call auto_continue(enabled=true)
+2. Call auto_continue(enabled=true)
 3. System will auto-resume when incomplete todos remain
-4. Post-implementation review will trigger automatically before stopping
 
 ### Plan Persistence
 - For complex multi-step tasks that span beyond a single session, use the \`save_plan\` tool to persist structured plans to \`.opencode/extendai-lab/plans/\`.

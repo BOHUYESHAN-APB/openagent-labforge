@@ -201,57 +201,57 @@ export const AGENT_ELIGIBILITY_REGISTRY: Readonly<Record<string, {
   // Primary agents - hard-reject
   prometheus: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'prometheus' is plan-mode-only (read-only). Use delegate-task for planning tasks instead.",
+    rejectionMessage: "Agent 'prometheus' is plan-mode-only (read-only). Use an orchestrator/executor lane for planning work instead.",
   },
   
   // Subagents - all hard-reject (read-only)
   explorer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'explorer' is read-only (codebase search). Use delegate-task for exploration tasks instead.",
+    rejectionMessage: "Agent 'explorer' is read-only (codebase search). Use an orchestrator-managed delegation lane instead.",
   },
   librarian: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'librarian' is read-only (docs/code search). Use delegate-task for research tasks instead.",
+    rejectionMessage: "Agent 'librarian' is read-only (docs/code search). Use an orchestrator-managed delegation lane instead.",
   },
   oracle: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'oracle' is read-only (architecture consultation). Use delegate-task for analysis tasks instead.",
+    rejectionMessage: "Agent 'oracle' is read-only (architecture consultation). Use an orchestrator-managed delegation lane instead.",
   },
   designer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'designer' is read-only (UI/UX design). Use delegate-task for design tasks instead.",
+    rejectionMessage: "Agent 'designer' is read-only (UI/UX design). Use an orchestrator-managed delegation lane instead.",
   },
   fixer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'fixer' is read-only (quick fixes). Use delegate-task for fix tasks instead.",
+    rejectionMessage: "Agent 'fixer' is read-only (quick fixes). Use an orchestrator-managed delegation lane instead.",
   },
   observer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'observer' is read-only. Use delegate-task instead.",
+    rejectionMessage: "Agent 'observer' is read-only. Use an orchestrator-managed delegation lane instead.",
   },
   council: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'council' is read-only (council member). Use delegate-task instead.",
+    rejectionMessage: "Agent 'council' is read-only (council member). Use an orchestrator-managed delegation lane instead.",
   },
   councillor: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'councillor' is read-only (council coordinator). Use delegate-task instead.",
+    rejectionMessage: "Agent 'councillor' is read-only (council coordinator). Use an orchestrator-managed delegation lane instead.",
   },
   metis: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'metis' is read-only (requirements analysis). Use delegate-task for analysis tasks instead.",
+    rejectionMessage: "Agent 'metis' is read-only (requirements analysis). Use an orchestrator-managed delegation lane instead.",
   },
   momus: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'momus' is read-only (plan review). Use delegate-task for review tasks instead.",
+    rejectionMessage: "Agent 'momus' is read-only (plan review). Use an orchestrator-managed delegation lane instead.",
   },
   "multimodal-looker": {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'multimodal-looker' is read-only (image/PDF analysis). Use delegate-task for visual tasks instead.",
+    rejectionMessage: "Agent 'multimodal-looker' is read-only (image/PDF analysis). Use an orchestrator-managed delegation lane instead.",
   },
   reviewer: {
     verdict: "hard-reject",
-    rejectionMessage: "Agent 'reviewer' is read-only (code review). Use delegate-task for review tasks instead.",
+    rejectionMessage: "Agent 'reviewer' is read-only (code review). Use an orchestrator-managed delegation lane instead.",
   },
 } as const
 

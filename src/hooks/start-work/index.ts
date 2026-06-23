@@ -13,6 +13,7 @@ import {
   getProjectBoulderFile,
   getProjectPlansDir,
 } from '../../paths/plugin-paths';
+import type { EffectiveAgentOverlayManager } from '../../utils';
 
 const COMMAND_NAME = 'ol-start-work';
 const EXECUTOR_AGENT = 'atlas';
@@ -22,7 +23,36 @@ interface ParsedArgs {
   worktreePath?: string;
 }
 
-export function createStartWorkHook(ctx: PluginInput) {
+interface StartWorkHook {
+  handleCommandExecuteBefore: (
+    input: {
+      command: string;
+      sessionID: string;
+      arguments: string;
+    },
+    output: { parts: Array<{ type: string; text?: string }> },
+  ) => Promise<void>;
+  handleToolExecuteAfter: (
+    input: { tool: string; sessionID?: string },
+    output?: { output?: unknown },
+  ) => Promise<void>;
+  handleEvent: (input: {
+    event: {
+      type: string;
+      properties?: { info?: { id?: string }; sessionID?: string };
+    };
+  }) => void;
+}
+
+export function createStartWorkHook(
+  ctx: PluginInput,
+  options?: {
+    overlayManager?: EffectiveAgentOverlayManager;
+    getCurrentAgent?: (sessionID: string) => string | undefined;
+  },
+): StartWorkHook {
+  const lastSavedPlanNameBySession = new Map<string, string>();
+
   async function handleCommandExecuteBefore(
     input: {
       command: string;
@@ -43,7 +73,34 @@ export function createStartWorkHook(ctx: PluginInput) {
     const shouldResumeActivePlan = Boolean(
       activeState && activePlanProgress && !activePlanProgress.isComplete,
     );
+    const preferredPlanName = shouldResumeActivePlan
+      ? undefined
+      : lastSavedPlanNameBySession.get(input.sessionID);
+    const incompletePlans = listPlanFiles(workspaceRoot).filter(
+      (plan) => !plan.progress.isComplete,
+    );
+    if (
+      !parsed.planName &&
+      !shouldResumeActivePlan &&
+      incompletePlans.length > 1 &&
+      !preferredPlanName
+    ) {
+      output.parts.push({
+        type: 'text',
+        text: multiplePlansMessage(incompletePlans),
+      });
+      return;
+    }
     let selectedPlan = findPlanFile(workspaceRoot, parsed.planName);
+    if (!parsed.planName && !selectedPlan && preferredPlanName) {
+      selectedPlan =
+        incompletePlans.find((plan) => plan.name === preferredPlanName) ?? null;
+    }
+    if (!parsed.planName && preferredPlanName) {
+      selectedPlan =
+        incompletePlans.find((plan) => plan.name === preferredPlanName) ??
+        selectedPlan;
+    }
     if (shouldResumeActivePlan && activeState && activePlanProgress) {
       selectedPlan = {
         name: activeState.plan_name,
@@ -76,6 +133,14 @@ export function createStartWorkHook(ctx: PluginInput) {
       : state;
     writeBoulderState(workspaceRoot, nextState);
 
+    options?.overlayManager?.clear(input.sessionID);
+    options?.overlayManager?.activate(input.sessionID, {
+      phase: 'execute',
+      agent: EXECUTOR_AGENT,
+      source: COMMAND_NAME,
+      returnAgent: options?.getCurrentAgent?.(input.sessionID),
+    });
+
     output.parts.push({
       type: 'text',
       text: buildStartWorkContext({
@@ -84,6 +149,7 @@ export function createStartWorkHook(ctx: PluginInput) {
         boulderPath: getProjectBoulderFile(workspaceRoot),
         progress: selectedPlan.progress,
         sessionID: input.sessionID,
+        originalAgent: options?.getCurrentAgent?.(input.sessionID),
         worktreePath: nextState.worktree_path,
       }),
     });
@@ -94,7 +160,48 @@ export function createStartWorkHook(ctx: PluginInput) {
     }
   }
 
-  return { handleCommandExecuteBefore };
+  async function handleToolExecuteAfter(
+    input: { tool: string; sessionID?: string },
+    output?: { output?: unknown },
+  ): Promise<void> {
+    if (input.tool !== 'save_plan' || !input.sessionID) {
+      return;
+    }
+
+    const text = typeof output?.output === 'string' ? output.output : '';
+    const match = text.match(/^Next command: \/ol-start-work\s+(.+)$/m);
+    if (!match) {
+      return;
+    }
+
+    const planName = match[1]?.trim();
+    if (!planName) {
+      return;
+    }
+
+    lastSavedPlanNameBySession.set(input.sessionID, planName);
+  }
+
+  function handleEvent(input: {
+    event: {
+      type: string;
+      properties?: { info?: { id?: string }; sessionID?: string };
+    };
+  }): void {
+    if (input.event.type !== 'session.deleted') {
+      return;
+    }
+
+    const sessionID =
+      input.event.properties?.info?.id ?? input.event.properties?.sessionID;
+    if (!sessionID) {
+      return;
+    }
+
+    lastSavedPlanNameBySession.delete(sessionID);
+  }
+
+  return { handleCommandExecuteBefore, handleToolExecuteAfter, handleEvent };
 }
 
 function getProgressForPlan(planPath: string) {
@@ -145,6 +252,36 @@ Plan saved to: ${getProjectPlansDir(workspaceRoot)}/<plan-name>.md
 Next command: /ol-start-work <plan-name>`;
 }
 
+function multiplePlansMessage(
+  plans: Array<{
+    name: string;
+    path: string;
+    progress: {
+      completed: number;
+      total: number;
+      percent: number;
+    };
+  }>,
+): string {
+  const planList = plans
+    .map(
+      (plan) =>
+        `- ${plan.name} (${plan.progress.completed}/${plan.progress.total}, ${plan.progress.percent}%) — ${plan.path}`,
+    )
+    .join('\n');
+
+  return `## Multiple incomplete plans found
+
+Execution is ambiguous because more than one saved plan is still incomplete.
+
+Use the question tool to ask the user which saved plan to execute, then run:
+
+/ol-start-work <selected-plan-name>
+
+Incomplete plans:
+${planList}`;
+}
+
 function buildStartWorkContext(input: {
   planName: string;
   planPath: string;
@@ -156,6 +293,7 @@ function buildStartWorkContext(input: {
     percent: number;
   };
   sessionID: string;
+  originalAgent?: string;
   worktreePath?: string;
 }): string {
   return `## OL START WORK
@@ -163,7 +301,10 @@ function buildStartWorkContext(input: {
 You are starting a plan execution session. Use executor behavior for execution.
 
 ### Runtime context
+- Current phase: execute
 - Executor agent: @executor (internal id: atlas)
+- Effective execution agent: @executor (internal id: atlas)
+- Control returns to: ${input.originalAgent ?? 'the original main agent'} after execution and final review complete
 - Plan name: ${input.planName}
 - Plan file: ${input.planPath}
 - Boulder state: ${input.boulderPath}

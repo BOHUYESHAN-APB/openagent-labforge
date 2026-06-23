@@ -190,9 +190,9 @@ Restart OpenCode. The plugin loads automatically.
 
 | Mode | Default? | Behavior |
 |------|----------|----------|
-| `ultra-minimal` | ✅ Yes | Only explorer, librarian, oracle registered. Others are local checklists |
+| `full` | ✅ Yes | All agents registered; lane-driven main-agent-first remains default |
+| `ultra-minimal` | — | Legacy reduced-registration compatibility mode |
 | `minimal` | — | + fixer, observer |
-| `full` | — | All agents registered; main-agent-first remains default |
 | `custom` | — | `allowedAgents` allowlist |
 | `main-only` | — | No child sessions, all specialist guidance as local checklists |
 
@@ -223,12 +223,12 @@ User: /ol-start-work my-plan
 todowrite → auto_continue(enabled=true)
   → session goes idle → check for incomplete todos
   → inject continuation prompt → agent resumes
-  → all todos complete → inject REVIEW_PROMPT
+  → all todos complete → activate review overlay (`reviewer`) + inject REVIEW_PROMPT
   → [APPROVE] batch done · [REJECT] rework · [NEEDS_USER] pause · [BLOCKED] pause
 ```
 
 - Auto-continue: max 5 consecutive, configurable cooldown
-- Auto-review: structured check against original request
+- Auto-review: structured check against original request with isolated reviewer prompt stack
 - User intent detection: "thanks", "嗯好" → auto-stop when todos complete
 
 ### 3. Load Agent Instructions
@@ -323,7 +323,7 @@ See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for full referenc
 |---------|------|-------------|
 | `/ol-light` / `/ol-heavy` / `/ol-turbo` | Prompt | Switch prompt mode |
 | `/ol-checkpoint [l\|h\|light\|heavy] [goal]` | Checkpoint | Create checkpoint (light: same-session, heavy: cross-session) |
-| `/ol-checkpoint-resume [id]` | Checkpoint | Resume from checkpoint |
+| `/ol-checkpoint-resume [id]` | Checkpoint | Resume from checkpoint — restores `atlas` executor lane + `boulder.json` if checkpoint contains active execution plan |
 | `/ol-handoff [goal]` | Checkpoint | Create context summary for new session |
 | `/ol-start-work [name]` | Workflow | Execute a saved plan |
 | `/ol-auto-continue-on/off` | Continuation | Toggle auto-continuation |
@@ -338,7 +338,7 @@ See [`extendai-lab.example.jsonc`](extendai-lab.example.jsonc) for full referenc
 | `/ol-ralph-loop [task]` | Workflow | Self-referential loop until completion |
 | `/ol-stop-continuation` | Control | Stop all continuation mechanisms |
 | `/goal [objective]` | Session | Set or show session goal |
-| `/subtask [task]` | Worker | Run bounded child worker |
+| `/subtask [task]` | Worker | Run bounded auxiliary child worker |
 
 ---
 
@@ -559,7 +559,7 @@ bun run check:ci   # Lint + format + organize imports
 - **Schema-sanitize hook**: JSON Schema cleanup for DeepSeek strict mode.
 - **Flash-escalation hook**: Failure-count-based auto model escalation.
 - **Delegation model v2**: Three-mode subagent execution (blocking/fire-and-forget/batch) with shared-prefix snapshot protocol.
-- **Review system v2**: Dual-mode review (main-agent self-review + @oracle delegation).
+- **Review system v2**: Structured review pipeline with overlay-ready review routing.
 - **Dashboard**: Web UI v1-v4 with skills viewer, plan renderer, theme toggle, schema editor.
 - **MCP server**: Independent per-window instances via `StdioServerTransport`.
 
@@ -577,8 +577,7 @@ bun run check:ci   # Lint + format + organize imports
   from npm on any machine.
 - **Bio Skills Catalog**: Replaced hardcoded routing guide with auto-generated entries from catalog.json.
   Removed absolute file path exposure from loaded skills prompt to prevent AI from copying files.
-- **Auto-Review System**: Refactored to support both main-agent self-review (Option A) and
-  @oracle delegation (Option B)
+- **Auto-Review System**: Refactored toward explicit review routing and overlay-aware final review
 - **save_plan Tool**: Enhanced description to explicitly prevent AI from outputting plans to conversation
 - **Start Work Command**: Improved cross-window state recovery with explicit context section
 - **Delete Guard**: Expanded tool name matching (bash, shell, exec, execute_command, powershell, etc.)

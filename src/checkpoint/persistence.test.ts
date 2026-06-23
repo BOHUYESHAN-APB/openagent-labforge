@@ -1,8 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getProjectMemoryDir } from '../paths/plugin-paths';
+import {
+  getProjectBoulderFile,
+  getProjectMemoryDir,
+} from '../paths/plugin-paths';
 import { CheckpointManager } from './manager';
 
 describe('checkpoint persistence', () => {
@@ -303,11 +312,14 @@ describe('checkpoint persistence', () => {
 
       expect(workspacePrefId).toBeTruthy();
       expect(repositoryPrefId).toBeTruthy();
+      if (!workspacePrefId || !repositoryPrefId) {
+        throw new Error('Expected preference ids to be created');
+      }
 
       const allEntries = manager.listManualPreferences('session-pref');
       expect(allEntries).toHaveLength(2);
       expect(allEntries.map((entry) => entry.id)).toEqual(
-        expect.arrayContaining([workspacePrefId!, repositoryPrefId!]),
+        expect.arrayContaining([workspacePrefId, repositoryPrefId]),
       );
 
       expect(manager.workspaceMemory.get(root)?.preferences).toEqual(
@@ -338,7 +350,7 @@ describe('checkpoint persistence', () => {
       expect(
         manager.removeManualPreferenceById(
           'session-pref',
-          repositoryPrefId!,
+          repositoryPrefId,
           'repository',
         ),
       ).toBe(true);
@@ -356,7 +368,7 @@ describe('checkpoint persistence', () => {
       expect(
         manager.removeManualPreferenceById(
           'session-pref',
-          workspacePrefId!,
+          workspacePrefId,
           'workspace',
         ),
       ).toBe(true);
@@ -407,6 +419,9 @@ describe('checkpoint persistence', () => {
 
       expect(firstId).toBeTruthy();
       expect(secondId).toBeTruthy();
+      if (!firstId || !secondId) {
+        throw new Error('Expected duplicate preference ids to be created');
+      }
       expect(firstId).not.toBe(secondId);
       expect(
         manager.repositoryMemory.get('repo-pref-dup')?.globalKnowledge,
@@ -418,7 +433,7 @@ describe('checkpoint persistence', () => {
       expect(
         manager.removeManualPreferenceById(
           'session-pref-dup',
-          firstId!,
+          firstId,
           'repository',
         ),
       ).toBe(true);
@@ -436,7 +451,7 @@ describe('checkpoint persistence', () => {
       expect(
         manager.removeManualPreferenceById(
           'session-pref-dup',
-          secondId!,
+          secondId,
           'repository',
         ),
       ).toBe(true);
@@ -536,6 +551,63 @@ describe('checkpoint persistence', () => {
         scope: 'workspace',
         kind: 'preference',
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('pre-compaction checkpoint captures active boulder execution state', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ol-precompact-plan-'));
+    try {
+      const manager = new CheckpointManager(root);
+      manager.initializeSession(
+        'session-plan',
+        root,
+        'repo-plan',
+        'conversation-plan',
+      );
+
+      mkdirSync(join(root, '.opencode', 'extendai-lab'), { recursive: true });
+      const planPath = join(root, 'active-plan.md');
+      writeFileSync(
+        planPath,
+        '- [x] 1. Done\n- [ ] 2. Remaining\n- [ ] F1. Review\n',
+      );
+      writeFileSync(
+        getProjectBoulderFile(root),
+        JSON.stringify(
+          {
+            active_plan: planPath,
+            plan_name: 'active-plan',
+            started_at: new Date().toISOString(),
+            session_ids: ['session-plan'],
+            agent: 'atlas',
+          },
+          null,
+          2,
+        ),
+      );
+
+      const checkpoint = manager.createPreCompactionCheckpoint('session-plan', {
+        goal: 'Continue execution before compaction',
+        pendingTasks: ['existing pending task'],
+        keyFiles: ['src/index.ts'],
+        recentDecisions: ['Decision A'],
+      });
+
+      expect(checkpoint).not.toBeNull();
+      const checkpointPath = checkpoint?.filePath;
+      expect(checkpointPath).toBeTruthy();
+      if (!checkpointPath) {
+        throw new Error('Expected checkpoint path to exist');
+      }
+      const content = readFileSync(checkpointPath, 'utf8');
+      expect(content).toContain('Active execution plan: active-plan');
+      expect(content).toContain('Top-level plan tasks remaining: 2');
+      expect(content).toContain(planPath);
+      expect(content).toContain('Active execution plan name: active-plan');
+      expect(content).toContain(`Active execution plan path: ${planPath}`);
+      expect(content).toContain('Re-read the plan, rebuild todos');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
