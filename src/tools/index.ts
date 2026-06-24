@@ -7,6 +7,8 @@ export { createMcpToggleTool } from './mcp-toggle';
 export { createMediaInventoryTool } from './media-inventory';
 export type { PresetManager } from './preset-manager';
 export { createPresetManager } from './preset-manager';
+export { createPlanEnterTool } from './plan-enter';
+export { createPlanExitTool } from './plan-exit';
 export { createSavePlanTool } from './save-plan';
 export { createWebfetchTool } from './smartfetch';
 export { createSubtaskTool } from './subtask';

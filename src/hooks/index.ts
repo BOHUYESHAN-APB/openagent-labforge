@@ -18,6 +18,7 @@ export { createJsonErrorRecoveryHook } from './json-error-recovery';
 export { createMemoryCommandsHook } from './memory-commands';
 export { createModeDetectorHook } from './mode-detector';
 export { createPhaseReminderHook } from './phase-reminder';
+export { createPlanModeHook } from './plan-mode';
 export { createPostFileToolNudgeHook } from './post-file-tool-nudge';
 export { createPrefixStabilityHook } from './prefix-stability';
 export { createPtyAvailabilityHook } from './pty-availability';
