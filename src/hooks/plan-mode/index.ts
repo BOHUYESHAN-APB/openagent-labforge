@@ -24,6 +24,33 @@ export function createPlanModeHook(options: PlanModeHookOptions) {
       const { tool, sessionID } = input;
       if (!sessionID) return;
 
+      // If plan overlay is active, deny dangerous tools
+      const activeOverlay = options.overlayManager.getCurrent(sessionID);
+      const DENIED_IN_PLAN_MODE = new Set([
+        'write',
+        'edit',
+        'bash',
+        'exec',
+        'execute_command',
+        'powershell',
+        'shell',
+        'task',
+        'subtask',
+      ]);
+
+      if (
+        activeOverlay?.phase === 'plan' &&
+        DENIED_IN_PLAN_MODE.has(tool)
+      ) {
+        output.args = {
+          _denied: true,
+          error:
+            `Plan mode is read-only. Tool "${tool}" is not allowed during planning. ` +
+            'Use plan_exit to return to the original agent if you need to modify files or run commands.',
+        };
+        return;
+      }
+
       if (tool === 'plan_enter') {
         // Already in plan mode? Deny.
         const currentOverlay = options.overlayManager.getCurrent(sessionID);

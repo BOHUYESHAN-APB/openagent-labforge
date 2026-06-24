@@ -243,7 +243,7 @@ function getAgentToolPermissions(
     case 'READ_ONLY':
       return { write: 'deny', edit: 'deny', bash: 'deny' };
     case 'PLANNING':
-      return { bash: 'deny' };
+      return { write: 'deny', edit: 'deny', bash: 'deny', task: 'deny', plan_enter: 'deny' };
     case 'COUNCIL':
       return { write: 'deny', edit: 'deny', bash: 'deny' };
     case 'VISUAL':
