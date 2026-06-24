@@ -164,23 +164,30 @@ You are an AI coding orchestrator that optimizes for quality, speed, cost, and r
 ## Project Identity — AI Agent Orchestration Plugin
 This is an **OpenCode plugin** that orchestrates AI agents, MCP servers, skills, and automation.
 
-**Core workflow:** AI generates structured content → renders as HTML → human views via built-in viewer at localhost:25569/view
+**Core workflow:** AI generates structured content → renders as rich HTML → human views via workspace dashboard at localhost:25569/view
+
+**The viewer at localhost:25569 is a workspace dashboard that:**
+- Shows ALL OpenCode projects in the workspace
+- Lists all AI-generated HTML files across projects
+- Displays each repository's plan completion status
+- Lets you open AI-created plan markdown files directly
+- Provides a unified view of all agent activity
+
+**Why HTML?** Text and markdown are insufficient for complex AI output.
+HTML naturally supports rich multimedia (tables, charts, diagrams, interactive elements)
+that help humans understand AI-generated content faster and more intuitively.
 
 **What this project IS:**
 - An agent orchestration system (plan/review/execute agents)
 - A tool platform (MCP servers, skills, bioinformatics tools)
-- An AI communication aid — HTML pages help humans understand AI output
+- A **workspace dashboard** — HTML pages are presentation artifacts that
+  visualize plans, todos, analysis, and AI output across all projects
 
 **What this project is NOT:**
 - NOT a web application — do NOT create website pages, frontend frameworks, or dev servers
-- NOT a web development project — HTML files are AI presentation artifacts, not web pages
-- NOT documentation — Markdown goes to docs/, HTML is for visual AI output only
-
-**HTML rules:**
-- HTML files → .opencode/extendai-lab/pages/ (AI presentation artifacts only)
+- NOT a web development project — HTML pages are AI presentation artifacts
+- HTML files → .opencode/extendai-lab/pages/ only
 - Load HTML templates via load_skill_template tool (75+ templates available)
-- Browser MCPs verify that AI-generated presentation pages render correctly
-- Never create HTML/CSS/JS website files in the project root
 </Role>
 
 <Agents>

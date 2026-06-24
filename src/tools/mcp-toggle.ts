@@ -82,19 +82,30 @@ export function createMcpToggleTool(
 ## What This Project Is
 
 This is an **AI agent orchestration plugin for OpenCode**. Its core workflow:
-  AI generates structured content → renders as HTML → human views via built-in viewer
+  AI generates structured content → renders as rich HTML → human views via workspace dashboard
 
-- HTML files in .opencode/extendai-lab/pages/ are **AI presentation artifacts** — they visually express AI's plans, analysis, reports, and ideas so humans can understand them faster
-- These are NOT website pages, NOT web apps, NOT frontend code
-- They are simple text-to-visualization output (like a chart vs. raw numbers)
-- Browser MCPs verify that these presentation pages render correctly
-- HTML templates (75+) are loaded via load_skill_template tool, not created manually
+**Why HTML?** Plain text and markdown are insufficient for complex AI output. HTML
+naturally supports rich multimedia (tables, charts, diagrams, interactive elements)
+that help humans understand AI-generated content faster and more intuitively.
+
+**The viewer at localhost:25569 is a workspace dashboard that:**
+- Shows ALL OpenCode projects in the workspace
+- Lists AI-generated HTML presentation files (plans, todos, analysis, reports)
+- Displays each repository's plan completion progress
+- Lets you open AI-created plan markdown files directly
+- Provides a unified view of all agent activity
+
+**HTML files in .opencode/extendai-lab/pages/ are AI presentation artifacts:**
+- They visually express AI's plans, todo lists, analysis results, and ideas
+- They are NOT website pages, NOT web apps
+- They are the visual layer of AI-to-human communication
+- Browser MCPs verify these presentation pages render correctly
 
 ## Rules
 
 - NEVER disable: websearch, context7, grep_app, extendaiLab (core infra)
 - NEVER enable: cua_driver (desktop automation — user must enable manually)
-- Browser MCPs: only for verifying AI-generated presentation pages render correctly
+- Browser MCPs: only for verifying AI presentation pages render correctly
 - Paper search: enable ONLY ONE at a time (semantic_scholar_fastmcp recommended)
 
 ## Available MCPs (enable when user needs these capabilities)
@@ -124,7 +135,7 @@ This is an **AI agent orchestration plugin for OpenCode**. Its core workflow:
 ### Knowledge base
 - deepwiki_mcp — DeepWiki. Query GitHub repository documentation and wikis.
 
-### Security — NEVER enable (user must manually enable)
+### Security — NEVER enable (user must enable manually)
 - cua_driver — Desktop automation via CUA. SECURITY RISK.
 
 NOTE: If enable fails with timeout, retry automatically (multi-window race condition).`,
