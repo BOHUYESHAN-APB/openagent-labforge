@@ -72,6 +72,15 @@ export function createPlanModeHook(options: PlanModeHookOptions) {
           source: 'plan-enter-tool',
           returnAgent,
         });
+
+        // Mirror command.execute.before pattern (used by /ol-start-work):
+        // Set output.message.agent to change the caller's user-message agent,
+        // so OpenCode reads lastUser.agent = 'prometheus' and switches agent.
+        // This is how /ol-start-work switches to executor (atlas) agent.
+        if ('message' in output) {
+          const msg = (output as { message?: { agent?: string } }).message;
+          if (msg) msg.agent = 'prometheus';
+        }
         return;
       }
 
@@ -88,6 +97,16 @@ export function createPlanModeHook(options: PlanModeHookOptions) {
 
         // Clear plan overlay
         options.overlayManager.clear(sessionID, 'plan');
+
+        // Restore output.message.agent to returnAgent so OpenCode switches back
+        if ('message' in output) {
+          const msg = (output as { message?: { agent?: string } }).message;
+          if (msg) {
+            const returnAgent =
+              currentOverlay?.returnAgent ?? options.getCurrentAgent(sessionID) ?? 'orchestrator';
+            msg.agent = returnAgent;
+          }
+        }
         return;
       }
     },
