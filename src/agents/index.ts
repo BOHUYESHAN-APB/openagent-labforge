@@ -244,7 +244,8 @@ function getAgentToolPermissions(
       return { write: 'deny', edit: 'deny', bash: 'deny' };
     case 'PLANNING':
       // prometheus (planner) can only read/research — no file modifications
-      return { write: 'deny', edit: 'deny', bash: 'deny', task: 'deny' };
+      // enter_plan_mode is denied because prometheus is already in plan mode
+      return { write: 'deny', edit: 'deny', bash: 'deny', task: 'deny', enter_plan_mode: 'deny' };
     case 'COUNCIL':
       return { write: 'deny', edit: 'deny', bash: 'deny' };
     case 'VISUAL':
