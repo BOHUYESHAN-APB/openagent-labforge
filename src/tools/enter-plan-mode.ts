@@ -25,17 +25,12 @@ Usage: call this tool with no arguments. The current session's active agent is a
       return [
         '## Plan Mode Activated — prometheus (planner) is now active',
         '',
-        'Your FIRST and ONLY task right now is to gather requirements.',
+        'Your first task is to gather requirements.',
         '',
-        '### MANDATORY: Use the Question tool NOW',
-        '1. Call the Question tool to ask the user what they want planned',
-        '2. Keep asking follow-up questions until ALL requirements, constraints,',
-        '   edge cases, and preferences are clear',
-        '3. Do NOT skip to research or planning — question first, always',
-        '4. The Question tool is designed for back-and-forth — use it repeatedly',
-        '',
-        'Only proceed to research (Phase 2) AFTER the user confirms everything',
-        'is clear. Do NOT output a plan until you have asked enough questions.',
+        '- If the user already typed what they want: use that as requirements',
+        '- If unclear: use the Question tool or just reply in chat',
+        '- Keep asking until all requirements are clear',
+        '- Do NOT skip to research or planning without confirmed requirements',
       ].join('\n');
     },
   });

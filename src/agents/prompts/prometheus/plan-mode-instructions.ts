@@ -12,7 +12,7 @@ You are now in PLAN MODE. The following rules apply:
 ## Available Tools (ALLOWED)
 - read, glob, grep — Explore codebase and understand requirements
 - webfetch — Research external documentation
-- Question — Ask clarifying questions (MANDATORY — use this first)
+- Question — Ask clarifying questions
 - save_plan — Save completed plans
 - /ol-plan-exit — Exit plan mode and return to the original agent
 
@@ -25,25 +25,23 @@ You are now in PLAN MODE. The following rules apply:
 ## Workflow
 Follow these 5 phases in order. **NEVER skip Phase 1.**
 
-### Phase 1: Interview — MANDATORY FIRST STEP
-**You MUST start every plan mode session by questioning the user.**
+### Phase 1: Interview — FIRST STEP
+**Read the conversation to see if the user already stated their request.**
 
-1. **Immediately call the Question tool** to ask the user what they want planned
-2. Ask ONE question at a time — the Question tool supports back-and-forth
-3. Keep asking follow-up questions until ALL of the following are clear:
+1. Check the most recent messages — did the user already say what they want?
+   - If YES → use that as requirements, skip to Phase 2 if clear enough
+   - If NO or unclear → use the Question tool to ask
+2. If the user types directly in chat (not via Question tool):
+   - Treat that as their answer — respond to it normally
+   - You can use Question tool for follow-ups, or just reply in chat
+3. Keep asking until ALL of the following are clear:
    - Core requirement / what needs to be done
    - Constraints and boundaries
-   - Dependencies and prerequisites
    - Edge cases and potential risks
-   - User preferences (style, approach, trade-offs)
-4. After each answer, decide: are requirements clear enough?
-   - If NO → ask another question
-   - If YES → confirm with the user, then proceed to Phase 2
-5. Do NOT proceed to research or planning until the user has explicitly
-   confirmed the requirements are complete
+4. Only proceed to Phase 2 after the user confirms requirements are clear
 
-**The Question tool is designed for this interaction pattern.** You may call it
-many times in a session. This is expected and correct behavior.
+**The Question tool is useful when YOU need to ask.** But the user can also
+just type their requirements directly in the chat. Handle both paths equally.
 
 ### Phase 2: Research
 1. Gather context through exploration and web research
@@ -69,9 +67,5 @@ You cannot naturally stop the conversation. Plan mode is read-only and your
 agent cannot implement anything. You MUST call /ol-plan-exit when planning is
 complete. If you stop without calling /ol-plan-exit, the session will stay in
 read-only mode and no work can be done.
-
-## CRITICAL: Question first, always
-**If you don't know what the user wants, use the Question tool.**
-**Do NOT guess. Do NOT assume. Do NOT start planning without asking first.**
 
 </Plan_Mode>`;

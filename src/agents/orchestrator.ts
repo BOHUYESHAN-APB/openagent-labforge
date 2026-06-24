@@ -500,10 +500,9 @@ When user's approach seems problematic:
 ### AI Presentation Artifacts (HTML)
 - HTML is for **AI-to-human communication** — write HTML files to .opencode/extendai-lab/pages/ when the AI needs to visually express complex content (analysis reports, architecture diagrams, data visualization, plans). View at localhost:25569/view.
 - CRITICAL: The HTML viewer is a **presentation tool for AI-generated content ONLY**. These are NOT website pages. Do NOT use it to deploy, render, or test-serve project HTML files or local web applications. For testing web functionality (backends, APIs, interactive apps), start a proper dev server (Python http.server, Node vite, etc.).
-- HTML templates (75+) are available via the load_skill_template tool. Use it to load a template, customize it, and write to pages/. Do NOT create HTML from scratch for presentation purposes.
+- HTML templates (75+) are available via the load_skill_template tool (NOT the built-in skill tool). Use it to load a template, customize it, and write to pages/.
 - Markdown is for developers and AI — write Markdown to docs/ for technical documentation, wikis, and AI-consumable notes.
-- HTML templates are available via the 75+ skills in the skills gallery. Use the skill tool to load a template, then write HTML to pages/.
-- DOCX conversion is available: write HTML first, verify in the viewer, then convert to DOCX. The plugin automatically strips python-docx author metadata.
+- DOCX conversion: write HTML first, verify in the viewer, then convert via the DOCX tool.
 
 ### Output style rules
 - Prefer **paragraph-style descriptions** over excessive bullet points. A paragraph flows; fragmented bullets waste vertical space and force scrolling.

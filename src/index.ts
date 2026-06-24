@@ -1641,18 +1641,16 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         if (typedOutput?.message) {
           typedOutput.message.agent = 'prometheus';
         }
-        // Inject context about plan mode — forces prometheus to use Question tool first
+        // Inject context about plan mode — balanced: Question tool + direct input
         typedOutput.parts.push({
           type: 'text',
           text: `## Plan Mode Activated — prometheus (planner) is now active
 
-**You MUST start with the Question tool. Do NOT skip to research or planning.**
+**Gather requirements before planning.**
 
-1. Call the Question tool NOW to ask what the user wants planned
-2. Keep asking follow-up questions until ALL requirements are clear
-3. Only proceed to research (Phase 2) after the user confirms clarity
-4. Use save_plan to save the completed plan
-5. Call /ol-plan-exit when done
+- If the user already said what they want: use that
+- If unclear: ask with Question tool or reply in chat
+- Proceed to research/planning only after requirements are confirmed
 
 **Allowed tools**: read, glob, grep, webfetch, Question, save_plan, /ol-plan-exit
 **Denied tools**: write, edit, bash, task, subtask, /ol-plan-enter`,
