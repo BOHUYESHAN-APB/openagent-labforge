@@ -1759,10 +1759,12 @@ describe('createTodoContinuationHook', () => {
           ],
         },
       });
+      const overlayManager = new EffectiveAgentOverlayManager();
       const hook = createTodoContinuationHook(ctx, {
         cooldownMs: 50,
         reviewOverlayPrompt:
           '<Role>Custom Reviewer Overlay</Role>\nUse the custom reviewer overlay prompt.',
+        overlayManager,
       });
 
       await hook.tool.auto_continue.execute({ enabled: true });
@@ -1787,7 +1789,8 @@ describe('createTodoContinuationHook', () => {
       ).toContain('🔎 Auto-review');
       const call = (ctx.client.session.prompt as ReturnType<typeof mock>).mock
         .calls[1][0];
-      expect(call.body.agent).toBe('reviewer');
+      // agent field intentionally omitted — overlay handles agent routing
+      expect(call.body.agent).toBeUndefined();
       expect(call.body.parts[0].text).toContain('[Auto-review');
       expect(call.body.parts[0].text).toContain(
         'Effective execution agent: reviewer',

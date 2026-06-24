@@ -1770,10 +1770,7 @@ Returning to the original agent (${returnAgent}). The plan has been saved.`,
       const persistentOverlayAgent = effectiveAgentOverlayManager.getCurrent(
         input.sessionID,
       )?.agent;
-      const responseOverlayAgent =
-        todoContinuationHook.getResponseAgentForSession(input.sessionID);
-      const agent =
-        responseOverlayAgent ?? persistentOverlayAgent ?? resolvedAgent;
+      const agent = persistentOverlayAgent ?? resolvedAgent;
 
       // Force-set message agent when overlay is active (plan/review mode).
       // This ensures the UI shows the correct agent even in interactive mode.
@@ -1782,7 +1779,7 @@ Returning to the original agent (${returnAgent}). The plan has been saved.`,
         output.message.agent = agent;
       }
 
-      if (resolvedAgent && !responseOverlayAgent && !persistentOverlayAgent) {
+      if (resolvedAgent && !persistentOverlayAgent) {
         const currentMappedAgent = sessionAgentMap.get(input.sessionID);
         const shouldUpdateBaseAgent =
           !persistentOverlayAgent ||
@@ -1825,8 +1822,7 @@ Returning to the original agent (${returnAgent}). The plan has been saved.`,
       output: { system: string[] },
     ): Promise<void> => {
       const overlayAgentName = input.sessionID
-        ? (effectiveAgentOverlayManager.getCurrent(input.sessionID)?.agent ??
-          todoContinuationHook.getEffectiveAgentForSession(input.sessionID))
+        ? effectiveAgentOverlayManager.getCurrent(input.sessionID)?.agent
         : undefined;
 
       if (overlayAgentName === 'reviewer') {

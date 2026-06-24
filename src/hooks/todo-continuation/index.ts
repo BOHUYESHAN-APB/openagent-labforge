@@ -403,8 +403,6 @@ interface ContinuationState {
   notificationBusyUntilBySession: Map<string, number>;
   reviewVerdictBySession: Map<string, StoredReviewVerdict>;
   reviewInjectedBySession: Set<string>;
-  reviewOverlayActiveBySession: Set<string>;
-  reviewResponsePendingBySession: Set<string>;
   autoEnableSuppressedSessionIds: Set<string>;
   autoEnableSuppressedGlobally: boolean;
   lastPressureCheckpointKeyBySession: Map<string, string>;
@@ -449,7 +447,6 @@ interface TodoContinuationHook {
     output: { parts: Array<{ type: string; text?: string }> },
   ) => Promise<void>;
   getEffectiveAgentForSession: (sessionID: string) => string | undefined;
-  getResponseAgentForSession: (sessionID: string) => string | undefined;
 }
 
 // ── State persistence (OMO ralph-loop pattern) ────────────────────
@@ -464,7 +461,6 @@ interface PersistedContinuationState {
   suppressUntil: number;
   reviewVerdictBySession: Array<[string, StoredReviewVerdict]>;
   reviewInjectedBySession: string[];
-  reviewOverlayActiveBySession: string[];
   autoEnableSuppressedSessionIds: string[];
   autoEnableSuppressedGlobally: boolean;
   lastPressureCheckpointKeyBySession: Array<[string, string]>;
@@ -499,9 +495,6 @@ function saveContinuationState(
         state.reviewVerdictBySession.entries(),
       ),
       reviewInjectedBySession: Array.from(state.reviewInjectedBySession),
-      reviewOverlayActiveBySession: Array.from(
-        state.reviewOverlayActiveBySession,
-      ),
       autoEnableSuppressedSessionIds: Array.from(
         state.autoEnableSuppressedSessionIds,
       ),
@@ -548,9 +541,6 @@ function loadContinuationState(
     }
     for (const sessionID of persisted.reviewInjectedBySession) {
       state.reviewInjectedBySession.add(sessionID);
-    }
-    for (const sessionID of persisted.reviewOverlayActiveBySession ?? []) {
-      state.reviewOverlayActiveBySession.add(sessionID);
     }
     for (const sessionID of persisted.autoEnableSuppressedSessionIds) {
       state.autoEnableSuppressedSessionIds.add(sessionID);
@@ -713,8 +703,6 @@ function resetState(state: ContinuationState): void {
   state.notificationBusyUntilBySession.clear();
   state.reviewVerdictBySession.clear();
   state.reviewInjectedBySession.clear();
-  state.reviewOverlayActiveBySession.clear();
-  state.reviewResponsePendingBySession.clear();
   state.autoEnableSuppressedSessionIds.clear();
   state.autoEnableSuppressedGlobally = false;
   state.lastPressureCheckpointKeyBySession.clear();
@@ -795,8 +783,6 @@ export function createTodoContinuationHook(
     notificationBusyUntilBySession: new Map<string, number>(),
     reviewVerdictBySession: new Map(),
     reviewInjectedBySession: new Set(),
-    reviewOverlayActiveBySession: new Set(),
-    reviewResponsePendingBySession: new Set(),
     autoEnableSuppressedSessionIds: new Set(),
     autoEnableSuppressedGlobally: false,
     lastPressureCheckpointKeyBySession: new Map(),
@@ -945,8 +931,6 @@ export function createTodoContinuationHook(
         activePlanSignatureBySession.delete(sessionID);
         planResyncRequiredBySession.delete(sessionID);
         state.lastPressureCheckpointKeyBySession.delete(sessionID);
-        state.reviewOverlayActiveBySession.delete(sessionID);
-        state.reviewResponsePendingBySession.delete(sessionID);
         config?.overlayManager?.clear(sessionID, 'review');
         hygiene.handleRequestStart({ sessionID });
       }
@@ -992,8 +976,6 @@ export function createTodoContinuationHook(
       );
     }
 
-    state.reviewOverlayActiveBySession.delete(lastUserMessage.sessionID);
-    state.reviewResponsePendingBySession.delete(lastUserMessage.sessionID);
     config?.overlayManager?.clear(lastUserMessage.sessionID, 'review');
 
     // Detect user intent from message text
@@ -1081,7 +1063,8 @@ export function createTodoContinuationHook(
       return;
     }
 
-    if (state.reviewOverlayActiveBySession.has(input.sessionID)) {
+    const overlay = config?.overlayManager?.getCurrent(input.sessionID);
+    if (overlay?.phase === 'review') {
       output.system.length = 0;
       output.system.push(buildReviewOverlaySystemPrompt(reviewOverlayPrompt));
       return;
@@ -1165,8 +1148,6 @@ export function createTodoContinuationHook(
     clearNotificationState(sessionID);
     state.reviewVerdictBySession.delete(sessionID);
     state.reviewInjectedBySession.delete(sessionID);
-    state.reviewOverlayActiveBySession.delete(sessionID);
-    state.reviewResponsePendingBySession.delete(sessionID);
     config?.overlayManager?.clear(sessionID, 'review');
     planResyncRequiredBySession.delete(sessionID);
     if (suppressAutoEnable) {
@@ -1259,13 +1240,6 @@ export function createTodoContinuationHook(
     }
 
     state.sawChatMessage = true;
-    if (
-      input.agent === REVIEW_EFFECTIVE_AGENT &&
-      state.reviewResponsePendingBySession.has(input.sessionID)
-    ) {
-      state.reviewResponsePendingBySession.delete(input.sessionID);
-      return;
-    }
     if (isPrimaryAgentName(input.agent)) {
       registerOrchestratorSession(input.sessionID);
     }
@@ -1541,8 +1515,6 @@ export function createTodoContinuationHook(
                   verdict,
                   findings,
                 });
-                state.reviewOverlayActiveBySession.delete(sessionID);
-                state.reviewResponsePendingBySession.delete(sessionID);
                 config?.overlayManager?.clear(sessionID, 'review');
                 disableContinuationForCompletedBatch(sessionID);
                 return; // Allow stop
@@ -1555,8 +1527,6 @@ export function createTodoContinuationHook(
                 });
                 state.reviewVerdictBySession.set(sessionID, 'reject');
                 state.reviewInjectedBySession.delete(sessionID);
-                state.reviewOverlayActiveBySession.delete(sessionID);
-                state.reviewResponsePendingBySession.delete(sessionID);
                 config?.overlayManager?.clear(sessionID, 'review');
                 setConsecutiveContinuations(state, sessionID, 0);
                 log(`[${HOOK_NAME}] Review REJECTED — injecting rework`, {
@@ -1595,8 +1565,6 @@ export function createTodoContinuationHook(
                   findings,
                 });
                 state.reviewVerdictBySession.set(sessionID, verdict);
-                state.reviewOverlayActiveBySession.delete(sessionID);
-                state.reviewResponsePendingBySession.delete(sessionID);
                 config?.overlayManager?.clear(sessionID, 'review');
                 await disableContinuationForReviewStop(
                   sessionID,
@@ -1624,13 +1592,13 @@ export function createTodoContinuationHook(
         log(`[${HOOK_NAME}] Injecting auto-review prompt`, { sessionID });
         state.reviewInjectedBySession.add(sessionID);
         state.reviewVerdictBySession.set(sessionID, 'pending');
-        state.reviewOverlayActiveBySession.add(sessionID);
-        state.reviewResponsePendingBySession.add(sessionID);
 
         // Capture phase before activating review overlay
         const priorOverlay = config?.overlayManager?.getCurrent(sessionID);
         const priorPhase = priorOverlay?.phase ?? 'execute';
 
+        // Activate review overlay — exactly like plan mode:
+        // the overlay handles agent routing via chat.message → output.message.agent
         config?.overlayManager?.activate(sessionID, {
           phase: 'review',
           agent: REVIEW_EFFECTIVE_AGENT,
@@ -1655,10 +1623,10 @@ export function createTodoContinuationHook(
             sessionID,
             buildUserVisibleReviewNotification({ stage: 'starting' }),
           );
+          // NOTE: agent field intentionally omitted — the overlay handles routing
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
-              agent: REVIEW_EFFECTIVE_AGENT,
               parts: [createInternalAgentTextPart(reviewPrompt)],
             },
           });
@@ -2193,14 +2161,15 @@ export function createTodoContinuationHook(
     handleEvent,
     handleChatMessage,
     handleCommandExecuteBefore,
-    getEffectiveAgentForSession: (sessionID: string) =>
-      state.reviewOverlayActiveBySession.has(sessionID)
-        ? REVIEW_EFFECTIVE_AGENT
-        : undefined,
-    getResponseAgentForSession: (sessionID: string) =>
-      state.reviewResponsePendingBySession.has(sessionID)
-        ? REVIEW_EFFECTIVE_AGENT
-        : undefined,
+    // Reads from the shared overlay manager — same source of truth as plan mode.
+    // Plan mode uses EffectiveAgentOverlayManager; review mode now uses it too.
+    getEffectiveAgentForSession: (sessionID: string) => {
+      const overlay = config?.overlayManager?.getCurrent(sessionID);
+      return overlay?.phase === 'review' ? REVIEW_EFFECTIVE_AGENT : undefined;
+    },
+    // getResponseAgentForSession is no longer needed:
+    // chat.message handler reads persistentOverlayAgent from the overlay manager,
+    // which is activated before the session.prompt() triggers the next turn.
   };
 }
 
