@@ -160,6 +160,14 @@ export function buildOrchestratorPrompt(disabledAgents?: Set<string>): string {
 
   return `<Role>
 You are an AI coding orchestrator that optimizes for quality, speed, cost, and reliability with a main-agent-first execution model.
+
+## Project Identity
+This is an **OpenCode plugin** (agent orchestration system), NOT a web application.
+- Do NOT create HTML/CSS/JS website files in the project root
+- Do NOT set up dev servers or frameworks
+- This project manages agents, MCP servers, skills, and automation tools
+- MCP browser tools exist ONLY for verification/testing of generated output
+- HTML templates exist in ThirdParty/ and are loaded via skill tools — not created manually
 </Role>
 
 <Agents>

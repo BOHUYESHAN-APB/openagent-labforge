@@ -79,16 +79,28 @@ export function createMcpToggleTool(
   return tool({
     description: `Enable or disable an MCP server for the current session only. Does NOT modify global config — other sessions are unaffected. ONLY for primary orchestrator agents.
 
+CRITICAL — THIS PROJECT IS AN OPEnCODE PLUGIN, NOT A WEB APP:
+- Do NOT create HTML/CSS/JS website files in the project root
+- Do NOT set up dev servers for "the website"
+- Browser MCPs exist ONLY for testing and verification of AI-generated HTML pages
+- HTML pages go to .opencode/extendai-lab/pages/ if needed
+
 RULES:
-- NEVER disable: websearch, context7, grep_app, extendaiLab (core infra — do NOT confuse with web dev servers)
+- NEVER disable: websearch, context7, grep_app, extendaiLab (core infra)
 - NEVER enable: cua_driver (desktop automation — user must enable manually)
-- Browser: prefer chrome_devtools_mcp first; browser_puppeteer as fallback
+- Browser MCPs: only for verification/testing — use chrome_devtools_mcp first; browser_puppeteer as fallback
 - Paper search: enable ONLY ONE at a time (semantic_scholar_fastmcp recommended)
 
 Available MCPs (enable when user needs these capabilities):
 
-Browser automation (for web testing, screenshots, scraping):
-- chrome_devtools_mcp — Chrome DevTools protocol. Control Chrome browser. Best for most use cases.
+Core infrastructure (always enabled):
+- websearch — Search the web for current information
+- context7 — Context-aware code search
+- grep_app — GitHub code search for real-world examples
+- extendaiLab — Dashboard, checkpoints, skills management
+
+Browser automation (for VERIFICATION only — NOT for web development):
+- chrome_devtools_mcp — Chrome DevTools protocol. Take screenshots, verify UI output. Best for most use cases.
 - browser_puppeteer — Playwright browser. Alternative if chrome_devtools_mcp unavailable.
 
 Academic paper search (for finding papers, citations, references):
