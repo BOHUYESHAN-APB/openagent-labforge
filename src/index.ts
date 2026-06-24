@@ -1641,22 +1641,21 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
         if (typedOutput?.message) {
           typedOutput.message.agent = 'prometheus';
         }
-        // Inject context about plan mode
+        // Inject context about plan mode — forces prometheus to use Question tool first
         typedOutput.parts.push({
           type: 'text',
-          text: `## Plan Mode Activated
+          text: `## Plan Mode Activated — prometheus (planner) is now active
 
-You are now in plan mode. prometheus (planner) is active.
+**You MUST start with the Question tool. Do NOT skip to research or planning.**
+
+1. Call the Question tool NOW to ask what the user wants planned
+2. Keep asking follow-up questions until ALL requirements are clear
+3. Only proceed to research (Phase 2) after the user confirms clarity
+4. Use save_plan to save the completed plan
+5. Call /ol-plan-exit when done
 
 **Allowed tools**: read, glob, grep, webfetch, Question, save_plan, /ol-plan-exit
-**Denied tools**: write, edit, bash, task, subtask, /ol-plan-enter
-
-Follow the 5-phase workflow:
-1. Interview — gather requirements with Question tool
-2. Research — explore codebase, webfetch docs
-3. Generate — create structured plan
-4. Save — call save_plan
-5. Exit — call /ol-plan-exit`,
+**Denied tools**: write, edit, bash, task, subtask, /ol-plan-enter`,
         });
         return;
       } else if (typedInput.command === PLAN_EXIT_COMMAND) {

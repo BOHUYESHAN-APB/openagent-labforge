@@ -1,11 +1,11 @@
 import { type ToolDefinition, tool } from '@opencode-ai/plugin';
 
 /**
- * enter_plan_mode tool — alternative name to avoid any naming conflicts.
+ * enter_plan_mode tool — activates plan overlay and switches to prometheus.
  *
- * This registers as a plugin tool with a unique name (enter_plan_mode instead
- * of plan_enter) to test if the original plan_enter tool's invisibility was
- * caused by a naming conflict with OpenCode built-in tools.
+ * On the next turn, prometheus receives the return value of this tool as
+ * a conversation message. The return is designed as a direct instruction
+ * that forces prometheus to immediately use the Question tool.
  */
 export function createEnterPlanModeTool(): ToolDefinition {
   return tool({
@@ -23,9 +23,19 @@ Usage: call this tool with no arguments. The current session's active agent is a
     args: {},
     async execute() {
       return [
-        'Plan mode entry triggered.',
-        'The overlay will activate on the next turn. Your agent should now switch to prometheus (planner).',
-        'Use /ol-plan-exit when planning is complete to return to the original agent.',
+        '## Plan Mode Activated — prometheus (planner) is now active',
+        '',
+        'Your FIRST and ONLY task right now is to gather requirements.',
+        '',
+        '### MANDATORY: Use the Question tool NOW',
+        '1. Call the Question tool to ask the user what they want planned',
+        '2. Keep asking follow-up questions until ALL requirements, constraints,',
+        '   edge cases, and preferences are clear',
+        '3. Do NOT skip to research or planning — question first, always',
+        '4. The Question tool is designed for back-and-forth — use it repeatedly',
+        '',
+        'Only proceed to research (Phase 2) AFTER the user confirms everything',
+        'is clear. Do NOT output a plan until you have asked enough questions.',
       ].join('\n');
     },
   });
