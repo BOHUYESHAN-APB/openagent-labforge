@@ -13,6 +13,12 @@ import {
 import { createCrashRecovery } from './crash-recovery';
 import { createTodoHygiene } from './todo-hygiene';
 import { detectUserIntent, shouldSkipContinuation } from './user-intent';
+import {
+  buildForceContinueMessage,
+  buildLazyStopRejectionMessage,
+  buildTruncationRecoveryMessage,
+  detectContinuationIntent,
+} from './continuation-intent';
 
 const HOOK_NAME = 'todo-continuation';
 const COMMAND_NAME = 'ol-auto-continue';
@@ -1669,9 +1675,12 @@ export function createTodoContinuationHook(
       }
 
       // Safety gate 3: inspect last assistant message, but do not let
-      // self-generated "should I continue?" style questions stop an
-      // unfinished batch. Only explicit user stop / abort / blocker should stop.
+      // self-generated "should I continue?" style questions or lazy stop
+      // patterns stop an unfinished batch. Only explicit user stop / abort /
+      // blocker should stop.
       let lastAssistantIsQuestion = false;
+      let continuationIntent: ReturnType<typeof detectContinuationIntent> | undefined;
+      let lastAssistantText = '';
       try {
         const messagesResult = await ctx.client.session.messages({
           path: { id: sessionID },
@@ -1682,14 +1691,22 @@ export function createTodoContinuationHook(
           .reverse()
           .find((m) => m.info?.role === 'assistant');
         if (lastAssistantMessage?.parts) {
-          const lastText = lastAssistantMessage.parts
+          lastAssistantText = lastAssistantMessage.parts
             .map((p) => p.text ?? '')
             .join(' ');
-          lastAssistantIsQuestion = isQuestion(lastText);
+          lastAssistantIsQuestion = isQuestion(lastAssistantText);
+          continuationIntent = detectContinuationIntent(lastAssistantText);
         }
         log(`[${HOOK_NAME}] Fetched messages`, {
           sessionID,
           lastAssistantIsQuestion,
+          continuationIntent: continuationIntent
+            ? {
+                hasIntent: continuationIntent.hasIntent,
+                hasStopSignal: continuationIntent.hasStopSignal,
+                isTruncated: continuationIntent.isTruncated,
+              }
+            : undefined,
         });
         clearTransientFailure(sessionID);
       } catch (error) {
@@ -1712,6 +1729,18 @@ export function createTodoContinuationHook(
           {
             sessionID,
           },
+        );
+      }
+      if (continuationIntent?.hasStopSignal) {
+        log(
+          `[${HOOK_NAME}] Lazy stop pattern detected — will inject force-continue`,
+          { sessionID },
+        );
+      }
+      if (continuationIntent?.isTruncated) {
+        log(
+          `[${HOOK_NAME}] Truncated output detected — will inject recovery`,
+          { sessionID },
         );
       }
 
@@ -1873,15 +1902,28 @@ export function createTodoContinuationHook(
         state.isAutoInjecting = true;
         try {
           const needsPlanResync = planResyncRequiredBySession.has(sessionID);
+          let promptText: string;
+
+          if (continuationIntent?.hasStopSignal) {
+            // Lazy stop pattern detected — reject and force continue
+            promptText = buildLazyStopRejectionMessage();
+          } else if (continuationIntent?.isTruncated) {
+            // Output was truncated mid-response — recover
+            promptText = buildTruncationRecoveryMessage();
+          } else if (continuationIntent?.hasIntent) {
+            // Signaled intent to continue but no tool calls — nudge
+            promptText = buildForceContinueMessage();
+          } else {
+            promptText = needsPlanResync
+              ? buildPlanResyncPrompt(ctx.directory)
+              : buildContinuationPrompt(todos);
+          }
+
           await ctx.client.session.prompt({
             path: { id: sessionID },
             body: {
               parts: [
-                createInternalAgentTextPart(
-                  needsPlanResync
-                    ? buildPlanResyncPrompt(ctx.directory)
-                    : buildContinuationPrompt(todos),
-                ),
+                createInternalAgentTextPart(promptText),
               ],
             },
           });

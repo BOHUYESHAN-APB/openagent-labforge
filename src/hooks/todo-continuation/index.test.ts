@@ -2569,7 +2569,7 @@ describe('createTodoContinuationHook', () => {
           data: [
             {
               info: { role: 'assistant' },
-              parts: [{ type: 'text', text: 'Working...' }],
+              parts: [{ type: 'text', text: 'Continuing on the next task now.' }],
             },
           ],
         },
