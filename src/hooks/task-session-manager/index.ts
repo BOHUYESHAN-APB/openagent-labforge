@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { PluginInput } from '@opencode-ai/plugin';
-import type { AgentName } from '../../config';
+import { ALL_AGENT_NAMES, type AgentName } from '../../config';
 import {
   BackgroundJobBoard,
   type BackgroundJobRecord,
@@ -29,17 +29,7 @@ interface PendingTaskCall {
   resumedTaskId?: string;
 }
 
-const AGENT_NAME_SET = new Set<AgentName>([
-  'orchestrator',
-  'oracle',
-  'designer',
-  'explorer',
-  'librarian',
-  'fixer',
-  'observer',
-  'council',
-  'councillor',
-]);
+const AGENT_NAME_SET = new Set<AgentName>(ALL_AGENT_NAMES as unknown as AgentName[]);
 
 const MAX_PENDING_TASK_CALLS = 100;
 const BACKGROUND_JOB_BOARD_SENTINEL = 'SENTINEL: background-job-board-v2';
