@@ -79,45 +79,33 @@ export function createMcpToggleTool(
   return tool({
     description: `Enable or disable an MCP server for the current session only. Does NOT modify global config — other sessions are unaffected. ONLY for primary orchestrator agents.
 
-## What This Project Is
+## MCP Architecture
 
-This is an **AI agent orchestration plugin for OpenCode**. Its core workflow:
-  AI generates structured content → renders as rich HTML → human views via workspace dashboard
+**extendaiLab** is OUR plugin's MCP server (always connected). It provides:
+- Workspace dashboard at localhost:25569/view — shows all projects,
+  AI-generated HTML pages, plan completion status, and lets you browse plans
+- Session checkpoint management
+- Skills loading and HTML page templates
 
-**Why HTML?** Plain text and markdown are insufficient for complex AI output. HTML
-naturally supports rich multimedia (tables, charts, diagrams, interactive elements)
-that help humans understand AI-generated content faster and more intuitively.
+All other MCPs listed below are **external tools** that users can optionally enable.
+They are NOT part of this plugin.
 
-**The viewer at localhost:25569 is a workspace dashboard that:**
-- Shows ALL OpenCode projects in the workspace
-- Lists AI-generated HTML presentation files (plans, todos, analysis, reports)
-- Displays each repository's plan completion progress
-- Lets you open AI-created plan markdown files directly
-- Provides a unified view of all agent activity
-
-**HTML files in .opencode/extendai-lab/pages/ are AI presentation artifacts:**
-- They visually express AI's plans, todo lists, analysis results, and ideas
-- They are NOT website pages, NOT web apps
-- They are the visual layer of AI-to-human communication
-- Browser MCPs verify these presentation pages render correctly
+## Why HTML?
+Plain text and markdown are insufficient for complex AI output. HTML supports rich
+multimedia (tables, charts, diagrams) that help humans understand AI content.
+Our extendaiLab MCP serves these HTML presentation pages via the workspace dashboard.
+HTML files go in .opencode/extendai-lab/pages/.
 
 ## Rules
 
 - NEVER disable: websearch, context7, grep_app, extendaiLab (core infra)
 - NEVER enable: cua_driver (desktop automation — user must enable manually)
-- Browser MCPs: only for verifying AI presentation pages render correctly
 - Paper search: enable ONLY ONE at a time (semantic_scholar_fastmcp recommended)
 
-## Available MCPs (enable when user needs these capabilities)
+## Available External MCPs (enable when user needs these capabilities)
 
-### Core infrastructure (always enabled)
-- websearch — Search the web for current information
-- context7 — Context-aware code search
-- grep_app — GitHub code search for real-world examples
-- extendaiLab — Dashboard, session checkpoints, skills management
-
-### AI presentation verification (verify AI->HTML pages look correct)
-- chrome_devtools_mcp — Chrome DevTools. Screenshot and verify AI-generated HTML pages in .opencode/extendai-lab/pages/. Best for most cases.
+### Browser automation
+- chrome_devtools_mcp — Chrome DevTools protocol. Control Chrome browser. Best for most use cases.
 - browser_puppeteer — Playwright browser. Alternative if chrome_devtools_mcp unavailable.
 
 ### Academic paper search
