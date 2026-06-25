@@ -321,11 +321,6 @@ function registerCompleteArgumentCommands(opencodeConfig: {
     template: '',
     description: 'Exit plan mode — return to the original agent. Call this when planning is complete.',
   });
-  registerCommandIfMissing(commands, LOOP_START_COMMAND, {
-    template: '',
-    description: 'Start a loop session. Creates a plan → executes → reviews → cycles until approved.',
-    argumentHint: '[task description]',
-  });
 }
 
 /**
@@ -1480,6 +1475,13 @@ const OhMyOpenCodeLite: Plugin = async (ctx) => {
           description:
             'Code review with severity classification (Critical/Major/Minor/Suggestion)',
           argumentHint: '[files-or-changes]',
+        };
+      }
+      if (!configCommand?.['ol-loop-start']) {
+        (opencodeConfig.command as Record<string, unknown>)['ol-loop-start'] = {
+          template: '',
+          description: 'Start a loop session — plan → execute → review → cycle until approved',
+          argumentHint: '[task description]',
         };
       }
     },
